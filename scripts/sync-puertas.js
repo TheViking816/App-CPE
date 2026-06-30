@@ -28,28 +28,23 @@ function parseConductor1aFromText(text) {
     specialty: "CONDUCTOR 1a",
     updatedAt: new Date().toISOString(),
     doors: [
-      { key: "LAB", label: "LAB", raw: values[0], turn: "Laborable" },
-      { key: "NOC", label: "NOC", raw: values[1], turn: "Laborable super/noche" },
-      { key: "LAB-SIG", label: "LAB SIG.", raw: values[2], turn: "Laborable siguiente dia" },
-      { key: "POL-LAB", label: "POL LAB", raw: values[3], turn: "Polivalencia laborable" },
-      { key: "POL-NOC", label: "POL NOC", raw: values[4], turn: "Polivalencia super/noche" },
-      { key: "POL-LAB-SIG", label: "POL SIG.", raw: values[5], turn: "Polivalencia siguiente dia" },
-      { key: "NOC-FES", label: "NOC-FES", raw: values[6], turn: "Festivo super/noche" },
-      { key: "FES", label: "FES", raw: values[7], turn: "Festivo diurno" },
-      { key: "POL-NOC-FES", label: "POL NOC-FES", raw: values[8], turn: "Festivo polivalencia super" },
-      { key: "POL-FES", label: "POL FES", raw: values[9], turn: "Festivo polivalencia diurno" }
+      { key: "LAB-HOY", label: "Lab Hoy", raw: values[0], dayType: "laborable", turn: "Turno" },
+      { key: "LAB-SUPER", label: "Super", raw: values[1], dayType: "laborable", turn: "Turno" },
+      { key: "LAB-SIG", label: "Lab Sig. Dia", raw: values[2], dayType: "laborable", turn: "Turno" },
+      { key: "FES-SUPER", label: "Super", raw: values[6], dayType: "festivo", turn: "Turno" },
+      { key: "FES-DIURNO", label: "Diurno", raw: values[7], dayType: "festivo", turn: "Turno" }
     ],
     rawColumns: {
       labHoy: values[0],
       super: values[1],
       labSigDia: values[2],
-      polivalenciaLabHoy: values[3],
-      polivalenciaSuper: values[4],
-      polivalenciaLabSigDia: values[5],
+      rawCol4: values[3],
+      rawCol5: values[4],
+      rawCol6: values[5],
       festivoSuper: values[6],
       festivoDiurno: values[7],
-      festivoPolivalenciaSuper: values[8],
-      festivoPolivalenciaDiurno: values[9]
+      rawCol9: values[8],
+      rawCol10: values[9]
     }
   };
 }

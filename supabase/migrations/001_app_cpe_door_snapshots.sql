@@ -27,28 +27,23 @@ select
   'CONDUCTOR 1a',
   'seed',
   '[
-    {"key":"LAB","label":"LAB","raw":72625,"turn":"Laborable"},
-    {"key":"NOC","label":"NOC","raw":72699,"turn":"Laborable super/noche"},
-    {"key":"LAB-SIG","label":"LAB SIG.","raw":72625,"turn":"Laborable siguiente dia"},
-    {"key":"POL-LAB","label":"POL LAB","raw":72546,"turn":"Polivalencia laborable"},
-    {"key":"POL-NOC","label":"POL NOC","raw":71197,"turn":"Polivalencia super/noche"},
-    {"key":"POL-LAB-SIG","label":"POL SIG.","raw":71558,"turn":"Polivalencia siguiente dia"},
-    {"key":"NOC-FES","label":"NOC-FES","raw":72737,"turn":"Festivo super/noche"},
-    {"key":"FES","label":"FES","raw":72541,"turn":"Festivo diurno"},
-    {"key":"POL-NOC-FES","label":"POL NOC-FES","raw":63186,"turn":"Festivo polivalencia super"},
-    {"key":"POL-FES","label":"POL FES","raw":71488,"turn":"Festivo polivalencia diurno"}
+    {"key":"LAB-HOY","label":"Lab Hoy","raw":72625,"dayType":"laborable","turn":"Turno"},
+    {"key":"LAB-SUPER","label":"Super","raw":72699,"dayType":"laborable","turn":"Turno"},
+    {"key":"LAB-SIG","label":"Lab Sig. Dia","raw":72625,"dayType":"laborable","turn":"Turno"},
+    {"key":"FES-SUPER","label":"Super","raw":72737,"dayType":"festivo","turn":"Turno"},
+    {"key":"FES-DIURNO","label":"Diurno","raw":72541,"dayType":"festivo","turn":"Turno"}
   ]'::jsonb,
   '{
     "labHoy": 72625,
     "super": 72699,
     "labSigDia": 72625,
-    "polivalenciaLabHoy": 72546,
-    "polivalenciaSuper": 71197,
-    "polivalenciaLabSigDia": 71558,
+    "rawCol4": 72546,
+    "rawCol5": 71197,
+    "rawCol6": 71558,
     "festivoSuper": 72737,
     "festivoDiurno": 72541,
-    "festivoPolivalenciaSuper": 63186,
-    "festivoPolivalenciaDiurno": 71488
+    "rawCol9": 63186,
+    "rawCol10": 71488
   }'::jsonb,
   '2026-06-30T11:32:28.672Z'::timestamptz
 where not exists (

@@ -1,79 +1,54 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316778848261120260630132522",
   "specialty": "CONDUCTOR 1a",
-  "updatedAt": "2026-06-30T11:51:06.588Z",
+  "updatedAt": "2026-06-30T12:15:11.315Z",
   "doors": [
     {
-      "key": "LAB",
-      "label": "LAB",
+      "key": "LAB-HOY",
+      "label": "Lab Hoy",
       "raw": 72625,
-      "turn": "Laborable"
+      "dayType": "laborable",
+      "turn": "Turno"
     },
     {
-      "key": "NOC",
-      "label": "NOC",
+      "key": "LAB-SUPER",
+      "label": "Super",
       "raw": 72699,
-      "turn": "Laborable super/noche"
+      "dayType": "laborable",
+      "turn": "Turno"
     },
     {
       "key": "LAB-SIG",
-      "label": "LAB SIG.",
+      "label": "Lab Sig. Dia",
       "raw": 72625,
-      "turn": "Laborable siguiente dia"
+      "dayType": "laborable",
+      "turn": "Turno"
     },
     {
-      "key": "POL-LAB",
-      "label": "POL LAB",
-      "raw": 72546,
-      "turn": "Polivalencia laborable"
-    },
-    {
-      "key": "POL-NOC",
-      "label": "POL NOC",
-      "raw": 71197,
-      "turn": "Polivalencia super/noche"
-    },
-    {
-      "key": "POL-LAB-SIG",
-      "label": "POL SIG.",
-      "raw": 71558,
-      "turn": "Polivalencia siguiente dia"
-    },
-    {
-      "key": "NOC-FES",
-      "label": "NOC-FES",
+      "key": "FES-SUPER",
+      "label": "Super",
       "raw": 72737,
-      "turn": "Festivo super/noche"
+      "dayType": "festivo",
+      "turn": "Turno"
     },
     {
-      "key": "FES",
-      "label": "FES",
+      "key": "FES-DIURNO",
+      "label": "Diurno",
       "raw": 72541,
-      "turn": "Festivo diurno"
-    },
-    {
-      "key": "POL-NOC-FES",
-      "label": "POL NOC-FES",
-      "raw": 63186,
-      "turn": "Festivo polivalencia super"
-    },
-    {
-      "key": "POL-FES",
-      "label": "POL FES",
-      "raw": 71488,
-      "turn": "Festivo polivalencia diurno"
+      "dayType": "festivo",
+      "turn": "Turno"
     }
   ],
   "rawColumns": {
     "labHoy": 72625,
     "super": 72699,
     "labSigDia": 72625,
-    "polivalenciaLabHoy": 72546,
-    "polivalenciaSuper": 71197,
-    "polivalenciaLabSigDia": 71558,
+    "rawCol4": 72546,
+    "rawCol5": 71197,
+    "rawCol6": 71558,
     "festivoSuper": 72737,
     "festivoDiurno": 72541,
-    "festivoPolivalenciaSuper": 63186,
-    "festivoPolivalenciaDiurno": 71488
+    "rawCol9": 63186,
+    "rawCol10": 71488
   }
 }

@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
-  CheckCircle2,
-  DoorOpen,
+  CalendarDays,
+  Clipboard,
+  ClipboardList,
   Eye,
   EyeOff,
+  FileText,
+  Home,
   Lock,
   LogOut,
+  Mail,
+  Menu,
   RefreshCcw,
   Search,
-  ShieldCheck,
+  Settings,
   UserRound
 } from "lucide-react";
 import {
@@ -33,14 +37,43 @@ function getInitialSession() {
   }
 }
 
+function buildPasswordHash(value) {
+  return btoa(unescape(encodeURIComponent(String(value || ""))));
+}
+
 function formatDistance(value) {
   if (value === null) return "Sin dato";
   if (value === 0) return "En puerta";
   return `${value} puestos`;
 }
 
-function buildPasswordHash(value) {
-  return btoa(unescape(encodeURIComponent(String(value || ""))));
+function formatClock(date) {
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(date);
+}
+
+function sanitizeDoors(doors) {
+  if (!Array.isArray(doors)) return specialty.doors;
+
+  return doors
+    .filter((door) => !String(door.key || "").toUpperCase().startsWith("POL"))
+    .filter((door) => !String(door.label || "").toUpperCase().includes("POL"))
+    .map((door) => {
+      if (door.dayType) return door;
+      if (door.key === "LAB") return { ...door, key: "LAB-HOY", label: "Lab Hoy", dayType: "laborable", turn: "Turno" };
+      if (door.key === "NOC") return { ...door, key: "LAB-SUPER", label: "Super", dayType: "laborable", turn: "Turno" };
+      if (door.key === "LAB-SIG") return { ...door, label: "Lab Sig. Dia", dayType: "laborable", turn: "Turno" };
+      if (door.key === "NOC-FES") return { ...door, key: "FES-SUPER", label: "Super", dayType: "festivo", turn: "Turno" };
+      if (door.key === "FES") return { ...door, key: "FES-DIURNO", label: "Diurno", dayType: "festivo", turn: "Turno" };
+      return door;
+    })
+    .filter((door) => door.dayType === "laborable" || door.dayType === "festivo");
 }
 
 function LoginPanel({ onLogin }) {
@@ -52,13 +85,14 @@ function LoginPanel({ onLogin }) {
   const submit = (event) => {
     event.preventDefault();
     const user = findByChapa(chapa);
+
     if (!user) {
       setError("Esa chapa no aparece en CONDUCTOR 1a.");
       return;
     }
 
     if (!pin.trim()) {
-      setError("Introduce un PIN local para bloquear esta sesión.");
+      setError("Introduce un PIN local para esta sesion.");
       return;
     }
 
@@ -72,14 +106,12 @@ function LoginPanel({ onLogin }) {
   };
 
   return (
-    <form className="login-panel" onSubmit={submit}>
-      <div className="panel-title">
-        <span className="icon-box"><Lock size={18} /></span>
-        <div>
-          <h2>Acceso local</h2>
-          <p>Entra con tu chapa del censo cargado.</p>
-        </div>
+    <form className="login-card" onSubmit={submit}>
+      <div className="login-logo">
+        <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="Portal Estiba VLC" />
       </div>
+      <h1>App CPE</h1>
+      <p>Acceso para fijos de CONDUCTOR 1a.</p>
 
       <label>
         <span>Chapa</span>
@@ -100,7 +132,7 @@ function LoginPanel({ onLogin }) {
           <Lock size={18} />
           <input
             type={showPin ? "text" : "password"}
-            placeholder="Solo se guarda en este navegador"
+            placeholder="Solo en este navegador"
             value={pin}
             onChange={(event) => setPin(event.target.value)}
           />
@@ -118,138 +150,110 @@ function LoginPanel({ onLogin }) {
       {error && <p className="form-error">{error}</p>}
 
       <button className="primary-button" type="submit">
-        Entrar <ArrowRight size={18} />
+        Entrar
       </button>
     </form>
   );
 }
 
-function SyncPlan() {
+function AppHeader({ user, onLogout }) {
   return (
-    <section className="sync-card">
-      <div className="panel-title compact">
-        <span className="icon-box green"><RefreshCcw size={17} /></span>
-        <div>
-          <h2>Lectura automática</h2>
-          <p>Puertas actualizables sin tocar el censo.</p>
-        </div>
+    <header className="app-header">
+      <div className="logo-box">
+        <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="Portal Estiba VLC" />
       </div>
+      <strong className="brand-text">CPE</strong>
+      <button className="header-icon" type="button" aria-label="Menu">
+        <Menu size={28} />
+      </button>
+      <button className="header-icon settings" type="button" aria-label="Ajustes">
+        <Settings size={21} />
+      </button>
+      {user && (
+        <button className="logout-button" type="button" onClick={onLogout}>
+          <Mail size={18} />
+          Salir
+        </button>
+      )}
+    </header>
+  );
+}
 
-      <div className="sync-list">
-        <div>
-          <strong>Opción más simple</strong>
-          <span>Leer la pantalla pública de Puertas y actualizar solo la fila CONDUCTOR 1a.</span>
-        </div>
-        <div>
-          <strong>Horarios</strong>
-          <span>Programar lectura a las 07:15, 12:15 y 14:45, con margen de reintento.</span>
-        </div>
-        <div>
-          <strong>Ventaja</strong>
-          <span>Sin usuario ni contraseña si el enlace de Puertas sigue accesible.</span>
-        </div>
-      </div>
+function Hero({ now, doorConfig }) {
+  return (
+    <section className="hero-card">
+      <h1>Puertas Fijos</h1>
+      <p>{formatClock(now)}</p>
+      <span />
+      {doorConfig?.updatedAt && (
+        <small>Actualizado: {new Date(doorConfig.updatedAt).toLocaleString("es-ES")}</small>
+      )}
     </section>
   );
 }
 
-function Sidebar({ session, user, onLogout, onLogin }) {
-  return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark">CPE</div>
-        <div>
-          <h1>App CPE</h1>
-          <p>Puertas y censo de fijos</p>
-        </div>
-      </div>
-
-      {session && user ? (
-        <section className="profile-card">
-          <div className="profile-main">
-            <span className="avatar">{String(user.chapa).slice(-2)}</span>
-            <div>
-              <p>Chapa</p>
-              <strong>{user.chapa}</strong>
-            </div>
-          </div>
-          <div className="profile-stats">
-            <span>Especialidad</span>
-            <strong>{specialty.name}</strong>
-            <span>Tu posición</span>
-            <strong>{user.position} / {censo.length}</strong>
-          </div>
-          <button className="secondary-button" onClick={onLogout}>
-            <LogOut size={17} /> Salir
-          </button>
-        </section>
-      ) : (
-        <LoginPanel onLogin={onLogin} />
-      )}
-
-      <SyncPlan />
-    </aside>
-  );
-}
-
-function DoorCard({ item }) {
-  const tone = classifyDistance(item.distance);
-
-  return (
-    <article className={`door-card ${tone}`}>
-      <div className="door-card-header">
-        <span>{item.label}</span>
-        <DoorOpen size={19} />
-      </div>
-      <strong>{item.raw}</strong>
-      <dl>
-        <div>
-          <dt>Puerta</dt>
-          <dd>{item.doorChapa}</dd>
-        </div>
-        <div>
-          <dt>Posición</dt>
-          <dd>{item.doorPosition || "-"}</dd>
-        </div>
-      </dl>
-      <p>{formatDistance(item.distance)}</p>
-    </article>
-  );
-}
-
-function Summary({ user, doors }) {
+function UserStrip({ user, doors }) {
   const nearest = doors
     .filter((item) => item.distance !== null)
     .sort((a, b) => a.distance - b.distance)[0];
 
   return (
-    <section className="summary">
+    <section className="user-strip">
       <div>
-        <p className="section-label">CONDUCTOR 1a</p>
-        <h2>Distancia a puertas</h2>
-        <p>
-          Censo específico de {censo.length} chapas. Las puertas usan el prefijo del portal y se calculan por los cuatro últimos dígitos.
-        </p>
+        <span>Chapa</span>
+        <strong>{user.chapa}</strong>
       </div>
-      <div className="summary-metrics">
-        <div>
-          <span>Tu posición</span>
-          <strong>{user ? user.position : "-"}</strong>
-        </div>
-        <div>
-          <span>Puerta más cercana</span>
-          <strong>{nearest ? nearest.label : "-"}</strong>
-        </div>
-        <div>
-          <span>Distancia mínima</span>
-          <strong>{nearest ? formatDistance(nearest.distance) : "-"}</strong>
-        </div>
+      <div>
+        <span>Posicion</span>
+        <strong>{user.position}/{censo.length}</strong>
+      </div>
+      <div>
+        <span>Mas cerca</span>
+        <strong>{nearest ? nearest.label : "-"}</strong>
+      </div>
+      <div>
+        <span>Distancia</span>
+        <strong>{nearest ? formatDistance(nearest.distance) : "-"}</strong>
       </div>
     </section>
   );
 }
 
-function CensoGrid({ user, doors, query, onQuery }) {
+function DoorsTable({ title, Icon, doors, tone }) {
+  return (
+    <section className="doors-table-section">
+      <h2><span><Icon size={16} /></span>{title}</h2>
+      <div className="doors-table-wrap">
+        <table className="doors-table">
+          <thead>
+            <tr>
+              <th>TIPO</th>
+              <th>PUERTA</th>
+              <th>POS.</th>
+              <th>DIST.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {doors.map((door) => (
+              <tr key={door.key} className={classifyDistance(door.distance)}>
+                <td>{door.label}</td>
+                <td>
+                  <span className={`door-badge ${tone}`}>{door.raw}</span>
+                  <small>{door.doorChapa}</small>
+                </td>
+                <td>{door.doorPosition || "-"}</td>
+                <td>{formatDistance(door.distance)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function CensoGrid({ user, doors }) {
+  const [query, setQuery] = useState("");
   const doorByChapa = useMemo(() => {
     const map = new Map();
     for (const door of doors) {
@@ -266,18 +270,18 @@ function CensoGrid({ user, doors, query, onQuery }) {
 
   return (
     <section className="censo-section">
-      <div className="section-header">
+      <div className="section-title-row">
         <div>
-          <p className="section-label">Censo</p>
+          <p>Censo: {censo.length}</p>
           <h2>{specialty.name}</h2>
         </div>
         <div className="search-field">
-          <Search size={18} />
+          <Search size={17} />
           <input
             inputMode="numeric"
-            placeholder="Buscar chapa o posición"
+            placeholder="Buscar"
             value={query}
-            onChange={(event) => onQuery(event.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
           />
         </div>
       </div>
@@ -285,7 +289,6 @@ function CensoGrid({ user, doors, query, onQuery }) {
       <div className="legend">
         <span><i className="legend-dot user" /> Tu chapa</span>
         <span><i className="legend-dot door" /> Puerta</span>
-        <span><i className="legend-dot both" /> Coincidencia</span>
       </div>
 
       <div className="censo-grid" role="list">
@@ -295,8 +298,7 @@ function CensoGrid({ user, doors, query, onQuery }) {
           const className = [
             "censo-cell",
             door ? "is-door" : "",
-            isUser ? "is-user" : "",
-            door && isUser ? "is-both" : ""
+            isUser ? "is-user" : ""
           ].filter(Boolean).join(" ");
 
           return (
@@ -312,28 +314,61 @@ function CensoGrid({ user, doors, query, onQuery }) {
   );
 }
 
-function Diagnostics() {
+function BottomNav() {
+  return (
+    <nav className="bottom-nav" aria-label="Navegacion inferior">
+      <a href="#inicio">
+        <Home size={24} />
+        <span>Inicio</span>
+      </a>
+      <a href="#contratacion">
+        <Clipboard size={24} />
+        <span>Mi Contratacion</span>
+      </a>
+      <a href="#sueldometro" className="premium">
+        <b>S</b>
+        <span>Sueldometro</span>
+      </a>
+      <a href="#puertas" className="active">
+        <CalendarDays size={24} />
+        <span>Puertas</span>
+      </a>
+      <a href="#tablon">
+        <ClipboardList size={24} />
+        <span>Tablon</span>
+      </a>
+    </nav>
+  );
+}
+
+function StatusLine({ doorConfig }) {
   const validation = validateCenso();
 
   return (
-    <section className={`diagnostics ${validation.ok ? "ok" : "warn"}`}>
-      <CheckCircle2 size={18} />
+    <div className="status-line">
+      <RefreshCcw size={16} />
       <span>
-        Censo cargado: {validation.count}/{validation.expected}
-        {validation.duplicates.length > 0 ? ` · duplicados: ${validation.duplicates.join(", ")}` : ""}
+        Censo {validation.count}/{validation.expected} - Puertas {doorConfig?.updatedAt ? "online" : "locales"} - solo TURNO
       </span>
-    </section>
+    </div>
   );
 }
 
 export function App() {
   const [session, setSession] = useState(getInitialSession);
-  const [query, setQuery] = useState("");
   const [doorConfig, setDoorConfig] = useState(null);
+  const [now, setNow] = useState(() => new Date());
 
   const user = session ? findByChapa(session.chapa) : null;
-  const activeDoors = doorConfig?.doors || specialty.doors;
+  const activeDoors = sanitizeDoors(doorConfig?.doors);
   const doors = useMemo(() => getDoorState(user?.chapa, activeDoors), [user?.chapa, activeDoors]);
+  const laborableDoors = doors.filter((door) => door.dayType === "laborable");
+  const festivoDoors = doors.filter((door) => door.dayType === "festivo");
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -348,9 +383,8 @@ export function App() {
           });
       })
       .then((response) => {
-        const data = response;
-        if (!cancelled && Array.isArray(data?.doors)) {
-          setDoorConfig(data);
+        if (!cancelled && Array.isArray(response?.doors)) {
+          setDoorConfig(response);
         }
       })
       .catch(() => {
@@ -367,47 +401,26 @@ export function App() {
     setSession(null);
   };
 
+  if (!user) {
+    return (
+      <div className="login-screen">
+        <LoginPanel onLogin={setSession} />
+      </div>
+    );
+  }
+
   return (
-    <div className="app-shell">
-      <Sidebar
-        session={session}
-        user={user}
-        onLogout={logout}
-        onLogin={setSession}
-      />
-
-      <main className="main-content">
-        <header className="topbar">
-          <div>
-            <p>Especialidad activa</p>
-            <h2>{specialty.name}</h2>
-          </div>
-          <div className="topbar-status">
-            <ShieldCheck size={18} />
-            <span>{doorConfig?.updatedAt ? `Puertas actualizadas ${new Date(doorConfig.updatedAt).toLocaleString("es-ES")}` : "Datos locales · sin credenciales del portal"}</span>
-          </div>
-        </header>
-
-        <Diagnostics />
-        <Summary user={user} doors={doors} />
-
-        <section className="doors-section">
-          <div className="section-header">
-            <div>
-              <p className="section-label">Puertas</p>
-              <h2>Turnos del portal</h2>
-            </div>
-            <p className="door-note">
-              Ejemplo: {activeDoors[0].raw} se lee como chapa {normalizeDoor(activeDoors[0].raw)}.
-            </p>
-          </div>
-          <div className="doors-grid">
-            {doors.map((item) => <DoorCard key={item.key} item={item} />)}
-          </div>
-        </section>
-
-        <CensoGrid user={user} doors={doors} query={query} onQuery={setQuery} />
+    <div className="mobile-app">
+      <AppHeader user={user} onLogout={logout} />
+      <main className="content" id="puertas">
+        <Hero now={now} doorConfig={doorConfig} />
+        <UserStrip user={user} doors={doors} />
+        <StatusLine doorConfig={doorConfig} />
+        <DoorsTable title="Puertas Laborables" Icon={FileText} doors={laborableDoors} tone="lab" />
+        <DoorsTable title="Puertas Festivas" Icon={CalendarDays} doors={festivoDoors} tone="fes" />
+        <CensoGrid user={user} doors={doors} />
       </main>
+      <BottomNav />
     </div>
   );
 }

@@ -23,10 +23,11 @@ export const specialty = {
   name: "CONDUCTOR 1a",
   expectedSize: 573,
   doors: [
-    { key: "LAB", label: "LAB", raw: 72625, turn: "Laborable" },
-    { key: "FES", label: "FES", raw: 72541, turn: "Festivo" },
-    { key: "NOC", label: "NOC", raw: 72699, turn: "Noche" },
-    { key: "NOC-FES", label: "NOC-FES", raw: 72737, turn: "Noche festiva" }
+    { key: "LAB-HOY", label: "Lab Hoy", raw: 72625, dayType: "laborable", turn: "Turno" },
+    { key: "LAB-SUPER", label: "Super", raw: 72699, dayType: "laborable", turn: "Turno" },
+    { key: "LAB-SIG", label: "Lab Sig. Dia", raw: 72625, dayType: "laborable", turn: "Turno" },
+    { key: "FES-SUPER", label: "Super", raw: 72737, dayType: "festivo", turn: "Turno" },
+    { key: "FES-DIURNO", label: "Diurno", raw: 72541, dayType: "festivo", turn: "Turno" }
   ]
 };
 
