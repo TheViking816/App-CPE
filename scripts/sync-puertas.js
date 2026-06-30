@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 const publicDataDir = path.join(rootDir, "public", "data");
 const privateDataDir = path.join(rootDir, "data");
+const diagnosticFileName = "puertas-sync-status.json";
 
 const puertasUrl = process.env.CPE_PUERTAS_URL
   || "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003";
@@ -71,12 +72,27 @@ async function main() {
     const parsed = parseConductor1aFromText(text);
     if (!parsed) {
       await page.screenshot({ path: path.join(privateDataDir, "puertas-error.png"), fullPage: true });
+      await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
+        ok: false,
+        stage: "parse",
+        updatedAt: new Date().toISOString(),
+        source: puertasUrl,
+        message: "No se pudo encontrar la fila CONDUCTOR 1a en Puertas.",
+        preview: text.slice(0, 800)
+      }, null, 2), "utf8");
       throw new Error("No se pudo encontrar la fila CONDUCTOR 1a en Puertas.");
     }
 
     const payload = JSON.stringify(parsed, null, 2);
     await fs.writeFile(path.join(publicDataDir, "puertas-conductor-1a.json"), payload, "utf8");
     await fs.writeFile(path.join(privateDataDir, "puertas-conductor-1a.json"), payload, "utf8");
+    await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
+      ok: true,
+      stage: "parsed",
+      updatedAt: parsed.updatedAt,
+      source: parsed.source,
+      doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw }))
+    }, null, 2), "utf8");
 
     if (supabaseUrl && supabaseServiceRole) {
       const supabase = createClient(supabaseUrl, supabaseServiceRole, {
@@ -94,8 +110,24 @@ async function main() {
         });
 
       if (error) {
+        await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
+          ok: false,
+          stage: "supabase",
+          updatedAt: new Date().toISOString(),
+          source: parsed.source,
+          doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw })),
+          message: error.message
+        }, null, 2), "utf8");
         throw new Error(`Puertas guardadas en JSON, pero fallo Supabase: ${error.message}`);
       }
+
+      await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
+        ok: true,
+        stage: "supabase",
+        updatedAt: parsed.updatedAt,
+        source: parsed.source,
+        doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw }))
+      }, null, 2), "utf8");
     }
 
     console.log(`OK: ${parsed.specialty}`);

@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "stage": "parsed",
+  "updatedAt": "2026-06-30T13:24:17.565Z",
+  "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
+  "doors": [
+    {
+      "key": "LAB",
+      "raw": 72625
+    },
+    {
+      "key": "NOC",
+      "raw": 72699
+    },
+    {
+      "key": "NOC-FES",
+      "raw": 72737
+    },
+    {
+      "key": "FES",
+      "raw": 72541
+    }
+  ]
+}
