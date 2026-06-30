@@ -42,7 +42,7 @@ jobs:
 
       - name: Push snapshot to Supabase
         id: push_supabase
-        if: steps.sync.conclusion == 'success'
+        if: steps.sync.outcome == 'success'
         continue-on-error: true
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
@@ -61,11 +61,12 @@ jobs:
           if-no-files-found: ignore
 
       - name: Commit updated puertas
+        if: always()
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Actualiza puertas App CPE"
           file_pattern: "public/data/puertas-conductor-1a.json public/data/puertas-sync-status.json"
 
       - name: Fail if sync failed
-        if: steps.sync.conclusion == 'failure' || steps.push_supabase.conclusion == 'failure'
+        if: steps.sync.outcome == 'failure' || steps.push_supabase.outcome == 'failure'
         run: exit 1

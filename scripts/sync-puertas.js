@@ -14,9 +14,24 @@ const puertasUrl = process.env.CPE_PUERTAS_URL
 const headless = String(process.env.CPE_HEADLESS || "true").toLowerCase() !== "false";
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const defaultProjectRef = "wvwdiywtlbffumshbboa";
+
+function resolveSupabaseUrl(value) {
+  const firstLine = String(value || "").trim().split(/\s+/)[0] || defaultProjectRef;
+
+  if (/^https?:\/\//i.test(firstLine)) {
+    return firstLine.replace(/\/$/, "");
+  }
+
+  if (/^[a-z0-9]{20}$/i.test(firstLine)) {
+    return `https://${firstLine}.supabase.co`;
+  }
+
+  return `https://${defaultProjectRef}.supabase.co`;
+}
 
 async function insertSupabaseSnapshot(parsed) {
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/app_cpe_door_snapshots`, {
+  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots`, {
     method: "POST",
     headers: {
       "apikey": supabaseServiceRole,
@@ -83,10 +98,11 @@ async function main() {
   });
 
   try {
-    const response = await page.goto(puertasUrl, { waitUntil: "networkidle", timeout: 30000 });
+    const response = await page.goto(puertasUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
     if (!response || response.status() >= 400) {
       throw new Error(`No se pudo abrir Puertas. HTTP ${response ? response.status() : "sin respuesta"}`);
     }
+    await page.locator("body").waitFor({ state: "visible", timeout: 15000 });
 
     const text = await page.locator("body").innerText({ timeout: 10000 });
     await fs.writeFile(path.join(privateDataDir, "raw-puertas.txt"), text, "utf8");
@@ -151,7 +167,16 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
+main().catch(async (error) => {
+  const message = error instanceof Error ? error.message : "Error desconocido";
+  await fs.mkdir(publicDataDir, { recursive: true });
+  await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
+    ok: false,
+    stage: "load",
+    updatedAt: new Date().toISOString(),
+    source: puertasUrl,
+    message
+  }, null, 2), "utf8").catch(() => {});
+  console.error(message);
   process.exit(1);
 });

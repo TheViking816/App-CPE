@@ -9,6 +9,21 @@ const statusPath = path.join(publicDataDir, "puertas-sync-status.json");
 
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const defaultProjectRef = "wvwdiywtlbffumshbboa";
+
+function resolveSupabaseUrl(value) {
+  const firstLine = String(value || "").trim().split(/\s+/)[0] || defaultProjectRef;
+
+  if (/^https?:\/\//i.test(firstLine)) {
+    return firstLine.replace(/\/$/, "");
+  }
+
+  if (/^[a-z0-9]{20}$/i.test(firstLine)) {
+    return `https://${firstLine}.supabase.co`;
+  }
+
+  return `https://${defaultProjectRef}.supabase.co`;
+}
 
 async function writeStatus(status) {
   await fs.writeFile(statusPath, JSON.stringify(status, null, 2), "utf8");
@@ -18,18 +33,20 @@ async function main() {
   const payloadPath = path.join(publicDataDir, "puertas-conductor-1a.json");
   const payload = JSON.parse(await fs.readFile(payloadPath, "utf8"));
 
-  if (!supabaseUrl || !supabaseServiceRole) {
+  if (!supabaseServiceRole) {
     await writeStatus({
       ok: false,
       stage: "supabase-env",
       updatedAt: new Date().toISOString(),
       supabaseConfigured: false,
-      message: "Missing CPE_SUPABASE_URL or CPE_SUPABASE_SERVICE_ROLE"
+      message: "Missing CPE_SUPABASE_SERVICE_ROLE"
     });
-    throw new Error("Missing Supabase secrets");
+    throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
   }
 
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/app_cpe_door_snapshots`, {
+  const restUrl = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots`;
+
+  const response = await fetch(restUrl, {
     method: "POST",
     headers: {
       "apikey": supabaseServiceRole,
