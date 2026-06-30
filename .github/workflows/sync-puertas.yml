@@ -40,6 +40,17 @@ jobs:
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
         run: npm run sync:puertas
 
+      - name: Upload debug data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: puertas-debug
+          path: |
+            data/raw-puertas.txt
+            data/puertas-conductor-1a.json
+            data/puertas-error.png
+          if-no-files-found: ignore
+
       - name: Commit updated puertas
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
