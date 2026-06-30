@@ -85,6 +85,26 @@ Accion recomendada:
 powershell.exe -ExecutionPolicy Bypass -NoProfile -Command "cd 'C:\Users\adria\Proyectos _IA\App-CPE'; npm run sync:puertas"
 ```
 
+## Refresco hibrido al abrir la app
+
+La app tambien puede pedir un refresco al abrirse:
+
+1. El frontend llama a la Edge Function `refresh-puertas`.
+2. La funcion revisa si el ultimo snapshot esta viejo.
+3. Si hace falta, dispara el workflow `sync-puertas.yml`.
+4. El workflow lee el enlace de Puertas con Playwright y guarda en Supabase.
+
+Secretos necesarios en Supabase Edge Functions:
+
+```powershell
+GITHUB_SYNC_TOKEN=github_pat_con_permiso_actions_write
+GITHUB_SYNC_REPO=TheViking816/App-CPE
+GITHUB_SYNC_WORKFLOW=sync-puertas.yml
+MIN_REFRESH_SECONDS=300
+```
+
+El token de GitHub debe tener permiso para ejecutar Actions en `TheViking816/App-CPE`. No se usa en el frontend.
+
 ## Sincronizar chapero completo con login
 
 Tambien existe `scripts/sync-cpe.js`, pero no es la opcion principal. Solo se usaria si algun dia necesitas refrescar el censo completo desde `Chapero por especialidades`.

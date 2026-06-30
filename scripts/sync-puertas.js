@@ -10,7 +10,7 @@ const publicDataDir = path.join(rootDir, "public", "data");
 const privateDataDir = path.join(rootDir, "data");
 
 const puertasUrl = process.env.CPE_PUERTAS_URL
-  || "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316778848261120260630132522";
+  || "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003";
 const headless = String(process.env.CPE_HEADLESS || "true").toLowerCase() !== "false";
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;

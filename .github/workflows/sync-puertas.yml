@@ -3,9 +3,13 @@ name: Sync puertas
 on:
   workflow_dispatch:
   schedule:
+    # GitHub Actions usa UTC. Estas entradas cubren horario de verano e invierno en Espana.
     - cron: "15 5 * * *"
+    - cron: "15 6 * * *"
     - cron: "15 10 * * *"
+    - cron: "15 11 * * *"
     - cron: "45 12 * * *"
+    - cron: "45 13 * * *"
 
 permissions:
   contents: write
@@ -31,6 +35,7 @@ jobs:
 
       - name: Sync puertas
         env:
+          CPE_PUERTAS_URL: "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003"
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
         run: npm run sync:puertas

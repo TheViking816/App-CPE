@@ -20,7 +20,7 @@ import {
   specialty,
   validateCenso
 } from "./censo.js";
-import { getLatestDoorSnapshot } from "./supabaseClient.js";
+import { getLatestDoorSnapshot, requestDoorRefresh } from "./supabaseClient.js";
 
 const STORAGE_KEY = "app-cpe-session";
 
@@ -386,20 +386,37 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
+    let refreshTimer = null;
 
-    getLatestDoorSnapshot()
-      .then((snapshot) => {
-        if (snapshot) return snapshot;
-        return fetch(`${import.meta.env.BASE_URL}data/puertas-conductor-1a.json`, { cache: "no-store" })
-          .then((response) => {
-            if (!response.ok) throw new Error("No hay fichero de puertas");
-            return response.json();
-          });
-      })
+    async function loadLatestSnapshot() {
+      const snapshot = await getLatestDoorSnapshot();
+      if (snapshot) return snapshot;
+
+      const response = await fetch(`${import.meta.env.BASE_URL}data/puertas-conductor-1a.json`, { cache: "no-store" });
+      if (!response.ok) throw new Error("No hay fichero de puertas");
+      return response.json();
+    }
+
+    loadLatestSnapshot()
       .then((response) => {
         if (!cancelled && Array.isArray(response?.doors)) {
           setDoorConfig(response);
         }
+
+        return requestDoorRefresh();
+      })
+      .then((refresh) => {
+        if (!refresh?.triggered || cancelled) return;
+
+        refreshTimer = window.setTimeout(() => {
+          loadLatestSnapshot()
+            .then((response) => {
+              if (!cancelled && Array.isArray(response?.doors)) {
+                setDoorConfig(response);
+              }
+            })
+            .catch(() => {});
+        }, 90000);
       })
       .catch(() => {
         if (!cancelled) setDoorConfig(null);
@@ -407,6 +424,7 @@ export function App() {
 
     return () => {
       cancelled = true;
+      if (refreshTimer) window.clearTimeout(refreshTimer);
     };
   }, []);
 

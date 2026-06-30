@@ -33,3 +33,18 @@ export async function getLatestDoorSnapshot() {
     rawColumns: data.raw_columns || {}
   };
 }
+
+export async function requestDoorRefresh({ force = false } = {}) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.functions.invoke("refresh-puertas", {
+    body: { force }
+  });
+
+  if (error) {
+    console.warn("No se pudo solicitar refresco de puertas:", error.message);
+    return null;
+  }
+
+  return data || null;
+}
