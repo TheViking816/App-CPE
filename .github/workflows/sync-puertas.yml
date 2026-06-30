@@ -42,7 +42,7 @@ jobs:
 
       - name: Push snapshot to Supabase
         id: push_supabase
-        if: steps.sync.outcome == 'success'
+        if: steps.sync.conclusion == 'success'
         continue-on-error: true
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
