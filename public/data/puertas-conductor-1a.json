@@ -1,0 +1,79 @@
+{
+  "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316778848261120260630132522",
+  "specialty": "CONDUCTOR 1a",
+  "updatedAt": "2026-06-30T11:51:06.588Z",
+  "doors": [
+    {
+      "key": "LAB",
+      "label": "LAB",
+      "raw": 72625,
+      "turn": "Laborable"
+    },
+    {
+      "key": "NOC",
+      "label": "NOC",
+      "raw": 72699,
+      "turn": "Laborable super/noche"
+    },
+    {
+      "key": "LAB-SIG",
+      "label": "LAB SIG.",
+      "raw": 72625,
+      "turn": "Laborable siguiente dia"
+    },
+    {
+      "key": "POL-LAB",
+      "label": "POL LAB",
+      "raw": 72546,
+      "turn": "Polivalencia laborable"
+    },
+    {
+      "key": "POL-NOC",
+      "label": "POL NOC",
+      "raw": 71197,
+      "turn": "Polivalencia super/noche"
+    },
+    {
+      "key": "POL-LAB-SIG",
+      "label": "POL SIG.",
+      "raw": 71558,
+      "turn": "Polivalencia siguiente dia"
+    },
+    {
+      "key": "NOC-FES",
+      "label": "NOC-FES",
+      "raw": 72737,
+      "turn": "Festivo super/noche"
+    },
+    {
+      "key": "FES",
+      "label": "FES",
+      "raw": 72541,
+      "turn": "Festivo diurno"
+    },
+    {
+      "key": "POL-NOC-FES",
+      "label": "POL NOC-FES",
+      "raw": 63186,
+      "turn": "Festivo polivalencia super"
+    },
+    {
+      "key": "POL-FES",
+      "label": "POL FES",
+      "raw": 71488,
+      "turn": "Festivo polivalencia diurno"
+    }
+  ],
+  "rawColumns": {
+    "labHoy": 72625,
+    "super": 72699,
+    "labSigDia": 72625,
+    "polivalenciaLabHoy": 72546,
+    "polivalenciaSuper": 71197,
+    "polivalenciaLabSigDia": 71558,
+    "festivoSuper": 72737,
+    "festivoDiurno": 72541,
+    "festivoPolivalenciaSuper": 63186,
+    "festivoPolivalenciaDiurno": 71488
+  }
+}
