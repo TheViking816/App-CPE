@@ -91,6 +91,7 @@ async function main() {
       stage: "parsed",
       updatedAt: parsed.updatedAt,
       source: parsed.source,
+      supabaseConfigured: Boolean(supabaseUrl && supabaseServiceRole),
       doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw }))
     }, null, 2), "utf8");
 
@@ -115,6 +116,7 @@ async function main() {
           stage: "supabase",
           updatedAt: new Date().toISOString(),
           source: parsed.source,
+          supabaseConfigured: true,
           doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw })),
           message: error.message
         }, null, 2), "utf8");
@@ -126,6 +128,7 @@ async function main() {
         stage: "supabase",
         updatedAt: parsed.updatedAt,
         source: parsed.source,
+        supabaseConfigured: true,
         doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw }))
       }, null, 2), "utf8");
     }

@@ -60,5 +60,5 @@ jobs:
           file_pattern: "public/data/puertas-conductor-1a.json public/data/puertas-sync-status.json"
 
       - name: Fail if sync failed
-        if: steps.sync.outcome == 'failure'
+        if: steps.sync.conclusion == 'failure'
         run: exit 1
