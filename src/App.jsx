@@ -108,7 +108,7 @@ function LoginPanel({ onLogin }) {
   return (
     <form className="login-card" onSubmit={submit}>
       <div className="login-logo">
-        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="App CPE" />
+        <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
       <h1>App CPE</h1>
       <p>Acceso para fijos de CONDUCTOR 1a.</p>
@@ -160,7 +160,7 @@ function AppHeader({ user, onLogout }) {
   return (
     <header className="app-header">
       <div className="logo-box">
-        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="App CPE" />
+        <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
       <strong className="brand-text">CPE</strong>
       <button className="header-icon" type="button" aria-label="Menu">
