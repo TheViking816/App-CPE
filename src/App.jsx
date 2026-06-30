@@ -341,7 +341,7 @@ export function App() {
     getLatestDoorSnapshot()
       .then((snapshot) => {
         if (snapshot) return snapshot;
-        return fetch("/data/puertas-conductor-1a.json", { cache: "no-store" })
+        return fetch(`${import.meta.env.BASE_URL}data/puertas-conductor-1a.json`, { cache: "no-store" })
           .then((response) => {
             if (!response.ok) throw new Error("No hay fichero de puertas");
             return response.json();
