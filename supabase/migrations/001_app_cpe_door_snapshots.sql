@@ -23,7 +23,7 @@ create policy "App CPE door snapshots are publicly readable"
 grant select on public.app_cpe_door_snapshots to anon, authenticated;
 
 insert into public.app_cpe_door_snapshots (specialty, source, doors, raw_columns, updated_at)
-values (
+select
   'CONDUCTOR 1a',
   'seed',
   '[
@@ -51,7 +51,6 @@ values (
     "festivoPolivalenciaDiurno": 71488
   }'::jsonb,
   '2026-06-30T11:32:28.672Z'::timestamptz
-)
 where not exists (
   select 1
   from public.app_cpe_door_snapshots
