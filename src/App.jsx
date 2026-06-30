@@ -1,33 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
-  Clipboard,
-  ClipboardList,
+  ExternalLink,
   Eye,
   EyeOff,
-  FileText,
   Home,
+  Link as LinkIcon,
   Lock,
   LogOut,
-  Mail,
-  Menu,
-  RefreshCcw,
   Search,
-  Settings,
-  UserRound
+  UserRound,
+  UsersRound
 } from "lucide-react";
 import {
   censo,
   classifyDistance,
   findByChapa,
   getDoorState,
-  normalizeDoor,
   specialty,
   validateCenso
 } from "./censo.js";
 import { getLatestDoorSnapshot } from "./supabaseClient.js";
 
 const STORAGE_KEY = "app-cpe-session";
+
+const NAV_ITEMS = [
+  { id: "inicio", label: "Inicio", Icon: Home },
+  { id: "puertas", label: "Puertas", Icon: CalendarDays },
+  { id: "censo", label: "Censo", Icon: UsersRound },
+  { id: "enlaces", label: "Enlaces", Icon: LinkIcon }
+];
 
 function getInitialSession() {
   try {
@@ -47,33 +49,44 @@ function formatDistance(value) {
   return `${value} puestos`;
 }
 
-function formatClock(date) {
-  return new Intl.DateTimeFormat("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  }).format(date);
+function normalizeLegacyDoor(door) {
+  const key = String(door.key || "").toUpperCase();
+  if (key === "LAB" || key === "LAB-HOY") {
+    return { ...door, key: "LAB", label: "Diurna", dayType: "laborable", shift: "LAB" };
+  }
+  if (key === "NOC" || key === "LAB-SUPER") {
+    return { ...door, key: "NOC", label: "Super", dayType: "laborable", shift: "NOC" };
+  }
+  if (key === "NOC-FES" || key === "FES-SUPER") {
+    return { ...door, key: "NOC-FES", label: "Super festiva", dayType: "festivo", shift: "NOC-FES" };
+  }
+  if (key === "FES" || key === "FES-DIURNO") {
+    return { ...door, key: "FES", label: "Diurna festiva", dayType: "festivo", shift: "FES" };
+  }
+  return null;
 }
 
 function sanitizeDoors(doors) {
-  if (!Array.isArray(doors)) return specialty.doors;
+  const source = Array.isArray(doors) ? doors : specialty.doors;
+  const byKey = new Map();
 
+  for (const door of source) {
+    const normalized = normalizeLegacyDoor(door);
+    if (normalized) byKey.set(normalized.key, normalized);
+  }
+
+  return ["LAB", "NOC", "NOC-FES", "FES"]
+    .map((key) => byKey.get(key))
+    .filter(Boolean);
+}
+
+function getNearestDoor(doors) {
   return doors
-    .filter((door) => !String(door.key || "").toUpperCase().startsWith("POL"))
-    .filter((door) => !String(door.label || "").toUpperCase().includes("POL"))
-    .map((door) => {
-      if (door.dayType) return door;
-      if (door.key === "LAB") return { ...door, key: "LAB-HOY", label: "Lab Hoy", dayType: "laborable", turn: "Turno" };
-      if (door.key === "NOC") return { ...door, key: "LAB-SUPER", label: "Super", dayType: "laborable", turn: "Turno" };
-      if (door.key === "LAB-SIG") return { ...door, label: "Lab Sig. Dia", dayType: "laborable", turn: "Turno" };
-      if (door.key === "NOC-FES") return { ...door, key: "FES-SUPER", label: "Super", dayType: "festivo", turn: "Turno" };
-      if (door.key === "FES") return { ...door, key: "FES-DIURNO", label: "Diurno", dayType: "festivo", turn: "Turno" };
-      return door;
-    })
-    .filter((door) => door.dayType === "laborable" || door.dayType === "festivo");
+    .filter((door) => door.distance !== null)
+    .reduce((nearest, door) => {
+      if (!nearest || door.distance < nearest.distance) return door;
+      return nearest;
+    }, null);
 }
 
 function LoginPanel({ onLogin }) {
@@ -162,16 +175,13 @@ function AppHeader({ user, onLogout }) {
       <div className="logo-box">
         <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
-      <strong className="brand-text">CPE</strong>
-      <button className="header-icon" type="button" aria-label="Menu">
-        <Menu size={28} />
-      </button>
-      <button className="header-icon settings" type="button" aria-label="Ajustes">
-        <Settings size={21} />
-      </button>
+      <div className="header-title">
+        <strong>App CPE</strong>
+        <span>{specialty.name}</span>
+      </div>
       {user && (
         <button className="logout-button" type="button" onClick={onLogout}>
-          <Mail size={18} />
+          <LogOut size={17} />
           Salir
         </button>
       )}
@@ -179,50 +189,48 @@ function AppHeader({ user, onLogout }) {
   );
 }
 
-function Hero({ now, doorConfig }) {
+function HomePanel({ user, doors, doorConfig }) {
+  const nearest = getNearestDoor(doors);
+  const validation = validateCenso();
+
   return (
-    <section className="hero-card">
-      <h1>Puertas Fijos</h1>
-      <p>{formatClock(now)}</p>
-      <span />
-      {doorConfig?.updatedAt && (
-        <small>Actualizado: {new Date(doorConfig.updatedAt).toLocaleString("es-ES")}</small>
-      )}
+    <section className="page-panel">
+      <div className="home-summary">
+        <p>Tu posicion</p>
+        <h1>{user.position} / {censo.length}</h1>
+        <span>Chapa {user.chapa}</span>
+      </div>
+
+      <div className="quick-grid">
+        <article>
+          <span>Puerta mas cercana</span>
+          <strong>{nearest ? nearest.label : "-"}</strong>
+          <small>{nearest ? `${nearest.shift} · ${formatDistance(nearest.distance)}` : "Sin dato"}</small>
+        </article>
+        <article>
+          <span>Estado</span>
+          <strong>{doorConfig?.updatedAt ? "Actualizado" : "Local"}</strong>
+          <small>Censo {validation.count}/{validation.expected}</small>
+        </article>
+      </div>
+
+      <section className="compact-door-list" aria-label="Resumen de puertas">
+        {doors.map((door) => (
+          <div key={door.key}>
+            <span>{door.shift}</span>
+            <strong>{formatDistance(door.distance)}</strong>
+            <small>{door.raw}</small>
+          </div>
+        ))}
+      </section>
     </section>
   );
 }
 
-function UserStrip({ user, doors }) {
-  const nearest = doors
-    .filter((item) => item.distance !== null)
-    .sort((a, b) => a.distance - b.distance)[0];
-
-  return (
-    <section className="user-strip">
-      <div>
-        <span>Chapa</span>
-        <strong>{user.chapa}</strong>
-      </div>
-      <div>
-        <span>Posicion</span>
-        <strong>{user.position}/{censo.length}</strong>
-      </div>
-      <div>
-        <span>Mas cerca</span>
-        <strong>{nearest ? nearest.label : "-"}</strong>
-      </div>
-      <div>
-        <span>Distancia</span>
-        <strong>{nearest ? formatDistance(nearest.distance) : "-"}</strong>
-      </div>
-    </section>
-  );
-}
-
-function DoorsTable({ title, Icon, doors, tone }) {
+function DoorsTable({ title, doors, tone }) {
   return (
     <section className="doors-table-section">
-      <h2><span><Icon size={16} /></span>{title}</h2>
+      <h2>{title}</h2>
       <div className="doors-table-wrap">
         <table className="doors-table">
           <thead>
@@ -236,10 +244,13 @@ function DoorsTable({ title, Icon, doors, tone }) {
           <tbody>
             {doors.map((door) => (
               <tr key={door.key} className={classifyDistance(door.distance)}>
-                <td>{door.label}</td>
+                <td>
+                  <strong>{door.label}</strong>
+                  <small>{door.shift}</small>
+                </td>
                 <td>
                   <span className={`door-badge ${tone}`}>{door.raw}</span>
-                  <small>{door.doorChapa}</small>
+                  <small>Chapa {door.doorChapa}</small>
                 </td>
                 <td>{door.doorPosition || "-"}</td>
                 <td>{formatDistance(door.distance)}</td>
@@ -252,7 +263,23 @@ function DoorsTable({ title, Icon, doors, tone }) {
   );
 }
 
-function CensoGrid({ user, doors }) {
+function DoorsPanel({ doors }) {
+  const laborableDoors = doors.filter((door) => door.dayType === "laborable");
+  const festivoDoors = doors.filter((door) => door.dayType === "festivo");
+
+  return (
+    <section className="page-panel">
+      <div className="section-heading">
+        <p>Puertas de turno</p>
+        <h1>CONDUCTOR 1a</h1>
+      </div>
+      <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
+      <DoorsTable title="Festivas" doors={festivoDoors} tone="fes" />
+    </section>
+  );
+}
+
+function CensoPanel({ user, doors }) {
   const [query, setQuery] = useState("");
   const doorByChapa = useMemo(() => {
     const map = new Map();
@@ -269,11 +296,11 @@ function CensoGrid({ user, doors }) {
   }, [query]);
 
   return (
-    <section className="censo-section">
+    <section className="page-panel censo-section">
       <div className="section-title-row">
         <div>
           <p>Censo: {censo.length}</p>
-          <h2>{specialty.name}</h2>
+          <h1>{specialty.name}</h1>
         </div>
         <div className="search-field">
           <Search size={17} />
@@ -305,7 +332,7 @@ function CensoGrid({ user, doors }) {
             <div className={className} key={`${item.position}-${item.chapa}`} role="listitem">
               <span>{item.position}</span>
               <strong>{item.chapa}</strong>
-              {door && <em>{door.label}</em>}
+              {door && <em>{door.shift}</em>}
             </div>
           );
         })}
@@ -314,61 +341,48 @@ function CensoGrid({ user, doors }) {
   );
 }
 
-function BottomNav() {
+function LinksPanel() {
   return (
-    <nav className="bottom-nav" aria-label="Navegacion inferior">
-      <a href="#inicio">
-        <Home size={24} />
-        <span>Inicio</span>
-      </a>
-      <a href="#contratacion">
-        <Clipboard size={24} />
-        <span>Mi Contratacion</span>
-      </a>
-      <a href="#sueldometro" className="premium">
-        <b>S</b>
-        <span>Sueldometro</span>
-      </a>
-      <a href="#puertas" className="active">
-        <CalendarDays size={24} />
-        <span>Puertas</span>
-      </a>
-      <a href="#tablon">
-        <ClipboardList size={24} />
-        <span>Tablon</span>
-      </a>
-    </nav>
+    <section className="page-panel">
+      <div className="section-heading">
+        <p>Accesos rapidos</p>
+        <h1>Enlaces utiles</h1>
+      </div>
+      <article className="empty-links">
+        <ExternalLink size={24} />
+        <strong>Preparado para enlaces</strong>
+        <span>Cuando me pases los accesos, los dejare aqui ordenados.</span>
+      </article>
+    </section>
   );
 }
 
-function StatusLine({ doorConfig }) {
-  const validation = validateCenso();
-
+function BottomNav({ activeTab, onChange }) {
   return (
-    <div className="status-line">
-      <RefreshCcw size={16} />
-      <span>
-        Censo {validation.count}/{validation.expected} - Puertas {doorConfig?.updatedAt ? "online" : "locales"} - solo TURNO
-      </span>
-    </div>
+    <nav className="bottom-nav" aria-label="Navegacion inferior">
+      {NAV_ITEMS.map(({ id, label, Icon }) => (
+        <button
+          key={id}
+          type="button"
+          className={activeTab === id ? "active" : ""}
+          onClick={() => onChange(id)}
+        >
+          <Icon size={23} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
 
 export function App() {
   const [session, setSession] = useState(getInitialSession);
   const [doorConfig, setDoorConfig] = useState(null);
-  const [now, setNow] = useState(() => new Date());
+  const [activeTab, setActiveTab] = useState("inicio");
 
   const user = session ? findByChapa(session.chapa) : null;
   const activeDoors = sanitizeDoors(doorConfig?.doors);
   const doors = useMemo(() => getDoorState(user?.chapa, activeDoors), [user?.chapa, activeDoors]);
-  const laborableDoors = doors.filter((door) => door.dayType === "laborable");
-  const festivoDoors = doors.filter((door) => door.dayType === "festivo");
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -399,6 +413,7 @@ export function App() {
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     setSession(null);
+    setActiveTab("inicio");
   };
 
   if (!user) {
@@ -412,15 +427,13 @@ export function App() {
   return (
     <div className="mobile-app">
       <AppHeader user={user} onLogout={logout} />
-      <main className="content" id="puertas">
-        <Hero now={now} doorConfig={doorConfig} />
-        <UserStrip user={user} doors={doors} />
-        <StatusLine doorConfig={doorConfig} />
-        <DoorsTable title="Puertas Laborables" Icon={FileText} doors={laborableDoors} tone="lab" />
-        <DoorsTable title="Puertas Festivas" Icon={CalendarDays} doors={festivoDoors} tone="fes" />
-        <CensoGrid user={user} doors={doors} />
+      <main className="content">
+        {activeTab === "inicio" && <HomePanel user={user} doors={doors} doorConfig={doorConfig} />}
+        {activeTab === "puertas" && <DoorsPanel doors={doors} />}
+        {activeTab === "censo" && <CensoPanel user={user} doors={doors} />}
+        {activeTab === "enlaces" && <LinksPanel />}
       </main>
-      <BottomNav />
+      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );
 }

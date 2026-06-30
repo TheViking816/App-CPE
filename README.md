@@ -15,7 +15,7 @@ Abrir `http://127.0.0.1:5177/`.
 
 1. Entra con una chapa del censo `CONDUCTOR 1a`.
 2. Usa cualquier PIN local para bloquear la sesion en ese navegador.
-3. La app muestra posicion, puertas laborables/festivas y distancia circular desde cada puerta.
+3. La app muestra posicion, las 4 puertas de turno y distancia circular desde cada puerta.
 
 El PIN no autentica contra el portal CPE. Es solo una barrera local de la demo.
 
@@ -31,7 +31,12 @@ El script lee la fila `CONDUCTOR 1a` de:
 
 `https://portal.cpevalencia.com/Noray/Puertas.asp?...`
 
-Y actualiza solo las columnas de `TURNO`:
+Y actualiza solo las 4 puertas de `TURNO`:
+
+- `LAB`: diurna laborable
+- `NOC`: super laborable
+- `NOC-FES`: super festiva
+- `FES`: diurna festiva
 
 - `public/data/puertas-conductor-1a.json`
 - `data/puertas-conductor-1a.json`

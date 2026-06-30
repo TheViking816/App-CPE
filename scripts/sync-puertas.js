@@ -28,11 +28,10 @@ function parseConductor1aFromText(text) {
     specialty: "CONDUCTOR 1a",
     updatedAt: new Date().toISOString(),
     doors: [
-      { key: "LAB-HOY", label: "Lab Hoy", raw: values[0], dayType: "laborable", turn: "Turno" },
-      { key: "LAB-SUPER", label: "Super", raw: values[1], dayType: "laborable", turn: "Turno" },
-      { key: "LAB-SIG", label: "Lab Sig. Dia", raw: values[2], dayType: "laborable", turn: "Turno" },
-      { key: "FES-SUPER", label: "Super", raw: values[6], dayType: "festivo", turn: "Turno" },
-      { key: "FES-DIURNO", label: "Diurno", raw: values[7], dayType: "festivo", turn: "Turno" }
+      { key: "LAB", label: "Diurna", raw: values[0], dayType: "laborable", shift: "LAB" },
+      { key: "NOC", label: "Super", raw: values[1], dayType: "laborable", shift: "NOC" },
+      { key: "NOC-FES", label: "Super festiva", raw: values[6], dayType: "festivo", shift: "NOC-FES" },
+      { key: "FES", label: "Diurna festiva", raw: values[7], dayType: "festivo", shift: "FES" }
     ],
     rawColumns: {
       labHoy: values[0],

@@ -27,11 +27,10 @@ select
   'CONDUCTOR 1a',
   'seed',
   '[
-    {"key":"LAB-HOY","label":"Lab Hoy","raw":72625,"dayType":"laborable","turn":"Turno"},
-    {"key":"LAB-SUPER","label":"Super","raw":72699,"dayType":"laborable","turn":"Turno"},
-    {"key":"LAB-SIG","label":"Lab Sig. Dia","raw":72625,"dayType":"laborable","turn":"Turno"},
-    {"key":"FES-SUPER","label":"Super","raw":72737,"dayType":"festivo","turn":"Turno"},
-    {"key":"FES-DIURNO","label":"Diurno","raw":72541,"dayType":"festivo","turn":"Turno"}
+    {"key":"LAB","label":"Diurna","raw":72625,"dayType":"laborable","shift":"LAB"},
+    {"key":"NOC","label":"Super","raw":72699,"dayType":"laborable","shift":"NOC"},
+    {"key":"NOC-FES","label":"Super festiva","raw":72737,"dayType":"festivo","shift":"NOC-FES"},
+    {"key":"FES","label":"Diurna festiva","raw":72541,"dayType":"festivo","shift":"FES"}
   ]'::jsonb,
   '{
     "labHoy": 72625,
