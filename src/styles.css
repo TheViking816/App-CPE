@@ -246,6 +246,14 @@ a {
   line-height: 1.1;
 }
 
+.section-heading span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .doors-table-section {
   margin-bottom: 22px;
 }

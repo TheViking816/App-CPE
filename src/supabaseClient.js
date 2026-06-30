@@ -1,6 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const defaultProjectRef = "wvwdiywtlbffumshbboa";
+
+function resolveSupabaseUrl(value) {
+  const firstLine = String(value || "").trim().split(/\s+/)[0] || defaultProjectRef;
+
+  if (/^https?:\/\//i.test(firstLine)) {
+    return firstLine.replace(/\/$/, "");
+  }
+
+  if (/^[a-z0-9]{20}$/i.test(firstLine)) {
+    return `https://${firstLine}.supabase.co`;
+  }
+
+  return `https://${defaultProjectRef}.supabase.co`;
+}
+
+const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = supabaseUrl && supabaseKey

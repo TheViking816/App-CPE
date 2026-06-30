@@ -23,6 +23,7 @@ import {
 import { getLatestDoorSnapshot, requestDoorRefresh } from "./supabaseClient.js";
 
 const STORAGE_KEY = "app-cpe-session";
+const SNAPSHOT_POLL_MS = 60_000;
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
@@ -47,6 +48,20 @@ function formatDistance(value) {
   if (value === null) return "Sin dato";
   if (value === 0) return "En puerta";
   return `${value} puestos`;
+}
+
+function formatUpdatedAt(value) {
+  if (!value) return "Sin actualizar";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin actualizar";
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function normalizeLegacyDoor(door) {
@@ -192,6 +207,7 @@ function AppHeader({ user, onLogout }) {
 function HomePanel({ user, doors, doorConfig }) {
   const nearest = getNearestDoor(doors);
   const validation = validateCenso();
+  const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
 
   return (
     <section className="page-panel">
@@ -210,7 +226,12 @@ function HomePanel({ user, doors, doorConfig }) {
         <article>
           <span>Estado</span>
           <strong>{doorConfig?.updatedAt ? "Actualizado" : "Local"}</strong>
-          <small>Censo {validation.count}/{validation.expected}</small>
+          <small>{updatedLabel}</small>
+        </article>
+        <article>
+          <span>Censo</span>
+          <strong>{validation.count}/{validation.expected}</strong>
+          <small>{specialty.name}</small>
         </article>
       </div>
 
@@ -263,7 +284,7 @@ function DoorsTable({ title, doors, tone }) {
   );
 }
 
-function DoorsPanel({ doors }) {
+function DoorsPanel({ doors, doorConfig }) {
   const laborableDoors = doors.filter((door) => door.dayType === "laborable");
   const festivoDoors = doors.filter((door) => door.dayType === "festivo");
 
@@ -272,6 +293,7 @@ function DoorsPanel({ doors }) {
       <div className="section-heading">
         <p>Puertas de turno</p>
         <h1>CONDUCTOR 1a</h1>
+        <span>Actualizado: {formatUpdatedAt(doorConfig?.updatedAt)}</span>
       </div>
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
       <DoorsTable title="Festivas" doors={festivoDoors} tone="fes" />
@@ -387,6 +409,7 @@ export function App() {
   useEffect(() => {
     let cancelled = false;
     let refreshTimer = null;
+    let pollTimer = null;
 
     async function loadLatestSnapshot() {
       const snapshot = await getLatestDoorSnapshot();
@@ -397,25 +420,27 @@ export function App() {
       return response.json();
     }
 
-    loadLatestSnapshot()
-      .then((response) => {
-        if (!cancelled && Array.isArray(response?.doors)) {
-          setDoorConfig(response);
-        }
+    async function applyLatestSnapshot() {
+      const response = await loadLatestSnapshot();
+      if (!cancelled && Array.isArray(response?.doors)) {
+        setDoorConfig(response);
+      }
+      return response;
+    }
 
+    applyLatestSnapshot()
+      .then((response) => {
+        if (!Array.isArray(response?.doors)) return null;
+        pollTimer = window.setInterval(() => {
+          applyLatestSnapshot().catch(() => {});
+        }, SNAPSHOT_POLL_MS);
         return requestDoorRefresh();
       })
       .then((refresh) => {
         if (!refresh?.triggered || cancelled) return;
 
         refreshTimer = window.setTimeout(() => {
-          loadLatestSnapshot()
-            .then((response) => {
-              if (!cancelled && Array.isArray(response?.doors)) {
-                setDoorConfig(response);
-              }
-            })
-            .catch(() => {});
+          applyLatestSnapshot().catch(() => {});
         }, 90000);
       })
       .catch(() => {
@@ -425,6 +450,26 @@ export function App() {
     return () => {
       cancelled = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
+      if (pollTimer) window.clearInterval(pollTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshWhenVisible() {
+      if (document.visibilityState !== "visible") return;
+      const snapshot = await getLatestDoorSnapshot();
+      if (!cancelled && Array.isArray(snapshot?.doors)) {
+        setDoorConfig(snapshot);
+      }
+    }
+
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, []);
 
@@ -447,7 +492,7 @@ export function App() {
       <AppHeader user={user} onLogout={logout} />
       <main className="content">
         {activeTab === "inicio" && <HomePanel user={user} doors={doors} doorConfig={doorConfig} />}
-        {activeTab === "puertas" && <DoorsPanel doors={doors} />}
+        {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} />}
         {activeTab === "censo" && <CensoPanel user={user} doors={doors} />}
         {activeTab === "enlaces" && <LinksPanel />}
       </main>
