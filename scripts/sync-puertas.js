@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -15,6 +14,29 @@ const puertasUrl = process.env.CPE_PUERTAS_URL
 const headless = String(process.env.CPE_HEADLESS || "true").toLowerCase() !== "false";
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+
+async function insertSupabaseSnapshot(parsed) {
+  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/app_cpe_door_snapshots`, {
+    method: "POST",
+    headers: {
+      "apikey": supabaseServiceRole,
+      "Authorization": `Bearer ${supabaseServiceRole}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal"
+    },
+    body: JSON.stringify({
+      specialty: parsed.specialty,
+      source: parsed.source,
+      doors: parsed.doors,
+      raw_columns: parsed.rawColumns,
+      updated_at: parsed.updatedAt
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+  }
+}
 
 function parseConductor1aFromText(text) {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -96,21 +118,10 @@ async function main() {
     }, null, 2), "utf8");
 
     if (supabaseUrl && supabaseServiceRole) {
-      const supabase = createClient(supabaseUrl, supabaseServiceRole, {
-        auth: { persistSession: false }
-      });
-
-      const { error } = await supabase
-        .from("app_cpe_door_snapshots")
-        .insert({
-          specialty: parsed.specialty,
-          source: parsed.source,
-          doors: parsed.doors,
-          raw_columns: parsed.rawColumns,
-          updated_at: parsed.updatedAt
-        });
-
-      if (error) {
+      try {
+        await insertSupabaseSnapshot(parsed);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Error desconocido";
         await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
           ok: false,
           stage: "supabase",
@@ -118,9 +129,9 @@ async function main() {
           source: parsed.source,
           supabaseConfigured: true,
           doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw })),
-          message: error.message
+          message
         }, null, 2), "utf8");
-        throw new Error(`Puertas guardadas en JSON, pero fallo Supabase: ${error.message}`);
+        throw new Error(`Puertas guardadas en JSON, pero fallo Supabase: ${message}`);
       }
 
       await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
