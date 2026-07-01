@@ -791,6 +791,14 @@ select {
   font-weight: 900;
 }
 
+.inline-notice {
+  margin: 10px 0 0;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .form-error {
   margin: -2px 0 12px;
   color: #c53232;

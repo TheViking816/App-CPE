@@ -113,6 +113,13 @@ function getValidSpecialtiesForChapa(chapa, selectedIds) {
   return selectedIds.filter((id) => findByChapa(normalized, id));
 }
 
+function getInvalidSpecialtyNamesForChapa(chapa, selectedIds) {
+  const normalized = normalizeChapa(chapa);
+  return selectedIds
+    .filter((id) => !findByChapa(normalized, id))
+    .map((id) => getSpecialty(id).name);
+}
+
 function LoginPanel({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
@@ -146,6 +153,13 @@ function LoginPanel({ onLogin }) {
 
     try {
       setLoading(true);
+      if (mode === "register") {
+        const invalidNames = getInvalidSpecialtyNamesForChapa(normalized, selectedSpecialties);
+        if (invalidNames.length) {
+          throw new Error(`No tienes la especialidad de ${invalidNames.join(", ")}.`);
+        }
+      }
+
       const response = mode === "register"
         ? await registerUser({
           chapa: normalized,
@@ -249,7 +263,6 @@ function AppHeader({ user, onLogout }) {
       </div>
       <div className="header-title">
         <strong>App CPE</strong>
-        <span>Fijos CPE Valencia</span>
       </div>
       {user && (
         <button className="logout-button" type="button" onClick={onLogout}>
@@ -265,6 +278,7 @@ function HomePanel({
   user,
   doors,
   doorConfig,
+  notice,
   activeSpecialty,
   availableSpecialties,
   activeSpecialtyId,
@@ -347,6 +361,7 @@ function HomePanel({
         <button className="secondary-button" type="button" onClick={() => onSpecialtiesSave(selectedSpecialties)}>
           Guardar especialidades
         </button>
+        {notice && <p className="inline-notice">{notice}</p>}
       </section>
     </section>
   );
@@ -361,8 +376,8 @@ function DoorsTable({ title, doors, tone }) {
           <thead>
             <tr>
               <th>TIPO</th>
-              <th>PUERTA</th>
               <th>POS.</th>
+              <th>CHAPA</th>
               <th>DIST.</th>
             </tr>
           </thead>
@@ -374,9 +389,9 @@ function DoorsTable({ title, doors, tone }) {
                   <small>{door.shift}</small>
                 </td>
                 <td>
-                  <span className={`door-badge ${tone}`}>{door.raw}</span>
+                  <span className={`door-badge ${tone}`}>{door.doorPosition || "-"}</span>
                 </td>
-                <td>{door.doorPosition || "-"}</td>
+                <td>{door.doorChapa || "-"}</td>
                 <td>{formatDistance(door.distance)}</td>
               </tr>
             ))}
@@ -515,6 +530,7 @@ export function App() {
   const [doorConfig, setDoorConfig] = useState(null);
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
+  const [notice, setNotice] = useState("");
 
   const availableSpecialties = useMemo(() => {
     const ids = Array.isArray(session?.specialties) && session.specialties.length ? session.specialties : [specialty.id];
@@ -606,6 +622,12 @@ export function App() {
   }, [activeSpecialty.name]);
 
   const saveSpecialties = async (selectedIds) => {
+    setNotice("");
+    const invalidNames = getInvalidSpecialtyNamesForChapa(session.chapa, selectedIds);
+    if (invalidNames.length) {
+      setNotice(`No tienes la especialidad de ${invalidNames.join(", ")}.`);
+    }
+
     const validIds = getValidSpecialtiesForChapa(session.chapa, selectedIds);
     const nextIds = validIds.length ? validIds : [activeSpecialtyId];
     const response = await updateUserSpecialties({ token: session.token, specialties: nextIds });
@@ -641,6 +663,7 @@ export function App() {
             user={user}
             doors={doors}
             doorConfig={doorConfig}
+            notice={notice}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}
             availableSpecialties={availableSpecialties}
