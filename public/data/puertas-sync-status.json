@@ -1,15 +1,7 @@
 {
-  "ok": true,
-  "stage": "supabase-upsert",
-  "updatedAt": "2026-07-01T09:41:07.013Z",
-  "supabaseConfigured": true,
-  "specialties": [
-    "CONDUCTOR 1a",
-    "CONDUCTOR 2a",
-    "TRASTAINERS RTT",
-    "POL. CONDUCTOR 1a",
-    "POL. CONDUCTOR 2a",
-    "POL. ESPECIALISTA",
-    "POL. TRINCADOR"
-  ]
+  "ok": false,
+  "stage": "load",
+  "updatedAt": "2026-07-01T10:03:57.476Z",
+  "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
+  "message": "No se pudieron encontrar filas de especialidades en Puertas."
 }
