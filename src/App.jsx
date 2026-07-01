@@ -203,11 +203,16 @@ function LoginPanel({ onLogin }) {
       setLoading(true);
       const detectedSpecialties = getDetectedSpecialtyIdsForChapa(normalized);
 
+      if (mode === "register" && detectedSpecialties.length === 0) {
+        setError("Esta chapa no aparece en ningun censo cargado.");
+        return;
+      }
+
       const response = mode === "register"
         ? await registerUser({
           chapa: normalized,
           password,
-          specialties: detectedSpecialties.length ? detectedSpecialties : [specialty.id]
+          specialties: detectedSpecialties
         })
         : await loginUser({ chapa: normalized, password });
 
