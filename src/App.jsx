@@ -334,7 +334,11 @@ function HomePanel({
       <div className="home-summary">
         <div>
           <p>Tu posicion</p>
-          <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
+          <h1>{user?.displayPosition || user?.position || "-"}</h1>
+          <div className="home-meta-row">
+            <span>Censo {activeSpecialty.censo.length}</span>
+            <span>Orden {user?.position || "-"}</span>
+          </div>
           <span>Chapa {user?.chapa || "-"}</span>
         </div>
       </div>
