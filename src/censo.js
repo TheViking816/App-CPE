@@ -82,13 +82,15 @@ function parsePairCenso(raw) {
 
   for (let index = 0; index < values.length; index += 2) {
     const chapa = values[index];
-    const displayPosition = Number(values[index + 1]);
-    if (!chapa || !Number.isFinite(displayPosition)) continue;
+    const sourcePosition = Number(values[index + 1]);
+    if (!chapa || !Number.isFinite(sourcePosition)) continue;
+    const position = result.length + 1;
     result.push({
       chapa: String(chapa).padStart(5, "0"),
       sourceChapa: String(chapa),
-      position: result.length + 1,
-      displayPosition
+      sourcePosition,
+      position,
+      displayPosition: position
     });
   }
 
