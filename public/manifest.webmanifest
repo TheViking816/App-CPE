@@ -2,21 +2,21 @@
   "name": "App CPE",
   "short_name": "App CPE",
   "description": "Puertas y censos CPE Valencia",
-  "start_url": "/App-CPE/",
-  "scope": "/App-CPE/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#0d3567",
   "icons": [
     {
-      "src": "/App-CPE/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/App-CPE/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

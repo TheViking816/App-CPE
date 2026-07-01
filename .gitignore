@@ -4,3 +4,6 @@ dist/
 video-review/
 *.png
 .env.local
+
+.vercel
+.env*.local
