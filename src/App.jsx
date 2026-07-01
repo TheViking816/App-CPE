@@ -27,6 +27,7 @@ import {
   getLatestDoorSnapshot,
   loginUser,
   registerUser,
+  requestDoorRefresh,
   trackUsageEvent,
   updateUserSpecialties
 } from "./supabaseClient.js";
@@ -698,6 +699,9 @@ export function App() {
     applyLatestSnapshot()
       .then((response) => {
         if (!Array.isArray(response?.doors)) return null;
+        refreshTimer = window.setTimeout(() => {
+          requestDoorRefresh().catch(() => {});
+        }, 1500);
         pollTimer = window.setInterval(() => {
           applyLatestSnapshot().catch(() => {});
         }, SNAPSHOT_POLL_MS);
