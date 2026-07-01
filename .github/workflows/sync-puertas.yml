@@ -11,6 +11,10 @@ on:
     - cron: "45 12 * * *"
     - cron: "45 13 * * *"
 
+concurrency:
+  group: sync-puertas
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -63,6 +67,7 @@ jobs:
 
       - name: Commit updated puertas
         if: always()
+        continue-on-error: true
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Actualiza puertas App CPE"
