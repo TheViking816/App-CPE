@@ -336,6 +336,10 @@ function HomePanel({
           <p>Tu posicion</p>
           <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
           <span>Chapa {user?.chapa || "-"}</span>
+          <div className="ring-legend" aria-label="Leyenda de circulos">
+            <span><i className="legend-dot user" /> Tu posicion</span>
+            <span><i className="legend-dot door" /> Puerta</span>
+          </div>
         </div>
       </div>
 
