@@ -57,6 +57,7 @@ jobs:
           path: |
             data/raw-puertas.txt
             data/puertas-conductor-1a.json
+            data/puertas-snapshots.json
             data/puertas-error.png
           if-no-files-found: ignore
 
@@ -65,7 +66,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Actualiza puertas App CPE"
-          file_pattern: "public/data/puertas-conductor-1a.json public/data/puertas-sync-status.json"
+          file_pattern: "public/data/puertas-conductor-1a.json public/data/puertas-snapshots.json public/data/puertas-sync-status.json"
 
       - name: Fail if sync failed
         if: steps.sync.outcome == 'failure' || steps.push_supabase.outcome == 'failure'

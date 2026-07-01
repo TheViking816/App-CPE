@@ -53,9 +53,17 @@ async function insertSupabaseSnapshot(parsed) {
   }
 }
 
-function parseConductor1aFromText(text) {
+const specialtyRows = [
+  { code: "11", name: "CONDUCTOR 1a" },
+  { code: "12", name: "CONDUCTOR 2a" },
+  { code: "22", name: "TRASTAINERS RTT" }
+];
+
+function parseSpecialtyFromText(text, row) {
   const normalized = text.replace(/\s+/g, " ").trim();
-  const match = normalized.match(/(?:^|\s)11\s+CONDUCTOR\s+1a\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})\s+(\d{5})(?:\s|$)/i);
+  const escapedName = row.name.replace(/\s+/g, "\\s+");
+  const pattern = new RegExp(`(?:^|\\s)${row.code}\\s+${escapedName}\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})(?:\\s|$)`, "i");
+  const match = normalized.match(pattern);
 
   if (!match) return null;
 
@@ -63,7 +71,7 @@ function parseConductor1aFromText(text) {
 
   return {
     source: puertasUrl,
-    specialty: "CONDUCTOR 1a",
+    specialty: row.name,
     updatedAt: new Date().toISOString(),
     doors: [
       { key: "LAB", label: "Diurna", raw: values[0], dayType: "laborable", shift: "LAB" },
@@ -84,6 +92,10 @@ function parseConductor1aFromText(text) {
       rawCol10: values[9]
     }
   };
+}
+
+function parseSpecialtiesFromText(text) {
+  return specialtyRows.map((row) => parseSpecialtyFromText(text, row)).filter(Boolean);
 }
 
 async function main() {
@@ -107,35 +119,41 @@ async function main() {
     const text = await page.locator("body").innerText({ timeout: 10000 });
     await fs.writeFile(path.join(privateDataDir, "raw-puertas.txt"), text, "utf8");
 
-    const parsed = parseConductor1aFromText(text);
-    if (!parsed) {
+    const parsedSnapshots = parseSpecialtiesFromText(text);
+    if (!parsedSnapshots.length) {
       await page.screenshot({ path: path.join(privateDataDir, "puertas-error.png"), fullPage: true });
       await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
         ok: false,
         stage: "parse",
         updatedAt: new Date().toISOString(),
         source: puertasUrl,
-        message: "No se pudo encontrar la fila CONDUCTOR 1a en Puertas.",
+        message: "No se pudieron encontrar filas de especialidades en Puertas.",
         preview: text.slice(0, 800)
       }, null, 2), "utf8");
-      throw new Error("No se pudo encontrar la fila CONDUCTOR 1a en Puertas.");
+      throw new Error("No se pudieron encontrar filas de especialidades en Puertas.");
     }
 
+    const parsed = parsedSnapshots.find((snapshot) => snapshot.specialty === "CONDUCTOR 1a") || parsedSnapshots[0];
     const payload = JSON.stringify(parsed, null, 2);
     await fs.writeFile(path.join(publicDataDir, "puertas-conductor-1a.json"), payload, "utf8");
     await fs.writeFile(path.join(privateDataDir, "puertas-conductor-1a.json"), payload, "utf8");
+    await fs.writeFile(path.join(publicDataDir, "puertas-snapshots.json"), JSON.stringify(parsedSnapshots, null, 2), "utf8");
+    await fs.writeFile(path.join(privateDataDir, "puertas-snapshots.json"), JSON.stringify(parsedSnapshots, null, 2), "utf8");
     await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
       ok: true,
       stage: "parsed",
       updatedAt: parsed.updatedAt,
       source: parsed.source,
       supabaseConfigured: Boolean(supabaseUrl && supabaseServiceRole),
+      specialties: parsedSnapshots.map((snapshot) => snapshot.specialty),
       doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw }))
     }, null, 2), "utf8");
 
     if (supabaseUrl && supabaseServiceRole) {
       try {
-        await insertSupabaseSnapshot(parsed);
+        for (const snapshot of parsedSnapshots) {
+          await insertSupabaseSnapshot(snapshot);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error desconocido";
         await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
@@ -144,6 +162,7 @@ async function main() {
           updatedAt: new Date().toISOString(),
           source: parsed.source,
           supabaseConfigured: true,
+          specialties: parsedSnapshots.map((snapshot) => snapshot.specialty),
           doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw })),
           message
         }, null, 2), "utf8");
@@ -156,12 +175,12 @@ async function main() {
         updatedAt: parsed.updatedAt,
         source: parsed.source,
         supabaseConfigured: true,
+        specialties: parsedSnapshots.map((snapshot) => snapshot.specialty),
         doors: parsed.doors.map((door) => ({ key: door.key, raw: door.raw }))
       }, null, 2), "utf8");
     }
 
-    console.log(`OK: ${parsed.specialty}`);
-    console.log(parsed.doors.map((door) => `${door.key}=${door.raw}`).join(" "));
+    console.log(`OK: ${parsedSnapshots.map((snapshot) => snapshot.specialty).join(", ")}`);
   } finally {
     await browser.close();
   }

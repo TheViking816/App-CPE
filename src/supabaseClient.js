@@ -23,13 +23,50 @@ export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
-export async function getLatestDoorSnapshot() {
+export async function registerUser({ chapa, password, specialties }) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_register", {
+    p_chapa: chapa,
+    p_password: password,
+    p_specialties: specialties
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function loginUser({ chapa, password }) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_login", {
+    p_chapa: chapa,
+    p_password: password
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUserSpecialties({ token, specialties }) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_update_specialties", {
+    p_token: token,
+    p_specialties: specialties
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getLatestDoorSnapshot(specialty = "CONDUCTOR 1a") {
   if (!supabase) return null;
 
   const { data, error } = await supabase
     .from("app_cpe_door_snapshots")
     .select("specialty, source, doors, raw_columns, updated_at")
-    .eq("specialty", "CONDUCTOR 1a")
+    .eq("specialty", specialty)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

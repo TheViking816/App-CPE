@@ -31,7 +31,10 @@ async function writeStatus(status) {
 
 async function main() {
   const payloadPath = path.join(publicDataDir, "puertas-conductor-1a.json");
-  const payload = JSON.parse(await fs.readFile(payloadPath, "utf8"));
+  const snapshotsPath = path.join(publicDataDir, "puertas-snapshots.json");
+  const snapshots = await fs.readFile(snapshotsPath, "utf8")
+    .then((content) => JSON.parse(content))
+    .catch(async () => [JSON.parse(await fs.readFile(payloadPath, "utf8"))]);
 
   if (!supabaseServiceRole) {
     await writeStatus({
@@ -46,41 +49,44 @@ async function main() {
 
   const restUrl = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots`;
 
-  const response = await fetch(restUrl, {
-    method: "POST",
-    headers: {
-      "apikey": supabaseServiceRole,
-      "Authorization": `Bearer ${supabaseServiceRole}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=minimal"
-    },
-    body: JSON.stringify({
-      specialty: payload.specialty,
-      source: payload.source,
-      doors: payload.doors,
-      raw_columns: payload.rawColumns,
-      updated_at: payload.updatedAt
-    })
-  });
-
-  if (!response.ok) {
-    const message = `HTTP ${response.status}: ${await response.text()}`;
-    await writeStatus({
-      ok: false,
-      stage: "supabase-insert",
-      updatedAt: new Date().toISOString(),
-      supabaseConfigured: true,
-      message
+  for (const payload of snapshots) {
+    const response = await fetch(restUrl, {
+      method: "POST",
+      headers: {
+        "apikey": supabaseServiceRole,
+        "Authorization": `Bearer ${supabaseServiceRole}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        specialty: payload.specialty,
+        source: payload.source,
+        doors: payload.doors,
+        raw_columns: payload.rawColumns,
+        updated_at: payload.updatedAt
+      })
     });
-    throw new Error(message);
+
+    if (!response.ok) {
+      const message = `HTTP ${response.status}: ${await response.text()}`;
+      await writeStatus({
+        ok: false,
+        stage: "supabase-insert",
+        updatedAt: new Date().toISOString(),
+        supabaseConfigured: true,
+        specialty: payload.specialty,
+        message
+      });
+      throw new Error(message);
+    }
   }
 
   await writeStatus({
     ok: true,
     stage: "supabase-insert",
-    updatedAt: payload.updatedAt,
+    updatedAt: snapshots[0]?.updatedAt || new Date().toISOString(),
     supabaseConfigured: true,
-    doors: payload.doors.map((door) => ({ key: door.key, raw: door.raw }))
+    specialties: snapshots.map((snapshot) => snapshot.specialty)
   });
 
   console.log("OK: snapshot insertado en Supabase");

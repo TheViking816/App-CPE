@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  Check,
   ExternalLink,
   Eye,
   EyeOff,
@@ -13,14 +14,21 @@ import {
   UsersRound
 } from "lucide-react";
 import {
-  censo,
   classifyDistance,
   findByChapa,
   getDoorState,
-  specialty,
-  validateCenso
+  getSpecialty,
+  normalizeChapa,
+  specialties,
+  specialty
 } from "./censo.js";
-import { getLatestDoorSnapshot, requestDoorRefresh } from "./supabaseClient.js";
+import {
+  getLatestDoorSnapshot,
+  loginUser,
+  registerUser,
+  requestDoorRefresh,
+  updateUserSpecialties
+} from "./supabaseClient.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const SNAPSHOT_POLL_MS = 60_000;
@@ -38,10 +46,6 @@ function getInitialSession() {
   } catch {
     return null;
   }
-}
-
-function buildPasswordHash(value) {
-  return btoa(unescape(encodeURIComponent(String(value || ""))));
 }
 
 function formatDistance(value) {
@@ -81,8 +85,8 @@ function normalizeLegacyDoor(door) {
   return null;
 }
 
-function sanitizeDoors(doors) {
-  const source = Array.isArray(doors) ? doors : specialty.doors;
+function sanitizeDoors(doors, activeSpecialty = specialty) {
+  const source = Array.isArray(doors) ? doors : activeSpecialty.doors;
   const byKey = new Map();
 
   for (const door of source) {
@@ -104,33 +108,60 @@ function getNearestDoor(doors) {
     }, null);
 }
 
+function getValidSpecialtiesForChapa(chapa, selectedIds) {
+  const normalized = normalizeChapa(chapa);
+  return selectedIds.filter((id) => findByChapa(normalized, id));
+}
+
 function LoginPanel({ onLogin }) {
+  const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
-  const [pin, setPin] = useState("");
-  const [showPin, setShowPin] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [selectedSpecialties, setSelectedSpecialties] = useState([specialty.id]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const submit = (event) => {
+  const toggleSpecialty = (id) => {
+    setSelectedSpecialties((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      return [...current, id];
+    });
+  };
+
+  const submit = async (event) => {
     event.preventDefault();
-    const user = findByChapa(chapa);
+    setError("");
 
-    if (!user) {
-      setError("Esa chapa no aparece en CONDUCTOR 1a.");
+    const normalized = normalizeChapa(chapa);
+    if (!normalized) {
+      setError("Introduce una chapa valida.");
       return;
     }
 
-    if (!pin.trim()) {
-      setError("Introduce un PIN local para esta sesion.");
+    if (!password.trim()) {
+      setError("Introduce una contraseña.");
       return;
     }
 
-    const session = {
-      chapa: user.chapa,
-      pinHash: buildPasswordHash(pin),
-      createdAt: new Date().toISOString()
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    onLogin(session);
+    try {
+      setLoading(true);
+      const response = mode === "register"
+        ? await registerUser({
+          chapa: normalized,
+          password,
+          specialties: getValidSpecialtiesForChapa(normalized, selectedSpecialties)
+        })
+        : await loginUser({ chapa: normalized, password });
+
+      if (!response?.token) throw new Error("No se pudo iniciar sesion.");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
+      onLogin(response);
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo acceder.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -139,7 +170,16 @@ function LoginPanel({ onLogin }) {
         <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
       <h1>App CPE</h1>
-      <p>Acceso para fijos de CONDUCTOR 1a.</p>
+      <p>Acceso para fijos.</p>
+
+      <div className="auth-tabs">
+        <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>
+          Entrar
+        </button>
+        <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>
+          Registro
+        </button>
+      </div>
 
       <label>
         <span>Chapa</span>
@@ -147,38 +187,55 @@ function LoginPanel({ onLogin }) {
           <UserRound size={18} />
           <input
             inputMode="numeric"
-            placeholder="Ej. 2625"
+            placeholder="Ej. 72683"
             value={chapa}
-            onChange={(event) => setChapa(event.target.value)}
+            onChange={(event) => setChapa(event.target.value.replace(/\D/g, "").slice(0, 5))}
           />
         </div>
       </label>
 
       <label>
-        <span>PIN local</span>
+        <span>Contraseña</span>
         <div className="field">
           <Lock size={18} />
           <input
-            type={showPin ? "text" : "password"}
-            placeholder="Solo en este navegador"
-            value={pin}
-            onChange={(event) => setPin(event.target.value)}
+            type={showPassword ? "text" : "password"}
+            placeholder="Minimo 4 caracteres"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
           />
           <button
             type="button"
             className="icon-button"
-            onClick={() => setShowPin((value) => !value)}
-            aria-label={showPin ? "Ocultar PIN" : "Mostrar PIN"}
+            onClick={() => setShowPassword((value) => !value)}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
           >
-            {showPin ? <EyeOff size={17} /> : <Eye size={17} />}
+            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
         </div>
       </label>
 
+      {mode === "register" && (
+        <div className="specialty-picker">
+          <span>Especialidades</span>
+          {specialties.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={selectedSpecialties.includes(item.id) ? "selected" : ""}
+              onClick={() => toggleSpecialty(item.id)}
+            >
+              <Check size={15} />
+              {item.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && <p className="form-error">{error}</p>}
 
-      <button className="primary-button" type="submit">
-        Entrar
+      <button className="primary-button" type="submit" disabled={loading}>
+        {loading ? "Procesando..." : mode === "register" ? "Crear cuenta" : "Entrar"}
       </button>
     </form>
   );
@@ -192,7 +249,7 @@ function AppHeader({ user, onLogout }) {
       </div>
       <div className="header-title">
         <strong>App CPE</strong>
-        <span>{specialty.name}</span>
+        <span>Fijos CPE Valencia</span>
       </div>
       {user && (
         <button className="logout-button" type="button" onClick={onLogout}>
@@ -204,16 +261,45 @@ function AppHeader({ user, onLogout }) {
   );
 }
 
-function HomePanel({ user, doors, doorConfig }) {
+function HomePanel({
+  user,
+  doors,
+  doorConfig,
+  activeSpecialty,
+  availableSpecialties,
+  activeSpecialtyId,
+  onSpecialtyChange,
+  onSpecialtiesSave
+}) {
   const nearest = getNearestDoor(doors);
-  const validation = validateCenso();
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
+  const [selectedSpecialties, setSelectedSpecialties] = useState(availableSpecialties.map((item) => item.id));
+
+  useEffect(() => {
+    setSelectedSpecialties(availableSpecialties.map((item) => item.id));
+  }, [availableSpecialties]);
+
+  const toggleSpecialty = (id) => {
+    setSelectedSpecialties((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      return [...current, id];
+    });
+  };
 
   return (
     <section className="page-panel">
+      <div className="specialty-select">
+        <span>Especialidad</span>
+        <select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
+          {availableSpecialties.map((item) => (
+            <option key={item.id} value={item.id}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="home-summary">
         <p>Tu posicion</p>
-        <h1>{user.position} / {censo.length}</h1>
+        <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
         <span>Chapa {user.chapa}</span>
       </div>
 
@@ -228,11 +314,6 @@ function HomePanel({ user, doors, doorConfig }) {
           <strong>{doorConfig?.updatedAt ? "Actualizado" : "Local"}</strong>
           <small>{updatedLabel}</small>
         </article>
-        <article>
-          <span>Censo</span>
-          <strong>{validation.count}/{validation.expected}</strong>
-          <small>{specialty.name}</small>
-        </article>
       </div>
 
       <section className="compact-door-list" aria-label="Resumen de puertas">
@@ -243,6 +324,29 @@ function HomePanel({ user, doors, doorConfig }) {
             <small>{door.raw}</small>
           </div>
         ))}
+      </section>
+
+      <section className="manage-specialties">
+        <div>
+          <span>Mis especialidades</span>
+          <strong>Añadir o quitar</strong>
+        </div>
+        <div className="specialty-picker inline">
+          {specialties.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={selectedSpecialties.includes(item.id) ? "selected" : ""}
+              onClick={() => toggleSpecialty(item.id)}
+            >
+              <Check size={15} />
+              {item.name}
+            </button>
+          ))}
+        </div>
+        <button className="secondary-button" type="button" onClick={() => onSpecialtiesSave(selectedSpecialties)}>
+          Guardar especialidades
+        </button>
       </section>
     </section>
   );
@@ -271,7 +375,6 @@ function DoorsTable({ title, doors, tone }) {
                 </td>
                 <td>
                   <span className={`door-badge ${tone}`}>{door.raw}</span>
-                  <small>Chapa {door.doorChapa}</small>
                 </td>
                 <td>{door.doorPosition || "-"}</td>
                 <td>{formatDistance(door.distance)}</td>
@@ -284,7 +387,7 @@ function DoorsTable({ title, doors, tone }) {
   );
 }
 
-function DoorsPanel({ doors, doorConfig }) {
+function DoorsPanel({ doors, doorConfig, activeSpecialty }) {
   const laborableDoors = doors.filter((door) => door.dayType === "laborable");
   const festivoDoors = doors.filter((door) => door.dayType === "festivo");
 
@@ -292,7 +395,7 @@ function DoorsPanel({ doors, doorConfig }) {
     <section className="page-panel">
       <div className="section-heading">
         <p>Puertas de turno</p>
-        <h1>CONDUCTOR 1a</h1>
+        <h1>{activeSpecialty.name}</h1>
         <span>Actualizado: {formatUpdatedAt(doorConfig?.updatedAt)}</span>
       </div>
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
@@ -301,7 +404,7 @@ function DoorsPanel({ doors, doorConfig }) {
   );
 }
 
-function CensoPanel({ user, doors }) {
+function CensoPanel({ user, doors, activeSpecialty }) {
   const [query, setQuery] = useState("");
   const doorByChapa = useMemo(() => {
     const map = new Map();
@@ -313,16 +416,16 @@ function CensoPanel({ user, doors }) {
 
   const filtered = useMemo(() => {
     const trimmed = query.trim();
-    if (!trimmed) return censo;
-    return censo.filter((item) => String(item.chapa).includes(trimmed) || String(item.position).includes(trimmed));
-  }, [query]);
+    if (!trimmed) return activeSpecialty.censo;
+    return activeSpecialty.censo.filter((item) => String(item.chapa).includes(trimmed) || String(item.displayPosition).includes(trimmed));
+  }, [activeSpecialty.censo, query]);
 
   return (
     <section className="page-panel censo-section">
       <div className="section-title-row">
         <div>
-          <p>Censo: {censo.length}</p>
-          <h1>{specialty.name}</h1>
+          <p>Censo: {activeSpecialty.censo.length}</p>
+          <h1>{activeSpecialty.name}</h1>
         </div>
         <div className="search-field">
           <Search size={17} />
@@ -352,7 +455,7 @@ function CensoPanel({ user, doors }) {
 
           return (
             <div className={className} key={`${item.position}-${item.chapa}`} role="listitem">
-              <span>{item.position}</span>
+              <span>{item.displayPosition || item.position}</span>
               <strong>{item.chapa}</strong>
               {door && <em>{door.shift}</em>}
             </div>
@@ -364,17 +467,27 @@ function CensoPanel({ user, doors }) {
 }
 
 function LinksPanel() {
+  const links = [
+    { label: "Prevision", url: "https://noray.cpevalencia.com/PrevisionDemanda.asp" },
+    { label: "Portal CPE", url: "https://portal.cpevalencia.com/" },
+    { label: "App descansos", url: "https://descansos-cpe.vercel.app/dashboard" },
+    { label: "Sueldometro CPE", url: "https://misueldocpe.vercel.app/" }
+  ];
+
   return (
     <section className="page-panel">
       <div className="section-heading">
         <p>Accesos rapidos</p>
         <h1>Enlaces utiles</h1>
       </div>
-      <article className="empty-links">
-        <ExternalLink size={24} />
-        <strong>Preparado para enlaces</strong>
-        <span>Cuando me pases los accesos, los dejare aqui ordenados.</span>
-      </article>
+      <div className="links-list">
+        {links.map((link) => (
+          <a key={link.url} href={link.url} target="_blank" rel="noreferrer">
+            <span>{link.label}</span>
+            <ExternalLink size={18} />
+          </a>
+        ))}
+      </div>
     </section>
   );
 }
@@ -401,10 +514,25 @@ export function App() {
   const [session, setSession] = useState(getInitialSession);
   const [doorConfig, setDoorConfig] = useState(null);
   const [activeTab, setActiveTab] = useState("inicio");
+  const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
 
-  const user = session ? findByChapa(session.chapa) : null;
-  const activeDoors = sanitizeDoors(doorConfig?.doors);
-  const doors = useMemo(() => getDoorState(user?.chapa, activeDoors), [user?.chapa, activeDoors]);
+  const availableSpecialties = useMemo(() => {
+    const ids = Array.isArray(session?.specialties) && session.specialties.length ? session.specialties : [specialty.id];
+    return ids.map(getSpecialty);
+  }, [session?.specialties]);
+  const activeSpecialty = getSpecialty(activeSpecialtyId);
+  const user = session ? findByChapa(session.chapa, activeSpecialty.id) : null;
+  const activeDoors = sanitizeDoors(doorConfig?.doors, activeSpecialty);
+  const doors = useMemo(
+    () => getDoorState(session?.chapa, activeDoors, activeSpecialty.id),
+    [session?.chapa, activeDoors, activeSpecialty.id]
+  );
+
+  useEffect(() => {
+    if (!availableSpecialties.some((item) => item.id === activeSpecialtyId)) {
+      setActiveSpecialtyId(availableSpecialties[0]?.id || specialty.id);
+    }
+  }, [activeSpecialtyId, availableSpecialties]);
 
   useEffect(() => {
     let cancelled = false;
@@ -412,12 +540,16 @@ export function App() {
     let pollTimer = null;
 
     async function loadLatestSnapshot() {
-      const snapshot = await getLatestDoorSnapshot();
+      const snapshot = await getLatestDoorSnapshot(activeSpecialty.name);
       if (snapshot) return snapshot;
 
-      const response = await fetch(`${import.meta.env.BASE_URL}data/puertas-conductor-1a.json`, { cache: "no-store" });
-      if (!response.ok) throw new Error("No hay fichero de puertas");
-      return response.json();
+      return {
+        source: "local",
+        specialty: activeSpecialty.name,
+        updatedAt: null,
+        doors: activeSpecialty.doors,
+        rawColumns: {}
+      };
     }
 
     async function applyLatestSnapshot() {
@@ -452,14 +584,14 @@ export function App() {
       if (refreshTimer) window.clearTimeout(refreshTimer);
       if (pollTimer) window.clearInterval(pollTimer);
     };
-  }, []);
+  }, [activeSpecialty.id, activeSpecialty.name]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function refreshWhenVisible() {
       if (document.visibilityState !== "visible") return;
-      const snapshot = await getLatestDoorSnapshot();
+      const snapshot = await getLatestDoorSnapshot(activeSpecialty.name);
       if (!cancelled && Array.isArray(snapshot?.doors)) {
         setDoorConfig(snapshot);
       }
@@ -471,7 +603,17 @@ export function App() {
       cancelled = true;
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, []);
+  }, [activeSpecialty.name]);
+
+  const saveSpecialties = async (selectedIds) => {
+    const validIds = getValidSpecialtiesForChapa(session.chapa, selectedIds);
+    const nextIds = validIds.length ? validIds : [activeSpecialtyId];
+    const response = await updateUserSpecialties({ token: session.token, specialties: nextIds });
+    const nextSession = response || { ...session, specialties: nextIds };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
+    if (!nextIds.includes(activeSpecialtyId)) setActiveSpecialtyId(nextIds[0]);
+  };
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
@@ -479,10 +621,13 @@ export function App() {
     setActiveTab("inicio");
   };
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="login-screen">
-        <LoginPanel onLogin={setSession} />
+        <LoginPanel onLogin={(nextSession) => {
+          setSession(nextSession);
+          setActiveSpecialtyId(nextSession.specialties?.[0] || specialty.id);
+        }} />
       </div>
     );
   }
@@ -491,9 +636,20 @@ export function App() {
     <div className="mobile-app">
       <AppHeader user={user} onLogout={logout} />
       <main className="content">
-        {activeTab === "inicio" && <HomePanel user={user} doors={doors} doorConfig={doorConfig} />}
-        {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} />}
-        {activeTab === "censo" && <CensoPanel user={user} doors={doors} />}
+        {activeTab === "inicio" && (
+          <HomePanel
+            user={user}
+            doors={doors}
+            doorConfig={doorConfig}
+            activeSpecialty={activeSpecialty}
+            activeSpecialtyId={activeSpecialtyId}
+            availableSpecialties={availableSpecialties}
+            onSpecialtyChange={setActiveSpecialtyId}
+            onSpecialtiesSave={saveSpecialties}
+          />
+        )}
+        {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
+        {activeTab === "censo" && <CensoPanel user={user} doors={doors} activeSpecialty={activeSpecialty} />}
         {activeTab === "enlaces" && <LinksPanel />}
       </main>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
