@@ -55,7 +55,7 @@ function getInitialSession() {
 function formatDistance(value) {
   if (value === null) return "Sin dato";
   if (value === 0) return "En puerta";
-  return `${value} puestos`;
+  return `${value} posiciones`;
 }
 
 function formatUpdatedAt(value) {
