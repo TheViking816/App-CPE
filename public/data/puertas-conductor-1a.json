@@ -1,19 +1,19 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
   "specialty": "CONDUCTOR 1a",
-  "updatedAt": "2026-07-01T12:28:30.972Z",
+  "updatedAt": "2026-07-01T12:39:06.524Z",
   "doors": [
     {
       "key": "LAB",
       "label": "Diurna",
-      "raw": 72625,
+      "raw": 72206,
       "dayType": "laborable",
       "shift": "LAB"
     },
     {
       "key": "NOC",
       "label": "Super",
-      "raw": 72699,
+      "raw": 72697,
       "dayType": "laborable",
       "shift": "NOC"
     },
@@ -33,8 +33,8 @@
     }
   ],
   "rawColumns": {
-    "labHoy": 72625,
-    "super": 72699,
+    "labHoy": 72206,
+    "super": 72697,
     "labSigDia": 72206,
     "rawCol4": 71558,
     "rawCol5": 71197,
