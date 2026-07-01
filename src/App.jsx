@@ -7,6 +7,7 @@ import {
   EyeOff,
   Home,
   Link as LinkIcon,
+  ListChecks,
   Lock,
   LogOut,
   Search,
@@ -31,12 +32,14 @@ import {
 } from "./supabaseClient.js";
 
 const STORAGE_KEY = "app-cpe-session";
+const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
 const SNAPSHOT_POLL_MS = 60_000;
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
   { id: "puertas", label: "Puertas", Icon: CalendarDays },
   { id: "censo", label: "Censo", Icon: UsersRound },
+  { id: "mis-especialidades", label: "Mis esp.", Icon: ListChecks },
   { id: "enlaces", label: "Enlaces", Icon: LinkIcon }
 ];
 
@@ -120,21 +123,62 @@ function getInvalidSpecialtyNamesForChapa(chapa, selectedIds) {
     .map((id) => getSpecialty(id).name);
 }
 
+function getDetectedSpecialtyIdsForChapa(chapa) {
+  const normalized = normalizeChapa(chapa);
+  if (!normalized) return [];
+  return specialties
+    .filter((item) => findByChapa(normalized, item.id))
+    .map((item) => item.id);
+}
+
+function uniqueIds(ids) {
+  return Array.from(new Set(ids.filter(Boolean)));
+}
+
+function getStoredOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem(SPECIALTY_OVERRIDES_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function getSpecialtyOverride(chapa) {
+  const normalized = normalizeChapa(chapa);
+  if (!normalized) return null;
+  const value = getStoredOverrides()[normalized];
+  return Array.isArray(value) ? value : null;
+}
+
+function saveSpecialtyOverride(chapa, ids) {
+  const normalized = normalizeChapa(chapa);
+  if (!normalized) return;
+  const overrides = getStoredOverrides();
+  overrides[normalized] = ids;
+  localStorage.setItem(SPECIALTY_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
+function getEffectiveSpecialtyIds(session) {
+  if (!session?.chapa) return [specialty.id];
+  const override = getSpecialtyOverride(session.chapa);
+  const detectedIds = getDetectedSpecialtyIdsForChapa(session.chapa);
+  const savedIds = Array.isArray(session.specialties) ? session.specialties : [];
+  const baseIds = override || uniqueIds([...detectedIds, ...savedIds]);
+  const validIds = getValidSpecialtiesForChapa(session.chapa, baseIds);
+  return validIds.length ? validIds : (detectedIds[0] ? [detectedIds[0]] : [specialty.id]);
+}
+
+function getSpecialtyKind(item) {
+  return item.kind === "polivalencia" ? "polivalencia" : "especialidad";
+}
+
 function LoginPanel({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedSpecialties, setSelectedSpecialties] = useState([specialty.id]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const toggleSpecialty = (id) => {
-    setSelectedSpecialties((current) => {
-      if (current.includes(id)) return current.filter((item) => item !== id);
-      return [...current, id];
-    });
-  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -153,18 +197,13 @@ function LoginPanel({ onLogin }) {
 
     try {
       setLoading(true);
-      if (mode === "register") {
-        const invalidNames = getInvalidSpecialtyNamesForChapa(normalized, selectedSpecialties);
-        if (invalidNames.length) {
-          throw new Error(`No tienes la especialidad de ${invalidNames.join(", ")}.`);
-        }
-      }
+      const detectedSpecialties = getDetectedSpecialtyIdsForChapa(normalized);
 
       const response = mode === "register"
         ? await registerUser({
           chapa: normalized,
           password,
-          specialties: getValidSpecialtiesForChapa(normalized, selectedSpecialties)
+          specialties: detectedSpecialties.length ? detectedSpecialties : [specialty.id]
         })
         : await loginUser({ chapa: normalized, password });
 
@@ -229,22 +268,7 @@ function LoginPanel({ onLogin }) {
         </div>
       </label>
 
-      {mode === "register" && (
-        <div className="specialty-picker">
-          <span>Especialidades</span>
-          {specialties.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={selectedSpecialties.includes(item.id) ? "selected" : ""}
-              onClick={() => toggleSpecialty(item.id)}
-            >
-              <Check size={15} />
-              {item.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {mode === "register" && <p className="login-hint">La app detectara tus especialidades por la chapa.</p>}
 
       {error && <p className="form-error">{error}</p>}
 
@@ -282,23 +306,10 @@ function HomePanel({
   activeSpecialty,
   availableSpecialties,
   activeSpecialtyId,
-  onSpecialtyChange,
-  onSpecialtiesSave
+  onSpecialtyChange
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
-  const [selectedSpecialties, setSelectedSpecialties] = useState(availableSpecialties.map((item) => item.id));
-
-  useEffect(() => {
-    setSelectedSpecialties(availableSpecialties.map((item) => item.id));
-  }, [availableSpecialties]);
-
-  const toggleSpecialty = (id) => {
-    setSelectedSpecialties((current) => {
-      if (current.includes(id)) return current.filter((item) => item !== id);
-      return [...current, id];
-    });
-  };
 
   return (
     <section className="page-panel">
@@ -314,7 +325,7 @@ function HomePanel({
       <div className="home-summary">
         <p>Tu posicion</p>
         <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
-        <span>Chapa {user.chapa}</span>
+        <span>Chapa {user?.chapa || "-"}</span>
       </div>
 
       <div className="quick-grid">
@@ -340,29 +351,77 @@ function HomePanel({
         ))}
       </section>
 
-      <section className="manage-specialties">
-        <div>
-          <span>Mis especialidades</span>
-          <strong>Añadir o quitar</strong>
-        </div>
-        <div className="specialty-picker inline">
-          {specialties.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={selectedSpecialties.includes(item.id) ? "selected" : ""}
-              onClick={() => toggleSpecialty(item.id)}
-            >
-              <Check size={15} />
-              {item.name}
-            </button>
-          ))}
-        </div>
-        <button className="secondary-button" type="button" onClick={() => onSpecialtiesSave(selectedSpecialties)}>
-          Guardar especialidades
-        </button>
-        {notice && <p className="inline-notice">{notice}</p>}
-      </section>
+      {notice && <p className="inline-notice">{notice}</p>}
+    </section>
+  );
+}
+
+function SpecialtyBlock({ title, items, selectedIds, onToggle }) {
+  return (
+    <section className="specialty-manage-block">
+      <div className="block-title-row">
+        <span>{title}</span>
+        <strong>{items.length}</strong>
+      </div>
+      <div className="specialty-picker inline">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={selectedIds.includes(item.id) ? "selected" : ""}
+            onClick={() => onToggle(item.id)}
+          >
+            <Check size={15} />
+            {item.name}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MySpecialtiesPanel({ session, availableSpecialties, notice, onSpecialtiesSave }) {
+  const [selectedSpecialties, setSelectedSpecialties] = useState(availableSpecialties.map((item) => item.id));
+  const detectedIds = useMemo(() => getDetectedSpecialtyIdsForChapa(session.chapa), [session.chapa]);
+  const specialtyItems = specialties.filter((item) => getSpecialtyKind(item) === "especialidad");
+  const polyvalenceItems = specialties.filter((item) => getSpecialtyKind(item) === "polivalencia");
+
+  useEffect(() => {
+    setSelectedSpecialties(availableSpecialties.map((item) => item.id));
+  }, [availableSpecialties]);
+
+  const toggleSpecialty = (id) => {
+    setSelectedSpecialties((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      return [...current, id];
+    });
+  };
+
+  return (
+    <section className="page-panel">
+      <div className="section-heading">
+        <p>Chapa {session.chapa}</p>
+        <h1>Mis especialidades</h1>
+        <span>Detectadas automaticamente: {detectedIds.length}</span>
+      </div>
+
+      <SpecialtyBlock
+        title="Especialidades"
+        items={specialtyItems}
+        selectedIds={selectedSpecialties}
+        onToggle={toggleSpecialty}
+      />
+      <SpecialtyBlock
+        title="Polivalencias"
+        items={polyvalenceItems}
+        selectedIds={selectedSpecialties}
+        onToggle={toggleSpecialty}
+      />
+
+      <button className="secondary-button" type="button" onClick={() => onSpecialtiesSave(selectedSpecialties)}>
+        Guardar seleccion
+      </button>
+      {notice && <p className="inline-notice">{notice}</p>}
     </section>
   );
 }
@@ -533,9 +592,9 @@ export function App() {
   const [notice, setNotice] = useState("");
 
   const availableSpecialties = useMemo(() => {
-    const ids = Array.isArray(session?.specialties) && session.specialties.length ? session.specialties : [specialty.id];
+    const ids = getEffectiveSpecialtyIds(session);
     return ids.map(getSpecialty);
-  }, [session?.specialties]);
+  }, [session]);
   const activeSpecialty = getSpecialty(activeSpecialtyId);
   const user = session ? findByChapa(session.chapa, activeSpecialty.id) : null;
   const activeDoors = sanitizeDoors(doorConfig?.doors, activeSpecialty);
@@ -630,6 +689,7 @@ export function App() {
 
     const validIds = getValidSpecialtiesForChapa(session.chapa, selectedIds);
     const nextIds = validIds.length ? validIds : [activeSpecialtyId];
+    saveSpecialtyOverride(session.chapa, nextIds);
     const response = await updateUserSpecialties({ token: session.token, specialties: nextIds });
     const nextSession = response || { ...session, specialties: nextIds };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
@@ -648,7 +708,7 @@ export function App() {
       <div className="login-screen">
         <LoginPanel onLogin={(nextSession) => {
           setSession(nextSession);
-          setActiveSpecialtyId(nextSession.specialties?.[0] || specialty.id);
+          setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
         }} />
       </div>
     );
@@ -668,11 +728,18 @@ export function App() {
             activeSpecialtyId={activeSpecialtyId}
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
-            onSpecialtiesSave={saveSpecialties}
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
         {activeTab === "censo" && <CensoPanel user={user} doors={doors} activeSpecialty={activeSpecialty} />}
+        {activeTab === "mis-especialidades" && (
+          <MySpecialtiesPanel
+            session={session}
+            availableSpecialties={availableSpecialties}
+            notice={notice}
+            onSpecialtiesSave={saveSpecialties}
+          />
+        )}
         {activeTab === "enlaces" && <LinksPanel />}
       </main>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />

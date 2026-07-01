@@ -2,7 +2,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "CONDUCTOR 1a",
-    "updatedAt": "2026-07-01T02:16:48.799Z",
+    "updatedAt": "2026-07-01T02:32:25.449Z",
     "doors": [
       {
         "key": "LAB",
@@ -49,7 +49,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "CONDUCTOR 2a",
-    "updatedAt": "2026-07-01T02:16:48.799Z",
+    "updatedAt": "2026-07-01T02:32:25.450Z",
     "doors": [
       {
         "key": "LAB",
@@ -96,7 +96,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "TRASTAINERS RTT",
-    "updatedAt": "2026-07-01T02:16:48.800Z",
+    "updatedAt": "2026-07-01T02:32:25.450Z",
     "doors": [
       {
         "key": "LAB",
@@ -143,7 +143,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. CONDUCTOR 1a",
-    "updatedAt": "2026-07-01T02:16:48.800Z",
+    "updatedAt": "2026-07-01T02:32:25.450Z",
     "doors": [
       {
         "key": "LAB",
@@ -190,7 +190,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. CONDUCTOR 2a",
-    "updatedAt": "2026-07-01T02:16:48.800Z",
+    "updatedAt": "2026-07-01T02:32:25.450Z",
     "doors": [
       {
         "key": "LAB",
@@ -232,6 +232,53 @@
       "festivoDiurno": 71542,
       "rawCol9": 71135,
       "rawCol10": 71508
+    }
+  },
+  {
+    "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
+    "specialty": "POL. ESPECIALISTA",
+    "updatedAt": "2026-07-01T02:32:25.450Z",
+    "doors": [
+      {
+        "key": "LAB",
+        "label": "Diurna",
+        "raw": 72667,
+        "dayType": "laborable",
+        "shift": "LAB"
+      },
+      {
+        "key": "NOC",
+        "label": "Super",
+        "raw": 71990,
+        "dayType": "laborable",
+        "shift": "NOC"
+      },
+      {
+        "key": "NOC-FES",
+        "label": "Super festiva",
+        "raw": 71844,
+        "dayType": "festivo",
+        "shift": "NOC-FES"
+      },
+      {
+        "key": "FES",
+        "label": "Diurna festiva",
+        "raw": 72012,
+        "dayType": "festivo",
+        "shift": "FES"
+      }
+    ],
+    "rawColumns": {
+      "labHoy": 30237,
+      "super": 30973,
+      "labSigDia": 30237,
+      "rawCol4": 72667,
+      "rawCol5": 71990,
+      "rawCol6": 72667,
+      "festivoSuper": 30973,
+      "festivoDiurno": 30973,
+      "rawCol9": 71844,
+      "rawCol10": 72012
     }
   }
 ]

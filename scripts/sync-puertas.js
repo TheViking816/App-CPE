@@ -58,7 +58,8 @@ const specialtyRows = [
   { code: "12", name: "CONDUCTOR 2a", snapshotName: "CONDUCTOR 2a", mode: "turno" },
   { code: "22", name: "TRASTAINERS RTT", snapshotName: "TRASTAINERS RTT", mode: "turno" },
   { code: "11", name: "CONDUCTOR 1a", snapshotName: "POL. CONDUCTOR 1a", mode: "polivalencia" },
-  { code: "12", name: "CONDUCTOR 2a", snapshotName: "POL. CONDUCTOR 2a", mode: "polivalencia" }
+  { code: "12", name: "CONDUCTOR 2a", snapshotName: "POL. CONDUCTOR 2a", mode: "polivalencia" },
+  { code: "03", name: "ESPECIALISTA", snapshotName: "POL. ESPECIALISTA", mode: "polivalencia" }
 ];
 
 function parseSpecialtyFromText(text, row) {
