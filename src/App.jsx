@@ -238,7 +238,6 @@ function LoginPanel({ onLogin }) {
         <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
       <h1>App CPE</h1>
-      <p>Acceso para fijos.</p>
 
       <div className="auth-tabs">
         <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>
