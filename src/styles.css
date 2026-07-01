@@ -177,19 +177,6 @@ a {
   font-weight: 800;
 }
 
-.home-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin: 3px 0 4px;
-}
-
-.home-meta-row span {
-  color: #6d7c91;
-  font-size: 12px;
-  font-weight: 900;
-}
-
 .ring-dot {
   position: absolute;
   top: 4px;
