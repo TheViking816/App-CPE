@@ -60,6 +60,23 @@ export async function updateUserSpecialties({ token, specialties }) {
   return data;
 }
 
+export async function trackUsageEvent({ eventType, chapa, metadata = {} }) {
+  if (!supabase || !eventType) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_track_event", {
+    p_event_type: eventType,
+    p_chapa: chapa || null,
+    p_metadata: metadata
+  });
+
+  if (error) {
+    console.warn("No se pudo registrar analitica:", error.message);
+    return null;
+  }
+
+  return data;
+}
+
 export async function getLatestDoorSnapshot(specialty = "CONDUCTOR 1a") {
   if (!supabase) return null;
 

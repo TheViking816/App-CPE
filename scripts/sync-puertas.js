@@ -30,14 +30,14 @@ function resolveSupabaseUrl(value) {
   return `https://${defaultProjectRef}.supabase.co`;
 }
 
-async function insertSupabaseSnapshot(parsed) {
-  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots`, {
+async function upsertSupabaseSnapshot(parsed) {
+  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots?on_conflict=specialty`, {
     method: "POST",
     headers: {
       "apikey": supabaseServiceRole,
       "Authorization": `Bearer ${supabaseServiceRole}`,
       "Content-Type": "application/json",
-      "Prefer": "return=minimal"
+      "Prefer": "resolution=merge-duplicates,return=minimal"
     },
     body: JSON.stringify({
       specialty: parsed.specialty,
@@ -59,7 +59,8 @@ const specialtyRows = [
   { code: "22", name: "TRASTAINERS RTT", snapshotName: "TRASTAINERS RTT", mode: "turno" },
   { code: "11", name: "CONDUCTOR 1a", snapshotName: "POL. CONDUCTOR 1a", mode: "polivalencia" },
   { code: "12", name: "CONDUCTOR 2a", snapshotName: "POL. CONDUCTOR 2a", mode: "polivalencia" },
-  { code: "03", name: "ESPECIALISTA", snapshotName: "POL. ESPECIALISTA", mode: "polivalencia" }
+  { code: "03", name: "ESPECIALISTA", snapshotName: "POL. ESPECIALISTA", mode: "polivalencia" },
+  { code: "10", name: "TRINCADOR", snapshotName: "POL. TRINCADOR", mode: "polivalencia" }
 ];
 
 function parseSpecialtyFromText(text, row) {
@@ -68,9 +69,11 @@ function parseSpecialtyFromText(text, row) {
   const pattern = new RegExp(`(?:^|\\s)${row.code}\\s+${escapedName}\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})\\s+(\\d{5})(?:\\s|$)`, "i");
   const match = normalized.match(pattern);
 
-  if (!match) return null;
+  const values = match
+    ? match.slice(1).map(Number)
+    : parseSpecialtyValuesFromLines(text, row);
 
-  const values = match.slice(1).map(Number);
+  if (!values) return null;
 
   return {
     source: puertasUrl,
@@ -102,6 +105,28 @@ function parseSpecialtyFromText(text, row) {
       rawCol10: values[9]
     }
   };
+}
+
+function parseSpecialtyValuesFromLines(text, row) {
+  const targetName = row.name.replace(/\s+/g, " ").trim().toUpperCase();
+  const line = text.split(/\r?\n/)
+    .find((candidate) => {
+      const normalized = candidate.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
+      return normalized.startsWith(`${row.code} ${targetName} `);
+    });
+
+  if (!line) return null;
+
+  const cells = line.split("\t").map((cell) => cell.replace(/\u00a0/g, " ").trim());
+  const valueCells = cells.slice(2);
+  if (valueCells.length < 10) return null;
+
+  const values = valueCells.slice(0, 10).map((cell) => {
+    const digits = cell.replace(/\D/g, "");
+    return digits ? Number(digits) : null;
+  });
+
+  return values.some((value) => value !== null) ? values : null;
 }
 
 function parseSpecialtiesFromText(text) {
@@ -162,7 +187,7 @@ async function main() {
     if (supabaseUrl && supabaseServiceRole) {
       try {
         for (const snapshot of parsedSnapshots) {
-          await insertSupabaseSnapshot(snapshot);
+          await upsertSupabaseSnapshot(snapshot);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error desconocido";

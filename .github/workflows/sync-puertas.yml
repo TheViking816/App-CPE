@@ -68,6 +68,7 @@ jobs:
           commit_message: "Actualiza puertas App CPE"
           file_pattern: "public/data/puertas-conductor-1a.json public/data/puertas-snapshots.json public/data/puertas-sync-status.json"
 
-      - name: Fail if sync failed
+      - name: Report non-blocking errors
         if: steps.sync.outcome == 'failure' || steps.push_supabase.outcome == 'failure'
-        run: exit 1
+        run: |
+          echo "::warning::Sync puertas no se completo, pero no se marca el workflow como fallido para evitar notificaciones por caidas externas."

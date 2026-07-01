@@ -27,7 +27,7 @@ import {
   getLatestDoorSnapshot,
   loginUser,
   registerUser,
-  requestDoorRefresh,
+  trackUsageEvent,
   updateUserSpecialties
 } from "./supabaseClient.js";
 
@@ -172,6 +172,10 @@ function getSpecialtyKind(item) {
   return item.kind === "polivalencia" ? "polivalencia" : "especialidad";
 }
 
+function getSpecialtyLabel(item) {
+  return item?.name?.replace(/^POL\.\s*/, "") || "";
+}
+
 function LoginPanel({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
@@ -208,6 +212,11 @@ function LoginPanel({ onLogin }) {
         : await loginUser({ chapa: normalized, password });
 
       if (!response?.token) throw new Error("No se pudo iniciar sesion.");
+      trackUsageEvent({
+        eventType: mode === "register" ? "register" : "login",
+        chapa: normalized,
+        metadata: { specialties: response.specialties || detectedSpecialties }
+      });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
       onLogin(response);
     } catch (requestError) {
@@ -317,15 +326,18 @@ function HomePanel({
         <span>Especialidad</span>
         <select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
           {availableSpecialties.map((item) => (
-            <option key={item.id} value={item.id}>{item.name}</option>
+            <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
           ))}
         </select>
       </div>
 
       <div className="home-summary">
-        <p>Tu posicion</p>
-        <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
-        <span>Chapa {user?.chapa || "-"}</span>
+        <PositionRing user={user} nearest={nearest} total={activeSpecialty.censo.length} />
+        <div>
+          <p>Tu posicion</p>
+          <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
+          <span>Chapa {user?.chapa || "-"}</span>
+        </div>
       </div>
 
       <div className="quick-grid">
@@ -372,7 +384,7 @@ function SpecialtyBlock({ title, items, selectedIds, onToggle }) {
             onClick={() => onToggle(item.id)}
           >
             <Check size={15} />
-            {item.name}
+            {getSpecialtyLabel(item)}
           </button>
         ))}
       </div>
@@ -426,6 +438,26 @@ function MySpecialtiesPanel({ session, availableSpecialties, notice, onSpecialti
   );
 }
 
+function PositionRing({ user, nearest, total }) {
+  const userPercent = user?.position && total ? (user.position / total) * 100 : 0;
+  const doorPercent = nearest?.doorPosition && total ? (nearest.doorPosition / total) * 100 : 0;
+
+  return (
+    <div
+      className="position-ring"
+      style={{
+        "--user-angle": `${userPercent * 3.6}deg`,
+        "--door-angle": `${doorPercent * 3.6}deg`
+      }}
+      aria-hidden="true"
+    >
+      <span className="ring-dot user-dot" />
+      <span className="ring-dot door-dot" />
+      <strong>{nearest?.shift || "-"}</strong>
+    </div>
+  );
+}
+
 function DoorsTable({ title, doors, tone }) {
   return (
     <section className="doors-table-section">
@@ -469,7 +501,7 @@ function DoorsPanel({ doors, doorConfig, activeSpecialty }) {
     <section className="page-panel">
       <div className="section-heading">
         <p>Puertas de turno</p>
-        <h1>{activeSpecialty.name}</h1>
+        <h1>{getSpecialtyLabel(activeSpecialty)}</h1>
         <span>Actualizado: {formatUpdatedAt(doorConfig?.updatedAt)}</span>
       </div>
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
@@ -499,7 +531,7 @@ function CensoPanel({ user, doors, activeSpecialty }) {
       <div className="section-title-row">
         <div>
           <p>Censo: {activeSpecialty.censo.length}</p>
-          <h1>{activeSpecialty.name}</h1>
+          <h1>{getSpecialtyLabel(activeSpecialty)}</h1>
         </div>
         <div className="search-field">
           <Search size={17} />
@@ -641,14 +673,6 @@ export function App() {
         pollTimer = window.setInterval(() => {
           applyLatestSnapshot().catch(() => {});
         }, SNAPSHOT_POLL_MS);
-        return requestDoorRefresh();
-      })
-      .then((refresh) => {
-        if (!refresh?.triggered || cancelled) return;
-
-        refreshTimer = window.setTimeout(() => {
-          applyLatestSnapshot().catch(() => {});
-        }, 90000);
       })
       .catch(() => {
         if (!cancelled) setDoorConfig(null);
@@ -660,6 +684,15 @@ export function App() {
       if (pollTimer) window.clearInterval(pollTimer);
     };
   }, [activeSpecialty.id, activeSpecialty.name]);
+
+  useEffect(() => {
+    if (!session?.chapa) return;
+    trackUsageEvent({
+      eventType: "app_open",
+      chapa: session.chapa,
+      metadata: { specialties: getEffectiveSpecialtyIds(session) }
+    });
+  }, [session?.chapa]);
 
   useEffect(() => {
     let cancelled = false;
@@ -694,6 +727,11 @@ export function App() {
     const nextSession = response || { ...session, specialties: nextIds };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
+    trackUsageEvent({
+      eventType: "specialties_update",
+      chapa: session.chapa,
+      metadata: { specialties: nextIds }
+    });
     if (!nextIds.includes(activeSpecialtyId)) setActiveSpecialtyId(nextIds[0]);
   };
 

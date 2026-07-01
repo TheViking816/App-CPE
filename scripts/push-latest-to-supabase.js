@@ -47,7 +47,7 @@ async function main() {
     throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
   }
 
-  const restUrl = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots`;
+  const restUrl = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots?on_conflict=specialty`;
 
   for (const payload of snapshots) {
     const response = await fetch(restUrl, {
@@ -56,7 +56,7 @@ async function main() {
         "apikey": supabaseServiceRole,
         "Authorization": `Bearer ${supabaseServiceRole}`,
         "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        "Prefer": "resolution=merge-duplicates,return=minimal"
       },
       body: JSON.stringify({
         specialty: payload.specialty,
@@ -71,7 +71,7 @@ async function main() {
       const message = `HTTP ${response.status}: ${await response.text()}`;
       await writeStatus({
         ok: false,
-        stage: "supabase-insert",
+        stage: "supabase-upsert",
         updatedAt: new Date().toISOString(),
         supabaseConfigured: true,
         specialty: payload.specialty,
@@ -83,13 +83,13 @@ async function main() {
 
   await writeStatus({
     ok: true,
-    stage: "supabase-insert",
+    stage: "supabase-upsert",
     updatedAt: snapshots[0]?.updatedAt || new Date().toISOString(),
     supabaseConfigured: true,
     specialties: snapshots.map((snapshot) => snapshot.specialty)
   });
 
-  console.log("OK: snapshot insertado en Supabase");
+  console.log("OK: snapshots actualizados en Supabase");
 }
 
 main().catch((error) => {

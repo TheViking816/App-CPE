@@ -149,8 +149,12 @@ a {
 }
 
 .home-summary {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
   padding: 18px 16px;
-  text-align: center;
+  text-align: left;
 }
 
 .home-summary p,
@@ -167,13 +171,54 @@ a {
 .home-summary h1 {
   margin: 4px 0;
   color: var(--ink);
-  font-size: 36px;
+  font-size: 32px;
   line-height: 1;
 }
 
 .home-summary span {
   color: var(--muted);
   font-weight: 800;
+}
+
+.position-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, #fff 0 52%, transparent 53%),
+    conic-gradient(from -90deg, rgba(13, 53, 103, 0.16), rgba(21, 184, 136, 0.28), rgba(13, 53, 103, 0.16));
+  border: 1px solid rgba(13, 53, 103, 0.18);
+  box-shadow: inset 0 0 0 5px #f4f8fc;
+}
+
+.position-ring strong {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.ring-dot {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  transform-origin: 0 31px;
+  box-shadow: 0 2px 8px rgba(7, 31, 63, 0.25);
+}
+
+.user-dot {
+  background: var(--green);
+  transform: rotate(var(--user-angle)) translateX(-50%);
+}
+
+.door-dot {
+  background: var(--blue);
+  transform: rotate(var(--door-angle)) translateX(-50%);
 }
 
 .quick-grid {
