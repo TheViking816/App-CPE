@@ -1,9 +1,8 @@
 {
   "ok": true,
-  "stage": "parsed",
-  "updatedAt": "2026-07-01T02:32:25.449Z",
-  "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
-  "supabaseConfigured": false,
+  "stage": "supabase-insert",
+  "updatedAt": "2026-07-01T02:35:53.724Z",
+  "supabaseConfigured": true,
   "specialties": [
     "CONDUCTOR 1a",
     "CONDUCTOR 2a",
@@ -11,23 +10,5 @@
     "POL. CONDUCTOR 1a",
     "POL. CONDUCTOR 2a",
     "POL. ESPECIALISTA"
-  ],
-  "doors": [
-    {
-      "key": "LAB",
-      "raw": 72625
-    },
-    {
-      "key": "NOC",
-      "raw": 72699
-    },
-    {
-      "key": "NOC-FES",
-      "raw": 72737
-    },
-    {
-      "key": "FES",
-      "raw": 72541
-    }
   ]
 }
