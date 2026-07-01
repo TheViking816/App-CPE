@@ -140,6 +140,7 @@ a {
 .home-summary,
 .quick-grid article,
 .compact-door-list,
+.door-ring-card,
 .empty-links,
 .censo-section {
   background: rgba(255, 255, 255, 0.92);
@@ -149,10 +150,6 @@ a {
 }
 
 .home-summary {
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
   padding: 18px 16px;
   text-align: left;
 }
@@ -180,26 +177,6 @@ a {
   font-weight: 800;
 }
 
-.position-ring {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at center, #fff 0 52%, transparent 53%),
-    conic-gradient(from -90deg, rgba(13, 53, 103, 0.16), rgba(21, 184, 136, 0.28), rgba(13, 53, 103, 0.16));
-  border: 1px solid rgba(13, 53, 103, 0.18);
-  box-shadow: inset 0 0 0 5px #f4f8fc;
-}
-
-.position-ring strong {
-  color: var(--navy);
-  font-size: 13px;
-  font-weight: 950;
-}
-
 .ring-dot {
   position: absolute;
   top: 4px;
@@ -219,6 +196,86 @@ a {
 .door-dot {
   background: var(--blue);
   transform: rotate(var(--door-angle)) translateX(-50%);
+}
+
+.door-rings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.door-ring-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.mini-position-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, #fff 0 50%, transparent 51%),
+    conic-gradient(from -90deg, rgba(13, 53, 103, 0.14), rgba(21, 184, 136, 0.26), rgba(13, 53, 103, 0.14));
+  border: 1px solid rgba(13, 53, 103, 0.16);
+  box-shadow: inset 0 0 0 4px #f4f8fc;
+}
+
+.mini-position-ring .ring-dot {
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  transform-origin: 0 22px;
+}
+
+.mini-position-ring strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.door-ring-card.near .mini-position-ring,
+.door-ring-card.now .mini-position-ring {
+  border-color: rgba(21, 184, 136, 0.42);
+  box-shadow: inset 0 0 0 4px #eefbf6;
+}
+
+.door-ring-card.far .mini-position-ring {
+  border-color: rgba(31, 71, 163, 0.22);
+}
+
+.door-ring-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.door-ring-card > div:last-child > strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.door-ring-card small {
+  display: block;
+  margin-top: 3px;
+  color: #6d7c91;
+  font-size: 11px;
+  font-weight: 850;
 }
 
 .quick-grid {

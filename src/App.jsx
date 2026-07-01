@@ -97,7 +97,7 @@ function sanitizeDoors(doors, activeSpecialty = specialty) {
     if (normalized) byKey.set(normalized.key, normalized);
   }
 
-  return ["LAB", "NOC", "NOC-FES", "FES"]
+  return ["NOC", "LAB", "NOC-FES", "FES"]
     .map((key) => byKey.get(key))
     .filter(Boolean);
 }
@@ -332,7 +332,6 @@ function HomePanel({
       </div>
 
       <div className="home-summary">
-        <PositionRing user={user} nearest={nearest} total={activeSpecialty.censo.length} />
         <div>
           <p>Tu posicion</p>
           <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
@@ -353,15 +352,7 @@ function HomePanel({
         </article>
       </div>
 
-      <section className="compact-door-list" aria-label="Resumen de puertas">
-        {doors.map((door) => (
-          <div key={door.key}>
-            <span>{door.shift}</span>
-            <strong>{formatDistance(door.distance)}</strong>
-            <small>{door.raw}</small>
-          </div>
-        ))}
-      </section>
+      <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
 
       {notice && <p className="inline-notice">{notice}</p>}
     </section>
@@ -438,23 +429,51 @@ function MySpecialtiesPanel({ session, availableSpecialties, notice, onSpecialti
   );
 }
 
-function PositionRing({ user, nearest, total }) {
+function formatCompactDistance(value) {
+  if (value === null) return "--";
+  if (value === 0) return "0";
+  return String(value);
+}
+
+function getDoorGroupLabel(door) {
+  return door.dayType === "festivo" ? "Festiva" : "Laborable";
+}
+
+function DoorRingsGrid({ user, doors, total }) {
+  return (
+    <section className="door-rings-grid" aria-label="Distancia visual a puertas">
+      {doors.map((door) => (
+        <DoorMiniRing key={door.key} user={user} door={door} total={total} />
+      ))}
+    </section>
+  );
+}
+
+function DoorMiniRing({ user, door, total }) {
   const userPercent = user?.position && total ? (user.position / total) * 100 : 0;
-  const doorPercent = nearest?.doorPosition && total ? (nearest.doorPosition / total) * 100 : 0;
+  const doorPercent = door?.doorPosition && total ? (door.doorPosition / total) * 100 : 0;
+  const distanceClass = classifyDistance(door.distance);
 
   return (
-    <div
-      className="position-ring"
-      style={{
-        "--user-angle": `${userPercent * 3.6}deg`,
-        "--door-angle": `${doorPercent * 3.6}deg`
-      }}
-      aria-hidden="true"
-    >
-      <span className="ring-dot user-dot" />
-      <span className="ring-dot door-dot" />
-      <strong>{nearest?.shift || "-"}</strong>
-    </div>
+    <article className={`door-ring-card ${distanceClass}`}>
+      <div
+        className="mini-position-ring"
+        style={{
+          "--user-angle": `${userPercent * 3.6}deg`,
+          "--door-angle": `${doorPercent * 3.6}deg`
+        }}
+        aria-hidden="true"
+      >
+        <span className="ring-dot user-dot" />
+        <span className="ring-dot door-dot" />
+        <strong>{formatCompactDistance(door.distance)}</strong>
+      </div>
+      <div>
+        <span>{getDoorGroupLabel(door)}</span>
+        <strong>{door.label}</strong>
+        <small>{door.doorChapa || door.raw || "-"}</small>
+      </div>
+    </article>
   );
 }
 
