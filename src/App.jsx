@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -35,6 +35,8 @@ import {
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
 const SNAPSHOT_POLL_MS = 60_000;
+const SNAPSHOT_REFRESH_POLL_MS = 5_000;
+const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
@@ -651,6 +653,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
+  const refreshRequestedRef = useRef(false);
 
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -674,6 +677,8 @@ export function App() {
     let cancelled = false;
     let refreshTimer = null;
     let pollTimer = null;
+    let refreshPollTimer = null;
+    let refreshPollAttempts = 0;
 
     async function loadLatestSnapshot() {
       const snapshot = await getLatestDoorSnapshot(activeSpecialty.name);
@@ -696,12 +701,35 @@ export function App() {
       return response;
     }
 
+    function startRefreshPolling() {
+      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
+      refreshPollAttempts = 0;
+      refreshPollTimer = window.setInterval(() => {
+        refreshPollAttempts += 1;
+        applyLatestSnapshot().catch(() => {});
+
+        if (refreshPollAttempts >= SNAPSHOT_REFRESH_POLL_ATTEMPTS && refreshPollTimer) {
+          window.clearInterval(refreshPollTimer);
+          refreshPollTimer = null;
+        }
+      }, SNAPSHOT_REFRESH_POLL_MS);
+    }
+
     applyLatestSnapshot()
       .then((response) => {
         if (!Array.isArray(response?.doors)) return null;
-        refreshTimer = window.setTimeout(() => {
-          requestDoorRefresh().catch(() => {});
-        }, 1500);
+        if (!refreshRequestedRef.current) {
+          refreshRequestedRef.current = true;
+          refreshTimer = window.setTimeout(() => {
+            requestDoorRefresh({ force: true })
+              .then((result) => {
+                if (cancelled) return;
+                if (result?.triggered) startRefreshPolling();
+                applyLatestSnapshot().catch(() => {});
+              })
+              .catch(() => {});
+          }, 1500);
+        }
         pollTimer = window.setInterval(() => {
           applyLatestSnapshot().catch(() => {});
         }, SNAPSHOT_POLL_MS);
@@ -714,6 +742,7 @@ export function App() {
       cancelled = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
       if (pollTimer) window.clearInterval(pollTimer);
+      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
     };
   }, [activeSpecialty.id, activeSpecialty.name]);
 
