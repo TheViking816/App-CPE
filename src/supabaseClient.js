@@ -23,6 +23,8 @@ export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
+const USAGE_TRACKING_EXCLUDED_CHAPAS = new Set(["72683"]);
+
 export async function registerUser({ chapa, password, specialties }) {
   if (!supabase) return null;
 
@@ -62,10 +64,15 @@ export async function updateUserSpecialties({ token, specialties }) {
 
 export async function trackUsageEvent({ eventType, chapa, metadata = {} }) {
   if (!supabase || !eventType) return null;
+  const normalizedChapa = String(chapa || "").replace(/\D/g, "").slice(-5);
+
+  if (USAGE_TRACKING_EXCLUDED_CHAPAS.has(normalizedChapa)) {
+    return null;
+  }
 
   const { data, error } = await supabase.rpc("app_cpe_track_event", {
     p_event_type: eventType,
-    p_chapa: chapa || null,
+    p_chapa: normalizedChapa || null,
     p_metadata: metadata
   });
 
