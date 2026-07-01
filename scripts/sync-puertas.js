@@ -54,9 +54,11 @@ async function insertSupabaseSnapshot(parsed) {
 }
 
 const specialtyRows = [
-  { code: "11", name: "CONDUCTOR 1a" },
-  { code: "12", name: "CONDUCTOR 2a" },
-  { code: "22", name: "TRASTAINERS RTT" }
+  { code: "11", name: "CONDUCTOR 1a", snapshotName: "CONDUCTOR 1a", mode: "turno" },
+  { code: "12", name: "CONDUCTOR 2a", snapshotName: "CONDUCTOR 2a", mode: "turno" },
+  { code: "22", name: "TRASTAINERS RTT", snapshotName: "TRASTAINERS RTT", mode: "turno" },
+  { code: "11", name: "CONDUCTOR 1a", snapshotName: "POL. CONDUCTOR 1a", mode: "polivalencia" },
+  { code: "12", name: "CONDUCTOR 2a", snapshotName: "POL. CONDUCTOR 2a", mode: "polivalencia" }
 ];
 
 function parseSpecialtyFromText(text, row) {
@@ -71,14 +73,21 @@ function parseSpecialtyFromText(text, row) {
 
   return {
     source: puertasUrl,
-    specialty: row.name,
+    specialty: row.snapshotName,
     updatedAt: new Date().toISOString(),
-    doors: [
-      { key: "LAB", label: "Diurna", raw: values[0], dayType: "laborable", shift: "LAB" },
-      { key: "NOC", label: "Super", raw: values[1], dayType: "laborable", shift: "NOC" },
-      { key: "NOC-FES", label: "Super festiva", raw: values[6], dayType: "festivo", shift: "NOC-FES" },
-      { key: "FES", label: "Diurna festiva", raw: values[7], dayType: "festivo", shift: "FES" }
-    ],
+    doors: row.mode === "polivalencia"
+      ? [
+        { key: "LAB", label: "Diurna", raw: values[3], dayType: "laborable", shift: "LAB" },
+        { key: "NOC", label: "Super", raw: values[4], dayType: "laborable", shift: "NOC" },
+        { key: "NOC-FES", label: "Super festiva", raw: values[8], dayType: "festivo", shift: "NOC-FES" },
+        { key: "FES", label: "Diurna festiva", raw: values[9], dayType: "festivo", shift: "FES" }
+      ]
+      : [
+        { key: "LAB", label: "Diurna", raw: values[0], dayType: "laborable", shift: "LAB" },
+        { key: "NOC", label: "Super", raw: values[1], dayType: "laborable", shift: "NOC" },
+        { key: "NOC-FES", label: "Super festiva", raw: values[6], dayType: "festivo", shift: "NOC-FES" },
+        { key: "FES", label: "Diurna festiva", raw: values[7], dayType: "festivo", shift: "FES" }
+      ],
     rawColumns: {
       labHoy: values[0],
       super: values[1],
