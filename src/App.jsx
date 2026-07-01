@@ -269,6 +269,7 @@ function LoginPanel({ onLogin }) {
             type={showPassword ? "text" : "password"}
             placeholder="Minimo 4 caracteres"
             value={password}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
             onChange={(event) => setPassword(event.target.value)}
           />
           <button

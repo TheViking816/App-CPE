@@ -6,7 +6,7 @@ create or replace function public.app_cpe_track_event(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions, pg_temp
 as $$
 declare
   v_event_type text := lower(trim(coalesce(p_event_type, '')));
@@ -39,7 +39,7 @@ create or replace function public.app_cpe_login(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions, pg_temp
 as $$
 declare
   v_user public.app_cpe_users;
