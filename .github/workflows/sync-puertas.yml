@@ -4,12 +4,16 @@ on:
   workflow_dispatch:
   schedule:
     # GitHub Actions usa UTC. Estas entradas cubren horario de verano e invierno en Espana.
-    - cron: "15 5 * * *"
-    - cron: "15 6 * * *"
-    - cron: "15 10 * * *"
-    - cron: "15 11 * * *"
+    # El paso "Check scheduled time" solo deja continuar en ventanas cortas de
+    # Europe/Madrid alrededor de 07:20, 12:20, 14:45 o 15:00.
+    - cron: "20 5 * * *"
+    - cron: "20 6 * * *"
+    - cron: "20 10 * * *"
+    - cron: "20 11 * * *"
     - cron: "45 12 * * *"
     - cron: "45 13 * * *"
+    - cron: "0 13 * * *"
+    - cron: "0 14 * * *"
 
 concurrency:
   group: sync-puertas
@@ -25,20 +29,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check scheduled time
+        id: schedule_gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run_sync=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          local_time="$(TZ=Europe/Madrid date +'%H:%M')"
+          case "$local_time" in
+            07:2[0-9]|07:3[0-5]|12:2[0-9]|12:3[0-5]|14:4[5-9]|14:5[0-9]|15:0[0-9]|15:1[0-5])
+              echo "run_sync=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "run_sync=false" >> "$GITHUB_OUTPUT"
+              echo "Skipping sync at Europe/Madrid $local_time"
+              ;;
+          esac
+
       - name: Setup Node.js
+        if: steps.schedule_gate.outputs.run_sync == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
 
       - name: Install dependencies
+        if: steps.schedule_gate.outputs.run_sync == 'true'
         run: npm ci
 
       - name: Install Playwright Chromium
+        if: steps.schedule_gate.outputs.run_sync == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Sync puertas
         id: sync
+        if: steps.schedule_gate.outputs.run_sync == 'true'
         continue-on-error: true
         env:
           CPE_PUERTAS_URL: "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003"
@@ -46,7 +73,7 @@ jobs:
 
       - name: Push snapshot to Supabase
         id: push_supabase
-        if: steps.sync.outcome == 'success'
+        if: steps.schedule_gate.outputs.run_sync == 'true' && steps.sync.outcome == 'success'
         continue-on-error: true
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
@@ -54,7 +81,7 @@ jobs:
         run: npm run push:supabase
 
       - name: Upload debug data
-        if: always()
+        if: always() && steps.schedule_gate.outputs.run_sync == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: puertas-debug
@@ -66,7 +93,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Commit updated puertas
-        if: always()
+        if: always() && steps.schedule_gate.outputs.run_sync == 'true'
         continue-on-error: true
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
@@ -74,6 +101,6 @@ jobs:
           file_pattern: "public/data/puertas-conductor-1a.json public/data/puertas-snapshots.json public/data/puertas-sync-status.json"
 
       - name: Report non-blocking errors
-        if: steps.sync.outcome == 'failure' || steps.push_supabase.outcome == 'failure'
+        if: steps.schedule_gate.outputs.run_sync == 'true' && (steps.sync.outcome == 'failure' || steps.push_supabase.outcome == 'failure')
         run: |
           echo "::warning::Sync puertas no se completo, pero no se marca el workflow como fallido para evitar notificaciones por caidas externas."
