@@ -409,6 +409,11 @@ function HomePanel({
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
+  const showRollOnAlert = (
+    activeSpecialty.id === "pol-especialista"
+    && nearest?.distance !== null
+    && nearest?.distance < 50
+  );
 
   return (
     <section className="page-panel">
@@ -467,7 +472,7 @@ function HomePanel({
         <article>
           <span>Puerta mas cercana</span>
           <strong>{nearest ? nearest.label : "-"}</strong>
-          <small>{nearest ? `${nearest.shift} · ${formatDistance(nearest.distance)}` : "Sin dato"}</small>
+          <small>{nearest ? `${nearest.shift} - ${formatDistance(nearest.distance)}` : "Sin dato"}</small>
         </article>
         <article>
           <span>Estado</span>
@@ -475,6 +480,19 @@ function HomePanel({
           <small>{updatedLabel}</small>
         </article>
       </div>
+
+      {showRollOnAlert && (
+        <div className="rollon-alert">
+          <div className="rollon-alert-icon">
+            <CircleAlert size={20} />
+          </div>
+          <div>
+            <span>Estiba cerca</span>
+            <strong>Puerta a {formatDistance(nearest.distance)}</strong>
+            <small>Si el doble se pone a las 18:00 o 19:00, la opcion de salir de roll-on es alta.</small>
+          </div>
+        </div>
+      )}
 
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
 

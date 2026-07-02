@@ -357,6 +357,56 @@ a {
   margin: 10px 0;
 }
 
+.rollon-alert {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 1px solid rgba(245, 130, 32, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 8px 20px rgba(126, 57, 10, 0.12);
+}
+
+.rollon-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #ffedd5;
+  color: #c05621;
+}
+
+.rollon-alert span {
+  display: block;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.rollon-alert strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.rollon-alert small {
+  display: block;
+  margin-top: 4px;
+  color: #6d7c91;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
 .chapero-card {
   display: grid;
   gap: 10px;
@@ -1215,6 +1265,26 @@ select {
 :root[data-theme="dark"] .chapero-card.excepcion .chapero-icon {
   background: rgba(251, 146, 60, 0.18);
   color: #fdba74;
+}
+
+:root[data-theme="dark"] .rollon-alert {
+  border-color: rgba(251, 146, 60, 0.42);
+  background:
+    linear-gradient(135deg, rgba(124, 45, 18, 0.38), rgba(16, 31, 51, 0.96));
+  box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .rollon-alert-icon {
+  background: rgba(251, 146, 60, 0.18);
+  color: #fdba74;
+}
+
+:root[data-theme="dark"] .rollon-alert span {
+  color: #fdba74;
+}
+
+:root[data-theme="dark"] .rollon-alert small {
+  color: var(--muted);
 }
 
 :root[data-theme="dark"] .chapero-summary div,
