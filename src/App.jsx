@@ -13,7 +13,9 @@ import {
   ListChecks,
   Lock,
   LogOut,
+  Moon,
   Search,
+  Sun,
   UserRound,
   UsersRound
 } from "lucide-react";
@@ -29,7 +31,6 @@ import {
 import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
-  getLatestDoorSnapshots,
   loginUser,
   registerUser,
   requestChaperoRefresh,
@@ -40,6 +41,7 @@ import {
 
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
+const THEME_KEY = "app-cpe-theme";
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
@@ -61,6 +63,17 @@ function getInitialSession() {
   }
 }
 
+function getInitialTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    return "light";
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+}
+
 function formatDistance(value) {
   if (value === null) return "Sin dato";
   if (value === 0) return "En puerta";
@@ -79,6 +92,16 @@ function formatUpdatedAt(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function formatCurrentDateTime(value) {
+  return new Intl.DateTimeFormat("es-ES", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(value);
 }
 
 function formatChaperoStatus(status) {
@@ -120,45 +143,6 @@ async function loadLocalChaperoSnapshot() {
 
 function isActiveChaperoStatus(status) {
   return status === "contratado" || status === "anticipado";
-}
-
-function getDoorReachedByShift(user, activeSpecialty, doors, shiftKey) {
-  const doorStates = getDoorState(user?.chapa, doors, activeSpecialty.id);
-  const matchingDoors = doorStates.filter((door) => door.shift === shiftKey);
-  const candidates = matchingDoors.length ? matchingDoors : doorStates;
-
-  return candidates.find((door) => (
-    user?.position
-    && door?.doorPosition
-    && user.position <= door.doorPosition
-  )) || null;
-}
-
-function getContractSource({ user, chaperoWorker, chaperoSnapshot, availableSpecialties, doorSnapshotsByName }) {
-  if (!user || !isActiveChaperoStatus(chaperoWorker?.status)) return null;
-
-  const orderedSpecialties = [...availableSpecialties].sort((a, b) => {
-    if (a.kind === b.kind) return 0;
-    return a.kind === "especialidad" ? -1 : 1;
-  });
-
-  for (const item of orderedSpecialties) {
-    const snapshot = doorSnapshotsByName.get(item.name);
-    const doors = sanitizeDoors(snapshot?.doors, item);
-    const reachedDoor = getDoorReachedByShift(user, item, doors, chaperoSnapshot?.shiftKey || "LAB");
-
-    if (reachedDoor) {
-      return {
-        specialty: item,
-        door: reachedDoor
-      };
-    }
-  }
-
-  return {
-    specialty: null,
-    door: null
-  };
 }
 
 function normalizeLegacyDoor(door) {
@@ -383,7 +367,7 @@ function LoginPanel({ onLogin }) {
   );
 }
 
-function AppHeader({ user, onLogout }) {
+function AppHeader({ user, theme, onThemeToggle, onLogout }) {
   return (
     <header className="app-header">
       <div className="logo-box">
@@ -392,6 +376,14 @@ function AppHeader({ user, onLogout }) {
       <div className="header-title">
         <strong>App CPE</strong>
       </div>
+      <button
+        className="theme-button"
+        type="button"
+        onClick={onThemeToggle}
+        aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+      >
+        {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
       {user && (
         <button className="logout-button" type="button" onClick={onLogout}>
           <LogOut size={17} />
@@ -408,7 +400,7 @@ function HomePanel({
   doorConfig,
   chaperoSnapshot,
   chaperoWorker,
-  contractSource,
+  currentTime,
   notice,
   activeSpecialty,
   availableSpecialties,
@@ -417,11 +409,39 @@ function HomePanel({
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
-  const sourceLabel = contractSource?.specialty ? getSpecialtyLabel(contractSource.specialty) : null;
-  const sourceKind = contractSource?.specialty?.kind === "polivalencia" ? "Polivalencia" : "Especialidad";
 
   return (
     <section className="page-panel">
+      <section className={`chapero-card ${chaperoWorker?.status || "empty"}`}>
+        <div className="app-time-row">
+          <span>{formatCurrentDateTime(currentTime)}</span>
+          <small>Chapa {user?.chapa || "-"}</small>
+        </div>
+
+        <div className="chapero-status-row">
+          <div className="chapero-icon">
+            {isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={24} /> : <CircleAlert size={24} />}
+          </div>
+          <div>
+            <span>Estado de chapa</span>
+            <strong>{formatChaperoStatus(chaperoWorker?.status)}</strong>
+            <small>Lectura directa del Chapero</small>
+          </div>
+        </div>
+
+        <div className="chapero-summary">
+          <div><strong>{chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
+          <div><strong>{chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
+          <div><strong>{chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
+          <div><strong>{chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
+        </div>
+
+        <div className="chapero-updated">
+          <Clock3 size={14} />
+          <span>Chapero actualizado: {formatUpdatedAt(chaperoSnapshot?.updatedAt)}</span>
+        </div>
+      </section>
+
       <div className="specialty-select">
         <span>Especialidad</span>
         <select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
@@ -455,43 +475,6 @@ function HomePanel({
           <small>{updatedLabel}</small>
         </article>
       </div>
-
-      <section className={`chapero-card ${chaperoWorker?.status || "empty"}`}>
-        <div className="chapero-status-row">
-          <div className="chapero-icon">
-            {isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={24} /> : <CircleAlert size={24} />}
-          </div>
-          <div>
-            <span>Estado de chapa</span>
-            <strong>{formatChaperoStatus(chaperoWorker?.status)}</strong>
-            <small>{chaperoSnapshot?.jornadaText || "Sin jornada cargada"}</small>
-          </div>
-        </div>
-
-        {isActiveChaperoStatus(chaperoWorker?.status) && (
-          <div className="contract-source">
-            <span>Contratacion detectada</span>
-            <strong>{sourceLabel || "Origen no identificado"}</strong>
-            <small>
-              {sourceLabel
-                ? `${sourceKind} · ${contractSource.door?.label || "Puerta"} ${contractSource.door?.doorPosition || ""}`
-                : "No coincide con las puertas cargadas para tus censos"}
-            </small>
-          </div>
-        )}
-
-        <div className="chapero-summary">
-          <div><strong>{chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
-          <div><strong>{chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
-          <div><strong>{chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
-          <div><strong>{chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
-        </div>
-
-        <div className="chapero-updated">
-          <Clock3 size={14} />
-          <span>Chapero actualizado: {formatUpdatedAt(chaperoSnapshot?.updatedAt)}</span>
-        </div>
-      </section>
 
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
 
@@ -778,9 +761,10 @@ function BottomNav({ activeTab, onChange }) {
 
 export function App() {
   const [session, setSession] = useState(getInitialSession);
+  const [theme, setTheme] = useState(getInitialTheme);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [doorConfig, setDoorConfig] = useState(null);
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
-  const [doorSnapshotsByName, setDoorSnapshotsByName] = useState(new Map());
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
@@ -801,22 +785,26 @@ export function App() {
     () => findChaperoWorker(chaperoSnapshot, session?.chapa),
     [chaperoSnapshot, session?.chapa]
   );
-  const contractSource = useMemo(
-    () => getContractSource({
-      user,
-      chaperoWorker,
-      chaperoSnapshot,
-      availableSpecialties,
-      doorSnapshotsByName
-    }),
-    [user, chaperoWorker, chaperoSnapshot, availableSpecialties, doorSnapshotsByName]
-  );
 
   useEffect(() => {
     if (!availableSpecialties.some((item) => item.id === activeSpecialtyId)) {
       setActiveSpecialtyId(availableSpecialties[0]?.id || specialty.id);
     }
   }, [activeSpecialtyId, availableSpecialties]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Theme persistence is optional; the app still works without localStorage.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -890,36 +878,6 @@ export function App() {
       if (refreshPollTimer) window.clearInterval(refreshPollTimer);
     };
   }, [activeSpecialty.id, activeSpecialty.name]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDoorSnapshotsForUser() {
-      const names = availableSpecialties.map((item) => item.name);
-      const snapshots = await getLatestDoorSnapshots(names);
-      const map = new Map(snapshots.map((snapshot) => [snapshot.specialty, snapshot]));
-
-      for (const item of availableSpecialties) {
-        if (!map.has(item.name)) {
-          map.set(item.name, {
-            source: "local",
-            specialty: item.name,
-            updatedAt: null,
-            doors: item.doors,
-            rawColumns: {}
-          });
-        }
-      }
-
-      if (!cancelled) setDoorSnapshotsByName(map);
-    }
-
-    loadDoorSnapshotsForUser().catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [availableSpecialties]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1017,7 +975,12 @@ export function App() {
 
   return (
     <div className="mobile-app">
-      <AppHeader user={user} onLogout={logout} />
+      <AppHeader
+        user={user}
+        theme={theme}
+        onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+        onLogout={logout}
+      />
       <main className="content">
         {activeTab === "inicio" && (
           <HomePanel
@@ -1026,7 +989,7 @@ export function App() {
             doorConfig={doorConfig}
             chaperoSnapshot={chaperoSnapshot}
             chaperoWorker={chaperoWorker}
-            contractSource={contractSource}
+            currentTime={currentTime}
             notice={notice}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}

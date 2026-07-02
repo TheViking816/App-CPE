@@ -18,6 +18,25 @@
   color: var(--ink);
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --navy: #dbeafe;
+  --navy-2: #4f9dff;
+  --blue: #6d8cff;
+  --teal: #45d6c8;
+  --green: #34d399;
+  --orange: #fb923c;
+  --red: #fb5555;
+  --ink: #edf6ff;
+  --muted: #a8b5c6;
+  --line: rgba(148, 163, 184, 0.28);
+  --soft: #071321;
+  --card: #101f33;
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.38);
+  background: #071321;
+  color: var(--ink);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -34,6 +53,13 @@ body {
     linear-gradient(135deg, rgba(8, 38, 75, 0.08), transparent 32%),
     linear-gradient(315deg, rgba(50, 199, 184, 0.14), transparent 38%),
     #eef5f8;
+}
+
+:root[data-theme="dark"] body {
+  background:
+    linear-gradient(135deg, rgba(79, 157, 255, 0.12), transparent 32%),
+    linear-gradient(315deg, rgba(69, 214, 200, 0.12), transparent 38%),
+    #071321;
 }
 
 button,
@@ -61,12 +87,19 @@ a {
   box-shadow: 0 0 0 1px rgba(8, 38, 75, 0.06);
 }
 
+:root[data-theme="dark"] .mobile-app {
+  background:
+    radial-gradient(circle at 6% 25%, rgba(79, 157, 255, 0.12), transparent 24%),
+    linear-gradient(180deg, #071321 0%, #0b1727 48%, #071321 100%);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.16);
+}
+
 .app-header {
   position: sticky;
   top: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr) auto;
+  grid-template-columns: 82px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   min-height: 90px;
@@ -131,6 +164,21 @@ a {
   color: #fff;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.theme-button {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.theme-button:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .content {
@@ -321,6 +369,27 @@ a {
   box-shadow: 0 8px 20px rgba(7, 31, 63, 0.1);
 }
 
+.app-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 2px;
+}
+
+.app-time-row span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: capitalize;
+}
+
+.app-time-row small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .chapero-card.contratado,
 .chapero-card.anticipado {
   border-color: rgba(16, 185, 129, 0.26);
@@ -370,8 +439,7 @@ a {
   color: #c05621;
 }
 
-.chapero-card span,
-.contract-source span {
+.chapero-card span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
@@ -388,7 +456,6 @@ a {
 }
 
 .chapero-status-row small,
-.contract-source small,
 .chapero-updated {
   display: block;
   margin-top: 4px;
@@ -396,22 +463,6 @@ a {
   font-size: 12px;
   font-weight: 800;
   line-height: 1.25;
-}
-
-.contract-source {
-  padding: 10px;
-  border: 1px solid rgba(13, 53, 103, 0.12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-}
-
-.contract-source strong {
-  display: block;
-  margin-top: 3px;
-  color: var(--navy);
-  font-size: 18px;
-  font-weight: 950;
-  line-height: 1.1;
 }
 
 .chapero-summary {
@@ -1110,14 +1161,179 @@ select {
   text-align: center;
 }
 
+:root[data-theme="dark"] .app-header {
+  background: linear-gradient(135deg, #06111f 0%, #102f52 100%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+}
+
+:root[data-theme="dark"] .home-summary,
+:root[data-theme="dark"] .quick-grid article,
+:root[data-theme="dark"] .compact-door-list,
+:root[data-theme="dark"] .door-ring-card,
+:root[data-theme="dark"] .empty-links,
+:root[data-theme="dark"] .censo-section,
+:root[data-theme="dark"] .specialty-select,
+:root[data-theme="dark"] .manage-specialties,
+:root[data-theme="dark"] .specialty-manage-block,
+:root[data-theme="dark"] .links-list a {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(16, 31, 51, 0.94);
+  box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .chapero-card {
+  border-color: rgba(148, 163, 184, 0.25);
+  background:
+    linear-gradient(135deg, rgba(16, 31, 51, 0.98), rgba(10, 25, 42, 0.94));
+  box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .chapero-card.contratado,
+:root[data-theme="dark"] .chapero-card.anticipado {
+  border-color: rgba(52, 211, 153, 0.38);
+  background:
+    linear-gradient(135deg, rgba(6, 78, 59, 0.44), rgba(16, 31, 51, 0.96));
+}
+
+:root[data-theme="dark"] .chapero-card.excepcion {
+  border-color: rgba(251, 146, 60, 0.46);
+  background:
+    linear-gradient(135deg, rgba(124, 45, 18, 0.42), rgba(16, 31, 51, 0.96));
+}
+
+:root[data-theme="dark"] .chapero-icon {
+  background: rgba(79, 157, 255, 0.16);
+  color: #b9d8ff;
+}
+
+:root[data-theme="dark"] .chapero-card.contratado .chapero-icon,
+:root[data-theme="dark"] .chapero-card.anticipado .chapero-icon {
+  background: rgba(52, 211, 153, 0.18);
+  color: #8ff5c9;
+}
+
+:root[data-theme="dark"] .chapero-card.excepcion .chapero-icon {
+  background: rgba(251, 146, 60, 0.18);
+  color: #fdba74;
+}
+
+:root[data-theme="dark"] .chapero-summary div,
+:root[data-theme="dark"] .search-field,
+:root[data-theme="dark"] .field,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] .censo-cell,
+:root[data-theme="dark"] .auth-tabs,
+:root[data-theme="dark"] .specialty-picker button,
+:root[data-theme="dark"] .secondary-button {
+  border-color: rgba(148, 163, 184, 0.26);
+  background: rgba(8, 22, 38, 0.72);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .specialty-picker button.selected,
+:root[data-theme="dark"] .censo-cell.is-door {
+  border-color: rgba(109, 140, 255, 0.5);
+  background: rgba(79, 157, 255, 0.14);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .censo-cell.is-user {
+  border-color: var(--orange);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+:root[data-theme="dark"] .doors-table-wrap {
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .doors-table th {
+  background: #102f52;
+}
+
+:root[data-theme="dark"] .doors-table td {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .doors-table tr.near td {
+  background: rgba(6, 78, 59, 0.28);
+}
+
+:root[data-theme="dark"] .doors-table tr.now td {
+  background: rgba(124, 45, 18, 0.28);
+}
+
+:root[data-theme="dark"] .doors-table tr.far td {
+  background: rgba(8, 22, 38, 0.54);
+}
+
+:root[data-theme="dark"] .compact-door-list div {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+
+:root[data-theme="dark"] .bottom-nav {
+  border-top-color: rgba(148, 163, 184, 0.24);
+  background: rgba(8, 18, 31, 0.96);
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.38);
+}
+
+:root[data-theme="dark"] .bottom-nav button.active {
+  color: #dbeafe;
+}
+
+:root[data-theme="dark"] .login-screen {
+  background: linear-gradient(135deg, #030b15 0%, #102f52 56%, #0f766e 100%);
+}
+
+:root[data-theme="dark"] .login-card {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(16, 31, 51, 0.96);
+}
+
+:root[data-theme="dark"] .login-card label,
+:root[data-theme="dark"] .censo-cell strong {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .auth-tabs button.active {
+  background: rgba(8, 22, 38, 0.9);
+  color: var(--ink);
+}
+
+@media (min-width: 760px) {
+  .mobile-app,
+  .bottom-nav {
+    width: min(100%, 760px);
+  }
+
+  .content {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .door-rings-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .censo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  }
+}
+
 @media (max-width: 430px) {
   .app-header {
-    grid-template-columns: 82px minmax(0, 1fr) auto;
+    grid-template-columns: 82px minmax(0, 1fr) auto auto;
     gap: 8px;
   }
 
   .logout-button {
     padding: 0 13px;
+  }
+
+  .theme-button {
+    width: 44px;
+    height: 44px;
   }
 
   .doors-table th,
