@@ -309,6 +309,146 @@ a {
   margin: 10px 0;
 }
 
+.chapero-card {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 251, 0.94));
+  box-shadow: 0 8px 20px rgba(7, 31, 63, 0.1);
+}
+
+.chapero-card.contratado,
+.chapero-card.anticipado {
+  border-color: rgba(16, 185, 129, 0.26);
+  background:
+    linear-gradient(135deg, rgba(236, 253, 245, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+.chapero-card.nocontratado {
+  border-color: rgba(13, 53, 103, 0.22);
+}
+
+.chapero-card.falta {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.chapero-card.excepcion {
+  border-color: rgba(245, 130, 32, 0.38);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+.chapero-status-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.chapero-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #edf3ff;
+  color: var(--navy-2);
+}
+
+.chapero-card.contratado .chapero-icon,
+.chapero-card.anticipado .chapero-icon {
+  background: #dff9ee;
+  color: #07815d;
+}
+
+.chapero-card.excepcion .chapero-icon {
+  background: #ffedd5;
+  color: #c05621;
+}
+
+.chapero-card span,
+.contract-source span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.chapero-status-row strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.chapero-status-row small,
+.contract-source small,
+.chapero-updated {
+  display: block;
+  margin-top: 4px;
+  color: #6d7c91;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.contract-source {
+  padding: 10px;
+  border: 1px solid rgba(13, 53, 103, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.contract-source strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.chapero-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.chapero-summary div {
+  min-width: 0;
+  padding: 8px 5px;
+  border-radius: 8px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.chapero-summary strong {
+  display: block;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.chapero-summary span {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+}
+
+.chapero-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+}
+
 .quick-grid article {
   min-width: 0;
   padding: 13px 12px;

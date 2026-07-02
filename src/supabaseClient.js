@@ -111,6 +111,60 @@ export async function getLatestDoorSnapshot(specialty = "CONDUCTOR 1a") {
   };
 }
 
+export async function getLatestDoorSnapshots(specialtyNames = []) {
+  if (!supabase || !Array.isArray(specialtyNames) || specialtyNames.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("app_cpe_door_snapshots")
+    .select("specialty, source, doors, raw_columns, updated_at")
+    .in("specialty", specialtyNames);
+
+  if (error) {
+    console.warn("No se pudieron leer puertas desde Supabase:", error.message);
+    return [];
+  }
+
+  return (data || [])
+    .filter((item) => Array.isArray(item.doors))
+    .map((item) => ({
+      source: item.source || "supabase",
+      specialty: item.specialty,
+      updatedAt: item.updated_at,
+      doors: item.doors,
+      rawColumns: item.raw_columns || {}
+    }));
+}
+
+export async function getLatestChaperoSnapshot() {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("app_cpe_chapero_snapshots")
+    .select("source, page_date, jornada_text, jornada_date, from_hour, to_hour, shift_key, summary, workers, updated_at")
+    .eq("snapshot_key", "latest")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("No se pudo leer Chapero desde Supabase:", error.message);
+    return null;
+  }
+
+  if (!data || !Array.isArray(data.workers)) return null;
+
+  return {
+    source: data.source || "supabase",
+    pageDate: data.page_date,
+    jornadaText: data.jornada_text,
+    jornadaDate: data.jornada_date,
+    fromHour: data.from_hour,
+    toHour: data.to_hour,
+    shiftKey: data.shift_key || "LAB",
+    summary: data.summary || {},
+    workers: data.workers,
+    updatedAt: data.updated_at
+  };
+}
+
 export async function requestDoorRefresh({ force = false } = {}) {
   if (!supabase) return null;
 
@@ -120,6 +174,21 @@ export async function requestDoorRefresh({ force = false } = {}) {
 
   if (error) {
     console.warn("No se pudo solicitar refresco de puertas:", error.message);
+    return null;
+  }
+
+  return data || null;
+}
+
+export async function requestChaperoRefresh() {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.functions.invoke("refresh-chapero", {
+    body: { force: true }
+  });
+
+  if (error) {
+    console.warn("No se pudo solicitar refresco de Chapero:", error.message);
     return null;
   }
 

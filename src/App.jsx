@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BadgeCheck,
   CalendarDays,
   Check,
+  CircleAlert,
+  Clock3,
   ExternalLink,
   Eye,
   EyeOff,
@@ -24,9 +27,12 @@ import {
   specialty
 } from "./censo.js";
 import {
+  getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
+  getLatestDoorSnapshots,
   loginUser,
   registerUser,
+  requestChaperoRefresh,
   requestDoorRefresh,
   trackUsageEvent,
   updateUserSpecialties
@@ -37,6 +43,7 @@ const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
+const CHAPERO_POLL_MS = 60_000;
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
@@ -72,6 +79,86 @@ function formatUpdatedAt(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function formatChaperoStatus(status) {
+  const labels = {
+    contratado: "Contratado",
+    anticipado: "Anticipado",
+    nocontratado: "No contratado",
+    falta: "No disponible",
+    excepcion: "Con excepcion",
+    doble: "Doble"
+  };
+
+  return labels[status] || "Sin dato";
+}
+
+function normalizeChaperoWorker(worker) {
+  return {
+    ...worker,
+    chapa: normalizeChapa(worker?.chapa || worker?.rawChapa)
+  };
+}
+
+function findChaperoWorker(chaperoSnapshot, chapa) {
+  const normalized = normalizeChapa(chapa);
+  if (!normalized || !Array.isArray(chaperoSnapshot?.workers)) return null;
+  return chaperoSnapshot.workers.map(normalizeChaperoWorker).find((worker) => worker.chapa === normalized) || null;
+}
+
+async function loadLocalChaperoSnapshot() {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}data/chapero-snapshot.json`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return Array.isArray(data?.workers) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function isActiveChaperoStatus(status) {
+  return status === "contratado" || status === "anticipado";
+}
+
+function getDoorReachedByShift(user, activeSpecialty, doors, shiftKey) {
+  const doorStates = getDoorState(user?.chapa, doors, activeSpecialty.id);
+  const matchingDoors = doorStates.filter((door) => door.shift === shiftKey);
+  const candidates = matchingDoors.length ? matchingDoors : doorStates;
+
+  return candidates.find((door) => (
+    user?.position
+    && door?.doorPosition
+    && user.position <= door.doorPosition
+  )) || null;
+}
+
+function getContractSource({ user, chaperoWorker, chaperoSnapshot, availableSpecialties, doorSnapshotsByName }) {
+  if (!user || !isActiveChaperoStatus(chaperoWorker?.status)) return null;
+
+  const orderedSpecialties = [...availableSpecialties].sort((a, b) => {
+    if (a.kind === b.kind) return 0;
+    return a.kind === "especialidad" ? -1 : 1;
+  });
+
+  for (const item of orderedSpecialties) {
+    const snapshot = doorSnapshotsByName.get(item.name);
+    const doors = sanitizeDoors(snapshot?.doors, item);
+    const reachedDoor = getDoorReachedByShift(user, item, doors, chaperoSnapshot?.shiftKey || "LAB");
+
+    if (reachedDoor) {
+      return {
+        specialty: item,
+        door: reachedDoor
+      };
+    }
+  }
+
+  return {
+    specialty: null,
+    door: null
+  };
 }
 
 function normalizeLegacyDoor(door) {
@@ -319,6 +406,9 @@ function HomePanel({
   user,
   doors,
   doorConfig,
+  chaperoSnapshot,
+  chaperoWorker,
+  contractSource,
   notice,
   activeSpecialty,
   availableSpecialties,
@@ -327,6 +417,8 @@ function HomePanel({
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
+  const sourceLabel = contractSource?.specialty ? getSpecialtyLabel(contractSource.specialty) : null;
+  const sourceKind = contractSource?.specialty?.kind === "polivalencia" ? "Polivalencia" : "Especialidad";
 
   return (
     <section className="page-panel">
@@ -363,6 +455,43 @@ function HomePanel({
           <small>{updatedLabel}</small>
         </article>
       </div>
+
+      <section className={`chapero-card ${chaperoWorker?.status || "empty"}`}>
+        <div className="chapero-status-row">
+          <div className="chapero-icon">
+            {isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={24} /> : <CircleAlert size={24} />}
+          </div>
+          <div>
+            <span>Estado de chapa</span>
+            <strong>{formatChaperoStatus(chaperoWorker?.status)}</strong>
+            <small>{chaperoSnapshot?.jornadaText || "Sin jornada cargada"}</small>
+          </div>
+        </div>
+
+        {isActiveChaperoStatus(chaperoWorker?.status) && (
+          <div className="contract-source">
+            <span>Contratacion detectada</span>
+            <strong>{sourceLabel || "Origen no identificado"}</strong>
+            <small>
+              {sourceLabel
+                ? `${sourceKind} · ${contractSource.door?.label || "Puerta"} ${contractSource.door?.doorPosition || ""}`
+                : "No coincide con las puertas cargadas para tus censos"}
+            </small>
+          </div>
+        )}
+
+        <div className="chapero-summary">
+          <div><strong>{chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
+          <div><strong>{chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
+          <div><strong>{chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
+          <div><strong>{chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
+        </div>
+
+        <div className="chapero-updated">
+          <Clock3 size={14} />
+          <span>Chapero actualizado: {formatUpdatedAt(chaperoSnapshot?.updatedAt)}</span>
+        </div>
+      </section>
 
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
 
@@ -650,6 +779,8 @@ function BottomNav({ activeTab, onChange }) {
 export function App() {
   const [session, setSession] = useState(getInitialSession);
   const [doorConfig, setDoorConfig] = useState(null);
+  const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
+  const [doorSnapshotsByName, setDoorSnapshotsByName] = useState(new Map());
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
@@ -665,6 +796,20 @@ export function App() {
   const doors = useMemo(
     () => getDoorState(session?.chapa, activeDoors, activeSpecialty.id),
     [session?.chapa, activeDoors, activeSpecialty.id]
+  );
+  const chaperoWorker = useMemo(
+    () => findChaperoWorker(chaperoSnapshot, session?.chapa),
+    [chaperoSnapshot, session?.chapa]
+  );
+  const contractSource = useMemo(
+    () => getContractSource({
+      user,
+      chaperoWorker,
+      chaperoSnapshot,
+      availableSpecialties,
+      doorSnapshotsByName
+    }),
+    [user, chaperoWorker, chaperoSnapshot, availableSpecialties, doorSnapshotsByName]
   );
 
   useEffect(() => {
@@ -747,6 +892,63 @@ export function App() {
   }, [activeSpecialty.id, activeSpecialty.name]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadDoorSnapshotsForUser() {
+      const names = availableSpecialties.map((item) => item.name);
+      const snapshots = await getLatestDoorSnapshots(names);
+      const map = new Map(snapshots.map((snapshot) => [snapshot.specialty, snapshot]));
+
+      for (const item of availableSpecialties) {
+        if (!map.has(item.name)) {
+          map.set(item.name, {
+            source: "local",
+            specialty: item.name,
+            updatedAt: null,
+            doors: item.doors,
+            rawColumns: {}
+          });
+        }
+      }
+
+      if (!cancelled) setDoorSnapshotsByName(map);
+    }
+
+    loadDoorSnapshotsForUser().catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [availableSpecialties]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let pollTimer = null;
+    let refreshTimer = null;
+
+    async function loadChaperoSnapshot() {
+      const snapshot = await getLatestChaperoSnapshot() || await loadLocalChaperoSnapshot();
+      if (!cancelled) setChaperoSnapshot(snapshot);
+    }
+
+    loadChaperoSnapshot().catch(() => {});
+    refreshTimer = window.setTimeout(() => {
+      requestChaperoRefresh()
+        .then(() => loadChaperoSnapshot())
+        .catch(() => {});
+    }, 1800);
+    pollTimer = window.setInterval(() => {
+      loadChaperoSnapshot().catch(() => {});
+    }, CHAPERO_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      if (pollTimer) window.clearInterval(pollTimer);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!session?.chapa) return;
     trackUsageEvent({
       eventType: "app_open",
@@ -822,6 +1024,9 @@ export function App() {
             user={user}
             doors={doors}
             doorConfig={doorConfig}
+            chaperoSnapshot={chaperoSnapshot}
+            chaperoWorker={chaperoWorker}
+            contractSource={contractSource}
             notice={notice}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}
