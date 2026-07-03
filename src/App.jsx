@@ -73,7 +73,7 @@ function getInitialTheme() {
     return "light";
   }
 
-  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+  return "light";
 }
 
 function formatDistance(value) {
@@ -252,7 +252,7 @@ function getSpecialtyLabel(item) {
   return item?.name?.replace(/^POL\.\s*/, "") || "";
 }
 
-function LoginPanel({ onLogin }) {
+function LoginPanel({ theme, onThemeToggle, onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
   const [password, setPassword] = useState("");
@@ -309,6 +309,14 @@ function LoginPanel({ onLogin }) {
 
   return (
     <form className="login-card" onSubmit={submit}>
+      <button
+        className="login-theme-button"
+        type="button"
+        onClick={onThemeToggle}
+        aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+      >
+        {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
       <div className="login-logo">
         <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
@@ -1014,10 +1022,14 @@ export function App() {
   if (!session) {
     return (
       <div className="login-screen">
-        <LoginPanel onLogin={(nextSession) => {
-          setSession(nextSession);
-          setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
-        }} />
+        <LoginPanel
+          theme={theme}
+          onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+          onLogin={(nextSession) => {
+            setSession(nextSession);
+            setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
+          }}
+        />
       </div>
     );
   }
