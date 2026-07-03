@@ -18,6 +18,7 @@ function resolveSupabaseUrl(value) {
 
 const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "feature/chapero-estado";
 
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
@@ -169,7 +170,7 @@ export async function requestDoorRefresh({ force = false } = {}) {
   if (!supabase) return null;
 
   const { data, error } = await supabase.functions.invoke("refresh-puertas", {
-    body: { force }
+    body: { force, ref: syncWorkflowRef }
   });
 
   if (error) {
@@ -184,7 +185,7 @@ export async function requestChaperoRefresh() {
   if (!supabase) return null;
 
   const { data, error } = await supabase.functions.invoke("refresh-puertas", {
-    body: { force: true }
+    body: { force: true, ref: syncWorkflowRef }
   });
 
   if (error) {
