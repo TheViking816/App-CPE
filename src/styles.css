@@ -430,6 +430,32 @@ a {
   box-shadow: 0 8px 18px rgba(7, 31, 63, 0.1);
 }
 
+.jornada-card {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(13, 53, 103, 0.13);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, #f8fbff 0%, #eef5fb 100%);
+  box-shadow: inset 4px 0 0 rgba(245, 130, 32, 0.9);
+}
+
+.jornada-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.jornada-card strong {
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 950;
+  line-height: 1;
+}
+
 .chapero-meta-row {
   display: flex;
   align-items: center;
@@ -1317,6 +1343,21 @@ select {
   background:
     linear-gradient(135deg, rgba(16, 31, 51, 0.98), rgba(10, 25, 42, 0.94));
   box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .jornada-card {
+  border-color: rgba(148, 163, 184, 0.24);
+  background:
+    linear-gradient(135deg, rgba(22, 42, 68, 0.98), rgba(14, 30, 50, 0.96));
+  box-shadow: inset 4px 0 0 rgba(251, 146, 60, 0.95);
+}
+
+:root[data-theme="dark"] .jornada-card span {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .jornada-card strong {
+  color: var(--ink);
 }
 
 :root[data-theme="dark"] .chapero-card.contratado,

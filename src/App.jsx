@@ -136,6 +136,12 @@ function normalizeChaperoWorker(worker) {
   };
 }
 
+function formatJornadaContratada(snapshot, isLoading = false) {
+  if (isLoading) return "Cargando jornada...";
+  if (!snapshot?.jornadaDate || !snapshot?.fromHour || !snapshot?.toHour) return "Sin jornada";
+  return `${snapshot.jornadaDate} ${snapshot.fromHour}-${snapshot.toHour}`;
+}
+
 function findChaperoWorker(chaperoSnapshot, chapa) {
   const normalized = normalizeChapa(chapa);
   if (!normalized || !Array.isArray(chaperoSnapshot?.workers)) return null;
@@ -439,6 +445,11 @@ function HomePanel({
   return (
     <section className="page-panel">
       <section className={`chapero-card ${chaperoLoading ? "loading" : chaperoWorker?.status || "empty"}`}>
+        <div className="jornada-card">
+          <span>Ultima jornada contratada</span>
+          <strong>{formatJornadaContratada(chaperoSnapshot, chaperoLoading)}</strong>
+        </div>
+
         <div className="chapero-meta-row">
           <span>{formatCurrentDateTime(currentTime)}</span>
           <small>Chapa {user?.chapa || "-"}</small>
