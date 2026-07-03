@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "sync:cpe": "node scripts/sync-cpe.js",
+    "sync:chapero": "node scripts/sync-chapero.js",
     "sync:puertas": "node scripts/sync-puertas.js",
     "push:supabase": "node scripts/push-latest-to-supabase.js"
   },

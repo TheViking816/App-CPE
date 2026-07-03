@@ -13,6 +13,7 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 const githubToken = Deno.env.get("GITHUB_SYNC_TOKEN") ?? "";
 const githubRepo = Deno.env.get("GITHUB_SYNC_REPO") ?? "TheViking816/App-CPE";
 const workflowId = Deno.env.get("GITHUB_SYNC_WORKFLOW") ?? "sync-puertas.yml";
+const defaultWorkflowRef = Deno.env.get("GITHUB_SYNC_REF") ?? "feature/chapero-estado";
 const minRefreshSeconds = Number(Deno.env.get("MIN_REFRESH_SECONDS") ?? "300");
 
 function jsonResponse(body: unknown, status = 200) {
@@ -45,7 +46,7 @@ async function getLatestSnapshotAgeSeconds() {
   return Math.floor((Date.now() - new Date(data.updated_at).getTime()) / 1000);
 }
 
-async function dispatchWorkflow() {
+async function dispatchWorkflow(workflowRef: string) {
   const response = await fetch(
     `https://api.github.com/repos/${githubRepo}/actions/workflows/${workflowId}/dispatches`,
     {
@@ -57,7 +58,7 @@ async function dispatchWorkflow() {
         "User-Agent": "app-cpe-refresh-puertas",
         "X-GitHub-Api-Version": "2022-11-28"
       },
-      body: JSON.stringify({ ref: "main" })
+      body: JSON.stringify({ ref: workflowRef })
     }
   );
 
@@ -85,9 +86,13 @@ Deno.serve(async (request) => {
   }
 
   let force = false;
+  let workflowRef = defaultWorkflowRef;
   try {
     const body = await request.json();
     force = body?.force === true;
+    if (typeof body?.ref === "string" && body.ref.trim()) {
+      workflowRef = body.ref.trim();
+    }
   } catch {
     force = false;
   }
@@ -98,16 +103,18 @@ Deno.serve(async (request) => {
       triggered: false,
       configured: true,
       ageSeconds,
+      workflowRef,
       message: "Latest snapshot is still fresh"
     });
   }
 
   try {
-    await dispatchWorkflow();
+    await dispatchWorkflow(workflowRef);
     return jsonResponse({
       triggered: true,
       configured: true,
       ageSeconds,
+      workflowRef,
       message: "GitHub sync workflow dispatched"
     }, 202);
   } catch (error) {
@@ -115,6 +122,7 @@ Deno.serve(async (request) => {
       triggered: false,
       configured: true,
       ageSeconds,
+      workflowRef,
       error: error instanceof Error ? error.message : "Unknown error"
     }, 502);
   }

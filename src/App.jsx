@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BadgeCheck,
   CalendarDays,
   Check,
+  CircleAlert,
+  Clock3,
   ExternalLink,
   Eye,
   EyeOff,
@@ -10,7 +13,9 @@ import {
   ListChecks,
   Lock,
   LogOut,
+  Moon,
   Search,
+  Sun,
   UserRound,
   UsersRound
 } from "lucide-react";
@@ -24,9 +29,11 @@ import {
   specialty
 } from "./censo.js";
 import {
+  getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   loginUser,
   registerUser,
+  requestChaperoRefresh,
   requestDoorRefresh,
   trackUsageEvent,
   updateUserSpecialties
@@ -34,9 +41,13 @@ import {
 
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
+const THEME_KEY = "app-cpe-theme";
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
+const CHAPERO_POLL_MS = 60_000;
+const CHAPERO_REFRESH_POLL_MS = 5_000;
+const CHAPERO_REFRESH_POLL_ATTEMPTS = 24;
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
@@ -48,10 +59,29 @@ const NAV_ITEMS = [
 
 function getInitialSession() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
+    const chapa = normalizeChapa(parsed?.chapa);
+    if (!chapa) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    return { ...parsed, chapa };
   } catch {
+    localStorage.removeItem(STORAGE_KEY);
     return null;
   }
+}
+
+function getInitialTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    return "light";
+  }
+
+  return "light";
 }
 
 function formatDistance(value) {
@@ -72,6 +102,59 @@ function formatUpdatedAt(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function formatCurrentDateTime(value) {
+  return new Intl.DateTimeFormat("es-ES", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(value);
+}
+
+function formatChaperoStatus(status, isLoading = false) {
+  if (isLoading) return "Cargando...";
+
+  const labels = {
+    contratado: "Contratado",
+    anticipado: "Anticipado",
+    nocontratado: "No contratado",
+    falta: "No disponible",
+    excepcion: "Con excepcion",
+    doble: "Doble"
+  };
+
+  return labels[status] || "No encontrado";
+}
+
+function normalizeChaperoWorker(worker) {
+  return {
+    ...worker,
+    chapa: normalizeChapa(worker?.chapa || worker?.rawChapa)
+  };
+}
+
+function findChaperoWorker(chaperoSnapshot, chapa) {
+  const normalized = normalizeChapa(chapa);
+  if (!normalized || !Array.isArray(chaperoSnapshot?.workers)) return null;
+  return chaperoSnapshot.workers.map(normalizeChaperoWorker).find((worker) => worker.chapa === normalized) || null;
+}
+
+async function loadLocalChaperoSnapshot() {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}data/chapero-snapshot.json`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return Array.isArray(data?.workers) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function isActiveChaperoStatus(status) {
+  return status === "contratado" || status === "anticipado";
 }
 
 function normalizeLegacyDoor(door) {
@@ -179,7 +262,7 @@ function getSpecialtyLabel(item) {
   return item?.name?.replace(/^POL\.\s*/, "") || "";
 }
 
-function LoginPanel({ onLogin }) {
+function LoginPanel({ theme, onThemeToggle, onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
   const [password, setPassword] = useState("");
@@ -236,6 +319,14 @@ function LoginPanel({ onLogin }) {
 
   return (
     <form className="login-card" onSubmit={submit}>
+      <button
+        className="login-theme-button"
+        type="button"
+        onClick={onThemeToggle}
+        aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+      >
+        {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
       <div className="login-logo">
         <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
@@ -296,7 +387,7 @@ function LoginPanel({ onLogin }) {
   );
 }
 
-function AppHeader({ user, onLogout }) {
+function AppHeader({ user, theme, onThemeToggle, onLogout }) {
   return (
     <header className="app-header">
       <div className="logo-box">
@@ -305,6 +396,14 @@ function AppHeader({ user, onLogout }) {
       <div className="header-title">
         <strong>App CPE</strong>
       </div>
+      <button
+        className="theme-button"
+        type="button"
+        onClick={onThemeToggle}
+        aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+      >
+        {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
       {user && (
         <button className="logout-button" type="button" onClick={onLogout}>
           <LogOut size={17} />
@@ -319,6 +418,10 @@ function HomePanel({
   user,
   doors,
   doorConfig,
+  chaperoSnapshot,
+  chaperoWorker,
+  chaperoLoading,
+  currentTime,
   notice,
   activeSpecialty,
   availableSpecialties,
@@ -327,9 +430,46 @@ function HomePanel({
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
+  const showRollOnAlert = (
+    activeSpecialty.id === "pol-especialista"
+    && nearest?.distance !== null
+    && nearest?.distance < 50
+  );
 
   return (
     <section className="page-panel">
+      <section className={`chapero-card ${chaperoLoading ? "loading" : chaperoWorker?.status || "empty"}`}>
+        <div className="chapero-meta-row">
+          <span>{formatCurrentDateTime(currentTime)}</span>
+          <small>Chapa {user?.chapa || "-"}</small>
+        </div>
+
+        <div className="chapero-status-row">
+          <div className="chapero-status-copy">
+            <span>Estado:</span>
+            <strong>{formatChaperoStatus(chaperoWorker?.status, chaperoLoading)}</strong>
+          </div>
+          <div className="chapero-status-badge">
+            {chaperoLoading
+              ? <Clock3 size={17} />
+              : isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={17} /> : <CircleAlert size={17} />}
+            <span>Chapero</span>
+          </div>
+        </div>
+
+        <div className="chapero-summary">
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
+        </div>
+
+        <div className="chapero-updated">
+          <Clock3 size={14} />
+          <span>{chaperoLoading ? "Cargando Chapero..." : `Actualizado: ${formatUpdatedAt(chaperoSnapshot?.updatedAt)}`}</span>
+        </div>
+      </section>
+
       <div className="specialty-select">
         <span>Especialidad</span>
         <select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
@@ -355,7 +495,7 @@ function HomePanel({
         <article>
           <span>Puerta mas cercana</span>
           <strong>{nearest ? nearest.label : "-"}</strong>
-          <small>{nearest ? `${nearest.shift} · ${formatDistance(nearest.distance)}` : "Sin dato"}</small>
+          <small>{nearest ? `${nearest.shift} - ${formatDistance(nearest.distance)}` : "Sin dato"}</small>
         </article>
         <article>
           <span>Estado</span>
@@ -363,6 +503,19 @@ function HomePanel({
           <small>{updatedLabel}</small>
         </article>
       </div>
+
+      {showRollOnAlert && (
+        <div className="rollon-alert">
+          <div className="rollon-alert-icon">
+            <CircleAlert size={20} />
+          </div>
+          <div>
+            <span>Estiba cerca</span>
+            <strong>Puerta a {formatDistance(nearest.distance)}</strong>
+            <small>Si el doble se pone a las 18:00 o 19:00, la opcion de salir de roll-on es alta.</small>
+          </div>
+        </div>
+      )}
 
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
 
@@ -649,11 +802,15 @@ function BottomNav({ activeTab, onChange }) {
 
 export function App() {
   const [session, setSession] = useState(getInitialSession);
+  const [theme, setTheme] = useState(getInitialTheme);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [doorConfig, setDoorConfig] = useState(null);
+  const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
+  const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
-  const refreshRequestedRef = useRef(false);
+  const syncRefreshRequestedRef = useRef(false);
 
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -661,10 +818,15 @@ export function App() {
   }, [session]);
   const activeSpecialty = getSpecialty(activeSpecialtyId);
   const user = session ? findByChapa(session.chapa, activeSpecialty.id) : null;
+  const displayUser = user || (session?.chapa ? { chapa: session.chapa, position: null, displayPosition: null } : null);
   const activeDoors = sanitizeDoors(doorConfig?.doors, activeSpecialty);
   const doors = useMemo(
     () => getDoorState(session?.chapa, activeDoors, activeSpecialty.id),
     [session?.chapa, activeDoors, activeSpecialty.id]
+  );
+  const chaperoWorker = useMemo(
+    () => findChaperoWorker(chaperoSnapshot, session?.chapa),
+    [chaperoSnapshot, session?.chapa]
   );
 
   useEffect(() => {
@@ -672,6 +834,20 @@ export function App() {
       setActiveSpecialtyId(availableSpecialties[0]?.id || specialty.id);
     }
   }, [activeSpecialtyId, availableSpecialties]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Theme persistence is optional; the app still works without localStorage.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -718,8 +894,8 @@ export function App() {
     applyLatestSnapshot()
       .then((response) => {
         if (!Array.isArray(response?.doors)) return null;
-        if (!refreshRequestedRef.current) {
-          refreshRequestedRef.current = true;
+        if (!syncRefreshRequestedRef.current) {
+          syncRefreshRequestedRef.current = true;
           refreshTimer = window.setTimeout(() => {
             requestDoorRefresh({ force: true })
               .then((result) => {
@@ -745,6 +921,65 @@ export function App() {
       if (refreshPollTimer) window.clearInterval(refreshPollTimer);
     };
   }, [activeSpecialty.id, activeSpecialty.name]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let pollTimer = null;
+    let refreshTimer = null;
+    let refreshPollTimer = null;
+    let refreshPollAttempts = 0;
+
+    async function loadChaperoSnapshot() {
+      const snapshot = await getLatestChaperoSnapshot() || await loadLocalChaperoSnapshot();
+      if (!cancelled) {
+        setChaperoSnapshot(snapshot);
+        setChaperoLoaded(true);
+      }
+      return snapshot;
+    }
+
+    function startChaperoRefreshPolling() {
+      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
+      refreshPollAttempts = 0;
+      refreshPollTimer = window.setInterval(() => {
+        refreshPollAttempts += 1;
+        loadChaperoSnapshot().catch(() => {});
+
+        if (refreshPollAttempts >= CHAPERO_REFRESH_POLL_ATTEMPTS && refreshPollTimer) {
+          window.clearInterval(refreshPollTimer);
+          refreshPollTimer = null;
+        }
+      }, CHAPERO_REFRESH_POLL_MS);
+    }
+
+    loadChaperoSnapshot().catch(() => {});
+    refreshTimer = window.setTimeout(() => {
+      if (syncRefreshRequestedRef.current) {
+        startChaperoRefreshPolling();
+        loadChaperoSnapshot().catch(() => {});
+        return;
+      }
+
+      syncRefreshRequestedRef.current = true;
+      requestChaperoRefresh()
+        .then((result) => {
+          if (cancelled) return;
+          if (result?.triggered) startChaperoRefreshPolling();
+          loadChaperoSnapshot().catch(() => {});
+        })
+        .catch(() => {});
+    }, 1800);
+    pollTimer = window.setInterval(() => {
+      loadChaperoSnapshot().catch(() => {});
+    }, CHAPERO_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      if (pollTimer) window.clearInterval(pollTimer);
+      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!session?.chapa) return;
@@ -805,23 +1040,36 @@ export function App() {
   if (!session) {
     return (
       <div className="login-screen">
-        <LoginPanel onLogin={(nextSession) => {
-          setSession(nextSession);
-          setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
-        }} />
+        <LoginPanel
+          theme={theme}
+          onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+          onLogin={(nextSession) => {
+            setSession(nextSession);
+            setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
+          }}
+        />
       </div>
     );
   }
 
   return (
     <div className="mobile-app">
-      <AppHeader user={user} onLogout={logout} />
+      <AppHeader
+        user={session}
+        theme={theme}
+        onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+        onLogout={logout}
+      />
       <main className="content">
         {activeTab === "inicio" && (
           <HomePanel
-            user={user}
+            user={displayUser}
             doors={doors}
             doorConfig={doorConfig}
+            chaperoSnapshot={chaperoSnapshot}
+            chaperoWorker={chaperoWorker}
+            chaperoLoading={!chaperoLoaded}
+            currentTime={currentTime}
             notice={notice}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}
