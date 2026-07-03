@@ -46,6 +46,8 @@ const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
 const CHAPERO_POLL_MS = 60_000;
+const CHAPERO_REFRESH_POLL_MS = 5_000;
+const CHAPERO_REFRESH_POLL_ATTEMPTS = 24;
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
@@ -418,19 +420,19 @@ function HomePanel({
   return (
     <section className="page-panel">
       <section className={`chapero-card ${chaperoWorker?.status || "empty"}`}>
-        <div className="app-time-row">
+        <div className="chapero-meta-row">
           <span>{formatCurrentDateTime(currentTime)}</span>
           <small>Chapa {user?.chapa || "-"}</small>
         </div>
 
         <div className="chapero-status-row">
-          <div className="chapero-icon">
-            {isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={24} /> : <CircleAlert size={24} />}
-          </div>
-          <div>
-            <span>Estado de chapa</span>
+          <div className="chapero-status-copy">
+            <span>Estado:</span>
             <strong>{formatChaperoStatus(chaperoWorker?.status)}</strong>
-            <small>Lectura directa del Chapero</small>
+          </div>
+          <div className="chapero-status-badge">
+            {isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={17} /> : <CircleAlert size={17} />}
+            <span>Chapero</span>
           </div>
         </div>
 
@@ -443,7 +445,7 @@ function HomePanel({
 
         <div className="chapero-updated">
           <Clock3 size={14} />
-          <span>Chapero actualizado: {formatUpdatedAt(chaperoSnapshot?.updatedAt)}</span>
+          <span>Actualizado: {formatUpdatedAt(chaperoSnapshot?.updatedAt)}</span>
         </div>
       </section>
 
@@ -901,16 +903,44 @@ export function App() {
     let cancelled = false;
     let pollTimer = null;
     let refreshTimer = null;
+    let refreshPollTimer = null;
+    let refreshPollAttempts = 0;
 
     async function loadChaperoSnapshot() {
       const snapshot = await getLatestChaperoSnapshot() || await loadLocalChaperoSnapshot();
       if (!cancelled) setChaperoSnapshot(snapshot);
+      return snapshot;
+    }
+
+    function startChaperoRefreshPolling() {
+      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
+      refreshPollAttempts = 0;
+      refreshPollTimer = window.setInterval(() => {
+        refreshPollAttempts += 1;
+        loadChaperoSnapshot().catch(() => {});
+
+        if (refreshPollAttempts >= CHAPERO_REFRESH_POLL_ATTEMPTS && refreshPollTimer) {
+          window.clearInterval(refreshPollTimer);
+          refreshPollTimer = null;
+        }
+      }, CHAPERO_REFRESH_POLL_MS);
     }
 
     loadChaperoSnapshot().catch(() => {});
     refreshTimer = window.setTimeout(() => {
+      if (refreshRequestedRef.current) {
+        startChaperoRefreshPolling();
+        loadChaperoSnapshot().catch(() => {});
+        return;
+      }
+
+      refreshRequestedRef.current = true;
       requestChaperoRefresh()
-        .then(() => loadChaperoSnapshot())
+        .then((result) => {
+          if (cancelled) return;
+          if (result?.triggered) startChaperoRefreshPolling();
+          loadChaperoSnapshot().catch(() => {});
+        })
         .catch(() => {});
     }, 1800);
     pollTimer = window.setInterval(() => {
@@ -921,6 +951,7 @@ export function App() {
       cancelled = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
       if (pollTimer) window.clearInterval(pollTimer);
+      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
     };
   }, []);
 

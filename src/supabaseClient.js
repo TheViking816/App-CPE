@@ -183,7 +183,7 @@ export async function requestDoorRefresh({ force = false } = {}) {
 export async function requestChaperoRefresh() {
   if (!supabase) return null;
 
-  const { data, error } = await supabase.functions.invoke("refresh-chapero", {
+  const { data, error } = await supabase.functions.invoke("refresh-puertas", {
     body: { force: true }
   });
 
