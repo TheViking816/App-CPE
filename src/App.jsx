@@ -59,8 +59,16 @@ const NAV_ITEMS = [
 
 function getInitialSession() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
+    const chapa = normalizeChapa(parsed?.chapa);
+    if (!chapa) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    return { ...parsed, chapa };
   } catch {
+    localStorage.removeItem(STORAGE_KEY);
     return null;
   }
 }
@@ -106,7 +114,9 @@ function formatCurrentDateTime(value) {
   }).format(value);
 }
 
-function formatChaperoStatus(status) {
+function formatChaperoStatus(status, isLoading = false) {
+  if (isLoading) return "Cargando...";
+
   const labels = {
     contratado: "Contratado",
     anticipado: "Anticipado",
@@ -116,7 +126,7 @@ function formatChaperoStatus(status) {
     doble: "Doble"
   };
 
-  return labels[status] || "Sin dato";
+  return labels[status] || "No encontrado";
 }
 
 function normalizeChaperoWorker(worker) {
@@ -410,6 +420,7 @@ function HomePanel({
   doorConfig,
   chaperoSnapshot,
   chaperoWorker,
+  chaperoLoading,
   currentTime,
   notice,
   activeSpecialty,
@@ -427,7 +438,7 @@ function HomePanel({
 
   return (
     <section className="page-panel">
-      <section className={`chapero-card ${chaperoWorker?.status || "empty"}`}>
+      <section className={`chapero-card ${chaperoLoading ? "loading" : chaperoWorker?.status || "empty"}`}>
         <div className="chapero-meta-row">
           <span>{formatCurrentDateTime(currentTime)}</span>
           <small>Chapa {user?.chapa || "-"}</small>
@@ -436,24 +447,26 @@ function HomePanel({
         <div className="chapero-status-row">
           <div className="chapero-status-copy">
             <span>Estado:</span>
-            <strong>{formatChaperoStatus(chaperoWorker?.status)}</strong>
+            <strong>{formatChaperoStatus(chaperoWorker?.status, chaperoLoading)}</strong>
           </div>
           <div className="chapero-status-badge">
-            {isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={17} /> : <CircleAlert size={17} />}
+            {chaperoLoading
+              ? <Clock3 size={17} />
+              : isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={17} /> : <CircleAlert size={17} />}
             <span>Chapero</span>
           </div>
         </div>
 
         <div className="chapero-summary">
-          <div><strong>{chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
-          <div><strong>{chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
-          <div><strong>{chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
-          <div><strong>{chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
+          <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
         </div>
 
         <div className="chapero-updated">
           <Clock3 size={14} />
-          <span>Actualizado: {formatUpdatedAt(chaperoSnapshot?.updatedAt)}</span>
+          <span>{chaperoLoading ? "Cargando Chapero..." : `Actualizado: ${formatUpdatedAt(chaperoSnapshot?.updatedAt)}`}</span>
         </div>
       </section>
 
@@ -793,10 +806,11 @@ export function App() {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [doorConfig, setDoorConfig] = useState(null);
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
+  const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
-  const refreshRequestedRef = useRef(false);
+  const syncRefreshRequestedRef = useRef(false);
 
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -804,6 +818,7 @@ export function App() {
   }, [session]);
   const activeSpecialty = getSpecialty(activeSpecialtyId);
   const user = session ? findByChapa(session.chapa, activeSpecialty.id) : null;
+  const displayUser = user || (session?.chapa ? { chapa: session.chapa, position: null, displayPosition: null } : null);
   const activeDoors = sanitizeDoors(doorConfig?.doors, activeSpecialty);
   const doors = useMemo(
     () => getDoorState(session?.chapa, activeDoors, activeSpecialty.id),
@@ -879,8 +894,8 @@ export function App() {
     applyLatestSnapshot()
       .then((response) => {
         if (!Array.isArray(response?.doors)) return null;
-        if (!refreshRequestedRef.current) {
-          refreshRequestedRef.current = true;
+        if (!syncRefreshRequestedRef.current) {
+          syncRefreshRequestedRef.current = true;
           refreshTimer = window.setTimeout(() => {
             requestDoorRefresh({ force: true })
               .then((result) => {
@@ -916,7 +931,10 @@ export function App() {
 
     async function loadChaperoSnapshot() {
       const snapshot = await getLatestChaperoSnapshot() || await loadLocalChaperoSnapshot();
-      if (!cancelled) setChaperoSnapshot(snapshot);
+      if (!cancelled) {
+        setChaperoSnapshot(snapshot);
+        setChaperoLoaded(true);
+      }
       return snapshot;
     }
 
@@ -936,13 +954,13 @@ export function App() {
 
     loadChaperoSnapshot().catch(() => {});
     refreshTimer = window.setTimeout(() => {
-      if (refreshRequestedRef.current) {
+      if (syncRefreshRequestedRef.current) {
         startChaperoRefreshPolling();
         loadChaperoSnapshot().catch(() => {});
         return;
       }
 
-      refreshRequestedRef.current = true;
+      syncRefreshRequestedRef.current = true;
       requestChaperoRefresh()
         .then((result) => {
           if (cancelled) return;
@@ -1037,7 +1055,7 @@ export function App() {
   return (
     <div className="mobile-app">
       <AppHeader
-        user={user}
+        user={session}
         theme={theme}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}
@@ -1045,11 +1063,12 @@ export function App() {
       <main className="content">
         {activeTab === "inicio" && (
           <HomePanel
-            user={user}
+            user={displayUser}
             doors={doors}
             doorConfig={doorConfig}
             chaperoSnapshot={chaperoSnapshot}
             chaperoWorker={chaperoWorker}
+            chaperoLoading={!chaperoLoaded}
             currentTime={currentTime}
             notice={notice}
             activeSpecialty={activeSpecialty}

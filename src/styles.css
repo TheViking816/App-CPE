@@ -8,6 +8,12 @@
   --green: #10b981;
   --orange: #f58220;
   --red: #f43f3f;
+  --chapero-contratado: #0d3567;
+  --chapero-anticipado: #3b82f6;
+  --chapero-nocontratado: #778394;
+  --chapero-falta: #9aa4b2;
+  --chapero-excepcion: #f58220;
+  --chapero-doble: #dc2626;
   --ink: #071f3f;
   --muted: #6d7c91;
   --line: #d9e2ec;
@@ -27,6 +33,12 @@
   --green: #34d399;
   --orange: #fb923c;
   --red: #fb5555;
+  --chapero-contratado: #12375f;
+  --chapero-anticipado: #3b82f6;
+  --chapero-nocontratado: #64748b;
+  --chapero-falta: #7b8798;
+  --chapero-excepcion: #ea7a18;
+  --chapero-doble: #ef4444;
   --ink: #edf6ff;
   --muted: #a8b5c6;
   --line: rgba(148, 163, 184, 0.28);
@@ -208,7 +220,7 @@ a {
 .section-heading p {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -216,7 +228,7 @@ a {
 .home-summary h1 {
   margin: 4px 0;
   color: var(--ink);
-  font-size: 32px;
+  font-size: 34px;
   line-height: 1;
 }
 
@@ -237,7 +249,7 @@ a {
   align-items: center;
   gap: 5px;
   color: #6d7c91;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -326,7 +338,7 @@ a {
 .door-ring-card span {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1.1;
   text-transform: uppercase;
@@ -336,7 +348,7 @@ a {
   display: block;
   margin-top: 3px;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 950;
   line-height: 1.1;
   overflow-wrap: anywhere;
@@ -346,7 +358,7 @@ a {
   display: block;
   margin-top: 3px;
   color: #6d7c91;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -384,7 +396,7 @@ a {
 .rollon-alert span {
   display: block;
   color: #b45309;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 950;
   text-transform: uppercase;
 }
@@ -428,14 +440,14 @@ a {
 
 .chapero-meta-row span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 950;
   text-transform: capitalize;
 }
 
 .chapero-meta-row small {
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 950;
 }
 
@@ -465,7 +477,7 @@ a {
   gap: 12px;
   padding: 10px 11px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #08264b 0%, #0d3567 100%);
+  background: linear-gradient(135deg, #08264b 0%, var(--chapero-contratado) 100%);
   color: #fff;
 }
 
@@ -476,7 +488,7 @@ a {
 .chapero-status-copy span {
   display: block;
   color: rgba(255, 255, 255, 0.74);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 950;
 }
 
@@ -484,7 +496,7 @@ a {
   display: block;
   margin-top: 2px;
   color: #fff;
-  font-size: 23px;
+  font-size: 25px;
   font-weight: 950;
   line-height: 1;
 }
@@ -499,20 +511,63 @@ a {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 950;
   white-space: nowrap;
 }
 
-.chapero-card.contratado .chapero-status-badge,
-.chapero-card.anticipado .chapero-status-badge {
+.chapero-card.contratado .chapero-status-badge {
   background: #dff9ee;
   color: #07815d;
+}
+
+.chapero-card.anticipado .chapero-status-row {
+  background: linear-gradient(135deg, #2563eb 0%, var(--chapero-anticipado) 100%);
+}
+
+.chapero-card.anticipado .chapero-status-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.chapero-card.nocontratado .chapero-status-row {
+  background: linear-gradient(135deg, #64748b 0%, var(--chapero-nocontratado) 100%);
+}
+
+.chapero-card.nocontratado .chapero-status-badge {
+  background: #edf2f7;
+  color: #475569;
+}
+
+.chapero-card.falta .chapero-status-row,
+.chapero-card.empty .chapero-status-row,
+.chapero-card.loading .chapero-status-row {
+  background: linear-gradient(135deg, #7b8798 0%, var(--chapero-falta) 100%);
+}
+
+.chapero-card.falta .chapero-status-badge,
+.chapero-card.empty .chapero-status-badge,
+.chapero-card.loading .chapero-status-badge {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.chapero-card.excepcion .chapero-status-row {
+  background: linear-gradient(135deg, #d97706 0%, var(--chapero-excepcion) 100%);
 }
 
 .chapero-card.excepcion .chapero-status-badge {
   background: #ffedd5;
   color: #c05621;
+}
+
+.chapero-card.doble .chapero-status-row {
+  background: linear-gradient(135deg, #991b1b 0%, var(--chapero-doble) 100%);
+}
+
+.chapero-card.doble .chapero-status-badge {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .chapero-summary {
@@ -532,7 +587,7 @@ a {
 .chapero-summary strong {
   display: block;
   color: var(--ink);
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 950;
   line-height: 1;
 }
@@ -541,7 +596,7 @@ a {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 950;
   text-transform: uppercase;
 }
@@ -552,7 +607,7 @@ a {
   gap: 6px;
   margin-top: 0;
   color: #6d7c91;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 850;
   line-height: 1.25;
 }
@@ -567,7 +622,7 @@ a {
   display: block;
   margin-top: 5px;
   color: var(--ink);
-  font-size: 17px;
+  font-size: 18px;
   overflow-wrap: anywhere;
 }
 
@@ -576,7 +631,7 @@ a {
   display: block;
   margin-top: 3px;
   color: #6d7c91;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -719,7 +774,7 @@ a {
   display: block;
   margin-top: 5px;
   color: #7b8798;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -898,7 +953,7 @@ select {
   display: block;
   margin-top: 3px;
   color: var(--blue);
-  font-size: 9px;
+  font-size: 10px;
   font-style: normal;
   font-weight: 900;
   text-transform: uppercase;
@@ -940,7 +995,7 @@ select {
   border: 0;
   background: transparent;
   color: #9ca6b5;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   text-align: center;
 }
@@ -1456,6 +1511,6 @@ select {
   }
 
   .bottom-nav button {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
