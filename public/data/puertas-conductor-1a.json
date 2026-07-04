@@ -1,7 +1,7 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
   "specialty": "CONDUCTOR 1a",
-  "updatedAt": "2026-07-04T10:47:35.592Z",
+  "updatedAt": "2026-07-04T11:14:46.157Z",
   "doors": [
     {
       "key": "LAB",
@@ -20,7 +20,7 @@
     {
       "key": "NOC-FES",
       "label": "Super festiva",
-      "raw": 72737,
+      "raw": 72301,
       "dayType": "festivo",
       "shift": "NOC-FES"
     },
@@ -39,7 +39,7 @@
     "rawCol4": 71725,
     "rawCol5": 71197,
     "rawCol6": 71725,
-    "festivoSuper": 72737,
+    "festivoSuper": 72301,
     "festivoDiurno": 72541,
     "rawCol9": 63186,
     "rawCol10": 71488
