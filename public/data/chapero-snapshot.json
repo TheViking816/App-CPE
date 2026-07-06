@@ -1,18 +1,18 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-07-06T07:37:26.598Z",
-  "pageDate": "06/07/2026 - 09:37",
+  "updatedAt": "2026-07-06T09:44:50.896Z",
+  "pageDate": "06/07/2026 - 11:44",
   "jornadaText": "ULTIMA JORNADA CONTRATADA: 06/07/26 - DE 08 A 14 H.",
   "jornadaDate": "06/07/26",
   "fromHour": "08",
   "toHour": "14",
   "shiftKey": "LAB",
   "summary": {
-    "contratado": 479,
-    "falta": 660,
-    "anticipado": 378,
-    "nocontratado": 42,
-    "excepcion": 21
+    "contratado": 477,
+    "falta": 668,
+    "anticipado": 376,
+    "nocontratado": 40,
+    "excepcion": 19
   },
   "workers": [
     {
@@ -300,8 +300,8 @@
     {
       "rawChapa": "4052",
       "chapa": "74052",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "4053",
@@ -3762,8 +3762,8 @@
     {
       "rawChapa": "1326",
       "chapa": "71326",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1327",
@@ -3882,8 +3882,8 @@
     {
       "rawChapa": "1354",
       "chapa": "71354",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1356",
@@ -4488,8 +4488,8 @@
     {
       "rawChapa": "1495",
       "chapa": "71495",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1496",
@@ -6324,8 +6324,8 @@
     {
       "rawChapa": "1953",
       "chapa": "71953",
-      "status": "excepcion",
-      "label": "Con excepcion"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1954",
@@ -7710,14 +7710,14 @@
     {
       "rawChapa": "2269",
       "chapa": "72269",
-      "status": "excepcion",
-      "label": "Con excepcion"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2270",
       "chapa": "72270",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2272",
@@ -8376,8 +8376,8 @@
     {
       "rawChapa": "2539",
       "chapa": "72539",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2540",
