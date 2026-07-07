@@ -1360,6 +1360,10 @@ select {
   color: var(--ink);
 }
 
+:root[data-theme="dark"] .mini-position-ring strong {
+  color: #0b2440;
+}
+
 :root[data-theme="dark"] .chapero-card.contratado,
 :root[data-theme="dark"] .chapero-card.anticipado {
   border-color: rgba(52, 211, 153, 0.38);
