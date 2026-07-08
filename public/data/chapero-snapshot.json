@@ -1,7 +1,7 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-07-08T10:47:35.598Z",
-  "pageDate": "08/07/2026 - 12:47",
+  "updatedAt": "2026-07-08T11:36:27.041Z",
+  "pageDate": "08/07/2026 - 13:36",
   "jornadaText": "ULTIMA JORNADA CONTRATADA: 08/07/26 - DE 14 A 20 H.",
   "jornadaDate": "08/07/26",
   "fromHour": "14",
@@ -9,10 +9,10 @@
   "shiftKey": "LAB",
   "summary": {
     "contratado": 714,
-    "falta": 674,
+    "falta": 675,
     "nocontratado": 12,
     "doble": 4,
-    "anticipado": 173,
+    "anticipado": 172,
     "excepcion": 3
   },
   "workers": [
@@ -385,8 +385,8 @@
     {
       "rawChapa": "4066",
       "chapa": "74066",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4067",
@@ -3601,8 +3601,8 @@
     {
       "rawChapa": "1279",
       "chapa": "71279",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1282",
