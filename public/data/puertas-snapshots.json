@@ -2,12 +2,12 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "CONDUCTOR 1a",
-    "updatedAt": "2026-07-08T12:14:12.825Z",
+    "updatedAt": "2026-07-08T12:38:54.802Z",
     "doors": [
       {
         "key": "LAB",
         "label": "Diurna",
-        "raw": 72282,
+        "raw": 72603,
         "dayType": "laborable",
         "shift": "LAB"
       },
@@ -34,7 +34,7 @@
       }
     ],
     "rawColumns": {
-      "labHoy": 72282,
+      "labHoy": 72603,
       "super": 72670,
       "labSigDia": 72603,
       "rawCol4": 63067,
@@ -49,7 +49,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "CONDUCTOR 2a",
-    "updatedAt": "2026-07-08T12:14:12.825Z",
+    "updatedAt": "2026-07-08T12:38:54.802Z",
     "doors": [
       {
         "key": "LAB",
@@ -96,19 +96,19 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "TRASTAINERS RTT",
-    "updatedAt": "2026-07-08T12:14:12.826Z",
+    "updatedAt": "2026-07-08T12:38:54.803Z",
     "doors": [
       {
         "key": "LAB",
         "label": "Diurna",
-        "raw": 71451,
+        "raw": 72330,
         "dayType": "laborable",
         "shift": "LAB"
       },
       {
         "key": "NOC",
         "label": "Super",
-        "raw": 72222,
+        "raw": 71412,
         "dayType": "laborable",
         "shift": "NOC"
       },
@@ -128,10 +128,10 @@
       }
     ],
     "rawColumns": {
-      "labHoy": 71451,
-      "super": 72222,
-      "labSigDia": 71451,
-      "rawCol4": 72021,
+      "labHoy": 72330,
+      "super": 71412,
+      "labSigDia": 72330,
+      "rawCol4": 71605,
       "rawCol5": 71603,
       "rawCol6": 71605,
       "festivoSuper": 72559,
@@ -143,7 +143,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. CONDUCTOR 1a",
-    "updatedAt": "2026-07-08T12:14:12.826Z",
+    "updatedAt": "2026-07-08T12:38:54.803Z",
     "doors": [
       {
         "key": "LAB",
@@ -175,7 +175,7 @@
       }
     ],
     "rawColumns": {
-      "labHoy": 72282,
+      "labHoy": 72603,
       "super": 72670,
       "labSigDia": 72603,
       "rawCol4": 63067,
@@ -190,7 +190,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. CONDUCTOR 2a",
-    "updatedAt": "2026-07-08T12:14:12.826Z",
+    "updatedAt": "2026-07-08T12:38:54.803Z",
     "doors": [
       {
         "key": "LAB",
@@ -237,7 +237,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. ESPECIALISTA",
-    "updatedAt": "2026-07-08T12:14:12.826Z",
+    "updatedAt": "2026-07-08T12:38:54.803Z",
     "doors": [
       {
         "key": "LAB",
@@ -249,7 +249,7 @@
       {
         "key": "NOC",
         "label": "Super",
-        "raw": 72054,
+        "raw": 72145,
         "dayType": "laborable",
         "shift": "NOC"
       },
@@ -270,10 +270,10 @@
     ],
     "rawColumns": {
       "labHoy": 30237,
-      "super": 30237,
+      "super": 30973,
       "labSigDia": 30237,
       "rawCol4": 72570,
-      "rawCol5": 72054,
+      "rawCol5": 72145,
       "rawCol6": 72570,
       "festivoSuper": 30237,
       "festivoDiurno": 30973,
@@ -284,12 +284,12 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. TRINCADOR",
-    "updatedAt": "2026-07-08T12:14:12.827Z",
+    "updatedAt": "2026-07-08T12:38:54.804Z",
     "doors": [
       {
         "key": "LAB",
         "label": "Diurna",
-        "raw": 71219,
+        "raw": 71192,
         "dayType": "laborable",
         "shift": "LAB"
       },
@@ -319,7 +319,7 @@
       "labHoy": null,
       "super": null,
       "labSigDia": null,
-      "rawCol4": 71219,
+      "rawCol4": 71192,
       "rawCol5": 71606,
       "rawCol6": 71192,
       "festivoSuper": null,
@@ -331,7 +331,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. TRINCA COCHES",
-    "updatedAt": "2026-07-08T12:14:12.828Z",
+    "updatedAt": "2026-07-08T12:38:54.804Z",
     "doors": [
       {
         "key": "LAB",
