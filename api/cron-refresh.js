@@ -68,7 +68,7 @@ export default async function handler(request, response) {
       authorization: `Bearer ${supabaseKey}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({ force: true, ref: "main", source: "vercel-cron" })
+    body: JSON.stringify({ force, ref: "main", source: "supabase-cron" })
   });
 
   const bodyText = await refreshResponse.text();
