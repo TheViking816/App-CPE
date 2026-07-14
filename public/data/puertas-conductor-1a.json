@@ -1,7 +1,7 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
   "specialty": "CONDUCTOR 1a",
-  "updatedAt": "2026-07-14T10:21:17.129Z",
+  "updatedAt": "2026-07-14T12:46:11.112Z",
   "doors": [
     {
       "key": "LAB",
@@ -36,7 +36,7 @@
     "labHoy": 72708,
     "super": 72709,
     "labSigDia": 72708,
-    "rawCol4": 24016,
+    "rawCol4": 71983,
     "rawCol5": 71197,
     "rawCol6": 71983,
     "festivoSuper": 71391,
