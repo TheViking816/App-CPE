@@ -1,7 +1,7 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-07-15T03:18:55.464Z",
-  "pageDate": "15/07/2026 - 05:18",
+  "updatedAt": "2026-07-15T04:44:29.872Z",
+  "pageDate": "15/07/2026 - 06:44",
   "jornadaText": "ULTIMA JORNADA CONTRATADA: 15/07/26 - DE 02 A 08 H.",
   "jornadaDate": "15/07/26",
   "fromHour": "02",
@@ -9,11 +9,10 @@
   "shiftKey": "NOC",
   "summary": {
     "anticipado": 582,
-    "falta": 650,
-    "contratado": 233,
+    "falta": 651,
+    "contratado": 238,
     "excepcion": 26,
-    "nocontratado": 84,
-    "doble": 6
+    "nocontratado": 84
   },
   "workers": [
     {
@@ -3373,8 +3372,8 @@
     {
       "rawChapa": "1209",
       "chapa": "71209",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1214",
@@ -3403,8 +3402,8 @@
     {
       "rawChapa": "1220",
       "chapa": "71220",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1230",
@@ -3523,8 +3522,8 @@
     {
       "rawChapa": "1259",
       "chapa": "71259",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1260",
@@ -4249,8 +4248,8 @@
     {
       "rawChapa": "1441",
       "chapa": "71441",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1442",
@@ -7297,8 +7296,8 @@
     {
       "rawChapa": "2153",
       "chapa": "72153",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2154",
@@ -7933,8 +7932,8 @@
     {
       "rawChapa": "2307",
       "chapa": "72307",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2309",
@@ -8119,8 +8118,8 @@
     {
       "rawChapa": "2343",
       "chapa": "72343",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2344",
