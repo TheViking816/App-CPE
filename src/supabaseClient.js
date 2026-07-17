@@ -17,7 +17,7 @@ function resolveSupabaseUrl(value) {
 }
 
 const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "").trim();
 const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "main";
 
 export const supabase = supabaseUrl && supabaseKey

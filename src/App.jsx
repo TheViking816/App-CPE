@@ -181,7 +181,7 @@ function normalizeLegacyDoor(door) {
 }
 
 function sanitizeDoors(doors, activeSpecialty = specialty) {
-  const source = Array.isArray(doors) ? doors : activeSpecialty.doors;
+  const source = Array.isArray(doors) ? doors : [];
   const byKey = new Map();
 
   for (const door of source) {
@@ -510,7 +510,7 @@ function HomePanel({
         </article>
         <article>
           <span>Estado</span>
-          <strong>{doorConfig?.updatedAt ? "Actualizado" : "Local"}</strong>
+          <strong>{doorConfig?.updatedAt ? "Actualizado" : "Sin datos"}</strong>
           <small>{updatedLabel}</small>
         </article>
       </div>
@@ -872,10 +872,10 @@ export function App() {
       if (snapshot) return snapshot;
 
       return {
-        source: "local",
+        source: "supabase",
         specialty: activeSpecialty.name,
         updatedAt: null,
-        doors: activeSpecialty.doors,
+        doors: [],
         rawColumns: {}
       };
     }
