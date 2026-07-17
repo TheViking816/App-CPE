@@ -13,7 +13,7 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 const githubToken = Deno.env.get("GITHUB_SYNC_TOKEN") ?? "";
 const githubRepo = Deno.env.get("GITHUB_SYNC_REPO") ?? "TheViking816/App-CPE";
 const workflowId = Deno.env.get("GITHUB_SYNC_WORKFLOW") ?? "sync-puertas.yml";
-const defaultWorkflowRef = Deno.env.get("GITHUB_SYNC_REF") ?? "feature/chapero-estado";
+const defaultWorkflowRef = Deno.env.get("GITHUB_SYNC_REF") ?? "main";
 const minRefreshSeconds = Number(Deno.env.get("MIN_REFRESH_SECONDS") ?? "300");
 
 function jsonResponse(body: unknown, status = 200) {
