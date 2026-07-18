@@ -1,7 +1,7 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-07-18T03:28:44.147Z",
-  "pageDate": "18/07/2026 - 05:28",
+  "updatedAt": "2026-07-18T03:56:02.744Z",
+  "pageDate": "18/07/2026 - 05:56",
   "jornadaText": "ULTIMA JORNADA CONTRATADA: 18/07/26 - DE 02 A 08 H.",
   "jornadaDate": "18/07/26",
   "fromHour": "02",
@@ -10,8 +10,7 @@
   "summary": {
     "anticipado": 407,
     "falta": 849,
-    "contratado": 246,
-    "doble": 14,
+    "contratado": 260,
     "excepcion": 23,
     "nocontratado": 42
   },
@@ -1195,8 +1194,8 @@
     {
       "rawChapa": "4224",
       "chapa": "74224",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4225",
@@ -1213,8 +1212,8 @@
     {
       "rawChapa": "4227",
       "chapa": "74227",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4228",
@@ -1303,8 +1302,8 @@
     {
       "rawChapa": "4245",
       "chapa": "74245",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4246",
@@ -3583,8 +3582,8 @@
     {
       "rawChapa": "1274",
       "chapa": "71274",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1276",
@@ -3637,8 +3636,8 @@
     {
       "rawChapa": "1288",
       "chapa": "71288",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1289",
@@ -5899,8 +5898,8 @@
     {
       "rawChapa": "1844",
       "chapa": "71844",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1846",
@@ -5935,8 +5934,8 @@
     {
       "rawChapa": "1853",
       "chapa": "71853",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1854",
@@ -5977,8 +5976,8 @@
     {
       "rawChapa": "1865",
       "chapa": "71865",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1867",
@@ -6325,8 +6324,8 @@
     {
       "rawChapa": "1952",
       "chapa": "71952",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1953",
@@ -6973,8 +6972,8 @@
     {
       "rawChapa": "2086",
       "chapa": "72086",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2087",
@@ -7195,8 +7194,8 @@
     {
       "rawChapa": "2132",
       "chapa": "72132",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2133",
@@ -7225,8 +7224,8 @@
     {
       "rawChapa": "2140",
       "chapa": "72140",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2141",
@@ -7273,8 +7272,8 @@
     {
       "rawChapa": "2149",
       "chapa": "72149",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2150",
@@ -7837,8 +7836,8 @@
     {
       "rawChapa": "2290",
       "chapa": "72290",
-      "status": "doble",
-      "label": "Doble"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2291",
