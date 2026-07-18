@@ -2,7 +2,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "CONDUCTOR 1a",
-    "updatedAt": "2026-07-18T11:28:10.225Z",
+    "updatedAt": "2026-07-18T12:36:02.039Z",
     "doors": [
       {
         "key": "LAB",
@@ -21,7 +21,7 @@
       {
         "key": "NOC-FES",
         "label": "Super festiva",
-        "raw": 72333,
+        "raw": 71924,
         "dayType": "festivo",
         "shift": "NOC-FES"
       },
@@ -40,7 +40,7 @@
       "rawCol4": 71983,
       "rawCol5": 71197,
       "rawCol6": 72247,
-      "festivoSuper": 72333,
+      "festivoSuper": 71924,
       "festivoDiurno": 72541,
       "rawCol9": 63186,
       "rawCol10": 71245
@@ -49,7 +49,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "CONDUCTOR 2a",
-    "updatedAt": "2026-07-18T11:28:10.226Z",
+    "updatedAt": "2026-07-18T12:36:02.039Z",
     "doors": [
       {
         "key": "LAB",
@@ -96,7 +96,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "TRASTAINERS RTT",
-    "updatedAt": "2026-07-18T11:28:10.226Z",
+    "updatedAt": "2026-07-18T12:36:02.039Z",
     "doors": [
       {
         "key": "LAB",
@@ -115,14 +115,14 @@
       {
         "key": "NOC-FES",
         "label": "Super festiva",
-        "raw": 72606,
+        "raw": 72122,
         "dayType": "festivo",
         "shift": "NOC-FES"
       },
       {
         "key": "FES",
         "label": "Diurna festiva",
-        "raw": 71529,
+        "raw": 72096,
         "dayType": "festivo",
         "shift": "FES"
       }
@@ -134,8 +134,8 @@
       "rawCol4": 71406,
       "rawCol5": 71603,
       "rawCol6": 71406,
-      "festivoSuper": 72606,
-      "festivoDiurno": 71529,
+      "festivoSuper": 72122,
+      "festivoDiurno": 72096,
       "rawCol9": 71603,
       "rawCol10": 71603
     }
@@ -143,7 +143,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. CONDUCTOR 1a",
-    "updatedAt": "2026-07-18T11:28:10.226Z",
+    "updatedAt": "2026-07-18T12:36:02.039Z",
     "doors": [
       {
         "key": "LAB",
@@ -181,7 +181,7 @@
       "rawCol4": 71983,
       "rawCol5": 71197,
       "rawCol6": 72247,
-      "festivoSuper": 72333,
+      "festivoSuper": 71924,
       "festivoDiurno": 72541,
       "rawCol9": 63186,
       "rawCol10": 71245
@@ -190,7 +190,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. CONDUCTOR 2a",
-    "updatedAt": "2026-07-18T11:28:10.226Z",
+    "updatedAt": "2026-07-18T12:36:02.040Z",
     "doors": [
       {
         "key": "LAB",
@@ -237,7 +237,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. ESPECIALISTA",
-    "updatedAt": "2026-07-18T11:28:10.226Z",
+    "updatedAt": "2026-07-18T12:36:02.040Z",
     "doors": [
       {
         "key": "LAB",
@@ -284,7 +284,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. TRINCADOR",
-    "updatedAt": "2026-07-18T11:28:10.227Z",
+    "updatedAt": "2026-07-18T12:36:02.040Z",
     "doors": [
       {
         "key": "LAB",
@@ -331,7 +331,7 @@
   {
     "source": "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003",
     "specialty": "POL. TRINCA COCHES",
-    "updatedAt": "2026-07-18T11:28:10.227Z",
+    "updatedAt": "2026-07-18T12:36:02.041Z",
     "doors": [
       {
         "key": "LAB",
