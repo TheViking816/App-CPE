@@ -1,18 +1,18 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-08-01T05:21:09.855Z",
-  "pageDate": "01/08/2026 - 07:21",
-  "jornadaText": "ULTIMA JORNADA CONTRATADA: 01/08/26 - DE 08 A 14 H.",
+  "updatedAt": "2026-08-01T09:47:32.603Z",
+  "pageDate": "01/08/2026 - 11:47",
+  "jornadaText": "ULTIMA JORNADA CONTRATADA: 01/08/26 - DE 14 A 20 H.",
   "jornadaDate": "01/08/26",
-  "fromHour": "08",
-  "toHour": "14",
+  "fromHour": "14",
+  "toHour": "20",
   "shiftKey": "LAB",
   "summary": {
-    "falta": 849,
-    "anticipado": 268,
-    "contratado": 454,
-    "nocontratado": 8,
-    "excepcion": 1
+    "falta": 854,
+    "contratado": 582,
+    "doble": 28,
+    "anticipado": 114,
+    "nocontratado": 2
   },
   "workers": [
     {
@@ -24,8 +24,8 @@
     {
       "rawChapa": "4002",
       "chapa": "74002",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4003",
@@ -60,8 +60,8 @@
     {
       "rawChapa": "4008",
       "chapa": "74008",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4009",
@@ -90,14 +90,14 @@
     {
       "rawChapa": "4013",
       "chapa": "74013",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4014",
       "chapa": "74014",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4015",
@@ -132,14 +132,14 @@
     {
       "rawChapa": "4020",
       "chapa": "74020",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4021",
       "chapa": "74021",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4022",
@@ -258,8 +258,8 @@
     {
       "rawChapa": "4044",
       "chapa": "74044",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4045",
@@ -288,14 +288,14 @@
     {
       "rawChapa": "4050",
       "chapa": "74050",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4051",
       "chapa": "74051",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4052",
@@ -354,8 +354,8 @@
     {
       "rawChapa": "4061",
       "chapa": "74061",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4062",
@@ -402,8 +402,8 @@
     {
       "rawChapa": "4069",
       "chapa": "74069",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4070",
@@ -414,8 +414,8 @@
     {
       "rawChapa": "4071",
       "chapa": "74071",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4072",
@@ -474,8 +474,8 @@
     {
       "rawChapa": "4081",
       "chapa": "74081",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4082",
@@ -678,8 +678,8 @@
     {
       "rawChapa": "4133",
       "chapa": "74133",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4134",
@@ -714,14 +714,14 @@
     {
       "rawChapa": "4140",
       "chapa": "74140",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4141",
       "chapa": "74141",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4142",
@@ -732,14 +732,14 @@
     {
       "rawChapa": "4143",
       "chapa": "74143",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4144",
       "chapa": "74144",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4145",
@@ -810,8 +810,8 @@
     {
       "rawChapa": "4158",
       "chapa": "74158",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4159",
@@ -846,8 +846,8 @@
     {
       "rawChapa": "4164",
       "chapa": "74164",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4165",
@@ -876,8 +876,8 @@
     {
       "rawChapa": "4169",
       "chapa": "74169",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4170",
@@ -906,8 +906,8 @@
     {
       "rawChapa": "4174",
       "chapa": "74174",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4175",
@@ -936,8 +936,8 @@
     {
       "rawChapa": "4179",
       "chapa": "74179",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4180",
@@ -972,14 +972,14 @@
     {
       "rawChapa": "4185",
       "chapa": "74185",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4186",
       "chapa": "74186",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4187",
@@ -1026,8 +1026,8 @@
     {
       "rawChapa": "4194",
       "chapa": "74194",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4195",
@@ -1050,14 +1050,14 @@
     {
       "rawChapa": "4199",
       "chapa": "74199",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4200",
       "chapa": "74200",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4201",
@@ -1068,14 +1068,14 @@
     {
       "rawChapa": "4202",
       "chapa": "74202",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4204",
       "chapa": "74204",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4205",
@@ -1146,14 +1146,14 @@
     {
       "rawChapa": "4216",
       "chapa": "74216",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4217",
       "chapa": "74217",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4218",
@@ -1176,14 +1176,14 @@
     {
       "rawChapa": "4221",
       "chapa": "74221",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4222",
       "chapa": "74222",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4223",
@@ -1194,14 +1194,14 @@
     {
       "rawChapa": "4224",
       "chapa": "74224",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4225",
       "chapa": "74225",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4226",
@@ -1218,14 +1218,14 @@
     {
       "rawChapa": "4228",
       "chapa": "74228",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4229",
       "chapa": "74229",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4230",
@@ -1248,26 +1248,26 @@
     {
       "rawChapa": "4233",
       "chapa": "74233",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4234",
       "chapa": "74234",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4235",
       "chapa": "74235",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4236",
       "chapa": "74236",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4237",
@@ -1284,8 +1284,8 @@
     {
       "rawChapa": "4239",
       "chapa": "74239",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4240",
@@ -1302,8 +1302,8 @@
     {
       "rawChapa": "4245",
       "chapa": "74245",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4246",
@@ -1320,20 +1320,20 @@
     {
       "rawChapa": "4248",
       "chapa": "74248",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "4255",
       "chapa": "74255",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4256",
       "chapa": "74256",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "4257",
@@ -1392,8 +1392,8 @@
     {
       "rawChapa": "3065",
       "chapa": "73065",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3066",
@@ -1410,8 +1410,8 @@
     {
       "rawChapa": "3068",
       "chapa": "73068",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3069",
@@ -1476,8 +1476,8 @@
     {
       "rawChapa": "3080",
       "chapa": "73080",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3082",
@@ -1686,8 +1686,8 @@
     {
       "rawChapa": "3117",
       "chapa": "73117",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3118",
@@ -1752,8 +1752,8 @@
     {
       "rawChapa": "3128",
       "chapa": "73128",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3129",
@@ -1770,8 +1770,8 @@
     {
       "rawChapa": "3131",
       "chapa": "73131",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "3132",
@@ -1914,14 +1914,14 @@
     {
       "rawChapa": "3159",
       "chapa": "73159",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "3160",
       "chapa": "73160",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "3162",
@@ -1980,8 +1980,8 @@
     {
       "rawChapa": "3176",
       "chapa": "73176",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "3178",
@@ -2046,14 +2046,14 @@
     {
       "rawChapa": "3202",
       "chapa": "73202",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3204",
       "chapa": "73204",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3205",
@@ -2070,8 +2070,8 @@
     {
       "rawChapa": "3207",
       "chapa": "73207",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3210",
@@ -2088,8 +2088,8 @@
     {
       "rawChapa": "3213",
       "chapa": "73213",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3217",
@@ -2106,14 +2106,14 @@
     {
       "rawChapa": "3222",
       "chapa": "73222",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3224",
       "chapa": "73224",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3226",
@@ -2142,8 +2142,8 @@
     {
       "rawChapa": "3230",
       "chapa": "73230",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3235",
@@ -2214,8 +2214,8 @@
     {
       "rawChapa": "3255",
       "chapa": "73255",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3256",
@@ -2250,8 +2250,8 @@
     {
       "rawChapa": "3270",
       "chapa": "73270",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3271",
@@ -2274,8 +2274,8 @@
     {
       "rawChapa": "3276",
       "chapa": "73276",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3278",
@@ -2286,8 +2286,8 @@
     {
       "rawChapa": "3291",
       "chapa": "73291",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3292",
@@ -2316,8 +2316,8 @@
     {
       "rawChapa": "3301",
       "chapa": "73301",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3303",
@@ -2352,8 +2352,8 @@
     {
       "rawChapa": "3309",
       "chapa": "73309",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3310",
@@ -2364,8 +2364,8 @@
     {
       "rawChapa": "3311",
       "chapa": "73311",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3312",
@@ -2388,8 +2388,8 @@
     {
       "rawChapa": "3315",
       "chapa": "73315",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3316",
@@ -2412,8 +2412,8 @@
     {
       "rawChapa": "3320",
       "chapa": "73320",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3321",
@@ -2424,8 +2424,8 @@
     {
       "rawChapa": "3322",
       "chapa": "73322",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "3331",
@@ -2502,8 +2502,8 @@
     {
       "rawChapa": "3346",
       "chapa": "73346",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "3347",
@@ -2562,8 +2562,8 @@
     {
       "rawChapa": "1003",
       "chapa": "71003",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1004",
@@ -2592,8 +2592,8 @@
     {
       "rawChapa": "1009",
       "chapa": "71009",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1010",
@@ -2610,14 +2610,14 @@
     {
       "rawChapa": "1012",
       "chapa": "71012",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1013",
       "chapa": "71013",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1014",
@@ -2742,8 +2742,8 @@
     {
       "rawChapa": "1039",
       "chapa": "71039",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1040",
@@ -2802,8 +2802,8 @@
     {
       "rawChapa": "1051",
       "chapa": "71051",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1052",
@@ -2934,8 +2934,8 @@
     {
       "rawChapa": "1083",
       "chapa": "71083",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1085",
@@ -3042,8 +3042,8 @@
     {
       "rawChapa": "1109",
       "chapa": "71109",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "1112",
@@ -3090,8 +3090,8 @@
     {
       "rawChapa": "1129",
       "chapa": "71129",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1130",
@@ -3168,8 +3168,8 @@
     {
       "rawChapa": "1147",
       "chapa": "71147",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1149",
@@ -3306,8 +3306,8 @@
     {
       "rawChapa": "1196",
       "chapa": "71196",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1197",
@@ -3372,8 +3372,8 @@
     {
       "rawChapa": "1209",
       "chapa": "71209",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1214",
@@ -3384,8 +3384,8 @@
     {
       "rawChapa": "1216",
       "chapa": "71216",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1217",
@@ -3414,8 +3414,8 @@
     {
       "rawChapa": "1231",
       "chapa": "71231",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1232",
@@ -3510,14 +3510,14 @@
     {
       "rawChapa": "1253",
       "chapa": "71253",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1258",
       "chapa": "71258",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1259",
@@ -3540,8 +3540,8 @@
     {
       "rawChapa": "1263",
       "chapa": "71263",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1265",
@@ -3558,8 +3558,8 @@
     {
       "rawChapa": "1269",
       "chapa": "71269",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1270",
@@ -3612,8 +3612,8 @@
     {
       "rawChapa": "1282",
       "chapa": "71282",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1283",
@@ -3660,8 +3660,8 @@
     {
       "rawChapa": "1295",
       "chapa": "71295",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "1298",
@@ -3672,8 +3672,8 @@
     {
       "rawChapa": "1300",
       "chapa": "71300",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1302",
@@ -3762,8 +3762,8 @@
     {
       "rawChapa": "1325",
       "chapa": "71325",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1326",
@@ -3804,8 +3804,8 @@
     {
       "rawChapa": "1335",
       "chapa": "71335",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1336",
@@ -3924,8 +3924,8 @@
     {
       "rawChapa": "1362",
       "chapa": "71362",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1363",
@@ -3960,8 +3960,8 @@
     {
       "rawChapa": "1371",
       "chapa": "71371",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1372",
@@ -4032,8 +4032,8 @@
     {
       "rawChapa": "1388",
       "chapa": "71388",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1389",
@@ -4074,14 +4074,14 @@
     {
       "rawChapa": "1403",
       "chapa": "71403",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1404",
       "chapa": "71404",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "1405",
@@ -4098,8 +4098,8 @@
     {
       "rawChapa": "1407",
       "chapa": "71407",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1409",
@@ -4140,8 +4140,8 @@
     {
       "rawChapa": "1415",
       "chapa": "71415",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1417",
@@ -4398,8 +4398,8 @@
     {
       "rawChapa": "1476",
       "chapa": "71476",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1477",
@@ -4536,8 +4536,8 @@
     {
       "rawChapa": "1506",
       "chapa": "71506",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1508",
@@ -4560,8 +4560,8 @@
     {
       "rawChapa": "1512",
       "chapa": "71512",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1513",
@@ -4602,8 +4602,8 @@
     {
       "rawChapa": "1520",
       "chapa": "71520",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1526",
@@ -4740,8 +4740,8 @@
     {
       "rawChapa": "1556",
       "chapa": "71556",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "1557",
@@ -4848,14 +4848,14 @@
     {
       "rawChapa": "1580",
       "chapa": "71580",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1581",
       "chapa": "71581",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1582",
@@ -4944,8 +4944,8 @@
     {
       "rawChapa": "1601",
       "chapa": "71601",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1603",
@@ -5142,8 +5142,8 @@
     {
       "rawChapa": "1648",
       "chapa": "71648",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1651",
@@ -5178,8 +5178,8 @@
     {
       "rawChapa": "1658",
       "chapa": "71658",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1659",
@@ -5208,8 +5208,8 @@
     {
       "rawChapa": "1666",
       "chapa": "71666",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1671",
@@ -5298,8 +5298,8 @@
     {
       "rawChapa": "1693",
       "chapa": "71693",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1695",
@@ -5334,8 +5334,8 @@
     {
       "rawChapa": "1703",
       "chapa": "71703",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "1704",
@@ -5352,8 +5352,8 @@
     {
       "rawChapa": "1707",
       "chapa": "71707",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1708",
@@ -5412,8 +5412,8 @@
     {
       "rawChapa": "1719",
       "chapa": "71719",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1720",
@@ -5520,8 +5520,8 @@
     {
       "rawChapa": "1748",
       "chapa": "71748",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1749",
@@ -5646,14 +5646,14 @@
     {
       "rawChapa": "1772",
       "chapa": "71772",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1773",
       "chapa": "71773",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1775",
@@ -5676,8 +5676,8 @@
     {
       "rawChapa": "1778",
       "chapa": "71778",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1779",
@@ -5688,8 +5688,8 @@
     {
       "rawChapa": "1782",
       "chapa": "71782",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1784",
@@ -5706,14 +5706,14 @@
     {
       "rawChapa": "1787",
       "chapa": "71787",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1788",
       "chapa": "71788",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1789",
@@ -5754,8 +5754,8 @@
     {
       "rawChapa": "1805",
       "chapa": "71805",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1806",
@@ -5784,8 +5784,8 @@
     {
       "rawChapa": "1814",
       "chapa": "71814",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1815",
@@ -5970,8 +5970,8 @@
     {
       "rawChapa": "1865",
       "chapa": "71865",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1867",
@@ -6018,8 +6018,8 @@
     {
       "rawChapa": "1880",
       "chapa": "71880",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1881",
@@ -6036,8 +6036,8 @@
     {
       "rawChapa": "1883",
       "chapa": "71883",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1884",
@@ -6192,8 +6192,8 @@
     {
       "rawChapa": "1924",
       "chapa": "71924",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1925",
@@ -6276,8 +6276,8 @@
     {
       "rawChapa": "1944",
       "chapa": "71944",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1945",
@@ -6288,8 +6288,8 @@
     {
       "rawChapa": "1946",
       "chapa": "71946",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1947",
@@ -6336,8 +6336,8 @@
     {
       "rawChapa": "1955",
       "chapa": "71955",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1956",
@@ -6396,8 +6396,8 @@
     {
       "rawChapa": "1973",
       "chapa": "71973",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1974",
@@ -6462,8 +6462,8 @@
     {
       "rawChapa": "1990",
       "chapa": "71990",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "1991",
@@ -6492,8 +6492,8 @@
     {
       "rawChapa": "2001",
       "chapa": "72001",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2002",
@@ -6504,8 +6504,8 @@
     {
       "rawChapa": "2003",
       "chapa": "72003",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2004",
@@ -6546,8 +6546,8 @@
     {
       "rawChapa": "2010",
       "chapa": "72010",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2011",
@@ -6564,8 +6564,8 @@
     {
       "rawChapa": "2013",
       "chapa": "72013",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2014",
@@ -6678,8 +6678,8 @@
     {
       "rawChapa": "2033",
       "chapa": "72033",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2034",
@@ -6702,8 +6702,8 @@
     {
       "rawChapa": "2038",
       "chapa": "72038",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "2039",
@@ -6738,8 +6738,8 @@
     {
       "rawChapa": "2044",
       "chapa": "72044",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2045",
@@ -6864,20 +6864,20 @@
     {
       "rawChapa": "2068",
       "chapa": "72068",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2069",
       "chapa": "72069",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2070",
       "chapa": "72070",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2071",
@@ -6894,8 +6894,8 @@
     {
       "rawChapa": "2073",
       "chapa": "72073",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2075",
@@ -6912,8 +6912,8 @@
     {
       "rawChapa": "2077",
       "chapa": "72077",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2078",
@@ -6990,8 +6990,8 @@
     {
       "rawChapa": "2091",
       "chapa": "72091",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2092",
@@ -7158,8 +7158,8 @@
     {
       "rawChapa": "2125",
       "chapa": "72125",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2126",
@@ -7176,8 +7176,8 @@
     {
       "rawChapa": "2129",
       "chapa": "72129",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2131",
@@ -7200,14 +7200,14 @@
     {
       "rawChapa": "2134",
       "chapa": "72134",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2136",
       "chapa": "72136",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2139",
@@ -7218,8 +7218,8 @@
     {
       "rawChapa": "2140",
       "chapa": "72140",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2141",
@@ -7248,8 +7248,8 @@
     {
       "rawChapa": "2146",
       "chapa": "72146",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2147",
@@ -7266,8 +7266,8 @@
     {
       "rawChapa": "2149",
       "chapa": "72149",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2150",
@@ -7284,8 +7284,8 @@
     {
       "rawChapa": "2152",
       "chapa": "72152",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2153",
@@ -7308,26 +7308,26 @@
     {
       "rawChapa": "2157",
       "chapa": "72157",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2159",
       "chapa": "72159",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2160",
       "chapa": "72160",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2161",
       "chapa": "72161",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2162",
@@ -7368,8 +7368,8 @@
     {
       "rawChapa": "2205",
       "chapa": "72205",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2206",
@@ -7404,8 +7404,8 @@
     {
       "rawChapa": "2212",
       "chapa": "72212",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2214",
@@ -7416,8 +7416,8 @@
     {
       "rawChapa": "2215",
       "chapa": "72215",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2218",
@@ -7488,8 +7488,8 @@
     {
       "rawChapa": "2231",
       "chapa": "72231",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2232",
@@ -7512,8 +7512,8 @@
     {
       "rawChapa": "2235",
       "chapa": "72235",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2236",
@@ -7560,8 +7560,8 @@
     {
       "rawChapa": "2244",
       "chapa": "72244",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2245",
@@ -7584,8 +7584,8 @@
     {
       "rawChapa": "2248",
       "chapa": "72248",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2249",
@@ -7614,8 +7614,8 @@
     {
       "rawChapa": "2253",
       "chapa": "72253",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2254",
@@ -7776,8 +7776,8 @@
     {
       "rawChapa": "2281",
       "chapa": "72281",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2282",
@@ -7824,8 +7824,8 @@
     {
       "rawChapa": "2289",
       "chapa": "72289",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2290",
@@ -7842,8 +7842,8 @@
     {
       "rawChapa": "2292",
       "chapa": "72292",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2293",
@@ -7992,8 +7992,8 @@
     {
       "rawChapa": "2320",
       "chapa": "72320",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "2321",
@@ -8022,8 +8022,8 @@
     {
       "rawChapa": "2326",
       "chapa": "72326",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2327",
@@ -8268,8 +8268,8 @@
     {
       "rawChapa": "2513",
       "chapa": "72513",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2514",
@@ -8280,20 +8280,20 @@
     {
       "rawChapa": "2515",
       "chapa": "72515",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2516",
       "chapa": "72516",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2517",
       "chapa": "72517",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2519",
@@ -8418,8 +8418,8 @@
     {
       "rawChapa": "2546",
       "chapa": "72546",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2547",
@@ -8496,8 +8496,8 @@
     {
       "rawChapa": "2560",
       "chapa": "72560",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2561",
@@ -8514,14 +8514,14 @@
     {
       "rawChapa": "2563",
       "chapa": "72563",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2564",
       "chapa": "72564",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2565",
@@ -8604,8 +8604,8 @@
     {
       "rawChapa": "2578",
       "chapa": "72578",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2579",
@@ -8616,8 +8616,8 @@
     {
       "rawChapa": "2580",
       "chapa": "72580",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2581",
@@ -8640,14 +8640,14 @@
     {
       "rawChapa": "2584",
       "chapa": "72584",
-      "status": "excepcion",
-      "label": "Con excepcion"
+      "status": "nocontratado",
+      "label": "No contratado"
     },
     {
       "rawChapa": "2585",
       "chapa": "72585",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2586",
@@ -8664,8 +8664,8 @@
     {
       "rawChapa": "2588",
       "chapa": "72588",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2589",
@@ -8850,8 +8850,8 @@
     {
       "rawChapa": "2621",
       "chapa": "72621",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2622",
@@ -8922,8 +8922,8 @@
     {
       "rawChapa": "2635",
       "chapa": "72635",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2636",
@@ -9072,8 +9072,8 @@
     {
       "rawChapa": "2665",
       "chapa": "72665",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "2666",
@@ -9090,8 +9090,8 @@
     {
       "rawChapa": "2668",
       "chapa": "72668",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "contratado",
+      "label": "Contratado"
     },
     {
       "rawChapa": "2669",
@@ -9132,8 +9132,8 @@
     {
       "rawChapa": "2676",
       "chapa": "72676",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "2679",
@@ -9234,8 +9234,8 @@
     {
       "rawChapa": "2698",
       "chapa": "72698",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "2699",
@@ -9246,8 +9246,8 @@
     {
       "rawChapa": "2700",
       "chapa": "72700",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "doble",
+      "label": "Doble"
     },
     {
       "rawChapa": "2701",
