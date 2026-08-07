@@ -328,27 +328,34 @@ async function collectSl(page) {
 
 async function collectPrimas(page) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
-  await openMenu(page, "Consultas", "Consulta de Primas Productividad", /Primas|SelDatJorPrimas/i);
+  await openMenu(page, "Consultas", "Consulta de Primas Productividad");
   const passwordInput = page.locator('input[type="password"]:visible').first();
-  if (await passwordInput.count()) {
+  await passwordInput.waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+  if (await passwordInput.isVisible().catch(() => false)) {
     await passwordInput.fill(portalSecurityKey);
-    await page.getByRole("button", { name: /Validar/i }).click();
+    await page.getByRole("button", { name: /Validar/i }).click({ noWaitAfter: true });
+    await page.waitForTimeout(1000);
   }
 
-  const selectorFrame = await waitForFrame(page, /SelDatJorPrimas\.asp|JornalesPrimas|JorPrimas/i);
-  if (selectorFrame) {
-    const accept = selectorFrame.getByRole("button", { name: /Aceptar/i });
-    if (await accept.count()) {
-      await accept.click();
-      await waitForFrame(page, /JornalesPrimas|JorPrimas/i);
-    }
+  const accept = page.getByRole("button", { name: /Aceptar/i }).first();
+  await accept.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+  if (await accept.isVisible().catch(() => false)) {
+    await accept.click({ noWaitAfter: true });
+    await page.waitForTimeout(1500);
   }
 
-  const frame = page.frames().find((item) => /JornalesPrimas|JorPrimas|Primas|Jornales/i.test(item.url()) && !/SelDatJorPrimas/i.test(item.url()))
-    || page.frames().find((item) => /Noray|portal\.cpevalencia/i.test(item.url()) && !/#User/.test(item.url()) && !/SelDatJorPrimas/i.test(item.url()))
-    || page.frames().find((item) => /SelDatJorPrimas/i.test(item.url()));
-
-  return parsePrimas(frame ? await frame.content() : await page.content());
+  const htmlCandidates = await Promise.all([
+    page.content(),
+    ...page.frames().map((frame) => frame.content().catch(() => ""))
+  ]);
+  const score = (result) => (
+    (result.rows || []).filter((row) => row.jornal).length * 1000
+    + (result.locked ? 0 : 100)
+    + (result.rows?.length || 0)
+  );
+  return htmlCandidates
+    .map((html) => parsePrimas(html))
+    .sort((a, b) => score(b) - score(a))[0];
 }
 
 async function upsertSupabase(snapshot) {
