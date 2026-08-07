@@ -236,13 +236,17 @@ async function writeStatus(status) {
 }
 
 function findMenuItem(page, text) {
-  return page.locator(".gwt-TreeItem:visible", { hasText: text }).first();
+  return page.locator(".norayService:visible, .gwt-TreeItem:visible", { hasText: text }).first();
 }
 
 async function ensureExpanded(page, group, child) {
-  if (await page.locator(".gwt-TreeItem:visible", { hasText: child }).count()) return;
-  await findMenuItem(page, group).click({ timeout: 8000 });
-  await findMenuItem(page, child).waitFor({ state: "visible", timeout: 5000 });
+  const childItem = findMenuItem(page, child);
+  if (await childItem.isVisible().catch(() => false)) return;
+
+  const groupItem = page.locator(".gwt-TreeItem:visible", { hasText: group }).first();
+  await groupItem.waitFor({ state: "visible", timeout: 30000 });
+  await groupItem.click({ timeout: 10000 });
+  await childItem.waitFor({ state: "visible", timeout: 10000 });
 }
 
 async function waitForFrame(page, pattern, timeout = 12000) {
