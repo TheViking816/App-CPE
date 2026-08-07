@@ -260,7 +260,7 @@ async function findVisibleMatch(page, selector, text, timeout = 0) {
 function findMenuItem(page, text, timeout = 0) {
   return findVisibleMatch(
     page,
-    ".NorayMenu .gwt-TreeItem, .norayService",
+    ".NorayMenu .gwt-TreeItem",
     text,
     timeout
   );
