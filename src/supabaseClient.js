@@ -220,6 +220,21 @@ export async function getOfficialPortalSnapshot({ token }) {
   return data;
 }
 
+export async function trackPortalOpen({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_track_portal_open", {
+    p_token: token
+  });
+
+  if (error) {
+    console.warn("No se pudo registrar la apertura del Portal:", error.message);
+    return null;
+  }
+
+  return data;
+}
+
 export async function requestPortalSync({ token, portalPassword, securityKey = "" }) {
   if (!supabase || !token) return null;
 

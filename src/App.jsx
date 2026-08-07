@@ -40,6 +40,7 @@ import {
   requestChaperoRefresh,
   requestDoorRefresh,
   requestPortalSync,
+  trackPortalOpen,
   trackUsageEvent,
   updateUserSpecialties
 } from "./supabaseClient.js";
@@ -1382,6 +1383,11 @@ export function App() {
       metadata: { specialties: getEffectiveSpecialtyIds(session) }
     });
   }, [session?.chapa]);
+
+  useEffect(() => {
+    if (!session?.token || activeTab !== "portal") return;
+    trackPortalOpen({ token: session.token });
+  }, [activeTab, session?.token]);
 
   useEffect(() => {
     let cancelled = false;
