@@ -3,10 +3,17 @@ import { createClient } from "@supabase/supabase-js";
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 
 function resolveSupabaseUrl(value) {
-  const firstLine = String(value || "").trim().split(/\s+/)[0] || defaultProjectRef;
+  const firstLine = String(value || "")
+    .replace(/\\r|\\n/g, "")
+    .trim()
+    .split(/\s+/)[0] || defaultProjectRef;
 
   if (/^https?:\/\//i.test(firstLine)) {
-    return firstLine.replace(/\/$/, "");
+    try {
+      return new URL(firstLine).origin;
+    } catch {
+      return `https://${defaultProjectRef}.supabase.co`;
+    }
   }
 
   if (/^[a-z0-9]{20}$/i.test(firstLine)) {
@@ -17,7 +24,9 @@ function resolveSupabaseUrl(value) {
 }
 
 const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
-const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "").trim();
+const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "")
+  .replace(/\\r|\\n/g, "")
+  .trim();
 const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "main";
 
 export const supabase = supabaseUrl && supabaseKey
