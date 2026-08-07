@@ -869,15 +869,26 @@ function PortalResultPreview({ snapshot }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
+  const [selectedHalf, setSelectedHalf] = useState("first");
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
     [jornales, primas, payload?.jornales?.monthLabel]
   );
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
-  const visibleJornales = useMemo(
-    () => [...enrichedJornales].sort((a, b) => String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""))),
-    [enrichedJornales]
+  const selectedJornales = useMemo(
+    () => enrichedJornales.filter((item) => {
+      const day = Number.parseInt(item.dia, 10);
+      if (!Number.isFinite(day)) return selectedHalf === "first";
+      return selectedHalf === "first" ? day <= 15 : day > 15;
+    }),
+    [enrichedJornales, selectedHalf]
   );
+  const selectedSummary = useMemo(() => summarizePayroll(selectedJornales), [selectedJornales]);
+  const visibleJornales = useMemo(
+    () => [...selectedJornales].sort((a, b) => String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""))),
+    [selectedJornales]
+  );
+  const selectedHalfLabel = selectedHalf === "first" ? "1a quincena" : "2a quincena";
 
   if (!payload) {
     return (
@@ -898,8 +909,8 @@ function PortalResultPreview({ snapshot }) {
       </section>
 
       <div className="portal-feature-grid">
-        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${jornales.length} jornales`}>
-          {formatEuro(payrollSummary.total)} total estimado
+        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${selectedJornales.length} jornales`}>
+          {formatEuro(selectedSummary.total)} {selectedHalfLabel}
         </PortalFeatureCard>
       </div>
 
@@ -910,13 +921,34 @@ function PortalResultPreview({ snapshot }) {
               <p>Jornales</p>
               <h1>{payload.jornales?.monthLabel || "Ultimo mes"}</h1>
             </div>
-            <strong className="portal-section-total">{formatEuro(payrollSummary.total)}</strong>
+            <strong className="portal-section-total">{formatEuro(selectedSummary.total)}</strong>
           </div>
           <div className="portal-payroll-summary">
-            <span>1a quincena <strong>{formatEuro(payrollSummary.firstHalf)}</strong></span>
-            <span>2a quincena <strong>{formatEuro(payrollSummary.secondHalf)}</strong></span>
+            <button
+              className={selectedHalf === "first" ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedHalf("first")}
+            >
+              <span>1a quincena</span>
+              <strong>{formatEuro(payrollSummary.firstHalf)}</strong>
+            </button>
+            <button
+              className={selectedHalf === "second" ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedHalf("second")}
+            >
+              <span>2a quincena</span>
+              <strong>{formatEuro(payrollSummary.secondHalf)}</strong>
+            </button>
           </div>
           <div className="portal-jornales-list">
+            {visibleJornales.length === 0 && (
+              <div className="portal-empty-state compact">
+                <BriefcaseBusiness size={22} />
+                <strong>Sin jornales en esta quincena</strong>
+                <span>No hay trabajos sincronizados para {selectedHalfLabel}.</span>
+              </div>
+            )}
             {visibleJornales.slice(0, 10).map((item, index) => (
               <article key={`${item.jornal}-${index}`}>
                 <span>{item.dia || "-"}</span>
@@ -1063,7 +1095,7 @@ function PortalPanel({ session }) {
       </div>
 
       <p className="portal-warning">
-        Funcion en pruebas. La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
+        La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
       </p>
 
       <section className="portal-security-card">
