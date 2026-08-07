@@ -272,7 +272,8 @@ async function login(page) {
   await userInput.fill(portalUser, { timeout: 45000 });
   await passwordInput.fill(portalPassword, { timeout: 15000 });
   await page.getByRole("button", { name: /Iniciar sesi/i }).click();
-  await page.getByText(/Finalizar sesi/i).first().waitFor({ state: "visible", timeout: 20000 });
+  await page.locator("button:visible", { hasText: /Finalizar sesi/i }).first()
+    .waitFor({ state: "visible", timeout: 20000 });
 
   body = await page.locator("body").innerText().catch(() => "");
   if (!/Finalizar sesi/i.test(body)) {
