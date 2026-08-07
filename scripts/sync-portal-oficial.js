@@ -17,6 +17,7 @@ const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
+const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "chrome").trim();
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -374,12 +375,16 @@ async function main() {
   await fs.mkdir(privateDataDir, { recursive: true });
   await fs.mkdir(profileDir, { recursive: true });
 
-  const context = await chromium.launchPersistentContext(profileDir, {
-    channel: "chrome",
+  const launchOptions = {
     headless,
     viewport: { width: 1500, height: 1100 },
     args: ["--disable-blink-features=AutomationControlled"]
-  });
+  };
+  if (browserChannel && browserChannel !== "bundled") {
+    launchOptions.channel = browserChannel;
+  }
+
+  const context = await chromium.launchPersistentContext(profileDir, launchOptions);
   const page = context.pages()[0] || await context.newPage();
 
   try {

@@ -35,10 +35,12 @@ import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   getOfficialPortalSnapshot,
+  getPortalSyncJob,
   loginUser,
   registerUser,
   requestChaperoRefresh,
   requestDoorRefresh,
+  requestPortalSync,
   trackUsageEvent,
   updateUserSpecialties
 } from "./supabaseClient.js";
@@ -975,8 +977,11 @@ function PortalPanel({ session }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(null);
+  const [portalPassword, setPortalPassword] = useState("");
   const [securityKey, setSecurityKey] = useState("");
-  const [securityKeySaved, setSecurityKeySaved] = useState(false);
+  const [syncingPortal, setSyncingPortal] = useState(false);
+  const [portalJob, setPortalJob] = useState(null);
+  const [portalMessage, setPortalMessage] = useState("");
 
   const loadSnapshot = async () => {
     setError("");
@@ -995,6 +1000,68 @@ function PortalPanel({ session }) {
     loadSnapshot();
   }, [session.token]);
 
+  useEffect(() => {
+    if (!portalJob?.jobId || !["queued", "running"].includes(portalJob.status)) return undefined;
+
+    let stopped = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const job = await getPortalSyncJob({ token: session.token, jobId: portalJob.jobId });
+        if (stopped || !job) return;
+        setPortalJob(job);
+        if (job.status === "completed") {
+          setPortalMessage("Portal actualizado.");
+          setSyncingPortal(false);
+          window.clearInterval(timer);
+          await loadSnapshot();
+        }
+        if (job.status === "failed") {
+          setPortalMessage(job.message || "No se pudo leer el portal.");
+          setSyncingPortal(false);
+          window.clearInterval(timer);
+        }
+      } catch (requestError) {
+        if (!stopped) {
+          setPortalMessage(requestError.message || "No se pudo comprobar la sincronizacion.");
+          setSyncingPortal(false);
+          window.clearInterval(timer);
+        }
+      }
+    }, 6000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [portalJob?.jobId, portalJob?.status, session.token]);
+
+  const handlePortalSync = async () => {
+    if (!portalPassword.trim()) {
+      setError("Introduce la contrasena del portal.");
+      return;
+    }
+
+    setError("");
+    setPortalMessage("Lanzando lectura del portal...");
+    setSyncingPortal(true);
+
+    try {
+      const job = await requestPortalSync({
+        token: session.token,
+        portalPassword,
+        securityKey
+      });
+      setPortalPassword("");
+      setSecurityKey("");
+      setPortalJob(job);
+      setPortalMessage("Lectura en cola. Puede tardar alrededor de un minuto.");
+    } catch (requestError) {
+      setPortalMessage("");
+      setSyncingPortal(false);
+      setError(requestError.message || "No se pudo lanzar la lectura del portal.");
+    }
+  };
+
   return (
     <section className="page-panel portal-panel">
       <div className="section-heading">
@@ -1004,7 +1071,7 @@ function PortalPanel({ session }) {
       </div>
 
       <p className="portal-warning">
-        Funcion en pruebas. La lectura se hace con Chrome real en un sincronizador local y la app muestra el ultimo dato guardado en Supabase.
+        Funcion en pruebas. La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
       </p>
 
       <button className="secondary-button" type="button" onClick={loadSnapshot} disabled={loading}>
@@ -1013,9 +1080,19 @@ function PortalPanel({ session }) {
 
       <section className="portal-security-card">
         <div>
-          <p>Clave de primas</p>
-          <span>Se usara solo para sincronizar primas. No se guarda en Supabase.</span>
+          <p>Actualizar portal</p>
+          <span>Introduce tu contrasena del portal oficial y, si quieres primas, la clave de seguridad.</span>
         </div>
+        <label>
+          <Lock size={17} />
+          <input
+            autoComplete="current-password"
+            placeholder="Contrasena del portal"
+            type="password"
+            value={portalPassword}
+            onChange={(event) => setPortalPassword(event.target.value)}
+          />
+        </label>
         <label>
           <Lock size={17} />
           <input
@@ -1024,25 +1101,18 @@ function PortalPanel({ session }) {
             placeholder="Clave de seguridad"
             type="password"
             value={securityKey}
-            onChange={(event) => {
-              setSecurityKey(event.target.value);
-              setSecurityKeySaved(false);
-            }}
+            onChange={(event) => setSecurityKey(event.target.value)}
           />
         </label>
         <button
-          className="secondary-button"
+          className="primary-button"
           type="button"
-          disabled={!securityKey.trim()}
-          onClick={() => setSecurityKeySaved(true)}
+          disabled={syncingPortal || !portalPassword.trim()}
+          onClick={handlePortalSync}
         >
-          Guardar en esta sesion
+          {syncingPortal ? "Leyendo portal..." : "Leer portal"}
         </button>
-        <small>
-          {securityKeySaved
-            ? "Clave preparada para la prueba. La lectura real de primas sigue dependiendo del sincronizador local con Chrome."
-            : "Si las primas aun aparecen pendientes, falta ejecutar el sincronizador con esa clave."}
-        </small>
+        {portalMessage && <small>{portalMessage}</small>}
       </section>
 
       {error && <p className="portal-warning">{error}</p>}

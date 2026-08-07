@@ -219,3 +219,38 @@ export async function getOfficialPortalSnapshot({ token }) {
 
   return data;
 }
+
+export async function requestPortalSync({ token, portalPassword, securityKey = "" }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.functions.invoke("refresh-portal", {
+    body: {
+      token,
+      portalPassword,
+      securityKey,
+      ref: syncWorkflowRef
+    }
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (data?.ok === false) {
+    throw new Error(data.error || "No se pudo lanzar la lectura del portal.");
+  }
+
+  return data || null;
+}
+
+export async function getPortalSyncJob({ token, jobId }) {
+  if (!supabase || !token || !jobId) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_sync_job", {
+    p_token: token,
+    p_job_id: jobId
+  });
+
+  if (error) throw error;
+  return data;
+}
