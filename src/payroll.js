@@ -1,0 +1,200 @@
+const VALENCIA_HOLIDAYS_2026 = new Set([
+  "2026-01-01", "2026-01-06", "2026-01-22", "2026-03-19", "2026-04-03",
+  "2026-04-06", "2026-04-13", "2026-05-01", "2026-06-24", "2026-07-16",
+  "2026-08-15", "2026-10-09", "2026-10-12", "2026-11-01", "2026-12-06",
+  "2026-12-08", "2026-12-25"
+]);
+
+const SALARY_TABLE = {
+  ESTIBA: {
+    I: {
+      LABORABLE: { "02-08": 216.19, "08-14": 102.19, "14-20": 102.19, "20-02": 153.32 },
+      SABADO: { "02-08": 216.19, "08-14": 118.66, "14-20": 183.96, "20-02": 270.55 },
+      FESTIVO: { "02-08": 389.23, "08-14": 183.96, "14-20": 260.50, "20-02": 350.68 },
+      FESTIVO_TO_LABORABLE: { "02-08": 247.72, "20-02": 310.65 },
+      FESTIVO_TO_FESTIVO: { "02-08": 424.44, "20-02": 350.68 },
+      LABORABLE_TO_FESTIVO: { "20-02": 194.16 }
+    },
+    II: {
+      LABORABLE: { "02-08": 223.27, "08-14": 105.53, "14-20": 105.53, "20-02": 158.36 },
+      SABADO: { "02-08": 223.27, "08-14": 122.02, "14-20": 189.98, "20-02": 279.42 },
+      FESTIVO: { "02-08": 401.99, "08-14": 189.98, "14-20": 269.05, "20-02": 362.16 },
+      FESTIVO_TO_LABORABLE: { "02-08": 261.16, "20-02": 320.77 },
+      FESTIVO_TO_FESTIVO: { "02-08": 438.26, "20-02": 362.16 },
+      LABORABLE_TO_FESTIVO: { "20-02": 200.51 }
+    },
+    III: {
+      LABORABLE: { "02-08": 225.82, "08-14": 106.56, "14-20": 106.56, "20-02": 159.91 },
+      SABADO: { "02-08": 225.82, "08-14": 131.81, "14-20": 191.77, "20-02": 282.10 },
+      FESTIVO: { "02-08": 405.86, "08-14": 191.66, "14-20": 271.51, "20-02": 365.52 },
+      FESTIVO_TO_LABORABLE: { "02-08": 269.62, "20-02": 323.86 },
+      FESTIVO_TO_FESTIVO: { "20-02": 365.62 },
+      LABORABLE_TO_FESTIVO: { "20-02": 159.91 }
+    },
+    IV: {
+      LABORABLE: { "02-08": 238.98, "08-14": 122.17, "14-20": 122.17, "20-02": 169.25 },
+      SABADO: { "02-08": 238.98, "08-14": 138.49, "14-20": 203.00, "20-02": 298.55 },
+      FESTIVO: { "02-08": 429.56, "08-14": 202.88, "14-20": 287.36, "20-02": 386.88 },
+      FESTIVO_TO_LABORABLE: { "02-08": 294.81, "20-02": 342.76 },
+      FESTIVO_TO_FESTIVO: { "20-02": 386.98 },
+      LABORABLE_TO_FESTIVO: { "20-02": 169.25 }
+    }
+  }
+};
+
+const CONDUCTOR_1A_COMPLEMENT = 7.38;
+const CONDUCTOR_2A_COMPLEMENT = 6.94;
+const TRINCADOR_COMPLEMENT = 48.21;
+
+const MONTHS_ES = {
+  enero: 1,
+  febrero: 2,
+  marzo: 3,
+  abril: 4,
+  mayo: 5,
+  junio: 6,
+  julio: 7,
+  agosto: 8,
+  septiembre: 9,
+  setiembre: 9,
+  octubre: 10,
+  noviembre: 11,
+  diciembre: 12
+};
+
+function pad(value) {
+  return String(value).padStart(2, "0");
+}
+
+function parseLocalDate(dateString) {
+  const [year, month, day] = String(dateString || "").split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function toYmd(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function isHoliday(dateString) {
+  const date = parseLocalDate(dateString);
+  return date.getDay() === 0 || VALENCIA_HOLIDAYS_2026.has(dateString);
+}
+
+function getDayType(dateString) {
+  if (isHoliday(dateString)) return "FESTIVO";
+  return parseLocalDate(dateString).getDay() === 6 ? "SABADO" : "LABORABLE";
+}
+
+function getAdjacentDay(dateString, delta) {
+  const date = parseLocalDate(dateString);
+  date.setDate(date.getDate() + delta);
+  return toYmd(date);
+}
+
+function parseShift(jornada = "") {
+  const text = String(jornada).toUpperCase();
+  if (/\b0?2\D+0?8\b/.test(text)) return "02-08";
+  if (/\b0?8\D+14\b/.test(text)) return "08-14";
+  if (/\b14\D+20\b/.test(text)) return "14-20";
+  if (/\b20\D+0?2\b/.test(text)) return "20-02";
+  return "";
+}
+
+function parseMonthLabel(monthLabel = "") {
+  const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
+  if (!match) return { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
+  const normalized = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return { month: MONTHS_ES[normalized] || new Date().getMonth() + 1, year: Number(match[2]) };
+}
+
+function parseAmount(value = "") {
+  const matches = String(value).match(/\d+(?:[.,]\d{1,2})/g);
+  if (!matches?.length) return 0;
+  return Number(matches[matches.length - 1].replace(",", ".")) || 0;
+}
+
+function normalizeSpecialty(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[.\-_/\\,;:()]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getGroup(specialty = "") {
+  const normalized = normalizeSpecialty(specialty);
+  if (/CONDUCTOR(?:\s+DE)?\s*[12]\s*A\b/.test(normalized)) return "II";
+  return "II";
+}
+
+function getComplement(specialty = "") {
+  const normalized = normalizeSpecialty(specialty);
+  if (/CONDUCTOR(?:\s+DE)?\s*1\s*A\b/.test(normalized)) return CONDUCTOR_1A_COMPLEMENT;
+  if (/CONDUCTOR(?:\s+DE)?\s*2\s*A\b/.test(normalized)) return CONDUCTOR_2A_COMPLEMENT;
+  if (/TRINCADOR|CAPATAZ\s+DE\s+O\s*P/.test(normalized)) return TRINCADOR_COMPLEMENT;
+  return 0;
+}
+
+function getRateKey(dateString, shift) {
+  const dayType = getDayType(dateString);
+  if (shift === "02-08" && isHoliday(getAdjacentDay(dateString, -1))) {
+    return dayType === "FESTIVO" ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+  }
+  if (shift === "20-02" && dayType === "LABORABLE" && isHoliday(getAdjacentDay(dateString, 1))) {
+    return "LABORABLE_TO_FESTIVO";
+  }
+  if (shift === "20-02" && dayType === "FESTIVO") {
+    return isHoliday(getAdjacentDay(dateString, 1)) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+  }
+  if (dayType === "SABADO" && shift === "02-08") return "LABORABLE";
+  return dayType;
+}
+
+function findMatchingPrima(jornal, primas = []) {
+  const keys = [jornal.parte, jornal.jornal].filter(Boolean).map(String);
+  const row = primas.find((item) => {
+    const values = item.values || [];
+    return keys.some((key) => values.some((value) => String(value).includes(key)));
+  });
+  if (!row) return 0;
+  return parseAmount((row.values || []).join(" "));
+}
+
+export function enrichJornales(jornales = [], primas = [], monthLabel = "") {
+  const { month, year } = parseMonthLabel(monthLabel);
+  return jornales.map((jornal) => {
+    const day = Number(jornal.dia);
+    const date = `${year}-${pad(month)}-${pad(day || 1)}`;
+    const shift = parseShift(jornal.jornada);
+    const group = getGroup(jornal.especialidad);
+    const rateKey = getRateKey(date, shift);
+    const table = SALARY_TABLE.ESTIBA[group] || SALARY_TABLE.ESTIBA.II;
+    const base = Number((table[rateKey]?.[shift] ?? table[getDayType(date)]?.[shift] ?? 0).toFixed(2));
+    const complement = Number(getComplement(jornal.especialidad).toFixed(2));
+    const production = Number(parseAmount(jornal.produccion).toFixed(2));
+    const prima = Number(findMatchingPrima(jornal, primas).toFixed(2));
+    const total = Number((base + complement + production + prima).toFixed(2));
+
+    return {
+      ...jornal,
+      payroll: { date, shift, group, rateKey, base, complement, production, prima, total }
+    };
+  });
+}
+
+export function summarizePayroll(items = []) {
+  return items.reduce((acc, item) => {
+    const day = Number(item.dia);
+    const total = Number(item.payroll?.total || 0);
+    acc.total += total;
+    if (day <= 15) acc.firstHalf += total;
+    else acc.secondHalf += total;
+    return acc;
+  }, { total: 0, firstHalf: 0, secondHalf: 0 });
+}
+
+export function formatEuro(value = 0) {
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(value) || 0);
+}

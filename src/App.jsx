@@ -30,6 +30,7 @@ import {
   specialties,
   specialty
 } from "./censo.js";
+import { enrichJornales, formatEuro, summarizePayroll } from "./payroll.js";
 import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
@@ -782,6 +783,8 @@ function PortalFeatureCard({ icon, title, children }) {
   );
 }
 
+const WEEKDAYS_ES = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+
 function PortalCalendarPreview({ descansos }) {
   const months = descansos?.months || [];
   const defaultMonthIndex = useMemo(() => {
@@ -807,6 +810,8 @@ function PortalCalendarPreview({ descansos }) {
   const days = month.days?.length
     ? month.days
     : Array.from({ length: 31 }, (_, index) => ({ day: index + 1, code: month.codes?.[index] || "" }));
+  const today = new Date();
+  const isCurrentMonth = Number(month.month) === today.getMonth() + 1 && Number(month.year) === today.getFullYear();
 
   return (
     <section className="portal-calendar-card">
@@ -831,12 +836,23 @@ function PortalCalendarPreview({ descansos }) {
         </div>
       )}
       <div className="portal-calendar-grid">
+        {["L", "M", "X", "J", "V", "S", "D"].map((weekday) => (
+          <div className="portal-weekday" key={weekday}>{weekday}</div>
+        ))}
         {days.map((item) => {
           const day = item.day;
           const code = item.code || "";
+          const date = new Date(Number(month.year), Number(month.month) - 1, day);
+          const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
+          const isToday = isCurrentMonth && day === today.getDate();
           return (
-            <div key={day} className={`portal-day ${code.toLowerCase()}`}>
+            <div
+              key={day}
+              className={`portal-day ${code.toLowerCase()} ${isToday ? "is-today" : ""}`}
+              style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
+            >
               <span>{day}</span>
+              <small>{WEEKDAYS_ES[date.getDay()]}</small>
               {code && <strong>{code}</strong>}
             </div>
           );
@@ -852,6 +868,11 @@ function PortalResultPreview({ snapshot }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
+  const enrichedJornales = useMemo(
+    () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
+    [jornales, primas, payload?.jornales?.monthLabel]
+  );
+  const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
 
   if (!payload) {
     return (
@@ -873,7 +894,7 @@ function PortalResultPreview({ snapshot }) {
 
       <div className="portal-feature-grid">
         <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${jornales.length} jornales`}>
-          {payload.jornales?.monthLabel || "Mes sincronizado del portal oficial."}
+          {formatEuro(payrollSummary.total)} total estimado
         </PortalFeatureCard>
         <PortalFeatureCard icon={<CalendarDays size={20} />} title="Descansos">
           DS {descansos?.totals?.DS || 0} - SL {descansos?.totals?.SL || 0} - VA {descansos?.totals?.VA || 0}
@@ -890,9 +911,14 @@ function PortalResultPreview({ snapshot }) {
               <p>Jornales</p>
               <h1>{payload.jornales?.monthLabel || "Ultimo mes"}</h1>
             </div>
+            <strong className="portal-section-total">{formatEuro(payrollSummary.total)}</strong>
+          </div>
+          <div className="portal-payroll-summary">
+            <span>1a quincena <strong>{formatEuro(payrollSummary.firstHalf)}</strong></span>
+            <span>2a quincena <strong>{formatEuro(payrollSummary.secondHalf)}</strong></span>
           </div>
           <div className="portal-jornales-list">
-            {jornales.slice(0, 10).map((item, index) => (
+            {enrichedJornales.slice(0, 10).map((item, index) => (
               <article key={`${item.jornal}-${index}`}>
                 <span>{item.dia || "-"}</span>
                 <div>
@@ -900,7 +926,12 @@ function PortalResultPreview({ snapshot }) {
                   <small>{item.jornada || ""}</small>
                   <em>{[item.buque, item.empresa].filter(Boolean).join(" - ")}</em>
                   {item.operacion && <em>{item.operacion}</em>}
+                  <em>
+                    Base {formatEuro(item.payroll?.base)} · Compl. {formatEuro(item.payroll?.complement)}
+                    {item.payroll?.prima > 0 ? ` · Prima ${formatEuro(item.payroll.prima)}` : ""}
+                  </em>
                 </div>
+                <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
               </article>
             ))}
           </div>
@@ -975,6 +1006,8 @@ function PortalPanel({ session }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(null);
+  const [securityKey, setSecurityKey] = useState("");
+  const [securityKeySaved, setSecurityKeySaved] = useState(false);
 
   const loadSnapshot = async () => {
     setError("");
@@ -1006,8 +1039,42 @@ function PortalPanel({ session }) {
       </p>
 
       <button className="secondary-button" type="button" onClick={loadSnapshot} disabled={loading}>
-        {loading ? "Actualizando..." : "Actualizar vista"}
+        Actualizar vista
       </button>
+
+      <section className="portal-security-card">
+        <div>
+          <p>Clave de primas</p>
+          <span>Se usara solo para sincronizar primas. No se guarda en Supabase.</span>
+        </div>
+        <label>
+          <Lock size={17} />
+          <input
+            autoComplete="off"
+            inputMode="numeric"
+            placeholder="Clave de seguridad"
+            type="password"
+            value={securityKey}
+            onChange={(event) => {
+              setSecurityKey(event.target.value);
+              setSecurityKeySaved(false);
+            }}
+          />
+        </label>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={!securityKey.trim()}
+          onClick={() => setSecurityKeySaved(true)}
+        >
+          Guardar en esta sesion
+        </button>
+        <small>
+          {securityKeySaved
+            ? "Clave preparada para la prueba. La lectura real de primas sigue dependiendo del sincronizador local con Chrome."
+            : "Si las primas aun aparecen pendientes, falta ejecutar el sincronizador con esa clave."}
+        </small>
+      </section>
 
       {error && <p className="portal-warning">{error}</p>}
       {loading && !snapshot ? (

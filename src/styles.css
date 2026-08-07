@@ -1146,6 +1146,55 @@ select {
   line-height: 1.35;
 }
 
+.portal-security-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.08);
+}
+
+.portal-security-card p {
+  margin: 0 0 3px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.portal-security-card span,
+.portal-security-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.portal-security-card label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #dbe6f1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+}
+
+.portal-security-card input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+}
+
 .portal-results {
   display: grid;
   gap: 12px;
@@ -1200,7 +1249,8 @@ select {
 }
 
 .portal-jornales-list article {
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .portal-primas-list article {
@@ -1244,6 +1294,46 @@ select {
   font-size: 12px;
   font-style: normal;
   font-weight: 700;
+}
+
+.portal-section-total,
+.portal-jornal-total {
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.portal-jornal-total {
+  justify-self: end;
+}
+
+.portal-payroll-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.portal-payroll-summary span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.portal-payroll-summary strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
 }
 
 .portal-code-grid {
@@ -1308,25 +1398,48 @@ select {
   gap: 5px;
 }
 
+.portal-weekday {
+  display: grid;
+  place-items: center;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+}
+
 .portal-day {
   display: grid;
   place-items: center;
-  min-height: 42px;
+  min-height: 48px;
   border: 1px solid #e1e8ef;
   border-radius: 7px;
   background: #f8fafc;
 }
 
-.portal-day span {
+.portal-day span,
+.portal-day small {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
+}
+
+.portal-day small {
+  font-size: 9px;
 }
 
 .portal-day strong {
   color: var(--ink);
   font-size: 12px;
   font-weight: 950;
+}
+
+.portal-day.is-today {
+  border-color: rgba(245, 130, 32, 0.8);
+  box-shadow: inset 0 0 0 2px rgba(245, 130, 32, 0.2);
+}
+
+.portal-day.is-today span {
+  color: #b45309;
 }
 
 .portal-day.ds {
@@ -1672,6 +1785,7 @@ select {
 :root[data-theme="dark"] .specialty-manage-block,
 :root[data-theme="dark"] .portal-feature-card,
 :root[data-theme="dark"] .portal-form,
+:root[data-theme="dark"] .portal-security-card,
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-primas-list article,
 :root[data-theme="dark"] .portal-code,
@@ -1692,8 +1806,12 @@ select {
 }
 
 :root[data-theme="dark"] .portal-feature-card strong,
+:root[data-theme="dark"] .portal-security-card p,
 :root[data-theme="dark"] .portal-jornales-list strong,
 :root[data-theme="dark"] .portal-primas-list span,
+:root[data-theme="dark"] .portal-section-total,
+:root[data-theme="dark"] .portal-jornal-total,
+:root[data-theme="dark"] .portal-payroll-summary strong,
 :root[data-theme="dark"] .portal-code,
 :root[data-theme="dark"] .portal-sync-card strong,
 :root[data-theme="dark"] .portal-empty-state strong {
@@ -1740,6 +1858,12 @@ select {
 
 :root[data-theme="dark"] .portal-form label {
   color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-security-card label,
+:root[data-theme="dark"] .portal-payroll-summary span {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(8, 22, 38, 0.72);
 }
 
 :root[data-theme="dark"] .portal-warning {
@@ -1967,5 +2091,18 @@ select {
 
   .bottom-nav button {
     font-size: 10px;
+  }
+
+  .portal-jornales-list article {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .portal-jornal-total {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .portal-payroll-summary {
+    grid-template-columns: 1fr;
   }
 }
