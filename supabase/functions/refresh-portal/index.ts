@@ -121,6 +121,6 @@ Deno.serve(async (request) => {
       configured: true,
       jobId: data.jobId,
       error: dispatchError instanceof Error ? dispatchError.message : "No se pudo lanzar GitHub Actions"
-    }, 502);
+    });
   }
 });
