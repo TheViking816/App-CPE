@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
+  BriefcaseBusiness,
   CalendarDays,
   Check,
   CircleAlert,
@@ -17,6 +18,7 @@ import {
   Search,
   Sun,
   UserRound,
+  WalletCards,
   UsersRound
 } from "lucide-react";
 import {
@@ -29,6 +31,7 @@ import {
   specialty
 } from "./censo.js";
 import {
+  fetchOfficialPortalData,
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   loginUser,
@@ -53,6 +56,7 @@ const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
   { id: "puertas", label: "Puertas", Icon: CalendarDays },
   { id: "censo", label: "Censo", Icon: UsersRound },
+  { id: "portal", label: "Portal", Icon: BriefcaseBusiness },
   { id: "mis-especialidades", label: "Mis esp.", Icon: ListChecks },
   { id: "enlaces", label: "Enlaces", Icon: LinkIcon }
 ];
@@ -268,7 +272,7 @@ function getSpecialtyLabel(item) {
   return item?.name?.replace(/^POL\.\s*/, "") || "";
 }
 
-function LoginPanel({ theme, onThemeToggle, onLogin }) {
+function LoginPanel({ theme, onThemeToggle, onLogin, onPortalLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
   const [password, setPassword] = useState("");
@@ -294,6 +298,21 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
     try {
       setLoading(true);
       const detectedSpecialties = getDetectedSpecialtyIdsForChapa(normalized);
+
+      if (mode === "portal") {
+        const portalData = await fetchOfficialPortalData({
+          chapa: normalized,
+          password,
+          section: "all"
+        });
+        onPortalLogin({
+          chapa: normalized,
+          portalOnly: true,
+          portalPreview: portalData,
+          specialties: detectedSpecialties
+        });
+        return;
+      }
 
       if (mode === "register" && detectedSpecialties.length === 0) {
         setError("Esta chapa no aparece en ningun censo cargado.");
@@ -345,6 +364,9 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
         <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>
           Registro
         </button>
+        <button type="button" className={mode === "portal" ? "active" : ""} onClick={() => setMode("portal")}>
+          Portal
+        </button>
       </div>
 
       <label>
@@ -383,11 +405,12 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
       </label>
 
       {mode === "register" && <p className="login-hint">La app detectara tus especialidades por la chapa.</p>}
+      {mode === "portal" && <p className="login-hint">Acceso temporal al portal oficial. No guardamos la contraseÃ±a.</p>}
 
       {error && <p className="form-error">{error}</p>}
 
       <button className="primary-button" type="submit" disabled={loading}>
-        {loading ? "Procesando..." : mode === "register" ? "Crear cuenta" : "Entrar"}
+        {loading ? "Procesando..." : mode === "register" ? "Crear cuenta" : mode === "portal" ? "Conectar portal" : "Entrar"}
       </button>
     </form>
   );
@@ -767,6 +790,195 @@ function CensoPanel({ user, doors, activeSpecialty }) {
   );
 }
 
+function PortalFeatureCard({ icon, title, children }) {
+  return (
+    <article className="portal-feature-card">
+      <div className="portal-feature-icon">{icon}</div>
+      <div>
+        <strong>{title}</strong>
+        <p>{children}</p>
+      </div>
+    </article>
+  );
+}
+
+function PortalResultPreview({ data }) {
+  const jornales = data?.jornales?.rows || data?.parsedPreview?.jornales?.rows || [];
+  const descansos = data?.descansos || data?.parsedPreview?.descansos || null;
+  const primas = data?.primas?.rows || data?.parsedPreview?.primas?.rows || [];
+
+  if (!jornales.length && !descansos && !primas.length) return null;
+
+  return (
+    <div className="portal-results">
+      {jornales.length > 0 && (
+        <section>
+          <div className="section-title-row compact">
+            <div>
+              <p>Jornales</p>
+              <h1>{jornales.length}</h1>
+            </div>
+          </div>
+          <div className="portal-jornales-list">
+            {jornales.slice(0, 8).map((item, index) => (
+              <article key={`${item.jornal}-${index}`}>
+                <span>{item.dia || "-"}</span>
+                <div>
+                  <strong>{item.especialidad || "Jornal"}</strong>
+                  <small>{item.jornada || ""}</small>
+                  <em>{item.buque || item.empresa || ""}</em>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {descansos && (
+        <section>
+          <div className="section-title-row compact">
+            <div>
+              <p>Descansos</p>
+              <h1>{descansos.worker?.group || "Calendario"}</h1>
+            </div>
+          </div>
+          <div className="portal-code-grid">
+            {["DS", "SL", "FS", "VA"].map((code) => (
+              <div key={code} className={`portal-code ${code.toLowerCase()}`}>
+                <strong>{descansos.totals?.[code] || 0}</strong>
+                <span>{code}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {primas.length > 0 && (
+        <section>
+          <div className="section-title-row compact">
+            <div>
+              <p>Primas</p>
+              <h1>{primas.length} lineas</h1>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function PortalPanel({ session }) {
+  const [chapa, setChapa] = useState(session?.chapa || "");
+  const [password, setPassword] = useState("");
+  const [securityKey, setSecurityKey] = useState("");
+  const [section, setSection] = useState("all");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [portalData, setPortalData] = useState(session?.portalPreview || null);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setPortalData(null);
+
+    try {
+      setLoading(true);
+      const data = await fetchOfficialPortalData({
+        chapa,
+        password,
+        securityKey,
+        section
+      });
+      setPortalData(data);
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo conectar con el portal oficial.");
+      if (requestError.payload?.parsedPreview) {
+        setPortalData(requestError.payload);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="page-panel portal-panel">
+      <div className="section-heading">
+        <p>Portal oficial</p>
+        <h1>Mi portal</h1>
+        <span>Jornales, primas y descansos en formato claro.</span>
+      </div>
+
+      <div className="portal-feature-grid">
+        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title="Jornales">
+          Resumen mensual, buques, empresas, jornadas y produccion.
+        </PortalFeatureCard>
+        <PortalFeatureCard icon={<WalletCards size={20} />} title="Primas">
+          Requiere clave de seguridad del portal.
+        </PortalFeatureCard>
+        <PortalFeatureCard icon={<CalendarDays size={20} />} title="Descansos">
+          Calendario con DS, SL, FS, VA y formacion.
+        </PortalFeatureCard>
+      </div>
+
+      <form className="portal-form" onSubmit={submit}>
+        <label>
+          <span>Usuario portal</span>
+          <div className="field">
+            <UserRound size={18} />
+            <input
+              inputMode="numeric"
+              value={chapa}
+              onChange={(event) => setChapa(event.target.value.replace(/\D/g, "").slice(0, 5))}
+              placeholder="Ej. 72683"
+            />
+          </div>
+        </label>
+        <label>
+          <span>ContraseÃ±a portal</span>
+          <div className="field">
+            <Lock size={18} />
+            <input
+              type="password"
+              value={password}
+              autoComplete="current-password"
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Clave del portal"
+            />
+          </div>
+        </label>
+        <label>
+          <span>Clave primas</span>
+          <div className="field">
+            <Lock size={18} />
+            <input
+              type="password"
+              value={securityKey}
+              autoComplete="off"
+              onChange={(event) => setSecurityKey(event.target.value)}
+              placeholder="Solo si consultas primas"
+            />
+          </div>
+        </label>
+        <label>
+          <span>Consulta</span>
+          <select value={section} onChange={(event) => setSection(event.target.value)}>
+            <option value="all">Todo</option>
+            <option value="jornales">Jornales</option>
+            <option value="descansos">Descansos</option>
+            <option value="primas">Primas</option>
+          </select>
+        </label>
+        <button className="primary-button" type="submit" disabled={loading}>
+          {loading ? "Conectando..." : "Leer portal"}
+        </button>
+      </form>
+
+      {error && <p className="portal-warning">{error}</p>}
+      <PortalResultPreview data={portalData} />
+    </section>
+  );
+}
+
 function LinksPanel() {
   const links = [
     { label: "Prevision", url: "https://noray.cpevalencia.com/PrevisionDemanda.asp" },
@@ -1058,6 +1270,11 @@ export function App() {
             setSession(nextSession);
             setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
           }}
+          onPortalLogin={(nextSession) => {
+            setSession(nextSession);
+            setActiveTab("portal");
+            setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
+          }}
         />
       </div>
     );
@@ -1098,6 +1315,7 @@ export function App() {
             onSpecialtiesSave={saveSpecialties}
           />
         )}
+        {activeTab === "portal" && <PortalPanel session={session} />}
         {activeTab === "enlaces" && <LinksPanel />}
       </main>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
