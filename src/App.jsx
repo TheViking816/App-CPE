@@ -960,22 +960,6 @@ function PortalResultPreview({ snapshot }) {
 
       {descansos && (
         <>
-          <section>
-            <div className="section-title-row compact">
-              <div>
-                <p>Descansos</p>
-                <h1>{descansos.worker?.group || "Calendario"}</h1>
-              </div>
-            </div>
-            <div className="portal-code-grid">
-              {["DS", "SL", "FS", "VA"].map((code) => (
-                <div key={code} className={`portal-code ${code.toLowerCase()}`}>
-                  <strong>{descansos.totals?.[code] || 0}</strong>
-                  <span>{code}</span>
-                </div>
-              ))}
-            </div>
-          </section>
           <PortalCalendarPreview descansos={descansos} />
         </>
       )}
