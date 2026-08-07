@@ -17,7 +17,7 @@ const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
-const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "chrome").trim();
+const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -272,11 +272,15 @@ async function login(page) {
   await userInput.fill(portalUser, { timeout: 45000 });
   await passwordInput.fill(portalPassword, { timeout: 15000 });
   await page.getByRole("button", { name: /Iniciar sesi/i }).click();
-  await page.locator("button:visible", { hasText: /Finalizar sesi/i }).first()
-    .waitFor({ state: "visible", timeout: 20000 });
+  const logoutButton = page.locator("button:visible", { hasText: /Finalizar sesi/i }).first();
+  await Promise.race([
+    logoutButton.waitFor({ state: "visible", timeout: 45000 }),
+    userInput.waitFor({ state: "hidden", timeout: 45000 })
+  ]);
 
   body = await page.locator("body").innerText().catch(() => "");
-  if (!/Finalizar sesi/i.test(body)) {
+  const authenticated = await logoutButton.isVisible().catch(() => false);
+  if (!authenticated || !/Finalizar sesi/i.test(body)) {
     throw new Error("No se pudo iniciar sesion en el portal oficial.");
   }
 }
