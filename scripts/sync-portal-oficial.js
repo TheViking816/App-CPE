@@ -277,14 +277,19 @@ async function login(page) {
   await passwordInput.fill(portalPassword, { timeout: 15000 });
   await page.getByRole("button", { name: /Iniciar sesi/i }).click();
   const logoutButton = page.locator("button:visible", { hasText: /Finalizar sesi/i }).first();
+  const userHeader = page.getByText(new RegExp(`^\\s*${portalUser}\\s*-`)).first();
+  const serviceMenu = page.locator(".norayService:visible").first();
   await Promise.race([
     logoutButton.waitFor({ state: "visible", timeout: 45000 }),
-    userInput.waitFor({ state: "hidden", timeout: 45000 })
+    userHeader.waitFor({ state: "visible", timeout: 45000 }),
+    serviceMenu.waitFor({ state: "visible", timeout: 45000 })
   ]);
 
   body = await page.locator("body").innerText().catch(() => "");
-  const authenticated = await logoutButton.isVisible().catch(() => false);
-  if (!authenticated || !/Finalizar sesi/i.test(body)) {
+  const authenticated = await logoutButton.isVisible().catch(() => false)
+    || await userHeader.isVisible().catch(() => false)
+    || await serviceMenu.isVisible().catch(() => false);
+  if (!authenticated) {
     throw new Error("No se pudo iniciar sesion en el portal oficial.");
   }
 }
