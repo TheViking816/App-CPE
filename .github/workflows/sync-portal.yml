@@ -41,10 +41,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Install Chromium system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
       - name: Sync portal
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
