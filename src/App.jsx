@@ -272,7 +272,7 @@ function getSpecialtyLabel(item) {
   return item?.name?.replace(/^POL\.\s*/, "") || "";
 }
 
-function LoginPanel({ theme, onThemeToggle, onLogin, onPortalLogin }) {
+function LoginPanel({ theme, onThemeToggle, onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
   const [password, setPassword] = useState("");
@@ -298,21 +298,6 @@ function LoginPanel({ theme, onThemeToggle, onLogin, onPortalLogin }) {
     try {
       setLoading(true);
       const detectedSpecialties = getDetectedSpecialtyIdsForChapa(normalized);
-
-      if (mode === "portal") {
-        const portalData = await fetchOfficialPortalData({
-          chapa: normalized,
-          password,
-          section: "all"
-        });
-        onPortalLogin({
-          chapa: normalized,
-          portalOnly: true,
-          portalPreview: portalData,
-          specialties: detectedSpecialties
-        });
-        return;
-      }
 
       if (mode === "register" && detectedSpecialties.length === 0) {
         setError("Esta chapa no aparece en ningun censo cargado.");
@@ -364,9 +349,6 @@ function LoginPanel({ theme, onThemeToggle, onLogin, onPortalLogin }) {
         <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>
           Registro
         </button>
-        <button type="button" className={mode === "portal" ? "active" : ""} onClick={() => setMode("portal")}>
-          Portal
-        </button>
       </div>
 
       <label>
@@ -405,12 +387,10 @@ function LoginPanel({ theme, onThemeToggle, onLogin, onPortalLogin }) {
       </label>
 
       {mode === "register" && <p className="login-hint">La app detectara tus especialidades por la chapa.</p>}
-      {mode === "portal" && <p className="login-hint">Acceso temporal al portal oficial. No guardamos la contraseÃ±a.</p>}
-
       {error && <p className="form-error">{error}</p>}
 
       <button className="primary-button" type="submit" disabled={loading}>
-        {loading ? "Procesando..." : mode === "register" ? "Crear cuenta" : mode === "portal" ? "Conectar portal" : "Entrar"}
+        {loading ? "Procesando..." : mode === "register" ? "Crear cuenta" : "Entrar"}
       </button>
     </form>
   );
@@ -908,6 +888,10 @@ function PortalPanel({ session }) {
         <span>Jornales, primas y descansos en formato claro.</span>
       </div>
 
+      <p className="portal-warning">
+        Funcion en pruebas. El portal oficial esta bloqueando la lectura automatica desde servidor; por eso puede devolver error aunque la clave sea correcta.
+      </p>
+
       <div className="portal-feature-grid">
         <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title="Jornales">
           Resumen mensual, buques, empresas, jornadas y produccion.
@@ -1268,11 +1252,6 @@ export function App() {
           onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
           onLogin={(nextSession) => {
             setSession(nextSession);
-            setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
-          }}
-          onPortalLogin={(nextSession) => {
-            setSession(nextSession);
-            setActiveTab("portal");
             setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
           }}
         />
