@@ -787,8 +787,17 @@ function PortalFeatureCard({ icon, title, children }) {
 
 const WEEKDAYS_ES = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
-function PortalCalendarPreview({ descansos }) {
+function PortalCalendarPreview({ descansos, slRows = [] }) {
   const months = descansos?.months || [];
+  const slPositionByDate = useMemo(() => {
+    const positions = new Map();
+    slRows.forEach((item) => {
+      const match = String(item.fecha || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) return;
+      positions.set(`${match[3]}-${match[2]}-${match[1]}`, String(item.posicion || "").trim());
+    });
+    return positions;
+  }, [slRows]);
   const defaultMonthIndex = useMemo(() => {
     if (!months.length) return 0;
     const now = new Date();
@@ -845,6 +854,8 @@ function PortalCalendarPreview({ descansos }) {
           const day = item.day;
           const code = item.code || "";
           const date = new Date(Number(month.year), Number(month.month) - 1, day);
+          const dateKey = `${month.year}-${String(month.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const slPosition = code.toUpperCase() === "SL" ? slPositionByDate.get(dateKey) : "";
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
           return (
@@ -855,7 +866,14 @@ function PortalCalendarPreview({ descansos }) {
             >
               <span>{day}</span>
               <small>{WEEKDAYS_ES[date.getDay()]}</small>
-              {code && <strong>{code}</strong>}
+              {code && (
+                <strong
+                  className={slPosition ? "portal-day-sl-position" : undefined}
+                  title={slPosition ? `Posicion SL ${slPosition}` : undefined}
+                >
+                  {slPosition ? `${code} · ${slPosition}` : code}
+                </strong>
+              )}
             </div>
           );
         })}
@@ -870,7 +888,7 @@ function PortalResultPreview({ snapshot }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
-  const [selectedHalf, setSelectedHalf] = useState("first");
+  const [selectedPeriod, setSelectedPeriod] = useState("first");
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
     [jornales, primas, payload?.jornales?.monthLabel]
@@ -878,18 +896,21 @@ function PortalResultPreview({ snapshot }) {
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const selectedJornales = useMemo(
     () => enrichedJornales.filter((item) => {
+      if (selectedPeriod === "month") return true;
       const day = Number.parseInt(item.dia, 10);
-      if (!Number.isFinite(day)) return selectedHalf === "first";
-      return selectedHalf === "first" ? day <= 15 : day > 15;
+      if (!Number.isFinite(day)) return selectedPeriod === "first";
+      return selectedPeriod === "first" ? day <= 15 : day > 15;
     }),
-    [enrichedJornales, selectedHalf]
+    [enrichedJornales, selectedPeriod]
   );
   const selectedSummary = useMemo(() => summarizePayroll(selectedJornales), [selectedJornales]);
   const visibleJornales = useMemo(
     () => [...selectedJornales].sort((a, b) => String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""))),
     [selectedJornales]
   );
-  const selectedHalfLabel = selectedHalf === "first" ? "1a quincena" : "2a quincena";
+  const selectedPeriodLabel = selectedPeriod === "month"
+    ? "mes completo"
+    : selectedPeriod === "first" ? "1a quincena" : "2a quincena";
 
   if (!payload) {
     return (
@@ -911,7 +932,7 @@ function PortalResultPreview({ snapshot }) {
 
       <div className="portal-feature-grid">
         <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${selectedJornales.length} jornales`}>
-          {formatEuro(selectedSummary.total)} {selectedHalfLabel}
+          {formatEuro(selectedSummary.total)} {selectedPeriodLabel}
         </PortalFeatureCard>
       </div>
 
@@ -926,31 +947,38 @@ function PortalResultPreview({ snapshot }) {
           </div>
           <div className="portal-payroll-summary">
             <button
-              className={selectedHalf === "first" ? "is-active" : ""}
+              className={selectedPeriod === "first" ? "is-active" : ""}
               type="button"
-              onClick={() => setSelectedHalf("first")}
+              onClick={() => setSelectedPeriod("first")}
             >
               <span>1a quincena</span>
               <strong>{formatEuro(payrollSummary.firstHalf)}</strong>
             </button>
             <button
-              className={selectedHalf === "second" ? "is-active" : ""}
+              className={selectedPeriod === "second" ? "is-active" : ""}
               type="button"
-              onClick={() => setSelectedHalf("second")}
+              onClick={() => setSelectedPeriod("second")}
             >
               <span>2a quincena</span>
               <strong>{formatEuro(payrollSummary.secondHalf)}</strong>
+            </button>
+            <button
+              className={selectedPeriod === "month" ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedPeriod("month")}
+            >
+              <span>Mes completo</span>
+              <strong>{formatEuro(payrollSummary.total)}</strong>
             </button>
           </div>
           <div className="portal-jornales-list">
             {visibleJornales.length === 0 && (
               <div className="portal-empty-state compact">
                 <BriefcaseBusiness size={22} />
-                <strong>Sin jornales en esta quincena</strong>
-                <span>No hay trabajos sincronizados para {selectedHalfLabel}.</span>
+                <strong>{selectedPeriod === "month" ? "Sin jornales este mes" : "Sin jornales en esta quincena"}</strong>
               </div>
             )}
-            {visibleJornales.slice(0, 10).map((item, index) => (
+            {visibleJornales.map((item, index) => (
               <article key={`${item.jornal}-${index}`}>
                 <span>{item.dia || "-"}</span>
                 <div>
@@ -972,7 +1000,7 @@ function PortalResultPreview({ snapshot }) {
 
       {descansos && (
         <>
-          <PortalCalendarPreview descansos={descansos} />
+          <PortalCalendarPreview descansos={descansos} slRows={slRows} />
         </>
       )}
 
