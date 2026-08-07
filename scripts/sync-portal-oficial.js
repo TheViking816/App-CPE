@@ -194,11 +194,47 @@ function parseDescansos(html = "") {
 }
 
 function parsePrimas(html = "") {
+  const pageText = textFromHtml(html);
   const rows = parseRowsFromTable(html);
+  const headerIndex = rows.findIndex((row) => (
+    row.some((cell) => /jornal/i.test(cell))
+    && row.some((cell) => /producci/i.test(cell))
+  ));
+
+  if (headerIndex === -1) {
+    return {
+      locked: /clave\s+de\s+seguridad|validar/i.test(pageText),
+      monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
+      rows: rows
+        .filter((row) => row.length > 1)
+        .map((row) => ({ values: row }))
+    };
+  }
+
+  const headers = rows[headerIndex].map((item) => item.toLowerCase());
+  const indexOf = (pattern, fallback) => {
+    const index = headers.findIndex((item) => pattern.test(item));
+    return index === -1 ? fallback : index;
+  };
+
   return {
-    rows: rows
-      .filter((row) => row.length > 1)
-      .map((row) => ({ values: row }))
+    locked: false,
+    monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
+    rows: rows.slice(headerIndex + 1)
+      .filter((row) => row.length >= 6 && /^\d+$/.test(String(row[0] || "")))
+      .map((row) => ({
+        values: row,
+        jornal: row[indexOf(/jornal/, 0)] || "",
+        parte: row[indexOf(/parte/, 1)] || "",
+        dia: row[indexOf(/^dia$/, 2)] || "",
+        tipo: row[indexOf(/tipo/, 3)] || "",
+        jornada: row[indexOf(/jornada/, 4)] || "",
+        especialidad: row[indexOf(/especialidad/, 5)] || "",
+        empresa: row[indexOf(/empresa/, 6)] || "",
+        buque: row[indexOf(/buque/, 7)] || "",
+        operacion: row[indexOf(/operaci/, 8)] || "",
+        produccion: row[indexOf(/producci/, 9)] || ""
+      }))
   };
 }
 
@@ -223,19 +259,22 @@ async function login(page) {
   await page.getByRole("button", { name: "Entendido" }).click().catch(() => {});
 
   let body = await page.locator("body").innerText().catch(() => "");
-  if (/Finalizar sesión|LUJAN MARIN|Usuario/i.test(body) && /Finalizar sesión/i.test(body)) return;
+  if (/Finalizar sesi|LUJAN MARIN|Usuario/i.test(body) && /Finalizar sesi/i.test(body)) return;
 
   if (!portalUser || !portalPassword) {
     throw new Error("Faltan CPE_PORTAL_USER y CPE_PORTAL_PASSWORD para iniciar sesion.");
   }
 
-  await page.locator('input[title="Usuario"]').fill(portalUser);
-  await page.locator('input[title="Contraseña"]').fill(portalPassword);
-  await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+  const visibleInputs = page.locator("input:visible");
+  const userInput = page.locator('input[title="Usuario"]:visible').or(visibleInputs.nth(0)).first();
+  const passwordInput = page.locator('input[title*="Contrase"]:visible').or(visibleInputs.nth(1)).first();
+  await userInput.fill(portalUser, { timeout: 45000 });
+  await passwordInput.fill(portalPassword, { timeout: 15000 });
+  await page.getByRole("button", { name: /Iniciar sesi/i }).click();
   await page.waitForTimeout(8000);
 
   body = await page.locator("body").innerText().catch(() => "");
-  if (!/Finalizar sesión/i.test(body)) {
+  if (!/Finalizar sesi/i.test(body)) {
     throw new Error("No se pudo iniciar sesion en el portal oficial.");
   }
 }
@@ -291,7 +330,20 @@ async function collectPrimas(page) {
     await page.getByRole("button", { name: /Validar/i }).click();
     await page.waitForTimeout(3500);
   }
-  const frame = page.frames().find((item) => /Noray|portal\.cpevalencia/i.test(item.url()) && !/#User/.test(item.url()));
+
+  const selectorFrame = page.frames().find((item) => /SelDatJorPrimas\.asp/i.test(item.url()));
+  if (selectorFrame) {
+    const accept = selectorFrame.getByRole("button", { name: /Aceptar/i });
+    if (await accept.count()) {
+      await accept.click();
+      await page.waitForTimeout(4000);
+    }
+  }
+
+  const frame = page.frames().find((item) => /JornalesPrimas|JorPrimas|Primas|Jornales/i.test(item.url()) && !/SelDatJorPrimas/i.test(item.url()))
+    || page.frames().find((item) => /Noray|portal\.cpevalencia/i.test(item.url()) && !/#User/.test(item.url()) && !/SelDatJorPrimas/i.test(item.url()))
+    || page.frames().find((item) => /SelDatJorPrimas/i.test(item.url()));
+
   return parsePrimas(frame ? await frame.content() : await page.content());
 }
 
