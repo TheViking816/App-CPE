@@ -868,6 +868,7 @@ function PortalResultPreview({ snapshot }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
+  const primasConImporte = primas.filter((item) => Number.parseFloat(String(item.produccion || item.values?.[9] || "").replace(",", ".").replace(/[^\d.-]/g, "")) > 0);
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
     [jornales, primas, payload?.jornales?.monthLabel]
@@ -904,7 +905,7 @@ function PortalResultPreview({ snapshot }) {
           DS {descansos?.totals?.DS || 0} - SL {descansos?.totals?.SL || 0} - VA {descansos?.totals?.VA || 0}
         </PortalFeatureCard>
         <PortalFeatureCard icon={<WalletCards size={20} />} title="Primas">
-          {payload.primas?.locked ? "Pendiente de clave de seguridad." : `${primas.length} lineas sincronizadas.`}
+          {payload.primas?.locked ? "Pendiente de clave de seguridad." : `${primasConImporte.length} con importe.`}
         </PortalFeatureCard>
       </div>
 
@@ -931,31 +932,11 @@ function PortalResultPreview({ snapshot }) {
                   <em>{[item.buque, item.empresa].filter(Boolean).join(" - ")}</em>
                   {item.operacion && <em>{item.operacion}</em>}
                   <em>
-                    Base {formatEuro(item.payroll?.base)} · Compl. {formatEuro(item.payroll?.complement)}
-                    {item.payroll?.prima > 0 ? ` · Prima ${formatEuro(item.payroll.prima)}` : ""}
+                    Base {formatEuro(item.payroll?.base)} - Compl. {formatEuro(item.payroll?.complement)}
+                    {item.payroll?.prima > 0 ? ` - Prima ${formatEuro(item.payroll.prima)}` : " - Prima pendiente"}
                   </em>
                 </div>
                 <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {primas.length > 0 && (
-        <section>
-          <div className="section-title-row compact">
-            <div>
-              <p>Primas</p>
-              <h1>{primas.length} lineas</h1>
-            </div>
-          </div>
-          <div className="portal-primas-list">
-            {primas.map((item, index) => (
-              <article key={`prima-${index}`}>
-                {(item.values || []).map((value, valueIndex) => (
-                  <span key={`${index}-${valueIndex}`}>{value}</span>
-                ))}
               </article>
             ))}
           </div>

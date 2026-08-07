@@ -153,13 +153,14 @@ function getRateKey(dateString, shift) {
 }
 
 function findMatchingPrima(jornal, primas = []) {
-  const keys = [jornal.parte, jornal.jornal].filter(Boolean).map(String);
-  const row = primas.find((item) => {
-    const values = item.values || [];
-    return keys.some((key) => values.some((value) => String(value).includes(key)));
-  });
-  if (!row) return 0;
-  return parseAmount((row.values || []).join(" "));
+  const parte = String(jornal.parte || "").trim();
+  if (!parte) return null;
+
+  const row = primas.find((item) => String(item.parte || item.values?.[1] || "").trim() === parte);
+  if (!row) return null;
+
+  const amount = parseAmount(row.produccion || row.values?.[9] || "");
+  return amount > 0 ? amount : null;
 }
 
 export function enrichJornales(jornales = [], primas = [], monthLabel = "") {
@@ -174,12 +175,24 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "") {
     const base = Number((table[rateKey]?.[shift] ?? table[getDayType(date)]?.[shift] ?? 0).toFixed(2));
     const complement = Number(getComplement(jornal.especialidad).toFixed(2));
     const production = Number(parseAmount(jornal.produccion).toFixed(2));
-    const prima = Number(findMatchingPrima(jornal, primas).toFixed(2));
-    const total = Number((base + complement + production + prima).toFixed(2));
+    const primaAmount = findMatchingPrima(jornal, primas);
+    const prima = primaAmount == null ? null : Number(primaAmount.toFixed(2));
+    const total = Number((base + complement + production + (prima || 0)).toFixed(2));
 
     return {
       ...jornal,
-      payroll: { date, shift, group, rateKey, base, complement, production, prima, total }
+      payroll: {
+        date,
+        shift,
+        group,
+        rateKey,
+        base,
+        complement,
+        production,
+        prima,
+        primaPending: prima == null,
+        total
+      }
     };
   });
 }
