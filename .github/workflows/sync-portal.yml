@@ -36,5 +36,5 @@ jobs:
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
           CPE_PORTAL_SYNC_JOB_ID: ${{ github.event.inputs.job_id }}
           CPE_PORTAL_BROWSER_CHANNEL: chrome
-          CPE_PORTAL_HEADLESS: "true"
-        run: npm run sync:portal:job
+          CPE_PORTAL_HEADLESS: "false"
+        run: xvfb-run -a npm run sync:portal:job

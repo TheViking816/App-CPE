@@ -53,8 +53,9 @@ async function updateJob(patch) {
 
 function runSync(job) {
   return new Promise((resolve, reject) => {
+    let diagnostic = "";
     const child = spawn(process.execPath, ["scripts/sync-portal-oficial.js"], {
-      stdio: "inherit",
+      stdio: ["ignore", "pipe", "pipe"],
       env: {
         ...process.env,
         CPE_PORTAL_USER: job.chapa,
@@ -65,10 +66,21 @@ function runSync(job) {
       }
     });
 
+    const forward = (stream, target) => {
+      stream.on("data", (chunk) => {
+        const text = chunk.toString();
+        diagnostic = `${diagnostic}${text}`.slice(-4000);
+        target.write(text);
+      });
+    };
+
+    forward(child.stdout, process.stdout);
+    forward(child.stderr, process.stderr);
+
     child.on("error", reject);
     child.on("exit", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`sync-portal-oficial.js exited with code ${code}`));
+      else reject(new Error(diagnostic.trim() || `sync-portal-oficial.js exited with code ${code}`));
     });
   });
 }
