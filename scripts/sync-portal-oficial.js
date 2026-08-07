@@ -271,6 +271,18 @@ async function waitForFrameText(page, pattern, timeout = 12000) {
   throw new Error(`No se cargo el contenido esperado: ${pattern}`);
 }
 
+async function waitForFrameLocator(page, getLocator, timeout = 12000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      const locator = getLocator(frame).first();
+      if (await locator.isVisible().catch(() => false)) return locator;
+    }
+    await page.waitForTimeout(200);
+  }
+  return null;
+}
+
 async function waitForParsedContent(page, parser, score, timeout = 12000) {
   const deadline = Date.now() + timeout;
   let bestResult = parser("");
@@ -369,8 +381,14 @@ async function collectPrimas(page) {
   await securityFrame.locator('input[type="password"]:visible').first().fill(portalSecurityKey);
   await securityFrame.getByRole("button", { name: /Validar/i }).click({ noWaitAfter: true });
 
-  const selectorFrame = await waitForFrameText(page, /periodo[\s\S]*aceptar/i);
-  await selectorFrame.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
+  const accept = await waitForFrameLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Aceptar/i }),
+    8000
+  );
+  if (accept) {
+    await accept.click({ noWaitAfter: true });
+  }
 
   return waitForParsedContent(
     page,
