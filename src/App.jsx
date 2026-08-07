@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
+  BriefcaseBusiness,
   CalendarDays,
   Check,
   CircleAlert,
@@ -14,6 +15,7 @@ import {
   Lock,
   LogOut,
   Moon,
+  RefreshCw,
   Search,
   Sun,
   UserRound,
@@ -28,13 +30,18 @@ import {
   specialties,
   specialty
 } from "./censo.js";
+import { enrichJornales, formatEuro, summarizePayroll } from "./payroll.js";
 import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
+  getOfficialPortalSnapshot,
+  getPortalSyncJob,
   loginUser,
   registerUser,
   requestChaperoRefresh,
   requestDoorRefresh,
+  requestPortalSync,
+  trackPortalOpen,
   trackUsageEvent,
   updateUserSpecialties
 } from "./supabaseClient.js";
@@ -53,6 +60,7 @@ const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
   { id: "puertas", label: "Puertas", Icon: CalendarDays },
   { id: "censo", label: "Censo", Icon: UsersRound },
+  { id: "portal", label: "Portal", Icon: BriefcaseBusiness },
   { id: "mis-especialidades", label: "Mis esp.", Icon: ListChecks },
   { id: "enlaces", label: "Enlaces", Icon: LinkIcon }
 ];
@@ -383,7 +391,6 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
       </label>
 
       {mode === "register" && <p className="login-hint">La app detectara tus especialidades por la chapa.</p>}
-
       {error && <p className="form-error">{error}</p>}
 
       <button className="primary-button" type="submit" disabled={loading}>
@@ -767,6 +774,436 @@ function CensoPanel({ user, doors, activeSpecialty }) {
   );
 }
 
+function PortalFeatureCard({ icon, title, children }) {
+  return (
+    <article className="portal-feature-card">
+      <div className="portal-feature-icon">{icon}</div>
+      <div>
+        <strong>{title}</strong>
+        <p>{children}</p>
+      </div>
+    </article>
+  );
+}
+
+const WEEKDAYS_ES = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+
+function PortalCalendarPreview({ descansos, slRows = [] }) {
+  const months = descansos?.months || [];
+  const slPositionByDate = useMemo(() => {
+    const positions = new Map();
+    slRows.forEach((item) => {
+      const match = String(item.fecha || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) return;
+      positions.set(`${match[3]}-${match[2]}-${match[1]}`, String(item.posicion || "").trim());
+    });
+    return positions;
+  }, [slRows]);
+  const defaultMonthIndex = useMemo(() => {
+    if (!months.length) return 0;
+    const now = new Date();
+    const currentIndex = months.findIndex((item) => (
+      Number(item.month) === now.getMonth() + 1 && Number(item.year) === now.getFullYear()
+    ));
+    if (currentIndex !== -1) return currentIndex;
+    const withCodesIndex = months.findIndex((item) => (
+      item.days?.some((day) => day.code) || item.codes?.length
+    ));
+    return withCodesIndex === -1 ? 0 : withCodesIndex;
+  }, [months]);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(defaultMonthIndex);
+
+  useEffect(() => {
+    setSelectedMonthIndex(defaultMonthIndex);
+  }, [defaultMonthIndex]);
+
+  const month = months[selectedMonthIndex] || months[defaultMonthIndex] || months[0];
+  if (!month) return null;
+  const days = month.days?.length
+    ? month.days
+    : Array.from({ length: 31 }, (_, index) => ({ day: index + 1, code: month.codes?.[index] || "" }));
+  const today = new Date();
+  const isCurrentMonth = Number(month.month) === today.getMonth() + 1 && Number(month.year) === today.getFullYear();
+
+  return (
+    <section className="portal-calendar-card">
+      <div className="section-title-row compact">
+        <div>
+          <p>Calendario</p>
+          <h1>{month.title}</h1>
+        </div>
+      </div>
+      {months.length > 1 && (
+        <div className="portal-month-tabs" role="tablist" aria-label="Meses de descansos">
+          {months.map((item, index) => (
+            <button
+              key={`${item.year || ""}-${item.month || ""}-${item.title}`}
+              className={index === selectedMonthIndex ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedMonthIndex(index)}
+            >
+              {item.title}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="portal-calendar-grid">
+        {["L", "M", "X", "J", "V", "S", "D"].map((weekday) => (
+          <div className="portal-weekday" key={weekday}>{weekday}</div>
+        ))}
+        {days.map((item) => {
+          const day = item.day;
+          const code = item.code || "";
+          const date = new Date(Number(month.year), Number(month.month) - 1, day);
+          const dateKey = `${month.year}-${String(month.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const slPosition = code.toUpperCase() === "SL" ? slPositionByDate.get(dateKey) : "";
+          const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
+          const isToday = isCurrentMonth && day === today.getDate();
+          return (
+            <div
+              key={day}
+              className={`portal-day ${code.toLowerCase()} ${isToday ? "is-today" : ""}`}
+              style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
+            >
+              <span>{day}</span>
+              <small>{WEEKDAYS_ES[date.getDay()]}</small>
+              {code && (
+                <strong
+                  className={slPosition ? "portal-day-sl-position" : undefined}
+                  title={slPosition ? `Posicion SL ${slPosition}` : undefined}
+                >
+                  {slPosition ? `${code} · ${slPosition}` : code}
+                </strong>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PortalResultPreview({ snapshot }) {
+  const payload = snapshot?.payload || null;
+  const jornales = payload?.jornales?.rows || [];
+  const descansos = payload?.descansos || null;
+  const slRows = payload?.sl?.rows || [];
+  const primas = payload?.primas?.rows || [];
+  const [selectedPeriod, setSelectedPeriod] = useState("first");
+  const enrichedJornales = useMemo(
+    () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
+    [jornales, primas, payload?.jornales?.monthLabel]
+  );
+  const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
+  const selectedJornales = useMemo(
+    () => enrichedJornales.filter((item) => {
+      if (selectedPeriod === "month") return true;
+      const day = Number.parseInt(item.dia, 10);
+      if (!Number.isFinite(day)) return selectedPeriod === "first";
+      return selectedPeriod === "first" ? day <= 15 : day > 15;
+    }),
+    [enrichedJornales, selectedPeriod]
+  );
+  const selectedSummary = useMemo(() => summarizePayroll(selectedJornales), [selectedJornales]);
+  const visibleJornales = useMemo(
+    () => [...selectedJornales].sort((a, b) => String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""))),
+    [selectedJornales]
+  );
+  const selectedPeriodLabel = selectedPeriod === "month"
+    ? "mes completo"
+    : selectedPeriod === "first" ? "1a quincena" : "2a quincena";
+
+  if (!payload) {
+    return (
+      <div className="portal-empty-state">
+        <BriefcaseBusiness size={26} />
+        <strong>Sin datos sincronizados</strong>
+        <span>Ejecuta el sincronizador local del portal oficial para cargar jornales y descansos.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="portal-results">
+      <section className="portal-sync-card">
+        <span>Ultima sincronizacion</span>
+        <strong>{formatUpdatedAt(snapshot.updatedAt)}</strong>
+        <small>Chapa {snapshot.chapa}</small>
+      </section>
+
+      <div className="portal-feature-grid">
+        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${selectedJornales.length} jornales`}>
+          {formatEuro(selectedSummary.total)} {selectedPeriodLabel}
+        </PortalFeatureCard>
+      </div>
+
+      {jornales.length > 0 && (
+        <section>
+          <div className="section-title-row compact">
+            <div>
+              <p>Jornales</p>
+              <h1>{payload.jornales?.monthLabel || "Ultimo mes"}</h1>
+            </div>
+            <strong className="portal-section-total">{formatEuro(selectedSummary.total)}</strong>
+          </div>
+          <div className="portal-payroll-summary">
+            <button
+              className={selectedPeriod === "first" ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedPeriod("first")}
+            >
+              <span>1a quincena</span>
+              <strong>{formatEuro(payrollSummary.firstHalf)}</strong>
+            </button>
+            <button
+              className={selectedPeriod === "second" ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedPeriod("second")}
+            >
+              <span>2a quincena</span>
+              <strong>{formatEuro(payrollSummary.secondHalf)}</strong>
+            </button>
+            <button
+              className={selectedPeriod === "month" ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedPeriod("month")}
+            >
+              <span>Mes completo</span>
+              <strong>{formatEuro(payrollSummary.total)}</strong>
+            </button>
+          </div>
+          <div className="portal-jornales-list">
+            {visibleJornales.length === 0 && (
+              <div className="portal-empty-state compact">
+                <BriefcaseBusiness size={22} />
+                <strong>{selectedPeriod === "month" ? "Sin jornales este mes" : "Sin jornales en esta quincena"}</strong>
+              </div>
+            )}
+            {visibleJornales.map((item, index) => (
+              <article key={`${item.jornal}-${index}`}>
+                <span>{item.dia || "-"}</span>
+                <div>
+                  <strong>{item.especialidad || "Jornal"}</strong>
+                  <small>{item.jornada || ""}</small>
+                  <em>{[item.buque, item.empresa].filter(Boolean).join(" - ")}</em>
+                  {item.operacion && <em>{item.operacion}</em>}
+                  <em>
+                    Base {formatEuro(item.payroll?.base)} - Compl. {formatEuro(item.payroll?.complement)}
+                    {item.payroll?.prima > 0 ? ` - Prima ${formatEuro(item.payroll.prima)}` : " - Prima pendiente"}
+                  </em>
+                </div>
+                <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {descansos && (
+        <>
+          <PortalCalendarPreview descansos={descansos} slRows={slRows} />
+        </>
+      )}
+
+      {slRows.length > 0 && (
+        <section>
+          <div className="section-title-row compact">
+            <div>
+              <p>Lista SL</p>
+              <h1>{slRows.length} solicitudes</h1>
+            </div>
+          </div>
+          <div className="portal-sl-list">
+            {slRows.slice(0, 12).map((item) => (
+              <article key={`${item.fecha}-${item.posicion}`}>
+                <span>{item.fecha}</span>
+                <strong>{item.posicion}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function PortalPanel({ session }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [snapshot, setSnapshot] = useState(null);
+  const [portalPassword, setPortalPassword] = useState("");
+  const [securityKey, setSecurityKey] = useState("");
+  const [syncingPortal, setSyncingPortal] = useState(false);
+  const [portalJob, setPortalJob] = useState(null);
+  const [portalMessage, setPortalMessage] = useState("");
+  const [showCredentials, setShowCredentials] = useState(false);
+
+  const loadSnapshot = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const data = await getOfficialPortalSnapshot({ token: session.token });
+      setSnapshot(data || null);
+      setShowCredentials(!data);
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo leer el portal sincronizado.");
+      setShowCredentials(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSnapshot();
+  }, [session.token]);
+
+  useEffect(() => {
+    if (!portalJob?.jobId || !["queued", "running"].includes(portalJob.status)) return undefined;
+
+    let stopped = false;
+    const timer = window.setInterval(async () => {
+      try {
+        const job = await getPortalSyncJob({ token: session.token, jobId: portalJob.jobId });
+        if (stopped || !job) return;
+        setPortalJob(job);
+        if (job.status === "completed") {
+          setPortalMessage("Portal actualizado.");
+          setSyncingPortal(false);
+          window.clearInterval(timer);
+          await loadSnapshot();
+          setShowCredentials(false);
+        }
+        if (job.status === "failed") {
+          setPortalMessage(job.message || "No se pudo leer el portal.");
+          setSyncingPortal(false);
+          window.clearInterval(timer);
+        }
+      } catch (requestError) {
+        if (!stopped) {
+          setPortalMessage(requestError.message || "No se pudo comprobar la sincronizacion.");
+          setSyncingPortal(false);
+          window.clearInterval(timer);
+        }
+      }
+    }, 1500);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [portalJob?.jobId, portalJob?.status, session.token]);
+
+  const handlePortalSync = async () => {
+    if (!portalPassword.trim()) {
+      setError("Introduce la contrasena del portal.");
+      return;
+    }
+
+    setError("");
+    setPortalMessage("Lanzando lectura del portal...");
+    setSyncingPortal(true);
+
+    try {
+      const job = await requestPortalSync({
+        token: session.token,
+        portalPassword,
+        securityKey
+      });
+      setPortalPassword("");
+      setSecurityKey("");
+      setPortalJob(job);
+      setPortalMessage("Lectura en curso. La app se actualizara automaticamente al terminar.");
+    } catch (requestError) {
+      setPortalMessage("");
+      setSyncingPortal(false);
+      setError(requestError.message || "No se pudo lanzar la lectura del portal.");
+    }
+  };
+
+  return (
+    <section className="page-panel portal-panel">
+      <div className="section-heading">
+        <p>Portal oficial</p>
+        <h1>Mi portal</h1>
+        <span>Jornales, primas y descansos en formato claro.</span>
+      </div>
+
+      {snapshot && !showCredentials && (
+        <div className="portal-update-row">
+          <span>Datos guardados del portal oficial</span>
+          <button type="button" onClick={() => setShowCredentials(true)}>
+            <RefreshCw size={16} />
+            Actualizar portal
+          </button>
+        </div>
+      )}
+
+      {showCredentials && (
+        <>
+          <p className="portal-warning">
+            La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
+          </p>
+
+          <section className="portal-security-card">
+            <div>
+              <p>{snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
+              <span>Introduce tu contrasena del portal oficial y, si quieres primas, la clave de seguridad.</span>
+            </div>
+            <label>
+              <Lock size={17} />
+              <input
+                autoComplete="current-password"
+                placeholder="Contrasena del portal"
+                type="password"
+                value={portalPassword}
+                onChange={(event) => setPortalPassword(event.target.value)}
+              />
+            </label>
+            <label>
+              <Lock size={17} />
+              <input
+                autoComplete="off"
+                inputMode="numeric"
+                placeholder="Clave de seguridad"
+                type="password"
+                value={securityKey}
+                onChange={(event) => setSecurityKey(event.target.value)}
+              />
+            </label>
+            <div className="portal-security-actions">
+              {snapshot && !syncingPortal && (
+                <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
+                  Cancelar
+                </button>
+              )}
+              <button
+                className="primary-button"
+                type="button"
+                disabled={syncingPortal || !portalPassword.trim()}
+                onClick={handlePortalSync}
+              >
+                {syncingPortal ? "Leyendo portal..." : "Leer portal"}
+              </button>
+            </div>
+            {portalMessage && <small>{portalMessage}</small>}
+          </section>
+        </>
+      )}
+
+      {error && <p className="portal-warning">{error}</p>}
+      {loading && !snapshot ? (
+        <div className="portal-empty-state">
+          <Clock3 size={26} />
+          <strong>Cargando portal</strong>
+          <span>Buscando el ultimo sincronizado de tu chapa.</span>
+        </div>
+      ) : (
+        <PortalResultPreview snapshot={snapshot} />
+      )}
+    </section>
+  );
+}
+
 function LinksPanel() {
   const links = [
     { label: "Prevision", url: "https://noray.cpevalencia.com/PrevisionDemanda.asp" },
@@ -1002,6 +1439,11 @@ export function App() {
   }, [session?.chapa]);
 
   useEffect(() => {
+    if (!session?.token || activeTab !== "portal") return;
+    trackPortalOpen({ token: session.token });
+  }, [activeTab, session?.token]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function refreshWhenVisible() {
@@ -1098,6 +1540,7 @@ export function App() {
             onSpecialtiesSave={saveSpecialties}
           />
         )}
+        {activeTab === "portal" && <PortalPanel session={session} />}
         {activeTab === "enlaces" && <LinksPanel />}
       </main>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />

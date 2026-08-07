@@ -204,3 +204,68 @@ export async function requestChaperoRefresh() {
 
   return data || null;
 }
+
+export async function getOfficialPortalSnapshot({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_snapshot", {
+    p_token: token
+  });
+
+  if (error) {
+    console.warn("No se pudo leer el portal oficial sincronizado:", error.message);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function trackPortalOpen({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_track_portal_open", {
+    p_token: token
+  });
+
+  if (error) {
+    console.warn("No se pudo registrar la apertura del Portal:", error.message);
+    return null;
+  }
+
+  return data;
+}
+
+export async function requestPortalSync({ token, portalPassword, securityKey = "" }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.functions.invoke("refresh-portal", {
+    body: {
+      token,
+      portalPassword,
+      securityKey,
+      ref: syncWorkflowRef
+    }
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (data?.ok === false) {
+    throw new Error(data.error || "No se pudo lanzar la lectura del portal.");
+  }
+
+  return data || null;
+}
+
+export async function getPortalSyncJob({ token, jobId }) {
+  if (!supabase || !token || !jobId) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_sync_job", {
+    p_token: token,
+    p_job_id: jobId
+  });
+
+  if (error) throw error;
+  return data;
+}
