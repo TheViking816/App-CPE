@@ -304,7 +304,7 @@ async function waitForParsedContent(page, parser, score, timeout = 12000) {
   return bestResult;
 }
 
-async function login(page) {
+async function login(page, attempt = 0) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
@@ -324,17 +324,21 @@ async function login(page) {
   const logoutButton = page.locator("button:visible", { hasText: /Finalizar sesi/i }).first();
   const userHeader = page.getByText(new RegExp(`^\\s*${portalUser}\\s*-`)).first();
   const serviceMenu = page.locator(".norayService:visible").first();
-  await Promise.race([
+  await Promise.any([
     logoutButton.waitFor({ state: "visible", timeout: 45000 }),
     userHeader.waitFor({ state: "visible", timeout: 45000 }),
     serviceMenu.waitFor({ state: "visible", timeout: 45000 })
-  ]);
+  ]).catch(() => {});
 
   body = await page.locator("body").innerText().catch(() => "");
   const authenticated = await logoutButton.isVisible().catch(() => false)
     || await userHeader.isVisible().catch(() => false)
     || await serviceMenu.isVisible().catch(() => false);
   if (!authenticated) {
+    if (attempt < 1) {
+      await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
+      return login(page, attempt + 1);
+    }
     throw new Error("No se pudo iniciar sesion en el portal oficial.");
   }
 }
