@@ -873,6 +873,10 @@ function PortalResultPreview({ snapshot }) {
     [jornales, primas, payload?.jornales?.monthLabel]
   );
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
+  const visibleJornales = useMemo(
+    () => [...enrichedJornales].sort((a, b) => String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""))),
+    [enrichedJornales]
+  );
 
   if (!payload) {
     return (
@@ -918,7 +922,7 @@ function PortalResultPreview({ snapshot }) {
             <span>2a quincena <strong>{formatEuro(payrollSummary.secondHalf)}</strong></span>
           </div>
           <div className="portal-jornales-list">
-            {enrichedJornales.slice(0, 10).map((item, index) => (
+            {visibleJornales.slice(0, 10).map((item, index) => (
               <article key={`${item.jornal}-${index}`}>
                 <span>{item.dia || "-"}</span>
                 <div>
