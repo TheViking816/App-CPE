@@ -236,16 +236,16 @@ async function writeStatus(status) {
 }
 
 function findMenuItem(page, text) {
-  return page.locator(".norayService:visible, .gwt-TreeItem:visible", { hasText: text }).first();
+  return page.locator(".norayService a", { hasText: text }).first();
 }
 
 async function ensureExpanded(page, group, child) {
   const childItem = findMenuItem(page, child);
   if (await childItem.isVisible().catch(() => false)) return;
 
-  const groupItem = page.locator(".gwt-TreeItem:visible", { hasText: group }).first();
-  await groupItem.waitFor({ state: "visible", timeout: 30000 });
-  await groupItem.click({ timeout: 10000 });
+  const groupItem = page.locator(".gwt-TreeItem", { hasText: group }).first();
+  await groupItem.waitFor({ state: "attached", timeout: 30000 });
+  await groupItem.click({ timeout: 10000, force: true });
   await childItem.waitFor({ state: "visible", timeout: 10000 });
 }
 
@@ -343,7 +343,7 @@ async function openMenu(page, group, text, framePattern) {
   await ensureExpanded(page, group, text);
   const item = findMenuItem(page, text);
   await item.scrollIntoViewIfNeeded().catch(() => {});
-  await item.click({ timeout: 10000 });
+  await item.click({ timeout: 10000, force: true });
   if (framePattern) await waitForFrame(page, framePattern);
 }
 
