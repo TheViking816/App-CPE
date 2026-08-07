@@ -361,11 +361,23 @@ async function collectJornales(page) {
 
 async function collectDescansos(page) {
   await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
-  return waitForParsedContent(
+  const result = await waitForParsedContent(
     page,
     parseDescansos,
     (result) => (result.months?.length || 0) * 100 + (result.worker?.chapa ? 1 : 0)
   );
+  if (result.months?.length) return result;
+
+  const samples = [];
+  for (const frame of page.frames()) {
+    const html = await frame.content().catch(() => "");
+    samples.push(
+      ...[...html.matchAll(/.{0,80}(?:selFecha|>\s*(?:DS|SL|FS|VA)\s*<).{0,140}/gi)]
+        .slice(0, 5)
+        .map((match) => match[0].replace(/\s+/g, " "))
+    );
+  }
+  throw new Error(`No se pudo leer el calendario de descansos. Muestra: ${samples.slice(0, 8).join(" | ")}`);
 }
 
 async function collectSl(page) {
