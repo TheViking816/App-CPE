@@ -372,10 +372,11 @@ async function collectDescansos(page) {
   for (const frame of page.frames()) {
     const html = await frame.content().catch(() => "");
     const text = await frame.locator("body").innerText().catch(() => "");
-    if (/descansos\s+mes|\b(?:DS|SL|FS|VA)\b/i.test(text)) {
+    if (/descansos|\b(?:DS|SL|FS|VA)\b/i.test(text)) {
       const compactText = text.replace(/\s+/g, " ");
-      const matchIndex = compactText.search(/descansos\s+mes|\b(?:DS|SL|FS|VA)\b/i);
-      samples.push(`TEXTO ${frame.url()}: ${compactText.slice(Math.max(0, matchIndex - 180), matchIndex + 1100)}`);
+      const matchIndex = compactText.search(/noray\s*-\s*descansos|descansos\s+mes\s+actual/i);
+      const start = matchIndex >= 0 ? Math.max(0, matchIndex - 180) : Math.max(0, compactText.length - 1400);
+      samples.push(`TEXTO ${frame.url()}: ${compactText.slice(start, start + 1400)}`);
     }
     samples.push(
       ...[...html.matchAll(/.{0,100}(?:selFecha|\b(?:DS|SL|FS|VA)\b).{0,180}/gi)]
