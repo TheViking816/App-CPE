@@ -783,8 +783,30 @@ function PortalFeatureCard({ icon, title, children }) {
 }
 
 function PortalCalendarPreview({ descansos }) {
-  const month = descansos?.months?.find((item) => item.codes?.length) || descansos?.months?.[0];
+  const months = descansos?.months || [];
+  const defaultMonthIndex = useMemo(() => {
+    if (!months.length) return 0;
+    const now = new Date();
+    const currentIndex = months.findIndex((item) => (
+      Number(item.month) === now.getMonth() + 1 && Number(item.year) === now.getFullYear()
+    ));
+    if (currentIndex !== -1) return currentIndex;
+    const withCodesIndex = months.findIndex((item) => (
+      item.days?.some((day) => day.code) || item.codes?.length
+    ));
+    return withCodesIndex === -1 ? 0 : withCodesIndex;
+  }, [months]);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(defaultMonthIndex);
+
+  useEffect(() => {
+    setSelectedMonthIndex(defaultMonthIndex);
+  }, [defaultMonthIndex]);
+
+  const month = months[selectedMonthIndex] || months[defaultMonthIndex] || months[0];
   if (!month) return null;
+  const days = month.days?.length
+    ? month.days
+    : Array.from({ length: 31 }, (_, index) => ({ day: index + 1, code: month.codes?.[index] || "" }));
 
   return (
     <section className="portal-calendar-card">
@@ -794,10 +816,24 @@ function PortalCalendarPreview({ descansos }) {
           <h1>{month.title}</h1>
         </div>
       </div>
+      {months.length > 1 && (
+        <div className="portal-month-tabs" role="tablist" aria-label="Meses de descansos">
+          {months.map((item, index) => (
+            <button
+              key={`${item.year || ""}-${item.month || ""}-${item.title}`}
+              className={index === selectedMonthIndex ? "is-active" : ""}
+              type="button"
+              onClick={() => setSelectedMonthIndex(index)}
+            >
+              {item.title}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="portal-calendar-grid">
-        {Array.from({ length: 31 }, (_, index) => {
-          const day = index + 1;
-          const code = month.codes?.[index] || "";
+        {days.map((item) => {
+          const day = item.day;
+          const code = item.code || "";
           return (
             <div key={day} className={`portal-day ${code.toLowerCase()}`}>
               <span>{day}</span>
@@ -865,6 +901,26 @@ function PortalResultPreview({ snapshot }) {
                   <em>{[item.buque, item.empresa].filter(Boolean).join(" - ")}</em>
                   {item.operacion && <em>{item.operacion}</em>}
                 </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {primas.length > 0 && (
+        <section>
+          <div className="section-title-row compact">
+            <div>
+              <p>Primas</p>
+              <h1>{primas.length} lineas</h1>
+            </div>
+          </div>
+          <div className="portal-primas-list">
+            {primas.map((item, index) => (
+              <article key={`prima-${index}`}>
+                {(item.values || []).map((value, valueIndex) => (
+                  <span key={`${index}-${valueIndex}`}>{value}</span>
+                ))}
               </article>
             ))}
           </div>

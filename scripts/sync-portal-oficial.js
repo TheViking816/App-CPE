@@ -139,23 +139,50 @@ function parseDescansos(html = "") {
   const pageText = textFromHtml(html);
   const worker = {
     chapa: normalizeChapa(pageText.match(/\b7\d{4}\b/)?.[0] || ""),
-    name: pageText.match(/\b7\d{4}\b\s+([A-ZÁÉÍÓÚÑ ]{6,})/i)?.[1]?.trim() || "",
+    name: pageText.match(/\b7\d{4}\b\s+([A-Z ]{6,})/i)?.[1]?.trim() || "",
     group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([^\n|]+)/i)?.[1]?.trim() || "",
     currentMonthRest: Number(pageText.match(/Descansos\s+mes\s+actual:\s*\((\d+)\)/i)?.[1] || 0),
     nextMonthRest: Number(pageText.match(/Descansos\s+proximo\s+mes:\s*\((\d+)\)/i)?.[1] || 0)
   };
 
-  const months = [];
-  const monthBlocks = pageText.split(/(?=\b\d{1,2}\/2026\b|\bSIN-F\s+-\s+[A-ZÁÉÍÓÚÑ][^\n]+)/i);
-  for (const block of monthBlocks) {
-    const title = block.match(/^([^\n]*?(?:\/2026|de 2026))/i)?.[1]?.trim();
-    if (!title) continue;
-    const codes = [...block.matchAll(/\b(DS|SL|FS|VA)\b/gi)].map((match) => match[1].toUpperCase());
-    const days = [...block.matchAll(/\b([1-9]|[12]\d|3[01])\b/g)].map((match) => Number(match[1]));
-    months.push({ title, codes, days: days.slice(0, 31) });
+  const monthsByKey = new Map();
+  const ensureMonth = (year, month) => {
+    const key = `${year}-${String(month).padStart(2, "0")}`;
+    if (!monthsByKey.has(key)) {
+      const totalDays = new Date(year, month, 0).getDate();
+      monthsByKey.set(key, {
+        title: `${month}/${year}`,
+        year,
+        month,
+        days: Array.from({ length: totalDays }, (_, index) => ({
+          day: index + 1,
+          weekday: "",
+          code: "",
+          jle: ""
+        }))
+      });
+    }
+    return monthsByKey.get(key);
+  };
+
+  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA)?\s*<\/a>/gi)) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const code = String(match[4] || "").toUpperCase();
+    const monthData = ensureMonth(year, month);
+    const dayData = monthData.days[day - 1];
+    if (dayData) dayData.code = code;
   }
 
-  const allCodes = months.flatMap((month) => month.codes);
+  const months = [...monthsByKey.values()]
+    .map((monthData) => ({
+      ...monthData,
+      codes: monthData.days.map((day) => day.code).filter(Boolean)
+    }))
+    .sort((a, b) => (a.year - b.year) || (a.month - b.month));
+
+  const allCodes = months.flatMap((month) => month.days.map((day) => day.code).filter(Boolean));
   return {
     worker,
     months,
