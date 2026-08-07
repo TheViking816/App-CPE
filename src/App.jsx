@@ -18,7 +18,6 @@ import {
   Search,
   Sun,
   UserRound,
-  WalletCards,
   UsersRound
 } from "lucide-react";
 import {
@@ -870,7 +869,6 @@ function PortalResultPreview({ snapshot }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
-  const primasConImporte = primas.filter((item) => Number.parseFloat(String(item.produccion || item.values?.[9] || "").replace(",", ".").replace(/[^\d.-]/g, "")) > 0);
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
     [jornales, primas, payload?.jornales?.monthLabel]
@@ -902,12 +900,6 @@ function PortalResultPreview({ snapshot }) {
       <div className="portal-feature-grid">
         <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${jornales.length} jornales`}>
           {formatEuro(payrollSummary.total)} total estimado
-        </PortalFeatureCard>
-        <PortalFeatureCard icon={<CalendarDays size={20} />} title="Descansos">
-          DS {descansos?.totals?.DS || 0} - SL {descansos?.totals?.SL || 0} - VA {descansos?.totals?.VA || 0}
-        </PortalFeatureCard>
-        <PortalFeatureCard icon={<WalletCards size={20} />} title="Primas">
-          {payload.primas?.locked ? "Pendiente de clave de seguridad." : `${primasConImporte.length} con importe.`}
         </PortalFeatureCard>
       </div>
 
@@ -1027,7 +1019,7 @@ function PortalPanel({ session }) {
           window.clearInterval(timer);
         }
       }
-    }, 6000);
+    }, 2500);
 
     return () => {
       stopped = true;
@@ -1054,7 +1046,7 @@ function PortalPanel({ session }) {
       setPortalPassword("");
       setSecurityKey("");
       setPortalJob(job);
-      setPortalMessage("Lectura en cola. Puede tardar alrededor de un minuto.");
+      setPortalMessage("Lectura en curso. La app se actualizara automaticamente al terminar.");
     } catch (requestError) {
       setPortalMessage("");
       setSyncingPortal(false);
@@ -1073,10 +1065,6 @@ function PortalPanel({ session }) {
       <p className="portal-warning">
         Funcion en pruebas. La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
       </p>
-
-      <button className="secondary-button" type="button" onClick={loadSnapshot} disabled={loading}>
-        Actualizar vista
-      </button>
 
       <section className="portal-security-card">
         <div>
