@@ -1151,6 +1151,38 @@ select {
   gap: 12px;
 }
 
+.portal-sync-card,
+.portal-calendar-card,
+.portal-empty-state,
+.portal-sl-list article {
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.08);
+}
+
+.portal-sync-card {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border-left: 5px solid var(--orange);
+}
+
+.portal-sync-card span,
+.portal-sync-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.portal-sync-card strong {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.05;
+}
+
 .portal-jornales-list {
   display: grid;
   gap: 8px;
@@ -1223,6 +1255,106 @@ select {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
+}
+
+.portal-calendar-card {
+  padding: 12px;
+}
+
+.portal-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.portal-day {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border: 1px solid #e1e8ef;
+  border-radius: 7px;
+  background: #f8fafc;
+}
+
+.portal-day span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.portal-day strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.portal-day.ds {
+  border-color: rgba(37, 99, 235, 0.3);
+  background: #eff6ff;
+}
+
+.portal-day.sl {
+  border-color: rgba(245, 130, 32, 0.38);
+  background: #fff7ed;
+}
+
+.portal-day.fs {
+  border-color: rgba(16, 185, 129, 0.32);
+  background: #ecfdf5;
+}
+
+.portal-day.va {
+  border-color: rgba(168, 85, 247, 0.34);
+  background: #f5f3ff;
+}
+
+.portal-sl-list {
+  display: grid;
+  gap: 7px;
+}
+
+.portal-sl-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.portal-sl-list span {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.portal-sl-list strong {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 30px;
+  border-radius: 8px;
+  background: #edf3ff;
+  color: var(--navy);
+}
+
+.portal-empty-state {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 180px;
+  padding: 22px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.portal-empty-state strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.portal-empty-state span {
+  max-width: 310px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .empty-links strong {
@@ -1501,6 +1633,10 @@ select {
 :root[data-theme="dark"] .portal-form,
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-code,
+:root[data-theme="dark"] .portal-sync-card,
+:root[data-theme="dark"] .portal-calendar-card,
+:root[data-theme="dark"] .portal-empty-state,
+:root[data-theme="dark"] .portal-sl-list article,
 :root[data-theme="dark"] .links-list a {
   border-color: rgba(148, 163, 184, 0.24);
   background: rgba(16, 31, 51, 0.94);
@@ -1515,7 +1651,35 @@ select {
 
 :root[data-theme="dark"] .portal-feature-card strong,
 :root[data-theme="dark"] .portal-jornales-list strong,
-:root[data-theme="dark"] .portal-code {
+:root[data-theme="dark"] .portal-code,
+:root[data-theme="dark"] .portal-sync-card strong,
+:root[data-theme="dark"] .portal-empty-state strong {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-day {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(8, 22, 38, 0.72);
+}
+
+:root[data-theme="dark"] .portal-day.ds {
+  background: rgba(37, 99, 235, 0.18);
+}
+
+:root[data-theme="dark"] .portal-day.sl {
+  background: rgba(251, 146, 60, 0.16);
+}
+
+:root[data-theme="dark"] .portal-day.fs {
+  background: rgba(16, 185, 129, 0.16);
+}
+
+:root[data-theme="dark"] .portal-day.va {
+  background: rgba(168, 85, 247, 0.18);
+}
+
+:root[data-theme="dark"] .portal-sl-list strong {
+  background: rgba(79, 157, 255, 0.14);
   color: var(--ink);
 }
 

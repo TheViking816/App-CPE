@@ -31,9 +31,9 @@ import {
   specialty
 } from "./censo.js";
 import {
-  fetchOfficialPortalData,
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
+  getOfficialPortalSnapshot,
   loginUser,
   registerUser,
   requestChaperoRefresh,
@@ -782,31 +782,88 @@ function PortalFeatureCard({ icon, title, children }) {
   );
 }
 
-function PortalResultPreview({ data }) {
-  const jornales = data?.jornales?.rows || data?.parsedPreview?.jornales?.rows || [];
-  const descansos = data?.descansos || data?.parsedPreview?.descansos || null;
-  const primas = data?.primas?.rows || data?.parsedPreview?.primas?.rows || [];
+function PortalCalendarPreview({ descansos }) {
+  const month = descansos?.months?.find((item) => item.codes?.length) || descansos?.months?.[0];
+  if (!month) return null;
 
-  if (!jornales.length && !descansos && !primas.length) return null;
+  return (
+    <section className="portal-calendar-card">
+      <div className="section-title-row compact">
+        <div>
+          <p>Calendario</p>
+          <h1>{month.title}</h1>
+        </div>
+      </div>
+      <div className="portal-calendar-grid">
+        {Array.from({ length: 31 }, (_, index) => {
+          const day = index + 1;
+          const code = month.codes?.[index] || "";
+          return (
+            <div key={day} className={`portal-day ${code.toLowerCase()}`}>
+              <span>{day}</span>
+              {code && <strong>{code}</strong>}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PortalResultPreview({ snapshot }) {
+  const payload = snapshot?.payload || null;
+  const jornales = payload?.jornales?.rows || [];
+  const descansos = payload?.descansos || null;
+  const slRows = payload?.sl?.rows || [];
+  const primas = payload?.primas?.rows || [];
+
+  if (!payload) {
+    return (
+      <div className="portal-empty-state">
+        <BriefcaseBusiness size={26} />
+        <strong>Sin datos sincronizados</strong>
+        <span>Ejecuta el sincronizador local del portal oficial para cargar jornales y descansos.</span>
+      </div>
+    );
+  }
 
   return (
     <div className="portal-results">
+      <section className="portal-sync-card">
+        <span>Ultima sincronizacion</span>
+        <strong>{formatUpdatedAt(snapshot.updatedAt)}</strong>
+        <small>Chapa {snapshot.chapa}</small>
+      </section>
+
+      <div className="portal-feature-grid">
+        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${jornales.length} jornales`}>
+          {payload.jornales?.monthLabel || "Mes sincronizado del portal oficial."}
+        </PortalFeatureCard>
+        <PortalFeatureCard icon={<CalendarDays size={20} />} title="Descansos">
+          DS {descansos?.totals?.DS || 0} - SL {descansos?.totals?.SL || 0} - VA {descansos?.totals?.VA || 0}
+        </PortalFeatureCard>
+        <PortalFeatureCard icon={<WalletCards size={20} />} title="Primas">
+          {payload.primas?.locked ? "Pendiente de clave de seguridad." : `${primas.length} lineas sincronizadas.`}
+        </PortalFeatureCard>
+      </div>
+
       {jornales.length > 0 && (
         <section>
           <div className="section-title-row compact">
             <div>
               <p>Jornales</p>
-              <h1>{jornales.length}</h1>
+              <h1>{payload.jornales?.monthLabel || "Ultimo mes"}</h1>
             </div>
           </div>
           <div className="portal-jornales-list">
-            {jornales.slice(0, 8).map((item, index) => (
+            {jornales.slice(0, 10).map((item, index) => (
               <article key={`${item.jornal}-${index}`}>
                 <span>{item.dia || "-"}</span>
                 <div>
                   <strong>{item.especialidad || "Jornal"}</strong>
                   <small>{item.jornada || ""}</small>
-                  <em>{item.buque || item.empresa || ""}</em>
+                  <em>{[item.buque, item.empresa].filter(Boolean).join(" - ")}</em>
+                  {item.operacion && <em>{item.operacion}</em>}
                 </div>
               </article>
             ))}
@@ -815,31 +872,42 @@ function PortalResultPreview({ data }) {
       )}
 
       {descansos && (
-        <section>
-          <div className="section-title-row compact">
-            <div>
-              <p>Descansos</p>
-              <h1>{descansos.worker?.group || "Calendario"}</h1>
-            </div>
-          </div>
-          <div className="portal-code-grid">
-            {["DS", "SL", "FS", "VA"].map((code) => (
-              <div key={code} className={`portal-code ${code.toLowerCase()}`}>
-                <strong>{descansos.totals?.[code] || 0}</strong>
-                <span>{code}</span>
+        <>
+          <section>
+            <div className="section-title-row compact">
+              <div>
+                <p>Descansos</p>
+                <h1>{descansos.worker?.group || "Calendario"}</h1>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
+            <div className="portal-code-grid">
+              {["DS", "SL", "FS", "VA"].map((code) => (
+                <div key={code} className={`portal-code ${code.toLowerCase()}`}>
+                  <strong>{descansos.totals?.[code] || 0}</strong>
+                  <span>{code}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+          <PortalCalendarPreview descansos={descansos} />
+        </>
       )}
 
-      {primas.length > 0 && (
+      {slRows.length > 0 && (
         <section>
           <div className="section-title-row compact">
             <div>
-              <p>Primas</p>
-              <h1>{primas.length} lineas</h1>
+              <p>Lista SL</p>
+              <h1>{slRows.length} posiciones</h1>
             </div>
+          </div>
+          <div className="portal-sl-list">
+            {slRows.slice(0, 12).map((item) => (
+              <article key={`${item.fecha}-${item.posicion}`}>
+                <span>{item.fecha}</span>
+                <strong>{item.posicion}</strong>
+              </article>
+            ))}
           </div>
         </section>
       )}
@@ -848,37 +916,26 @@ function PortalResultPreview({ data }) {
 }
 
 function PortalPanel({ session }) {
-  const [chapa, setChapa] = useState(session?.chapa || "");
-  const [password, setPassword] = useState("");
-  const [securityKey, setSecurityKey] = useState("");
-  const [section, setSection] = useState("all");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [portalData, setPortalData] = useState(session?.portalPreview || null);
+  const [snapshot, setSnapshot] = useState(null);
 
-  const submit = async (event) => {
-    event.preventDefault();
+  const loadSnapshot = async () => {
     setError("");
-    setPortalData(null);
-
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await fetchOfficialPortalData({
-        chapa,
-        password,
-        securityKey,
-        section
-      });
-      setPortalData(data);
+      const data = await getOfficialPortalSnapshot({ token: session.token });
+      setSnapshot(data || null);
     } catch (requestError) {
-      setError(requestError.message || "No se pudo conectar con el portal oficial.");
-      if (requestError.payload?.parsedPreview) {
-        setPortalData(requestError.payload);
-      }
+      setError(requestError.message || "No se pudo leer el portal sincronizado.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadSnapshot();
+  }, [session.token]);
 
   return (
     <section className="page-panel portal-panel">
@@ -889,76 +946,23 @@ function PortalPanel({ session }) {
       </div>
 
       <p className="portal-warning">
-        Funcion en pruebas. El portal oficial esta bloqueando la lectura automatica desde servidor; por eso puede devolver error aunque la clave sea correcta.
+        Funcion en pruebas. La lectura se hace con Chrome real en un sincronizador local y la app muestra el ultimo dato guardado en Supabase.
       </p>
 
-      <div className="portal-feature-grid">
-        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title="Jornales">
-          Resumen mensual, buques, empresas, jornadas y produccion.
-        </PortalFeatureCard>
-        <PortalFeatureCard icon={<WalletCards size={20} />} title="Primas">
-          Requiere clave de seguridad del portal.
-        </PortalFeatureCard>
-        <PortalFeatureCard icon={<CalendarDays size={20} />} title="Descansos">
-          Calendario con DS, SL, FS, VA y formacion.
-        </PortalFeatureCard>
-      </div>
-
-      <form className="portal-form" onSubmit={submit}>
-        <label>
-          <span>Usuario portal</span>
-          <div className="field">
-            <UserRound size={18} />
-            <input
-              inputMode="numeric"
-              value={chapa}
-              onChange={(event) => setChapa(event.target.value.replace(/\D/g, "").slice(0, 5))}
-              placeholder="Ej. 72683"
-            />
-          </div>
-        </label>
-        <label>
-          <span>ContraseÃ±a portal</span>
-          <div className="field">
-            <Lock size={18} />
-            <input
-              type="password"
-              value={password}
-              autoComplete="current-password"
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Clave del portal"
-            />
-          </div>
-        </label>
-        <label>
-          <span>Clave primas</span>
-          <div className="field">
-            <Lock size={18} />
-            <input
-              type="password"
-              value={securityKey}
-              autoComplete="off"
-              onChange={(event) => setSecurityKey(event.target.value)}
-              placeholder="Solo si consultas primas"
-            />
-          </div>
-        </label>
-        <label>
-          <span>Consulta</span>
-          <select value={section} onChange={(event) => setSection(event.target.value)}>
-            <option value="all">Todo</option>
-            <option value="jornales">Jornales</option>
-            <option value="descansos">Descansos</option>
-            <option value="primas">Primas</option>
-          </select>
-        </label>
-        <button className="primary-button" type="submit" disabled={loading}>
-          {loading ? "Conectando..." : "Leer portal"}
-        </button>
-      </form>
+      <button className="secondary-button" type="button" onClick={loadSnapshot} disabled={loading}>
+        {loading ? "Actualizando..." : "Actualizar vista"}
+      </button>
 
       {error && <p className="portal-warning">{error}</p>}
-      <PortalResultPreview data={portalData} />
+      {loading && !snapshot ? (
+        <div className="portal-empty-state">
+          <Clock3 size={26} />
+          <strong>Cargando portal</strong>
+          <span>Buscando el ultimo sincronizado de tu chapa.</span>
+        </div>
+      ) : (
+        <PortalResultPreview snapshot={snapshot} />
+      )}
     </section>
   );
 }

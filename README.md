@@ -110,3 +110,24 @@ El token de GitHub debe tener permiso para ejecutar Actions en `TheViking816/App
 Tambien existe `scripts/sync-cpe.js`, pero no es la opcion principal. Solo se usaria si algun dia necesitas refrescar el censo completo desde `Chapero por especialidades`.
 
 No guardar credenciales en el frontend, GitHub, localStorage ni archivos versionados.
+
+## Prueba portal oficial
+
+El portal oficial bloquea la lectura desde Vercel/serverless. Para jornales, descansos, SL, FS y primas se usa un sincronizador local con Chrome real:
+
+```powershell
+$env:CPE_PORTAL_USER="72683"
+$env:CPE_PORTAL_PASSWORD="tu_clave_portal"
+$env:CPE_PORTAL_SECURITY_KEY="tu_clave_primas_opcional"
+$env:CPE_SUPABASE_URL="https://wvwdiywtlbffumshbboa.supabase.co"
+$env:CPE_SUPABASE_SERVICE_ROLE="tu_service_role_key"
+npm run sync:portal
+```
+
+Antes de usarlo en la app, ejecutar en Supabase:
+
+```text
+supabase/migrations/009_app_cpe_portal_snapshots.sql
+```
+
+El script guarda el ultimo resultado por chapa en `app_cpe_portal_snapshots`. La app no lee esa tabla directamente: llama a `app_cpe_get_portal_snapshot(token)` y Supabase devuelve solo el snapshot de la chapa que ha iniciado sesion en App CPE.

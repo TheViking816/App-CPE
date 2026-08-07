@@ -205,21 +205,15 @@ export async function requestChaperoRefresh() {
   return data || null;
 }
 
-export async function fetchOfficialPortalData({ chapa, password, securityKey = "", section = "all" }) {
-  const response = await fetch("/api/portal-cpe", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({ chapa, password, securityKey, section })
+export async function getOfficialPortalSnapshot({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_snapshot", {
+    p_token: token
   });
 
-  const data = await response.json().catch(() => null);
-  if (!response.ok || !data?.ok) {
-    const error = new Error(data?.message || "No se pudo leer el portal oficial.");
-    error.code = data?.code;
-    error.detail = data?.detail;
-    error.payload = data;
+  if (error) {
+    console.warn("No se pudo leer el portal oficial sincronizado:", error.message);
     throw error;
   }
 
