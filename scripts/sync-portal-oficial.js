@@ -368,7 +368,8 @@ async function collectDescansos(page) {
   const result = await waitForParsedContent(
     page,
     parseDescansos,
-    (result) => (result.months?.length || 0) * 100 + (result.worker?.chapa ? 1 : 0)
+    (result) => (result.months?.length || 0) * 100 + (result.worker?.chapa ? 1 : 0),
+    30000
   );
   if (result.months?.length) return result;
 
