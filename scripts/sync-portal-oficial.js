@@ -235,18 +235,48 @@ async function writeStatus(status) {
   await fs.writeFile(STATUS_PATH, JSON.stringify(status, null, 2), "utf8");
 }
 
-function findMenuItem(page, text) {
-  return page.locator(".NorayMenu .gwt-TreeItem, .norayService", { hasText: text }).first();
+function exactTextPattern(text) {
+  const escaped = String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^\\s*${escaped}\\s*$`, "i");
+}
+
+async function findVisibleMatch(page, selector, text, timeout = 0) {
+  const deadline = Date.now() + timeout;
+  const pattern = exactTextPattern(text);
+
+  do {
+    const matches = page.locator(selector).filter({ hasText: pattern });
+    const count = await matches.count().catch(() => 0);
+    for (let index = 0; index < count; index += 1) {
+      const candidate = matches.nth(index);
+      if (await candidate.isVisible().catch(() => false)) return candidate;
+    }
+    if (Date.now() < deadline) await page.waitForTimeout(150);
+  } while (Date.now() < deadline);
+
+  return null;
+}
+
+function findMenuItem(page, text, timeout = 0) {
+  return findVisibleMatch(
+    page,
+    ".NorayMenu .gwt-TreeItem, .norayService",
+    text,
+    timeout
+  );
 }
 
 async function ensureExpanded(page, group, child) {
-  const childItem = findMenuItem(page, child);
-  if (await childItem.isVisible().catch(() => false)) return;
+  if (await findMenuItem(page, child)) return;
 
-  const groupItem = page.locator(".gwt-TreeItem", { hasText: group }).first();
-  await groupItem.waitFor({ state: "attached", timeout: 30000 });
-  await groupItem.click({ timeout: 10000, force: true });
-  await childItem.waitFor({ state: "visible", timeout: 10000 });
+  const groupItem = await findVisibleMatch(page, ".gwt-TreeItem", group, 30000);
+  if (!groupItem) throw new Error(`No se encontro el menu visible: ${group}`);
+
+  await groupItem.scrollIntoViewIfNeeded();
+  await groupItem.click({ timeout: 10000 });
+
+  const childItem = await findMenuItem(page, child, 10000);
+  if (!childItem) throw new Error(`No se encontro la opcion visible: ${child}`);
 }
 
 async function waitForFrame(page, pattern, timeout = 12000) {
@@ -345,9 +375,10 @@ async function login(page, attempt = 0) {
 
 async function openMenu(page, group, text, framePattern) {
   await ensureExpanded(page, group, text);
-  const item = findMenuItem(page, text);
-  await item.scrollIntoViewIfNeeded().catch(() => {});
-  await item.click({ timeout: 10000, force: true });
+  const item = await findMenuItem(page, text, 10000);
+  if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
+  await item.scrollIntoViewIfNeeded();
+  await item.click({ timeout: 10000 });
   if (framePattern) await waitForFrame(page, framePattern);
 }
 
