@@ -236,7 +236,7 @@ async function writeStatus(status) {
 }
 
 function findMenuItem(page, text) {
-  return page.locator(".norayService a", { hasText: text }).first();
+  return page.locator(".norayService", { hasText: text }).first();
 }
 
 async function ensureExpanded(page, group, child) {
