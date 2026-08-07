@@ -969,7 +969,7 @@ function PortalResultPreview({ snapshot }) {
           <div className="section-title-row compact">
             <div>
               <p>Lista SL</p>
-              <h1>{slRows.length} posiciones</h1>
+              <h1>{slRows.length} solicitudes</h1>
             </div>
           </div>
           <div className="portal-sl-list">
