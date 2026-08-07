@@ -127,15 +127,6 @@ function parseSl(html = "") {
   };
 }
 
-function parseFs(html = "") {
-  const pageText = textFromHtml(html);
-  const rows = parseRowsFromTable(html);
-  return {
-    title: pageText.match(/FS\s+FESTIVOS\s+SELECCIONADOS/i)?.[0] || "FS FESTIVOS SELECCIONADOS",
-    rows: rows.filter((row) => row.length > 1)
-  };
-}
-
 function parseDescansos(html = "") {
   const pageText = textFromHtml(html);
   const worker = {
@@ -251,13 +242,22 @@ function findMenuItem(page, text) {
 async function ensureExpanded(page, group, child) {
   if (await page.locator(".gwt-TreeItem:visible", { hasText: child }).count()) return;
   await findMenuItem(page, group).click({ timeout: 8000 });
-  await page.waitForTimeout(800);
+  await findMenuItem(page, child).waitFor({ state: "visible", timeout: 5000 });
+}
+
+async function waitForFrame(page, pattern, timeout = 12000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const frame = findFrame(page, pattern);
+    if (frame) return frame;
+    await page.waitForTimeout(150);
+  }
+  throw new Error(`No se cargo la pantalla esperada: ${pattern}`);
 }
 
 async function login(page) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
-  await page.waitForTimeout(5000);
-  await page.getByRole("button", { name: "Entendido" }).click().catch(() => {});
+  await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
   let body = await page.locator("body").innerText().catch(() => "");
   if (/Finalizar sesi|LUJAN MARIN|Usuario/i.test(body) && /Finalizar sesi/i.test(body)) return;
@@ -272,7 +272,7 @@ async function login(page) {
   await userInput.fill(portalUser, { timeout: 45000 });
   await passwordInput.fill(portalPassword, { timeout: 15000 });
   await page.getByRole("button", { name: /Iniciar sesi/i }).click();
-  await page.waitForTimeout(8000);
+  await page.getByText(/Finalizar sesi/i).first().waitFor({ state: "visible", timeout: 20000 });
 
   body = await page.locator("body").innerText().catch(() => "");
   if (!/Finalizar sesi/i.test(body)) {
@@ -280,64 +280,53 @@ async function login(page) {
   }
 }
 
-async function openMenu(page, group, text) {
+async function openMenu(page, group, text, framePattern) {
   await ensureExpanded(page, group, text);
   const item = findMenuItem(page, text);
   await item.scrollIntoViewIfNeeded().catch(() => {});
   await item.click({ timeout: 10000 });
-  await page.waitForTimeout(3500);
+  if (framePattern) await waitForFrame(page, framePattern);
 }
 
 function findFrame(page, pattern) {
   return page.frames().find((frame) => pattern.test(frame.url()));
 }
 
-async function getFrameHtml(page, pattern) {
-  const frame = findFrame(page, pattern);
-  if (!frame) return "";
-  return frame.content();
-}
-
 async function collectJornales(page) {
-  await openMenu(page, "Consultas", "Consulta de jornales");
-  const frame = findFrame(page, /SelDatJor1\.asp/i);
-  if (!frame) return { monthLabel: "", rows: [] };
+  await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
+  const frame = await waitForFrame(page, /SelDatJor1\.asp/i);
   await frame.getByRole("button", { name: /Aceptar/i }).click();
-  await page.waitForTimeout(3500);
-  return parseJornales(await getFrameHtml(page, /Jornales1\.asp/i));
+  const resultFrame = await waitForFrame(page, /Jornales1\.asp/i);
+  return parseJornales(await resultFrame.content());
 }
 
 async function collectDescansos(page) {
-  await openMenu(page, "Solicitudes", "Solicitar Descansos");
-  return parseDescansos(await getFrameHtml(page, /Prueba\.asp/i));
+  await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
+  const frame = await waitForFrame(page, /Prueba\.asp/i);
+  return parseDescansos(await frame.content());
 }
 
 async function collectSl(page) {
-  await openMenu(page, "Consultas", "Consulta posicion SL");
-  return parseSl(await getFrameHtml(page, /MostrarSL\.asp/i));
-}
-
-async function collectFs(page) {
-  await openMenu(page, "Consultas", "Consulta FS");
-  return parseFs(await getFrameHtml(page, /MostrarFAFS\.asp/i));
+  await openMenu(page, "Consultas", "Consulta posicion SL", /MostrarSL\.asp/i);
+  const frame = await waitForFrame(page, /MostrarSL\.asp/i);
+  return parseSl(await frame.content());
 }
 
 async function collectPrimas(page) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
-  await openMenu(page, "Consultas", "Consulta de Primas Productividad");
+  await openMenu(page, "Consultas", "Consulta de Primas Productividad", /Primas|SelDatJorPrimas/i);
   const passwordInput = page.locator('input[type="password"]:visible').first();
   if (await passwordInput.count()) {
     await passwordInput.fill(portalSecurityKey);
     await page.getByRole("button", { name: /Validar/i }).click();
-    await page.waitForTimeout(3500);
   }
 
-  const selectorFrame = page.frames().find((item) => /SelDatJorPrimas\.asp/i.test(item.url()));
+  const selectorFrame = await waitForFrame(page, /SelDatJorPrimas\.asp|JornalesPrimas|JorPrimas/i);
   if (selectorFrame) {
     const accept = selectorFrame.getByRole("button", { name: /Aceptar/i });
     if (await accept.count()) {
       await accept.click();
-      await page.waitForTimeout(4000);
+      await waitForFrame(page, /JornalesPrimas|JorPrimas/i);
     }
   }
 
@@ -394,7 +383,6 @@ async function main() {
       jornales: await collectJornales(page),
       descansos: await collectDescansos(page),
       sl: await collectSl(page),
-      fs: await collectFs(page),
       primas: await collectPrimas(page)
     };
 

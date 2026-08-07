@@ -1195,6 +1195,56 @@ select {
   font-weight: 900;
 }
 
+.portal-update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.08);
+}
+
+.portal-update-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.portal-update-row button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #cad9e8;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: var(--navy);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.portal-security-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portal-security-actions:has(.primary-button:only-child) {
+  grid-template-columns: 1fr;
+}
+
+.portal-security-actions .secondary-button,
+.portal-security-actions .primary-button {
+  min-height: 44px;
+}
+
 .portal-results {
   display: grid;
   gap: 12px;
@@ -1806,6 +1856,7 @@ select {
 :root[data-theme="dark"] .portal-feature-card,
 :root[data-theme="dark"] .portal-form,
 :root[data-theme="dark"] .portal-security-card,
+:root[data-theme="dark"] .portal-update-row,
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-primas-list article,
 :root[data-theme="dark"] .portal-code,
@@ -1817,6 +1868,12 @@ select {
   border-color: rgba(148, 163, 184, 0.24);
   background: rgba(16, 31, 51, 0.94);
   box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .portal-update-row button {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(8, 22, 38, 0.72);
+  color: var(--ink);
 }
 
 :root[data-theme="dark"] .portal-feature-icon,

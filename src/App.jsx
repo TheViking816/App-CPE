@@ -15,6 +15,7 @@ import {
   Lock,
   LogOut,
   Moon,
+  RefreshCw,
   Search,
   Sun,
   UserRound,
@@ -1035,6 +1036,7 @@ function PortalPanel({ session }) {
   const [syncingPortal, setSyncingPortal] = useState(false);
   const [portalJob, setPortalJob] = useState(null);
   const [portalMessage, setPortalMessage] = useState("");
+  const [showCredentials, setShowCredentials] = useState(false);
 
   const loadSnapshot = async () => {
     setError("");
@@ -1042,8 +1044,10 @@ function PortalPanel({ session }) {
     try {
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
+      setShowCredentials(!data);
     } catch (requestError) {
       setError(requestError.message || "No se pudo leer el portal sincronizado.");
+      setShowCredentials(true);
     } finally {
       setLoading(false);
     }
@@ -1067,6 +1071,7 @@ function PortalPanel({ session }) {
           setSyncingPortal(false);
           window.clearInterval(timer);
           await loadSnapshot();
+          setShowCredentials(false);
         }
         if (job.status === "failed") {
           setPortalMessage(job.message || "No se pudo leer el portal.");
@@ -1080,7 +1085,7 @@ function PortalPanel({ session }) {
           window.clearInterval(timer);
         }
       }
-    }, 2500);
+    }, 1500);
 
     return () => {
       stopped = true;
@@ -1123,46 +1128,67 @@ function PortalPanel({ session }) {
         <span>Jornales, primas y descansos en formato claro.</span>
       </div>
 
-      <p className="portal-warning">
-        La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
-      </p>
-
-      <section className="portal-security-card">
-        <div>
-          <p>Actualizar portal</p>
-          <span>Introduce tu contrasena del portal oficial y, si quieres primas, la clave de seguridad.</span>
+      {snapshot && !showCredentials && (
+        <div className="portal-update-row">
+          <span>Datos guardados del portal oficial</span>
+          <button type="button" onClick={() => setShowCredentials(true)}>
+            <RefreshCw size={16} />
+            Actualizar portal
+          </button>
         </div>
-        <label>
-          <Lock size={17} />
-          <input
-            autoComplete="current-password"
-            placeholder="Contrasena del portal"
-            type="password"
-            value={portalPassword}
-            onChange={(event) => setPortalPassword(event.target.value)}
-          />
-        </label>
-        <label>
-          <Lock size={17} />
-          <input
-            autoComplete="off"
-            inputMode="numeric"
-            placeholder="Clave de seguridad"
-            type="password"
-            value={securityKey}
-            onChange={(event) => setSecurityKey(event.target.value)}
-          />
-        </label>
-        <button
-          className="primary-button"
-          type="button"
-          disabled={syncingPortal || !portalPassword.trim()}
-          onClick={handlePortalSync}
-        >
-          {syncingPortal ? "Leyendo portal..." : "Leer portal"}
-        </button>
-        {portalMessage && <small>{portalMessage}</small>}
-      </section>
+      )}
+
+      {showCredentials && (
+        <>
+          <p className="portal-warning">
+            La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
+          </p>
+
+          <section className="portal-security-card">
+            <div>
+              <p>{snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
+              <span>Introduce tu contrasena del portal oficial y, si quieres primas, la clave de seguridad.</span>
+            </div>
+            <label>
+              <Lock size={17} />
+              <input
+                autoComplete="current-password"
+                placeholder="Contrasena del portal"
+                type="password"
+                value={portalPassword}
+                onChange={(event) => setPortalPassword(event.target.value)}
+              />
+            </label>
+            <label>
+              <Lock size={17} />
+              <input
+                autoComplete="off"
+                inputMode="numeric"
+                placeholder="Clave de seguridad"
+                type="password"
+                value={securityKey}
+                onChange={(event) => setSecurityKey(event.target.value)}
+              />
+            </label>
+            <div className="portal-security-actions">
+              {snapshot && !syncingPortal && (
+                <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
+                  Cancelar
+                </button>
+              )}
+              <button
+                className="primary-button"
+                type="button"
+                disabled={syncingPortal || !portalPassword.trim()}
+                onClick={handlePortalSync}
+              >
+                {syncingPortal ? "Leyendo portal..." : "Leer portal"}
+              </button>
+            </div>
+            {portalMessage && <small>{portalMessage}</small>}
+          </section>
+        </>
+      )}
 
       {error && <p className="portal-warning">{error}</p>}
       {loading && !snapshot ? (

@@ -30,14 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
       - name: Sync portal
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
           CPE_PORTAL_SYNC_JOB_ID: ${{ github.event.inputs.job_id }}
-          CPE_PORTAL_BROWSER_CHANNEL: bundled
-          CPE_PORTAL_HEADLESS: "false"
-        run: xvfb-run -a npm run sync:portal:job
+          CPE_PORTAL_BROWSER_CHANNEL: chrome
+          CPE_PORTAL_HEADLESS: "true"
+        run: npm run sync:portal:job
