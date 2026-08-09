@@ -154,7 +154,7 @@ function getJourney(map, date, journey) {
   const fecha = normalizeDate(date);
   const jornada = normalizeJourney(journey);
   const key = `${fecha}|${jornada}`;
-  if (!map.has(key)) map.set(key, { key, fecha, jornada, companies: new Map() });
+  if (!map.has(key)) map.set(key, { key, fecha, jornada, anticipada: false, companies: new Map() });
   return map.get(key);
 }
 
@@ -202,6 +202,8 @@ export function buildGeneralBoard(rows, snapshot) {
   });
   (snapshot?.jornadas || []).forEach((item) => {
     const journey = getJourney(map, item.fecha || snapshot.fecha, item.jornada);
+    const sources = Array.isArray(item.fuentes) ? item.fuentes : [];
+    journey.anticipada = sources.includes("anticipada") && !sources.includes("turno");
     (item.bloques || []).forEach((block) => {
       const group = getGroup(journey, block.empresa, block);
       (block.especialidades || []).forEach((specialty) => addSpecialty(group, specialty.nombre, "turno", specialty.solicitudes));
