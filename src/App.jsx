@@ -11,7 +11,7 @@ import {
   EyeOff,
   Home,
   Link as LinkIcon,
-  ListChecks,
+  ClipboardList,
   Lock,
   LogOut,
   Moon,
@@ -45,6 +45,7 @@ import {
   trackUsageEvent,
   updateUserSpecialties
 } from "./supabaseClient.js";
+import GeneralBoard from "./GeneralBoard.jsx";
 
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
@@ -61,7 +62,7 @@ const NAV_ITEMS = [
   { id: "puertas", label: "Puertas", Icon: CalendarDays },
   { id: "censo", label: "Censo", Icon: UsersRound },
   { id: "portal", label: "Portal", Icon: BriefcaseBusiness },
-  { id: "mis-especialidades", label: "Mis esp.", Icon: ListChecks },
+  { id: "tablon", label: "Tablón", Icon: ClipboardList },
   { id: "enlaces", label: "Enlaces", Icon: LinkIcon }
 ];
 
@@ -1532,12 +1533,10 @@ export function App() {
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
         {activeTab === "censo" && <CensoPanel user={user} doors={doors} activeSpecialty={activeSpecialty} />}
-        {activeTab === "mis-especialidades" && (
-          <MySpecialtiesPanel
-            session={session}
-            availableSpecialties={availableSpecialties}
-            notice={notice}
-            onSpecialtiesSave={saveSpecialties}
+        {activeTab === "tablon" && (
+          <GeneralBoard
+            chapa={session.chapa}
+            onOpen={(chapa) => trackUsageEvent({ eventType: "tablon_general_open", chapa })}
           />
         )}
         {activeTab === "portal" && <PortalPanel session={session} />}
