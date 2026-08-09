@@ -52,7 +52,9 @@ const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
 const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
+const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
 const DEFAULT_PORTAL_SYNC_SECONDS = 75;
+const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
@@ -103,6 +105,32 @@ function savePortalSyncDuration(chapa, seconds) {
     localStorage.setItem(PORTAL_SYNC_TIMINGS_KEY, JSON.stringify(stored));
   } catch {
     // La estimacion seguira usando el valor inicial si no hay almacenamiento.
+  }
+}
+
+function readPortalActiveSync(chapa) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_ACTIVE_SYNC_KEY)) || {};
+    const activeSync = stored[normalizeChapa(chapa)];
+    const startedAt = Number(activeSync?.startedAt || 0);
+    if (!activeSync?.jobId || !startedAt || Date.now() - startedAt > PORTAL_ACTIVE_SYNC_MAX_AGE_MS) {
+      return null;
+    }
+    return activeSync;
+  } catch {
+    return null;
+  }
+}
+
+function writePortalActiveSync(chapa, activeSync) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_ACTIVE_SYNC_KEY)) || {};
+    const key = normalizeChapa(chapa);
+    if (activeSync?.jobId) stored[key] = activeSync;
+    else delete stored[key];
+    localStorage.setItem(PORTAL_ACTIVE_SYNC_KEY, JSON.stringify(stored));
+  } catch {
+    // Si el almacenamiento no esta disponible, la lectura sigue en el servidor.
   }
 }
 
@@ -1079,6 +1107,7 @@ function PortalResultPreview({ snapshot }) {
 
 function PortalPanel({ session }) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
+  const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(null);
@@ -1086,13 +1115,13 @@ function PortalPanel({ session }) {
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [rememberCredentials, setRememberCredentials] = useState(Boolean(initialCredentials));
-  const [syncingPortal, setSyncingPortal] = useState(false);
-  const [portalJob, setPortalJob] = useState(null);
-  const [portalMessage, setPortalMessage] = useState("");
+  const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
+  const [portalJob, setPortalJob] = useState(initialActiveSync || null);
+  const [portalMessage, setPortalMessage] = useState(initialActiveSync ? "Recuperando la sincronizacion en curso..." : "");
   const [showCredentials, setShowCredentials] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(0);
-  const [syncElapsed, setSyncElapsed] = useState(0);
-  const syncStartedAtRef = useRef(0);
+  const [syncProgress, setSyncProgress] = useState(initialActiveSync ? 3 : 0);
+  const [syncElapsed, setSyncElapsed] = useState(initialActiveSync ? Math.floor((Date.now() - initialActiveSync.startedAt) / 1000) : 0);
+  const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
 
   const loadSnapshot = async () => {
@@ -1140,6 +1169,11 @@ function PortalPanel({ session }) {
         const job = await getPortalSyncJob({ token: session.token, jobId: portalJob.jobId });
         if (stopped || !job) return;
         setPortalJob(job);
+        writePortalActiveSync(session.chapa, {
+          jobId: portalJob.jobId,
+          status: job.status,
+          startedAt: syncStartedAtRef.current
+        });
         if (job.status === "completed") {
           const measuredSeconds = job.startedAt && job.finishedAt
             ? (new Date(job.finishedAt).getTime() - new Date(job.startedAt).getTime()) / 1000
@@ -1152,18 +1186,18 @@ function PortalPanel({ session }) {
           await loadSnapshot();
           setShowCredentials(false);
           setSyncingPortal(false);
+          writePortalActiveSync(session.chapa, null);
         }
         if (job.status === "failed") {
           setPortalMessage(job.message || "No se pudo leer el portal.");
           setSyncingPortal(false);
           setShowCredentials(true);
+          writePortalActiveSync(session.chapa, null);
           window.clearInterval(timer);
         }
       } catch (requestError) {
         if (!stopped) {
           setPortalMessage(requestError.message || "No se pudo comprobar la sincronizacion.");
-          setSyncingPortal(false);
-          window.clearInterval(timer);
         }
       }
     }, 1500);
@@ -1210,6 +1244,11 @@ function PortalPanel({ session }) {
         setSecurityKey("");
       }
       setPortalJob(job);
+      writePortalActiveSync(session.chapa, {
+        jobId: job.jobId,
+        status: job.status || "queued",
+        startedAt: syncStartedAtRef.current
+      });
       setShowCredentials(false);
       setPortalMessage("Lectura en curso. La app se actualizara automaticamente al terminar.");
     } catch (requestError) {
