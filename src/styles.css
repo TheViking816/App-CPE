@@ -1104,7 +1104,9 @@ select {
 .general-journeys strong { font-size: 20px; }
 .general-journeys span, .general-journeys small { font-weight: 800; }
 .general-journeys em { display: flex; gap: 6px; font-size: 10px; font-style: normal; }
-.general-journeys em b { padding: 3px 5px; border-radius: 4px; background: rgba(255,255,255,.16); }
+.general-journeys em b { padding: 3px 6px; border-radius: 4px; }
+.general-journeys em .bolsa { background: #e1ecff; color: #205ec2; }
+.general-journeys em .turno { background: #d9f8ef; color: #007d60; }
 
 .general-tools {
   display: grid;
