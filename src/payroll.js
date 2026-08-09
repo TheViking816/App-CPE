@@ -100,6 +100,22 @@ function parseShift(jornada = "") {
   return "";
 }
 
+const SHIFT_ORDER = {
+  "02-08": 0,
+  "08-14": 1,
+  "14-20": 2,
+  "20-02": 3
+};
+
+export function compareJornalesDescending(a, b) {
+  const dateComparison = String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""));
+  if (dateComparison !== 0) return dateComparison;
+
+  const aShift = a.payroll?.shift || parseShift(a.jornada);
+  const bShift = b.payroll?.shift || parseShift(b.jornada);
+  return (SHIFT_ORDER[bShift] ?? -1) - (SHIFT_ORDER[aShift] ?? -1);
+}
+
 function parseMonthLabel(monthLabel = "") {
   const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
   if (!match) return { month: new Date().getMonth() + 1, year: new Date().getFullYear() };

@@ -30,7 +30,7 @@ import {
   specialties,
   specialty
 } from "./censo.js";
-import { enrichJornales, formatEuro, summarizePayroll } from "./payroll.js";
+import { compareJornalesDescending, enrichJornales, formatEuro, summarizePayroll } from "./payroll.js";
 import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
@@ -906,7 +906,7 @@ function PortalResultPreview({ snapshot }) {
   );
   const selectedSummary = useMemo(() => summarizePayroll(selectedJornales), [selectedJornales]);
   const visibleJornales = useMemo(
-    () => [...selectedJornales].sort((a, b) => String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""))),
+    () => [...selectedJornales].sort(compareJornalesDescending),
     [selectedJornales]
   );
   const selectedPeriodLabel = selectedPeriod === "month"
