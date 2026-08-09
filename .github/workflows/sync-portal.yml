@@ -42,6 +42,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Sync portal
+        # El proceso registra el resultado en Supabase para que la app lo muestre.
+        # Un bloqueo temporal del portal no debe convertir el workflow en fallido
+        # ni generar notificaciones por correo de GitHub Actions.
+        continue-on-error: true
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
