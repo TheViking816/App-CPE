@@ -258,18 +258,32 @@ async function findVisibleMatch(page, selector, text, timeout = 0) {
 }
 
 function findMenuItem(page, text, timeout = 0) {
-  return findVisibleMatch(
-    page,
-    ".NorayMenu .gwt-TreeItem",
-    text,
-    timeout
-  );
+  return findVisibleMatchAcrossFrames(page, ".NorayMenu .gwt-TreeItem", text, timeout);
+}
+
+async function findVisibleMatchAcrossFrames(page, selector, text, timeout = 0) {
+  const deadline = Date.now() + timeout;
+  const pattern = exactTextPattern(text);
+
+  do {
+    for (const root of [page, ...page.frames()]) {
+      const matches = root.locator(selector).filter({ hasText: pattern });
+      const count = await matches.count().catch(() => 0);
+      for (let index = 0; index < count; index += 1) {
+        const candidate = matches.nth(index);
+        if (await candidate.isVisible().catch(() => false)) return candidate;
+      }
+    }
+    if (Date.now() < deadline) await page.waitForTimeout(150);
+  } while (Date.now() < deadline);
+
+  return null;
 }
 
 async function ensureExpanded(page, group, child) {
   if (await findMenuItem(page, child)) return;
 
-  const groupItem = await findVisibleMatch(page, ".gwt-TreeItem", group, 30000);
+  const groupItem = await findVisibleMatchAcrossFrames(page, ".gwt-TreeItem", group, 30000);
   if (!groupItem) throw new Error(`No se encontro el menu visible: ${group}`);
 
   await groupItem.scrollIntoViewIfNeeded();
