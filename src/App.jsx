@@ -50,12 +50,61 @@ import GeneralBoard from "./GeneralBoard.jsx";
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
 const THEME_KEY = "app-cpe-theme";
+const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
+const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
+const DEFAULT_PORTAL_SYNC_SECONDS = 75;
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
 const CHAPERO_POLL_MS = 60_000;
 const CHAPERO_REFRESH_POLL_MS = 5_000;
 const CHAPERO_REFRESH_POLL_ATTEMPTS = 24;
+
+function readPortalCredentials(chapa) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_CREDENTIALS_KEY)) || {};
+    const credentials = stored[normalizeChapa(chapa)];
+    return credentials?.portalPassword ? credentials : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePortalCredentials(chapa, credentials) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_CREDENTIALS_KEY)) || {};
+    const key = normalizeChapa(chapa);
+    if (credentials?.portalPassword) stored[key] = credentials;
+    else delete stored[key];
+    localStorage.setItem(PORTAL_CREDENTIALS_KEY, JSON.stringify(stored));
+  } catch {
+    // El navegador puede bloquear el almacenamiento privado.
+  }
+}
+
+function getPortalSyncEstimate(chapa) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_SYNC_TIMINGS_KEY)) || {};
+    const samples = Array.isArray(stored[normalizeChapa(chapa)]) ? stored[normalizeChapa(chapa)] : [];
+    if (!samples.length) return DEFAULT_PORTAL_SYNC_SECONDS;
+    return Math.max(20, Math.round(samples.reduce((sum, value) => sum + Number(value || 0), 0) / samples.length));
+  } catch {
+    return DEFAULT_PORTAL_SYNC_SECONDS;
+  }
+}
+
+function savePortalSyncDuration(chapa, seconds) {
+  if (!Number.isFinite(seconds) || seconds < 1) return;
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_SYNC_TIMINGS_KEY)) || {};
+    const key = normalizeChapa(chapa);
+    const samples = Array.isArray(stored[key]) ? stored[key] : [];
+    stored[key] = [...samples, Math.round(seconds)].slice(-5);
+    localStorage.setItem(PORTAL_SYNC_TIMINGS_KEY, JSON.stringify(stored));
+  } catch {
+    // La estimacion seguira usando el valor inicial si no hay almacenamiento.
+  }
+}
 
 const NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
@@ -1029,15 +1078,22 @@ function PortalResultPreview({ snapshot }) {
 }
 
 function PortalPanel({ session }) {
+  const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(null);
-  const [portalPassword, setPortalPassword] = useState("");
-  const [securityKey, setSecurityKey] = useState("");
+  const [portalPassword, setPortalPassword] = useState(initialCredentials?.portalPassword || "");
+  const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
+  const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
+  const [rememberCredentials, setRememberCredentials] = useState(Boolean(initialCredentials));
   const [syncingPortal, setSyncingPortal] = useState(false);
   const [portalJob, setPortalJob] = useState(null);
   const [portalMessage, setPortalMessage] = useState("");
   const [showCredentials, setShowCredentials] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncElapsed, setSyncElapsed] = useState(0);
+  const syncStartedAtRef = useRef(0);
+  const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
 
   const loadSnapshot = async () => {
     setError("");
@@ -1059,6 +1115,23 @@ function PortalPanel({ session }) {
   }, [session.token]);
 
   useEffect(() => {
+    if (!syncingPortal || !syncStartedAtRef.current) return undefined;
+    const updateProgress = () => {
+      const elapsed = Math.max(0, (Date.now() - syncStartedAtRef.current) / 1000);
+      const estimate = syncEstimateRef.current;
+      const status = portalJob?.status || "queued";
+      const calculated = status === "running"
+        ? 12 + (elapsed / estimate) * 82
+        : 3 + (elapsed / estimate) * 24;
+      setSyncElapsed(Math.floor(elapsed));
+      setSyncProgress((current) => Math.max(current, Math.min(94, calculated)));
+    };
+    updateProgress();
+    const timer = window.setInterval(updateProgress, 500);
+    return () => window.clearInterval(timer);
+  }, [syncingPortal, portalJob?.status]);
+
+  useEffect(() => {
     if (!portalJob?.jobId || !["queued", "running"].includes(portalJob.status)) return undefined;
 
     let stopped = false;
@@ -1068,15 +1141,22 @@ function PortalPanel({ session }) {
         if (stopped || !job) return;
         setPortalJob(job);
         if (job.status === "completed") {
+          const measuredSeconds = job.startedAt && job.finishedAt
+            ? (new Date(job.finishedAt).getTime() - new Date(job.startedAt).getTime()) / 1000
+            : (Date.now() - syncStartedAtRef.current) / 1000;
+          savePortalSyncDuration(session.chapa, measuredSeconds);
+          syncEstimateRef.current = getPortalSyncEstimate(session.chapa);
+          setSyncProgress(100);
           setPortalMessage("Portal actualizado.");
-          setSyncingPortal(false);
           window.clearInterval(timer);
           await loadSnapshot();
           setShowCredentials(false);
+          setSyncingPortal(false);
         }
         if (job.status === "failed") {
           setPortalMessage(job.message || "No se pudo leer el portal.");
           setSyncingPortal(false);
+          setShowCredentials(true);
           window.clearInterval(timer);
         }
       } catch (requestError) {
@@ -1095,24 +1175,42 @@ function PortalPanel({ session }) {
   }, [portalJob?.jobId, portalJob?.status, session.token]);
 
   const handlePortalSync = async () => {
-    if (!portalPassword.trim()) {
+    const passwordToUse = portalPassword.trim() || savedCredentials?.portalPassword || "";
+    const securityKeyToUse = securityKey.trim() || savedCredentials?.securityKey || "";
+    if (!passwordToUse) {
       setError("Introduce la contrasena del portal.");
+      setShowCredentials(true);
       return;
     }
 
     setError("");
     setPortalMessage("Lanzando lectura del portal...");
     setSyncingPortal(true);
+    setSyncProgress(3);
+    setSyncElapsed(0);
+    syncEstimateRef.current = getPortalSyncEstimate(session.chapa);
+    syncStartedAtRef.current = Date.now();
 
     try {
       const job = await requestPortalSync({
         token: session.token,
-        portalPassword,
-        securityKey
+        portalPassword: passwordToUse,
+        securityKey: securityKeyToUse
       });
-      setPortalPassword("");
-      setSecurityKey("");
+      if (rememberCredentials) {
+        const nextCredentials = { portalPassword: passwordToUse, securityKey: securityKeyToUse };
+        writePortalCredentials(session.chapa, nextCredentials);
+        setSavedCredentials(nextCredentials);
+        setPortalPassword(passwordToUse);
+        setSecurityKey(securityKeyToUse);
+      } else {
+        writePortalCredentials(session.chapa, null);
+        setSavedCredentials(null);
+        setPortalPassword("");
+        setSecurityKey("");
+      }
       setPortalJob(job);
+      setShowCredentials(false);
       setPortalMessage("Lectura en curso. La app se actualizara automaticamente al terminar.");
     } catch (requestError) {
       setPortalMessage("");
@@ -1120,6 +1218,17 @@ function PortalPanel({ session }) {
       setError(requestError.message || "No se pudo lanzar la lectura del portal.");
     }
   };
+
+  const forgetCredentials = () => {
+    writePortalCredentials(session.chapa, null);
+    setSavedCredentials(null);
+    setRememberCredentials(false);
+    setPortalPassword("");
+    setSecurityKey("");
+    setShowCredentials(true);
+  };
+
+  const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
 
   return (
     <section className="page-panel portal-panel">
@@ -1131,18 +1240,26 @@ function PortalPanel({ session }) {
 
       {snapshot && !showCredentials && (
         <div className="portal-update-row">
-          <span>Datos guardados del portal oficial</span>
-          <button type="button" onClick={() => setShowCredentials(true)}>
-            <RefreshCw size={16} />
-            Actualizar portal
-          </button>
+          <span>
+            Datos guardados del portal oficial
+            {savedCredentials && <small>Claves recordadas en este dispositivo</small>}
+          </span>
+          <div>
+            {savedCredentials && <button className="portal-forget-button" type="button" onClick={forgetCredentials}>Cambiar claves</button>}
+            <button type="button" disabled={syncingPortal} onClick={savedCredentials ? handlePortalSync : () => setShowCredentials(true)}>
+              <RefreshCw size={16} className={syncingPortal ? "is-spinning" : ""} />
+              {syncingPortal ? "Actualizando" : "Actualizar portal"}
+            </button>
+          </div>
         </div>
       )}
 
-      {showCredentials && (
+      {showCredentials && !syncingPortal && (
         <>
           <p className="portal-warning">
-            La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion.
+            {rememberCredentials
+              ? "La app guardara tus claves solo en este dispositivo para las proximas actualizaciones."
+              : "La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion."}
           </p>
 
           <section className="portal-security-card">
@@ -1171,6 +1288,15 @@ function PortalPanel({ session }) {
                 onChange={(event) => setSecurityKey(event.target.value)}
               />
             </label>
+            <label className="portal-remember-option">
+              <input
+                type="checkbox"
+                checked={rememberCredentials}
+                onChange={(event) => setRememberCredentials(event.target.checked)}
+              />
+              <span>Recordar las claves en este dispositivo</span>
+            </label>
+            {rememberCredentials && <small className="portal-storage-note">No se envian a otro dispositivo. Puedes borrarlas desde “Cambiar claves”.</small>}
             <div className="portal-security-actions">
               {snapshot && !syncingPortal && (
                 <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
@@ -1189,6 +1315,22 @@ function PortalPanel({ session }) {
             {portalMessage && <small>{portalMessage}</small>}
           </section>
         </>
+      )}
+
+      {syncingPortal && (
+        <section className="portal-progress-card" aria-live="polite">
+          <div className="portal-progress-heading">
+            <span><RefreshCw size={18} className="is-spinning" />Actualizando portal</span>
+            <strong>{Math.round(syncProgress)}%</strong>
+          </div>
+          <div className="portal-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(syncProgress)}>
+            <span style={{ width: `${syncProgress}%` }} />
+          </div>
+          <div className="portal-progress-meta">
+            <span>{portalJob?.status === "running" ? "Leyendo jornales, primas y descansos" : "Preparando la lectura segura"}</span>
+            <small>{syncRemaining > 0 ? `Aproximadamente ${syncRemaining} s restantes` : "Finalizando..."} · {syncElapsed} s transcurridos</small>
+          </div>
+        </section>
       )}
 
       {error && <p className="portal-warning">{error}</p>}

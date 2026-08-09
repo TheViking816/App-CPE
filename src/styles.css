@@ -1417,6 +1417,22 @@ select {
   font-weight: 800;
 }
 
+.portal-update-row > span {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-update-row > span small {
+  color: #078267;
+  font-size: 10px;
+}
+
+.portal-update-row > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .portal-update-row button {
   display: inline-flex;
   align-items: center;
@@ -1432,6 +1448,109 @@ select {
   font-size: 12px;
   font-weight: 900;
   cursor: pointer;
+}
+
+.portal-update-row button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.portal-update-row .portal-forget-button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.portal-remember-option {
+  display: flex !important;
+  justify-content: flex-start !important;
+  min-height: 42px !important;
+  cursor: pointer;
+}
+
+.portal-remember-option input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--navy-2);
+}
+
+.portal-remember-option span {
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: none;
+}
+
+.portal-storage-note {
+  margin-top: -4px;
+  text-transform: none !important;
+}
+
+.portal-progress-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #c9d9e9;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 20px rgba(7, 31, 63, 0.1);
+}
+
+.portal-progress-heading,
+.portal-progress-heading span,
+.portal-progress-meta {
+  display: flex;
+  align-items: center;
+}
+
+.portal-progress-heading {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portal-progress-heading span {
+  gap: 8px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.portal-progress-heading strong {
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.portal-progress-track {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #e5edf5;
+}
+
+.portal-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1769d1, #10b98d);
+  transition: width 0.5s ease;
+}
+
+.portal-progress-meta {
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-progress-meta small {
+  text-align: right;
+}
+
+.is-spinning {
+  animation: spin 1s linear infinite;
 }
 
 .portal-security-actions {
@@ -2061,6 +2180,7 @@ select {
 :root[data-theme="dark"] .portal-form,
 :root[data-theme="dark"] .portal-security-card,
 :root[data-theme="dark"] .portal-update-row,
+:root[data-theme="dark"] .portal-progress-card,
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-primas-list article,
 :root[data-theme="dark"] .portal-code,
@@ -2078,6 +2198,22 @@ select {
   border-color: rgba(148, 163, 184, 0.3);
   background: rgba(8, 22, 38, 0.72);
   color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-update-row .portal-forget-button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .portal-progress-heading span,
+:root[data-theme="dark"] .portal-progress-heading strong,
+:root[data-theme="dark"] .portal-remember-option span {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-progress-track {
+  background: rgba(148, 163, 184, 0.2);
 }
 
 :root[data-theme="dark"] .portal-feature-icon,
@@ -2397,5 +2533,25 @@ select {
 
   .portal-payroll-summary {
     grid-template-columns: 1fr;
+  }
+
+  .portal-update-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .portal-update-row > div {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .portal-progress-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .portal-progress-meta small {
+    text-align: left;
   }
 }
