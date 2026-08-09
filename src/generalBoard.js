@@ -265,13 +265,17 @@ export async function fetchGeneralBoard() {
   const historical = await Promise.all(dates.map((date) => portalSupabase.from("jornales").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").eq("fecha", date).order("id")));
   const failed = historical.find((result) => result.error);
   if (failed?.error) throw failed.error;
-  const storedRows = [...historical.flatMap((result) => result.data || []), ...currentAndFutureRows]
-    .filter((row) => `${normalizeDate(row.fecha)}|${normalizeJourney(row.jornada)}` !== expected.key);
-  const bolsaRows = trustedKeys.has(expected.key) ? [...storedRows, ...(syncResult.rows || [])] : storedRows;
+  const storedRows = dedupeRows([...historical.flatMap((result) => result.data || []), ...currentAndFutureRows]);
+  const storedKeys = new Set(storedRows.map((row) => `${normalizeDate(row.fecha)}|${normalizeJourney(row.jornada)}`));
+  const expectedBolsaAvailable = trustedKeys.has(expected.key) || storedKeys.has(expected.key);
+  const bolsaRows = dedupeRows([
+    ...storedRows,
+    ...(syncResult.success ? syncResult.rows || [] : [])
+  ]).filter((row) => normalizeDate(row.fecha) >= todayIso);
   return {
     journeys: buildGeneralBoard(bolsaRows, snapshot),
     expectedKey: expected.key,
-    bolsaPending: !trustedKeys.has(expected.key),
+    bolsaPending: !expectedBolsaAvailable,
     updatedAt: snapshot.generatedAt || snapshotRow.updated_at
   };
 }
