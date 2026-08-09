@@ -65,7 +65,7 @@ function Company({ company, journey, query, expandAll }) {
 }
 
 export default function GeneralBoard({ chapa, onOpen }) {
-  const [data, setData] = useState({ journeys: [], updatedAt: "" });
+  const [data, setData] = useState({ journeys: [], updatedAt: "", expectedKey: "", bolsaPending: false });
   const [selected, setSelected] = useState("");
   const [query, setQuery] = useState("");
   const [expandAll, setExpandAll] = useState(false);
@@ -84,7 +84,7 @@ export default function GeneralBoard({ chapa, onOpen }) {
     return () => { active = false; };
   }, [chapa]);
 
-  const journey = data.journeys.find((item) => item.key === selected) || data.journeys[0];
+  const journey = data.journeys.find((item) => item.key === selected);
   const counts = boardCounts(journey);
   const normalizedQuery = normalizeText(query).toUpperCase();
   return (
@@ -92,10 +92,11 @@ export default function GeneralBoard({ chapa, onOpen }) {
       <div className="section-heading"><p>Contratación completa</p><h1>Tablón general</h1><span>Bolsa y Turno en una sola vista</span></div>
       {loading && <div className="general-loading"><span className="spinner" />Cargando contratación...</div>}
       {error && <p className="inline-notice error">{error}</p>}
+      {!loading && !error && !journey && <p className="inline-notice">Contratación pendiente. Esperando la jornada correspondiente a este horario.</p>}
       {!loading && journey && <>
         <div className="general-journeys">{data.journeys.map((item) => { const itemCounts = boardCounts(item); return <button type="button" className={item.key === journey.key ? "active" : ""} onClick={() => { setSelected(item.key); setExpandAll(false); }} key={item.key}><strong>{item.jornada}</strong><span>{dateLabel(item.fecha)}</span><small>{itemCounts.total} asignaciones</small><em><b className="bolsa">B {itemCounts.bolsa}</b><b className="turno">T {itemCounts.turno}</b></em></button>; })}</div>
         <div className="general-tools"><label><Search size={20} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar asignaciones..." /></label><button type="button" onClick={() => setExpandAll((value) => !value)}>{expandAll ? "Contraer" : "Expandir"}</button></div>
-        <div className="general-summary"><div><UsersRound size={24} /><span>Contratación total<strong>{counts.total}</strong><small>{counts.companies} empresas · {counts.ships} barcos</small></span></div><p className="turno"><span>Turno</span><strong>{counts.turno}</strong></p><p className="bolsa"><span>Bolsa</span><strong>{counts.bolsa}</strong></p></div>
+        <div className="general-summary"><div><UsersRound size={24} /><span>Contratación total<strong>{counts.total}</strong><small>{counts.companies} empresas · {counts.ships} barcos</small></span></div><p className="turno"><span>Turno</span><strong>{counts.turno}</strong></p><p className="bolsa"><span>Bolsa</span><strong>{data.bolsaPending && journey.key === data.expectedKey ? "Pendiente" : counts.bolsa}</strong></p></div>
         <div className="general-company-list">{[...journey.companies.values()].map((company) => <Company company={company} journey={journey} query={normalizedQuery} expandAll={expandAll} key={company.key} />)}</div>
         <p className="general-updated">Actualizado {data.updatedAt ? new Date(data.updatedAt).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "--"}</p>
       </>}

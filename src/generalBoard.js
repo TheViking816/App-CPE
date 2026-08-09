@@ -5,6 +5,15 @@ const PORTAL_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 const portalSupabase = createClient(PORTAL_SUPABASE_URL, PORTAL_SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
+const BOARD_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSTtbkA94xqjf81lsR7bLKKtyES2YBDKs8J2T4UrSEan7e5Z_eaptShCA78R1wqUyYyASJxmHj3gDnY/pub?output=csv&gid=1388412839";
+const CONTRACTING_HOLIDAYS = new Set([
+  "01/01/2026", "06/01/2026", "22/01/2026", "19/03/2026", "03/04/2026", "06/04/2026",
+  "13/04/2026", "01/05/2026", "24/06/2026", "15/08/2026", "09/10/2026", "12/10/2026",
+  "01/11/2026", "06/12/2026", "08/12/2026", "25/12/2026",
+  "01/01/2027", "06/01/2027", "02/04/2027", "05/04/2027", "01/05/2027", "09/10/2027",
+  "12/10/2027", "01/11/2027", "06/12/2027", "08/12/2027", "25/12/2027"
+]);
+let boardSyncInFlight = null;
 
 export const JOURNEY_ORDER = ["02-08", "08-14", "14-20", "18-00", "19-01", "20-02"];
 const SPECIALTY_ORDER = ["CAPATAZ", "SOBORDISTA", "CLASIFICADOR", "GRUAS", "CONDUCTOR 1A", "ESPECIALISTA"];
@@ -23,6 +32,97 @@ export function normalizeDate(value) {
 export function normalizeJourney(value) {
   const match = String(value || "").match(/(\d{1,2})\s*(?:-|A|a)\s*(\d{1,2})/);
   return match ? `${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}` : String(value || "Sin jornada").trim();
+}
+
+function madridParts(now = new Date()) {
+  return Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(now).map(({ type, value }) => [type, value]));
+}
+
+function offsetDate(parts, offset, format = "iso") {
+  const date = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) + offset, 12));
+  return new Intl.DateTimeFormat(format === "iso" ? "en-CA" : "en-GB", format === "iso"
+    ? { timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit" }
+    : { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+}
+
+export function expectedContractingSelection(now = new Date()) {
+  const parts = madridParts(now);
+  const minute = Number(parts.hour) * 60 + Number(parts.minute);
+  const specialEve = parts.weekday === "Sat" || CONTRACTING_HOLIDAYS.has(offsetDate(parts, 1, "es"));
+  let offset = 0;
+  let journey = "02-08";
+  if (minute >= 7 * 60) journey = "08-14";
+  if (specialEve && minute >= 11 * 60 + 30) journey = "14-20";
+  if (specialEve && minute >= 13 * 60) {
+    offset = 1;
+    journey = "02-08";
+  } else if (!specialEve && minute >= 14 * 60 + 30) journey = "20-02";
+  else if (!specialEve && minute >= 12 * 60) journey = "14-20";
+  const date = offsetDate(parts, offset);
+  return { key: `${date}|${journey}`, date, journey };
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let current = "";
+  let quoted = false;
+  for (const char of line) {
+    if (char === '"') quoted = !quoted;
+    else if (char === "," && !quoted) { result.push(current.trim()); current = ""; }
+    else current += char;
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseBoardCsv(csvText) {
+  const lines = csvText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = parseCsvLine(lines[0]).map((value) => value.trim().replace(/^"|"$/g, "").toLowerCase());
+  const indexOf = (...names) => names.map((name) => headers.indexOf(name)).find((index) => index >= 0);
+  const columns = {
+    date: indexOf("fecha", "fc"), journey: indexOf("jornada", "cshorario", "horario"),
+    company: indexOf("empresa", "nomcliabr", "cliente"), part: indexOf("parte"), ship: indexOf("buque"),
+    posts: { T: indexOf("t"), TC: indexOf("tc"), C1: indexOf("c1"), B: indexOf("b"), E: indexOf("e") }
+  };
+  const postNames = { T: "Trincador", TC: "Trincador de Coches", C1: "Conductor de 1a", B: "Conductor de 2a", E: "Especialista" };
+  const rows = [];
+  for (const line of lines.slice(1)) {
+    const values = parseCsvLine(line).map((value) => value.trim().replace(/^"|"$/g, ""));
+    const rawDate = values[columns.date] || "";
+    if (!/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(rawDate)) continue;
+    const journey = normalizeJourney(values[columns.journey]);
+    if (!JOURNEY_ORDER.includes(journey)) continue;
+    const [day, month, rawYear] = rawDate.split("/");
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    for (const [code, index] of Object.entries(columns.posts)) {
+      const chapa = values[index]?.trim();
+      if (!chapa || !Number.isFinite(Number(chapa)) || Number(chapa) <= 0) continue;
+      rows.push({ fecha: `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`, jornada, chapa,
+        puesto: postNames[code], empresa: values[columns.company] || "", buque: values[columns.ship] || "--", parte: values[columns.part] || "1" });
+    }
+  }
+  return rows;
+}
+
+async function syncBoardFromCsv() {
+  if (boardSyncInFlight) return boardSyncInFlight;
+  boardSyncInFlight = (async () => {
+    let response;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      response = await fetch(BOARD_CSV_URL, { cache: "no-store" }).catch(() => null);
+      if (response?.ok) break;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 1000));
+    }
+    if (!response?.ok) return { success: false, journeys: [] };
+    const rows = parseBoardCsv(await response.text());
+    if (!rows.length) return { success: false, journeys: [] };
+    return { success: true, rows, journeys: [...new Set(rows.map((row) => `${row.fecha}|${row.jornada}`))] };
+  })();
+  try { return await boardSyncInFlight; } finally { boardSyncInFlight = null; }
 }
 
 function companyInfo(value) {
@@ -140,14 +240,13 @@ export function sortSpecialties(items) {
 }
 
 export function defaultJourneyKey(journeys) {
-  const now = new Date();
-  const hour = now.getHours();
-  const preferred = hour < 8 && hour >= 2 ? "02-08" : hour < 14 && hour >= 8 ? "08-14" : hour < 20 && hour >= 14 ? "14-20" : "20-02";
-  const today = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-  return journeys.find((item) => item.fecha === today && item.jornada === preferred)?.key || journeys.find((item) => item.fecha === today)?.key || journeys[0]?.key || "";
+  return expectedContractingSelection().key;
 }
 
 export async function fetchGeneralBoard() {
+  const expected = expectedContractingSelection();
+  const syncResult = await syncBoardFromCsv().catch(() => ({ success: false, journeys: [], rows: [] }));
+  const trustedKeys = new Set(syncResult.success ? syncResult.journeys : []);
   const { data: snapshotRow, error: snapshotError } = await portalSupabase.from("contratacion_turno_snapshot").select("payload, updated_at").eq("id", "latest").maybeSingle();
   if (snapshotError || !snapshotRow?.payload) throw snapshotError || new Error("No hay contratación de Turno");
   const { data: currentRows, error: currentError } = await portalSupabase.from("tablon_actual").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").order("id");
@@ -156,8 +255,13 @@ export async function fetchGeneralBoard() {
   const historical = await Promise.all(dates.map((date) => portalSupabase.from("jornales").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").eq("fecha", date).order("id")));
   const failed = historical.find((result) => result.error);
   if (failed?.error) throw failed.error;
+  const storedRows = [...historical.flatMap((result) => result.data || []), ...(currentRows || [])]
+    .filter((row) => `${normalizeDate(row.fecha)}|${normalizeJourney(row.jornada)}` !== expected.key);
+  const bolsaRows = trustedKeys.has(expected.key) ? [...storedRows, ...(syncResult.rows || [])] : storedRows;
   return {
-    journeys: buildGeneralBoard([...historical.flatMap((result) => result.data || []), ...(currentRows || [])], snapshotRow.payload),
+    journeys: buildGeneralBoard(bolsaRows, snapshotRow.payload),
+    expectedKey: expected.key,
+    bolsaPending: !trustedKeys.has(expected.key),
     updatedAt: snapshotRow.payload.generatedAt || snapshotRow.updated_at
   };
 }
