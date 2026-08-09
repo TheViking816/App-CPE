@@ -48,6 +48,10 @@ function offsetDate(parts, offset, format = "iso") {
     : { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
 }
 
+function madridTodayIso(now = new Date()) {
+  return offsetDate(madridParts(now), 0);
+}
+
 export function expectedContractingSelection(now = new Date()) {
   const parts = madridParts(now);
   const minute = Number(parts.hour) * 60 + Number(parts.minute);
@@ -118,7 +122,7 @@ async function syncBoardFromCsv() {
       if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 1000));
     }
     if (!response?.ok) return { success: false, journeys: [] };
-    const rows = parseBoardCsv(await response.text());
+    const rows = parseBoardCsv(await response.text()).filter((row) => row.fecha >= madridTodayIso());
     if (!rows.length) return { success: false, journeys: [] };
     return { success: true, rows, journeys: [...new Set(rows.map((row) => `${row.fecha}|${row.jornada}`))] };
   })();
@@ -245,24 +249,30 @@ export function defaultJourneyKey(journeys) {
 
 export async function fetchGeneralBoard() {
   const expected = expectedContractingSelection();
+  const todayIso = madridTodayIso();
   const syncResult = await syncBoardFromCsv().catch(() => ({ success: false, journeys: [], rows: [] }));
   const trustedKeys = new Set(syncResult.success ? syncResult.journeys : []);
   const { data: snapshotRow, error: snapshotError } = await portalSupabase.from("contratacion_turno_snapshot").select("payload, updated_at").eq("id", "latest").maybeSingle();
   if (snapshotError || !snapshotRow?.payload) throw snapshotError || new Error("No hay contratación de Turno");
   const { data: currentRows, error: currentError } = await portalSupabase.from("tablon_actual").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").order("id");
   if (currentError) throw currentError;
-  const dates = [...new Set([...(snapshotRow.payload.jornadas || []).map((item) => normalizeDate(item.fecha || snapshotRow.payload.fecha)), ...(currentRows || []).map((item) => normalizeDate(item.fecha))].filter(Boolean))];
+  const snapshot = {
+    ...snapshotRow.payload,
+    jornadas: (snapshotRow.payload.jornadas || []).filter((item) => normalizeDate(item.fecha || snapshotRow.payload.fecha) >= todayIso)
+  };
+  const currentAndFutureRows = (currentRows || []).filter((item) => normalizeDate(item.fecha) >= todayIso);
+  const dates = [...new Set([...(snapshot.jornadas || []).map((item) => normalizeDate(item.fecha || snapshot.fecha)), ...currentAndFutureRows.map((item) => normalizeDate(item.fecha))].filter(Boolean))];
   const historical = await Promise.all(dates.map((date) => portalSupabase.from("jornales").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").eq("fecha", date).order("id")));
   const failed = historical.find((result) => result.error);
   if (failed?.error) throw failed.error;
-  const storedRows = [...historical.flatMap((result) => result.data || []), ...(currentRows || [])]
+  const storedRows = [...historical.flatMap((result) => result.data || []), ...currentAndFutureRows]
     .filter((row) => `${normalizeDate(row.fecha)}|${normalizeJourney(row.jornada)}` !== expected.key);
   const bolsaRows = trustedKeys.has(expected.key) ? [...storedRows, ...(syncResult.rows || [])] : storedRows;
   return {
-    journeys: buildGeneralBoard(bolsaRows, snapshotRow.payload),
+    journeys: buildGeneralBoard(bolsaRows, snapshot),
     expectedKey: expected.key,
     bolsaPending: !trustedKeys.has(expected.key),
-    updatedAt: snapshotRow.payload.generatedAt || snapshotRow.updated_at
+    updatedAt: snapshot.generatedAt || snapshotRow.updated_at
   };
 }
 
