@@ -85,6 +85,16 @@ function runSync(job) {
   });
 }
 
+function publicErrorMessage(error) {
+  const message = error instanceof Error ? error.message : "Error desconocido";
+  return message
+    .split(/\bMuestra:/i)[0]
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300) || "No se pudo leer el portal oficial.";
+}
+
 async function main() {
   if (!jobId) throw new Error("Missing CPE_PORTAL_SYNC_JOB_ID");
   if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
@@ -126,7 +136,7 @@ async function main() {
   } catch (error) {
     await updateJob({
       status: "failed",
-      message: error instanceof Error ? error.message.slice(0, 500) : "Error desconocido",
+      message: publicErrorMessage(error),
       portal_password: null,
       security_key: null,
       finished_at: new Date().toISOString()

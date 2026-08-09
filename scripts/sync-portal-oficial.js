@@ -410,7 +410,7 @@ async function collectJornales(page) {
 
 async function collectDescansos(page) {
   await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
-  const result = await waitForParsedContent(
+  let result = await waitForParsedContent(
     page,
     parseDescansos,
     (result) => result.months?.length || 0,
@@ -418,21 +418,24 @@ async function collectDescansos(page) {
   );
   if (result.months?.length) return result;
 
-  const samples = [];
-  for (const frame of page.frames()) {
-    const html = await frame.content().catch(() => "");
-    const text = await frame.locator("body").innerText().catch(() => "");
-    if (/descansos|\b(?:DS|SL|FS|VA)\b/i.test(text)) {
-      const compactText = text.replace(/\s+/g, " ");
-      samples.push(`TEXTO ${frame.url()}: ${compactText.slice(Math.max(0, compactText.length - 2400))}`);
-    }
-    samples.push(
-      ...[...html.matchAll(/.{0,100}(?:selFecha|\b(?:DS|SL|FS|VA)\b).{0,180}/gi)]
-        .slice(0, 5)
-        .map((match) => match[0].replace(/\s+/g, " "))
+  const directPage = await page.context().newPage();
+  try {
+    await directPage.goto(new URL("/Noray/Prueba.asp", PORTAL_URL).toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 30000
+    });
+    result = await waitForParsedContent(
+      directPage,
+      parseDescansos,
+      (parsed) => parsed.months?.length || 0,
+      20000
     );
+    if (result.months?.length) return result;
+  } finally {
+    await directPage.close();
   }
-  throw new Error(`No se pudo leer el calendario de descansos. Muestra: ${samples.slice(0, 8).join(" | ")}`);
+
+  throw new Error("No se pudo leer el calendario de descansos. Se conservaran los ultimos datos disponibles.");
 }
 
 async function collectSl(page) {
@@ -489,6 +492,26 @@ async function upsertSupabase(snapshot) {
   }
 }
 
+async function getExistingSupabaseSnapshot() {
+  if (!supabaseServiceRole || !portalUser) return null;
+  try {
+    const response = await fetch(
+      `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(portalUser)}&limit=1`,
+      {
+        headers: {
+          apikey: supabaseServiceRole,
+          Authorization: `Bearer ${supabaseServiceRole}`
+        }
+      }
+    );
+    if (!response.ok) return null;
+    const rows = await response.json();
+    return rows?.[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   await fs.mkdir(privateDataDir, { recursive: true });
   await fs.mkdir(profileDir, { recursive: true });
@@ -508,9 +531,18 @@ async function main() {
   try {
     await login(page);
     const updatedAt = new Date().toISOString();
+    const existingSnapshot = await getExistingSupabaseSnapshot();
+    let descansos;
+    try {
+      descansos = await collectDescansos(page);
+    } catch (error) {
+      descansos = existingSnapshot?.payload?.descansos || null;
+      if (!descansos) throw error;
+      console.warn(error instanceof Error ? error.message : "No se pudo actualizar el calendario de descansos.");
+    }
     const payload = {
       jornales: await collectJornales(page),
-      descansos: await collectDescansos(page),
+      descansos,
       sl: await collectSl(page),
       primas: await collectPrimas(page)
     };
