@@ -505,6 +505,71 @@ function AppHeader({ user, theme, onThemeToggle, onLogout }) {
   );
 }
 
+const ASSIGNMENT_SHIFT_ORDER = {
+  "02-08": 1,
+  "08-14": 2,
+  "14-20": 3,
+  "18-00": 4,
+  "19-01": 5,
+  "20-02": 6
+};
+
+function normalizeAssignmentShift(value) {
+  const hours = String(value || "").match(/(\d{2})\s*(?:A|-|–)\s*(\d{2})/i);
+  return hours ? `${hours[1]}-${hours[2]}` : String(value || "").trim();
+}
+
+function CurrentAssignments({ snapshot }) {
+  const assignments = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (snapshot?.payload?.asignaciones?.rows || [])
+      .filter((item) => {
+        const date = parsePortalDate(item.fecha);
+        return date && date >= today;
+      })
+      .sort((a, b) => {
+        const dateDiff = parsePortalDate(a.fecha) - parsePortalDate(b.fecha);
+        if (dateDiff) return dateDiff;
+        return (ASSIGNMENT_SHIFT_ORDER[normalizeAssignmentShift(a.jornada)] || 99)
+          - (ASSIGNMENT_SHIFT_ORDER[normalizeAssignmentShift(b.jornada)] || 99);
+      });
+  }, [snapshot]);
+
+  if (!assignments.length) return null;
+
+  return (
+    <section className="current-assignments-card">
+      <div className="current-assignments-heading">
+        <div className="current-assignments-icon"><ClipboardList size={21} /></div>
+        <div>
+          <span>Mi contratacion</span>
+          <strong>{assignments.length === 1 ? "Proximo servicio" : `${assignments.length} servicios`}</strong>
+        </div>
+      </div>
+      <div className="current-assignments-list">
+        {assignments.map((item, index) => (
+          <article key={`${item.parte}-${item.fecha}-${item.jornada}-${index}`}>
+            <div className="current-assignment-date">
+              <strong>{formatShortPortalDate(item.fecha)}</strong>
+              <span>{normalizeAssignmentShift(item.jornada) || "--"}</span>
+            </div>
+            <div className="current-assignment-copy">
+              <strong>{item.especialidad || "Servicio asignado"}</strong>
+              <span>{[item.buque, item.empresa].filter((value) => value && !/^--?$/.test(String(value).trim())).join(" - ")}</span>
+              <small>{[item.operacion, item.muelle].filter((value) => value && !/^--?$/.test(String(value).trim())).join(" · ")}</small>
+            </div>
+            <div className="current-assignment-part">
+              <span>Parte</span>
+              <strong>{item.parte}</strong>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function HomePanel({
   user,
   doors,
@@ -513,6 +578,7 @@ function HomePanel({
   chaperoWorker,
   chaperoLoading,
   currentTime,
+  portalSnapshot,
   notice,
   activeSpecialty,
   availableSpecialties,
@@ -565,6 +631,8 @@ function HomePanel({
           <span>{chaperoLoading ? "Cargando Chapero..." : `Actualizado: ${formatUpdatedAt(chaperoSnapshot?.updatedAt)}`}</span>
         </div>
       </section>
+
+      <CurrentAssignments snapshot={portalSnapshot} />
 
       <div className="specialty-select">
         <span>Especialidad</span>
@@ -865,6 +933,82 @@ function PortalFeatureCard({ icon, title, children }) {
 }
 
 const WEEKDAYS_ES = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+const MONTHS_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+function parsePortalDate(value) {
+  const normalized = String(value || "").trim();
+  const dayFirst = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const yearFirst = normalized.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+  if (!dayFirst && !yearFirst) return null;
+  const year = Number(dayFirst?.[3] || yearFirst?.[1]);
+  const month = Number(dayFirst?.[2] || yearFirst?.[2]);
+  const day = Number(dayFirst?.[1] || yearFirst?.[3]);
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatShortPortalDate(value) {
+  const date = parsePortalDate(value);
+  return date
+    ? `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`
+    : String(value || "").slice(0, 5);
+}
+
+function formatVacationRange(period) {
+  const start = parsePortalDate(period?.inicio);
+  const end = parsePortalDate(period?.fin);
+  if (!start || !end) return [period?.inicio, period?.fin].filter(Boolean).join(" - ");
+  const startLabel = `${start.getDate()} ${MONTHS_ES[start.getMonth()]}`;
+  const endLabel = `${end.getDate()} ${MONTHS_ES[end.getMonth()]}`;
+  return start.getTime() === end.getTime() ? startLabel : `${startLabel} - ${endLabel}`;
+}
+
+function PortalVacationPreview({ vacaciones }) {
+  const periods = vacaciones?.rows || [];
+  if (!vacaciones?.recognized || periods.length === 0) return null;
+  const accumulatedDays = Math.max(
+    Number(vacaciones.totalDays) || 0,
+    ...periods.map((period) => Number(period.acumulado) || 0)
+  );
+
+  return (
+    <section className="portal-vacation-card">
+      <div className="portal-vacation-heading">
+        <div className="portal-vacation-icon"><CalendarDays size={22} /></div>
+        <div>
+          <p>Vacaciones {vacaciones.year || ""}</p>
+          <h1>{accumulatedDays} dias asignados</h1>
+        </div>
+        <strong>{periods.length} {periods.length === 1 ? "periodo" : "periodos"}</strong>
+      </div>
+      <div className="portal-vacation-periods">
+        {periods.map((period, index) => {
+          const start = parsePortalDate(period.inicio);
+          const end = parsePortalDate(period.fin);
+          const daysInMonth = start ? new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() : 31;
+          const sameMonth = start && end
+            && start.getMonth() === end.getMonth()
+            && start.getFullYear() === end.getFullYear();
+          const left = start ? ((start.getDate() - 1) / daysInMonth) * 100 : 0;
+          const width = sameMonth
+            ? Math.max((Number(period.dias) / daysInMonth) * 100, 4)
+            : 100 - left;
+          return (
+            <article key={`${period.inicio}-${period.fin}-${index}`}>
+              <div>
+                <strong>{formatVacationRange(period)}</strong>
+                <span>{period.dias} {Number(period.dias) === 1 ? "dia" : "dias"}</span>
+              </div>
+              <div className="portal-vacation-track" aria-hidden="true">
+                <i style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 function PortalCalendarPreview({ descansos, slRows = [] }) {
   const months = descansos?.months || [];
@@ -967,6 +1111,7 @@ function PortalResultPreview({ snapshot }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
+  const vacaciones = payload?.vacaciones || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
@@ -996,7 +1141,7 @@ function PortalResultPreview({ snapshot }) {
       <div className="portal-empty-state">
         <BriefcaseBusiness size={26} />
         <strong>Sin datos sincronizados</strong>
-        <span>Ejecuta el sincronizador local del portal oficial para cargar jornales y descansos.</span>
+        <span>Lee el portal oficial para cargar jornales, descansos y vacaciones.</span>
       </div>
     );
   }
@@ -1080,34 +1225,15 @@ function PortalResultPreview({ snapshot }) {
       )}
 
       {descansos && (
-        <>
-          <PortalCalendarPreview descansos={descansos} slRows={slRows} />
-        </>
+        <PortalCalendarPreview descansos={descansos} slRows={slRows} />
       )}
 
-      {slRows.length > 0 && (
-        <section>
-          <div className="section-title-row compact">
-            <div>
-              <p>Lista SL</p>
-              <h1>{slRows.length} solicitudes</h1>
-            </div>
-          </div>
-          <div className="portal-sl-list">
-            {slRows.slice(0, 12).map((item) => (
-              <article key={`${item.fecha}-${item.posicion}`}>
-                <span>{item.fecha}</span>
-                <strong>{item.posicion}</strong>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+      <PortalVacationPreview vacaciones={vacaciones} />
     </div>
   );
 }
 
-function PortalPanel({ session }) {
+function PortalPanel({ session, onSnapshotChange }) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
   const [loading, setLoading] = useState(true);
@@ -1132,6 +1258,7 @@ function PortalPanel({ session }) {
     try {
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
+      onSnapshotChange?.(data || null);
       setShowCredentials(!data);
     } catch (requestError) {
       setError(requestError.message || "No se pudo leer el portal sincronizado.");
@@ -1276,7 +1403,7 @@ function PortalPanel({ session }) {
       <div className="section-heading">
         <p>Portal oficial</p>
         <h1>Mi portal</h1>
-        <span>Jornales, primas y descansos en formato claro.</span>
+        <span>Jornales, primas, descansos y vacaciones en formato claro.</span>
       </div>
 
       {snapshot && !showCredentials && (
@@ -1368,7 +1495,7 @@ function PortalPanel({ session }) {
             <span style={{ width: `${syncProgress}%` }} />
           </div>
           <div className="portal-progress-meta">
-            <span>{portalJob?.status === "running" ? "Leyendo jornales, primas y descansos" : "Preparando la lectura segura"}</span>
+            <span>{portalJob?.status === "running" ? "Leyendo jornales, primas, descansos y vacaciones" : "Preparando la lectura segura"}</span>
             <small>{syncRemaining > 0 ? `Aproximadamente ${syncRemaining} s restantes` : "Finalizando..."} · {syncElapsed} s transcurridos</small>
           </div>
         </section>
@@ -1447,6 +1574,7 @@ export function App() {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [doorConfig, setDoorConfig] = useState(null);
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
+  const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
@@ -1632,6 +1760,26 @@ export function App() {
   }, [session?.chapa]);
 
   useEffect(() => {
+    if (!session?.token) {
+      setPortalSnapshot(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const loadPortalSnapshot = async () => {
+      try {
+        const data = await getOfficialPortalSnapshot({ token: session.token });
+        if (!cancelled) setPortalSnapshot(data || null);
+      } catch {
+        if (!cancelled) setPortalSnapshot(null);
+      }
+    };
+    loadPortalSnapshot();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.token]);
+
+  useEffect(() => {
     if (!session?.token || activeTab !== "portal") return;
     trackPortalOpen({ token: session.token });
   }, [activeTab, session?.token]);
@@ -1719,6 +1867,7 @@ export function App() {
             chaperoWorker={chaperoWorker}
             chaperoLoading={!chaperoLoaded}
             currentTime={currentTime}
+            portalSnapshot={portalSnapshot}
             notice={notice}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}
@@ -1734,7 +1883,7 @@ export function App() {
             onOpen={(chapa) => trackUsageEvent({ eventType: "tablon_general_open", chapa })}
           />
         )}
-        {activeTab === "portal" && <PortalPanel session={session} />}
+        {activeTab === "portal" && <PortalPanel session={session} onSnapshotChange={setPortalSnapshot} />}
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
       </main>

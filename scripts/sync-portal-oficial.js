@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { parseAssignmentsFromTables } from "./portal-assignments.js";
+import { parseVacacionesFromRows } from "./portal-vacations.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -125,6 +127,16 @@ function parseSl(html = "") {
       .filter((row) => /^\d{2}\/\d{2}\/\d{4}$/.test(row[0] || ""))
       .map((row) => ({ fecha: row[0], posicion: row[1] || "" }))
   };
+}
+
+function parseAssignments(html = "") {
+  const tables = [...String(html).matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/gi)]
+    .map((match) => parseRowsFromTable(`<table>${match[1]}</table>`));
+  return parseAssignmentsFromTables(tables, textFromHtml(html));
+}
+
+function parseVacaciones(html = "") {
+  return parseVacacionesFromRows(parseRowsFromTable(html), textFromHtml(html));
 }
 
 function parseDescansos(html = "") {
@@ -522,6 +534,30 @@ async function collectSl(page) {
   return parseSl(await frame.content());
 }
 
+async function collectAssignments(page) {
+  await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
+  const result = await waitForParsedContent(
+    page,
+    parseAssignments,
+    (parsed) => parsed.rows?.length || 0,
+    30000
+  );
+  if (result.recognized) return result;
+  throw new Error("No se pudo leer la contratacion actual. Se conservaran los ultimos datos disponibles.");
+}
+
+async function collectVacaciones(page) {
+  await openMenu(page, "Solicitudes", "Solicitud Vacaciones");
+  const result = await waitForParsedContent(
+    page,
+    parseVacaciones,
+    (parsed) => parsed.rows?.length || 0,
+    30000
+  );
+  if (result.recognized) return result;
+  throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
+}
+
 async function collectPrimas(page) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
   await openMenu(page, "Consultas", "Consulta de Primas Productividad");
@@ -668,18 +704,49 @@ async function main() {
         return fallback;
       }
     };
+    const readOptionalSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
+      console.log(`Leyendo ${name}...`);
+      try {
+        const value = await reader();
+        if (isMeaningful(value)) {
+          console.log(`${name} actualizado.`);
+          return value;
+        }
+        console.warn(`${name} no devolvio datos; se conserva la ultima lectura disponible.`);
+      } catch (error) {
+        console.warn(`${name} no se pudo actualizar. ${error instanceof Error ? error.message : ""}`.trim());
+      }
+      return isMeaningful(fallback) ? fallback : emptyValue;
+    };
 
     const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
+    const hasVacationData = (value) => Boolean(value?.recognized);
     const jornales = await readSection("jornales", () => collectJornales(page), existingSnapshot?.payload?.jornales, hasRows);
+    const asignaciones = await readOptionalSection(
+      "contratacion actual",
+      () => collectAssignments(page),
+      existingSnapshot?.payload?.asignaciones,
+      { recognized: false, rows: [] },
+      hasVacationData
+    );
     const primas = await readSection("primas", () => collectPrimas(page), existingSnapshot?.payload?.primas, hasRows);
     const sl = await readSection("lista SL", () => collectSl(page), existingSnapshot?.payload?.sl, hasRows);
     const descansos = await readSection("descansos", () => collectDescansos(page), existingSnapshot?.payload?.descansos, hasMonths);
+    const vacaciones = await readOptionalSection(
+      "vacaciones",
+      () => collectVacaciones(page),
+      existingSnapshot?.payload?.vacaciones,
+      { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
+      hasVacationData
+    );
     const payload = {
       jornales,
+      asignaciones,
       descansos,
       sl,
-      primas
+      primas,
+      vacaciones
     };
 
     const snapshot = {
@@ -697,9 +764,11 @@ async function main() {
       updatedAt,
       supabaseConfigured: Boolean(supabaseServiceRole),
       jornales: payload.jornales.rows.length,
+      asignaciones: payload.asignaciones.rows.length,
       sl: payload.sl.rows.length,
       primas: payload.primas.rows.length,
-      descansos: payload.descansos.worker
+      descansos: payload.descansos.worker,
+      vacaciones: payload.vacaciones.rows.length
     });
     console.log(`OK: portal oficial sincronizado para ${portalUser}`);
   } catch (error) {

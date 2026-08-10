@@ -1616,6 +1616,7 @@ select {
 
 .portal-sync-card,
 .portal-calendar-card,
+.portal-vacation-card,
 .portal-empty-state,
 .portal-sl-list article {
   border: 1px solid rgba(217, 226, 236, 0.9);
@@ -1795,6 +1796,223 @@ select {
 
 .portal-calendar-card {
   padding: 12px;
+}
+
+.current-assignments-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-left: 5px solid #16a085;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.08);
+}
+
+.current-assignments-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.current-assignments-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 8px;
+  background: #e8faf4;
+  color: #087f66;
+}
+
+.current-assignments-heading > div:nth-child(2) {
+  display: grid;
+  gap: 1px;
+}
+
+.current-assignments-heading span,
+.current-assignment-part span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.current-assignments-heading strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.current-assignments-list {
+  display: grid;
+  gap: 7px;
+}
+
+.current-assignments-list article {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.current-assignment-date {
+  display: grid;
+  min-height: 48px;
+  place-content: center;
+  border-radius: 7px;
+  background: var(--navy);
+  color: #fff;
+  text-align: center;
+}
+
+.current-assignment-date strong {
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.current-assignment-date span {
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.current-assignment-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.current-assignment-copy strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.current-assignment-copy span,
+.current-assignment-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-assignment-part {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+}
+
+.current-assignment-part strong {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.portal-vacation-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.portal-vacation-heading {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-vacation-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.portal-vacation-heading p,
+.portal-vacation-heading h1 {
+  margin: 0;
+}
+
+.portal-vacation-heading p {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.portal-vacation-heading h1 {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.portal-vacation-heading > strong {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #6d28d9;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.portal-vacation-periods {
+  display: grid;
+  gap: 8px;
+}
+
+.portal-vacation-periods article {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.42fr) minmax(150px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.portal-vacation-periods article > div:first-child {
+  display: grid;
+  gap: 1px;
+}
+
+.portal-vacation-periods strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.portal-vacation-periods span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-vacation-track {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e8e6f5;
+}
+
+.portal-vacation-track i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 8px;
+  border-radius: 4px;
+  background: #8b5cf6;
 }
 
 .portal-month-tabs {
@@ -2230,6 +2448,8 @@ select {
 }
 
 :root[data-theme="dark"] .home-summary,
+:root[data-theme="dark"] .current-assignments-card,
+:root[data-theme="dark"] .current-assignments-list article,
 :root[data-theme="dark"] .quick-grid article,
 :root[data-theme="dark"] .compact-door-list,
 :root[data-theme="dark"] .door-ring-card,
@@ -2248,6 +2468,8 @@ select {
 :root[data-theme="dark"] .portal-code,
 :root[data-theme="dark"] .portal-sync-card,
 :root[data-theme="dark"] .portal-calendar-card,
+:root[data-theme="dark"] .portal-vacation-card,
+:root[data-theme="dark"] .portal-vacation-periods article,
 :root[data-theme="dark"] .portal-empty-state,
 :root[data-theme="dark"] .portal-sl-list article,
 :root[data-theme="dark"] .links-list a {
@@ -2285,6 +2507,8 @@ select {
 }
 
 :root[data-theme="dark"] .portal-feature-card strong,
+:root[data-theme="dark"] .current-assignments-heading strong,
+:root[data-theme="dark"] .current-assignment-copy strong,
 :root[data-theme="dark"] .portal-security-card p,
 :root[data-theme="dark"] .portal-jornales-list strong,
 :root[data-theme="dark"] .portal-primas-list span,
@@ -2295,6 +2519,30 @@ select {
 :root[data-theme="dark"] .portal-sync-card strong,
 :root[data-theme="dark"] .portal-empty-state strong {
   color: var(--ink);
+}
+
+:root[data-theme="dark"] .current-assignments-icon {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .current-assignment-part strong {
+  color: #93c5fd;
+}
+
+:root[data-theme="dark"] .portal-vacation-icon,
+:root[data-theme="dark"] .portal-vacation-heading > strong {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .portal-vacation-heading h1,
+:root[data-theme="dark"] .portal-vacation-periods strong {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-vacation-track {
+  background: rgba(139, 92, 246, 0.2);
 }
 
 :root[data-theme="dark"] .portal-day {
@@ -2615,5 +2863,16 @@ select {
 
   .portal-progress-meta small {
     text-align: left;
+  }
+
+  .portal-vacation-periods article {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .current-assignments-list article {
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px;
   }
 }
