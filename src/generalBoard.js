@@ -177,10 +177,27 @@ function getGroup(journey, companyValue, block) {
 
 function addSpecialty(group, name, source, payload) {
   const key = specialtyKey(name);
-  if (!group.specialties.has(key)) group.specialties.set(key, { key, name: String(name || "Sin especialidad").trim(), bolsa: [], turno: 0 });
+  if (!group.specialties.has(key)) group.specialties.set(key, {
+    key,
+    name: String(name || "Sin especialidad").trim(),
+    bolsa: [],
+    officialTotal: null,
+    turno: 0
+  });
   const specialty = group.specialties.get(key);
   if (source === "bolsa") specialty.bolsa.push(payload);
-  else specialty.turno += Number(payload || 0);
+  else specialty.officialTotal = (specialty.officialTotal || 0) + Number(payload || 0);
+}
+
+export function reconcileOfficialTotals(journeys) {
+  journeys.forEach((journey) => journey.companies.forEach((company) => company.groups.forEach((group) => {
+    group.specialties.forEach((specialty) => {
+      specialty.turno = specialty.officialTotal === null
+        ? 0
+        : Math.max(specialty.officialTotal - specialty.bolsa.length, 0);
+    });
+  })));
+  return journeys;
 }
 
 function dedupeRows(rows) {
@@ -210,7 +227,8 @@ export function buildGeneralBoard(rows, snapshot) {
       (block.especialidades || []).forEach((specialty) => addSpecialty(group, specialty.nombre, "turno", specialty.solicitudes));
     });
   });
-  return [...map.values()].sort((a, b) => a.fecha.localeCompare(b.fecha) || JOURNEY_ORDER.indexOf(a.jornada) - JOURNEY_ORDER.indexOf(b.jornada));
+  return reconcileOfficialTotals([...map.values()])
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || JOURNEY_ORDER.indexOf(a.jornada) - JOURNEY_ORDER.indexOf(b.jornada));
 }
 
 export function boardCounts(journey) {
