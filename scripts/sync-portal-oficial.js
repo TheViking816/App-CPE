@@ -130,9 +130,7 @@ function parseSl(html = "") {
 }
 
 function parseAssignments(html = "") {
-  const tables = [...String(html).matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/gi)]
-    .map((match) => parseRowsFromTable(`<table>${match[1]}</table>`));
-  return parseAssignmentsFromTables(tables, textFromHtml(html));
+  return parseAssignmentsFromTables([parseRowsFromTable(html)], textFromHtml(html));
 }
 
 function parseVacaciones(html = "") {
@@ -248,7 +246,11 @@ async function writeStatus(status) {
 }
 
 function exactTextPattern(text) {
-  const escaped = String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const rawText = String(text);
+  const normalizedText = /Ã|Â/.test(rawText)
+    ? Buffer.from(rawText, "latin1").toString("utf8")
+    : rawText;
+  const escaped = normalizedText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`^\\s*${escaped}\\s*$`, "i");
 }
 
@@ -358,6 +360,51 @@ async function waitForParsedContent(page, parser, score, timeout = 12000) {
   }
 
   return bestResult;
+}
+
+async function waitForParsedFrame(page, pattern, parser, score, timeout = 8000) {
+  const frame = await waitForFrame(page, pattern, timeout);
+  const deadline = Date.now() + timeout;
+  let bestResult = parser("");
+  let bestScore = score(bestResult);
+
+  while (Date.now() < deadline) {
+    const result = parser(await frame.content().catch(() => ""));
+    const resultScore = score(result);
+    if (resultScore > bestScore) {
+      bestResult = result;
+      bestScore = resultScore;
+    }
+    if (bestScore > 0) return bestResult;
+    await page.waitForTimeout(150);
+  }
+
+  return bestResult;
+}
+
+async function readDirectPortalPage(context, url, parser, score, timeout = 8000) {
+  const directPage = await context.newPage();
+  try {
+    await directPage.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+    const deadline = Date.now() + timeout;
+    let bestResult = parser("");
+    let bestScore = score(bestResult);
+
+    while (Date.now() < deadline) {
+      const result = parser(await directPage.content().catch(() => ""));
+      const resultScore = score(result);
+      if (resultScore > bestScore) {
+        bestResult = result;
+        bestScore = resultScore;
+      }
+      if (bestScore > 0) return bestResult;
+      await directPage.waitForTimeout(150);
+    }
+
+    return bestResult;
+  } finally {
+    await directPage.close();
+  }
 }
 
 async function readPortalAuthState(page) {
@@ -534,28 +581,62 @@ async function collectSl(page) {
   return parseSl(await frame.content());
 }
 
-async function collectAssignments(page) {
+async function collectAssignmentsViaMenu(page) {
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
-  const result = await waitForParsedContent(
+  const result = await waitForParsedFrame(
     page,
+    /DondeVoy\.asp/i,
     parseAssignments,
     (parsed) => parsed.rows?.length || 0,
-    30000
+    8000
   );
-  if (result.recognized) return result;
+  if (result.recognized && result.rows?.length) return result;
   throw new Error("No se pudo leer la contratacion actual. Se conservaran los ultimos datos disponibles.");
 }
 
-async function collectVacaciones(page) {
+async function collectVacacionesViaMenu(page) {
   await openMenu(page, "Solicitudes", "Solicitud Vacaciones");
-  const result = await waitForParsedContent(
+  const result = await waitForParsedFrame(
     page,
+    /VacacionesC24\.asp/i,
     parseVacaciones,
     (parsed) => parsed.rows?.length || 0,
-    30000
+    8000
   );
-  if (result.recognized) return result;
+  if (result.recognized && result.rows?.length) return result;
   throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
+}
+
+async function collectAssignments(page) {
+  try {
+    const result = await readDirectPortalPage(
+      page.context(),
+      "https://portal.cpevalencia.com/Noray/DondeVoy.asp",
+      parseAssignments,
+      (parsed) => parsed.rows?.length || 0,
+      8000
+    );
+    if (result.recognized && result.rows?.length) return result;
+  } catch {
+    // The menu fallback handles portal-side route changes.
+  }
+  return collectAssignmentsViaMenu(page);
+}
+
+async function collectVacaciones(page) {
+  try {
+    const result = await readDirectPortalPage(
+      page.context(),
+      "https://portal.cpevalencia.com/Noray/src/VacacionesC24UniVac/VacacionesC24.asp",
+      parseVacaciones,
+      (parsed) => parsed.rows?.length || 0,
+      8000
+    );
+    if (result.recognized && result.rows?.length) return result;
+  } catch {
+    // The menu fallback handles portal-side route changes.
+  }
+  return collectVacacionesViaMenu(page);
 }
 
 async function collectPrimas(page) {

@@ -7,8 +7,8 @@ const LABELS = [
   ["empresa", /^empresa:?$/i],
   ["muelle", /^muelle:?$/i],
   ["buque", /^buque:?$/i],
-  ["operacion", /^operaci.n:?$/i],
-  ["mercancia", /^mercanc.a:?$/i],
+  ["operacion", /^operaci.*n:?$/i],
+  ["mercancia", /^mercanc.*a:?$/i],
   ["observaciones", /^observaciones:?$/i]
 ];
 
@@ -27,8 +27,21 @@ export function parseAssignmentsFromTables(tables = [], pageText = "") {
   const assignments = [];
 
   tables.forEach((rows) => {
-    const assignment = {};
+    let assignment = {};
+
+    const saveAssignment = () => {
+      if (assignment.parte && (assignment.fecha || assignment.jornada)) {
+        assignments.push(assignment);
+      }
+      assignment = {};
+    };
+
     rows.forEach((row) => {
+      const startsAssignment = row.some((cell, index) => (
+        findLabel(cell) === "parte" && normalizeCell(row[index + 1])
+      ));
+      if (startsAssignment && assignment.parte) saveAssignment();
+
       for (let index = 0; index < row.length - 1; index += 1) {
         const key = findLabel(row[index]);
         if (!key || assignment[key]) continue;
@@ -37,7 +50,7 @@ export function parseAssignmentsFromTables(tables = [], pageText = "") {
       }
     });
 
-    if (assignment.parte && (assignment.fecha || assignment.jornada)) assignments.push(assignment);
+    saveAssignment();
   });
 
   const unique = new Map();
