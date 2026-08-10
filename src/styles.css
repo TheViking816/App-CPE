@@ -1784,6 +1784,49 @@ select {
   gap: 2px;
 }
 
+.portal-irpf-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.portal-irpf-actions label {
+  display: grid;
+  gap: 5px;
+}
+
+.portal-irpf-save {
+  min-height: 42px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: #123f75;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-irpf-save:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.portal-irpf-message {
+  margin: 10px 0 0;
+  color: #087f5b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.portal-irpf-message.is-error {
+  color: #c92a2a;
+}
+
 .portal-irpf-heading > label {
   grid-template-columns: auto auto;
   align-items: center;
@@ -3346,6 +3389,19 @@ select {
 
   .portal-irpf-heading {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .portal-irpf-actions {
+    width: 100%;
+  }
+
+  .portal-irpf-actions label {
+    flex: 0 0 auto;
+  }
+
+  .portal-irpf-save {
+    flex: 1;
   }
 
   .portal-irpf-breakdown {

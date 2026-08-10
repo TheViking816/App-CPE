@@ -20,6 +20,7 @@ import {
   Search,
   Ship,
   Sun,
+  Save,
   UserRound,
   UsersRound,
   X
@@ -46,6 +47,7 @@ import {
   requestPortalSync,
   trackPortalOpen,
   trackUsageEvent,
+  updateUserIrpf,
   updateUserSpecialties
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
@@ -1247,7 +1249,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
   );
 }
 
-function PortalResultPreview({ snapshot }) {
+function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const payload = snapshot?.payload || null;
   const jornales = payload?.jornales?.rows || [];
   const descansos = payload?.descansos || null;
@@ -1256,17 +1258,47 @@ function PortalResultPreview({ snapshot }) {
   const vacaciones = payload?.vacaciones || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
+  const [savedIrpfRate, setSavedIrpfRate] = useState(0);
+  const [savingIrpf, setSavingIrpf] = useState(false);
+  const [irpfMessage, setIrpfMessage] = useState("");
+  const [irpfError, setIrpfError] = useState(false);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
 
   useEffect(() => {
-    if (!irpfStorageKey) return;
-    const savedRate = Number.parseFloat(localStorage.getItem(irpfStorageKey) || "0");
-    setIrpfRate(Number.isFinite(savedRate) ? Math.min(Math.max(savedRate, 0), 60) : 0);
-  }, [irpfStorageKey]);
+    const remoteRate = Number.parseFloat(session?.irpfRate);
+    const localRate = irpfStorageKey
+      ? Number.parseFloat(localStorage.getItem(irpfStorageKey) || "")
+      : Number.NaN;
+    const nextRate = Number.isFinite(remoteRate) ? remoteRate : localRate;
+    const normalizedRate = Number.isFinite(nextRate) ? Math.min(Math.max(nextRate, 0), 60) : 0;
+    setIrpfRate(normalizedRate);
+    setSavedIrpfRate(normalizedRate);
+    setIrpfMessage("");
+    setIrpfError(false);
+  }, [irpfStorageKey, session?.irpfRate]);
 
-  useEffect(() => {
-    if (irpfStorageKey) localStorage.setItem(irpfStorageKey, String(irpfRate));
-  }, [irpfRate, irpfStorageKey]);
+  const saveIrpfRate = async () => {
+    setSavingIrpf(true);
+    setIrpfMessage("");
+    setIrpfError(false);
+    try {
+      const response = await updateUserIrpf({ token: session.token, irpfRate });
+      const persistedRate = Number.parseFloat(response?.irpfRate);
+      const normalizedRate = Number.isFinite(persistedRate) ? persistedRate : irpfRate;
+      const nextSession = { ...session, ...(response || {}), irpfRate: normalizedRate };
+      if (irpfStorageKey) localStorage.setItem(irpfStorageKey, String(normalizedRate));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+      setIrpfRate(normalizedRate);
+      setSavedIrpfRate(normalizedRate);
+      onSessionChange?.(nextSession);
+      setIrpfMessage("IRPF guardado en tu perfil.");
+    } catch (requestError) {
+      setIrpfError(true);
+      setIrpfMessage(requestError.message || "No se pudo guardar el IRPF.");
+    } finally {
+      setSavingIrpf(false);
+    }
+  };
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
     [jornales, primas, payload?.jornales?.monthLabel]
@@ -1357,31 +1389,46 @@ function PortalResultPreview({ snapshot }) {
                 <span>Ajuste de IRPF</span>
                 <strong>Neto estimado</strong>
               </div>
-              <label>
-                <span>IRPF</span>
-                <span className="portal-irpf-input">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    max="60"
-                    step="0.1"
-                    value={irpfRate}
-                    onChange={(event) => {
-                      const value = Number.parseFloat(event.target.value);
-                      setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
-                    }}
-                    aria-label="Porcentaje de IRPF"
-                  />
-                  <b>%</b>
-                </span>
-              </label>
+              <div className="portal-irpf-actions">
+                <label>
+                  <span>IRPF</span>
+                  <span className="portal-irpf-input">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      max="60"
+                      step="0.1"
+                      value={irpfRate}
+                      onChange={(event) => {
+                        const value = Number.parseFloat(event.target.value);
+                        setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
+                        setIrpfMessage("");
+                      }}
+                      aria-label="Porcentaje de IRPF"
+                    />
+                    <b>%</b>
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  className="portal-irpf-save"
+                  disabled={savingIrpf || irpfRate === savedIrpfRate}
+                  onClick={saveIrpfRate}
+                >
+                  {savingIrpf ? <RefreshCw size={16} className="is-spinning" /> : <Save size={16} />}
+                  {savingIrpf ? "Guardando" : "Guardar"}
+                </button>
+              </div>
             </div>
             <div className="portal-irpf-breakdown">
               <div><span>Bruto</span><strong>{formatEuro(selectedSummary.total)}</strong></div>
               <div><span>Retencion</span><strong>-{formatEuro(selectedWithholding)}</strong></div>
               <div className="is-net"><span>Neto estimado</span><strong>{formatEuro(selectedNet)}</strong></div>
             </div>
+            {irpfMessage && (
+              <p className={`portal-irpf-message${irpfError ? " is-error" : ""}`}>{irpfMessage}</p>
+            )}
             <small>Estimacion del periodo seleccionado aplicando solo la retencion de IRPF.</small>
           </section>
           <div className="portal-jornales-list">
@@ -1422,7 +1469,7 @@ function PortalResultPreview({ snapshot }) {
   );
 }
 
-function PortalPanel({ session, onSnapshotChange }) {
+function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
   const [loading, setLoading] = useState(true);
@@ -1698,7 +1745,7 @@ function PortalPanel({ session, onSnapshotChange }) {
           <span>Buscando el ultimo sincronizado de tu chapa.</span>
         </div>
       ) : (
-        <PortalResultPreview snapshot={snapshot} />
+        <PortalResultPreview snapshot={snapshot} session={session} onSessionChange={onSessionChange} />
       )}
     </section>
   );
@@ -2072,7 +2119,9 @@ export function App() {
             onOpen={(chapa) => trackUsageEvent({ eventType: "tablon_general_open", chapa })}
           />
         )}
-        {activeTab === "portal" && <PortalPanel session={session} onSnapshotChange={setPortalSnapshot} />}
+        {activeTab === "portal" && (
+          <PortalPanel session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />
+        )}
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
       </main>

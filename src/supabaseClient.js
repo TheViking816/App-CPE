@@ -72,6 +72,18 @@ export async function updateUserSpecialties({ token, specialties }) {
   return data;
 }
 
+export async function updateUserIrpf({ token, irpfRate }) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_update_irpf", {
+    p_token: token,
+    p_irpf_rate: irpfRate
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function trackUsageEvent({ eventType, chapa, metadata = {} }) {
   if (!supabase || !eventType) return null;
   const normalizedChapa = String(chapa || "").replace(/\D/g, "").slice(-5);
