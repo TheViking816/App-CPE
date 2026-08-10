@@ -105,9 +105,21 @@ MIN_REFRESH_SECONDS=300
 
 El token de GitHub debe tener permiso para ejecutar Actions en `TheViking816/App-CPE`. No se usa en el frontend.
 
-## Sincronizar chapero completo con login
+## Actualizar censos de especialidades
 
-Tambien existe `scripts/sync-cpe.js`, pero no es la opcion principal. Solo se usaria si algun dia necesitas refrescar el censo completo desde `Chapero por especialidades`.
+Guarda el texto copiado de `Chapero por especialidades` en un archivo y ejecuta primero una comparacion:
+
+```powershell
+npm run sync:censos -- --input "C:\ruta\censos.txt"
+```
+
+El comando comprueba el tamano declarado, duplicados, primera y ultima chapa, altas, bajas y cambios de posicion. Si el resultado es correcto, aplica el nuevo orden con:
+
+```powershell
+npm run sync:censos -- --input "C:\ruta\censos.txt" --apply
+```
+
+La actualizacion modifica el listado y `expectedSize` en `src/censo.js`. Sin `--apply` nunca cambia la app. Tambien puede intentar una lectura directa usando `CPE_PORTAL_USER` y `CPE_PORTAL_PASSWORD`, aunque el portal puede bloquear la automatizacion; el TXT es el metodo mas estable.
 
 No guardar credenciales en el frontend, GitHub, localStorage ni archivos versionados.
 
