@@ -1430,6 +1430,15 @@ function BottomNav({ activeTab, onChange }) {
   );
 }
 
+function ContactFooter({ login = false }) {
+  return (
+    <footer className={`contact-footer${login ? " login-contact-footer" : ""}`}>
+      <span>Dudas o sugerencias:</span>
+      <a href="mailto:portalestibavlc@gmail.com">portalestibavlc@gmail.com</a>
+    </footer>
+  );
+}
+
 export function App() {
   const [session, setSession] = useState(getInitialSession);
   const [theme, setTheme] = useState(getInitialTheme);
@@ -1675,14 +1684,17 @@ export function App() {
   if (!session) {
     return (
       <div className="login-screen">
-        <LoginPanel
-          theme={theme}
-          onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
-          onLogin={(nextSession) => {
-            setSession(nextSession);
-            setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
-          }}
-        />
+        <div className="login-stack">
+          <LoginPanel
+            theme={theme}
+            onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+            onLogin={(nextSession) => {
+              setSession(nextSession);
+              setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
+            }}
+          />
+          <ContactFooter login />
+        </div>
       </div>
     );
   }
@@ -1722,6 +1734,7 @@ export function App() {
         )}
         {activeTab === "portal" && <PortalPanel session={session} />}
         {activeTab === "enlaces" && <LinksPanel />}
+        <ContactFooter />
       </main>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </div>

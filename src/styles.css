@@ -1031,6 +1031,31 @@ select {
   box-shadow: inset 0 2px 0 var(--orange);
 }
 
+.contact-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 24px 4px 0;
+  padding: 16px 8px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.contact-footer a {
+  color: var(--navy-2);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.contact-footer a:hover {
+  text-decoration: underline;
+}
+
 .general-board {
   width: 100%;
   max-width: 100%;
@@ -1936,6 +1961,27 @@ select {
   place-items: center;
   padding: 18px;
   background: linear-gradient(135deg, #061f3f 0%, #0d3567 55%, #0c776e 100%);
+}
+
+.login-stack {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 390px);
+}
+
+.login-stack .login-card {
+  width: 100%;
+}
+
+.login-contact-footer {
+  margin: 0;
+  padding: 12px 8px 0;
+  border-top-color: rgba(255, 255, 255, 0.26);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.login-contact-footer a {
+  color: #fff;
 }
 
 .login-card {
