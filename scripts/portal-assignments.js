@@ -61,3 +61,55 @@ export function parseAssignmentsFromTables(tables = [], pageText = "") {
 
   return { recognized, rows: [...unique.values()] };
 }
+
+const DETAIL_FIELDS = [
+  ["parte", /^parte:?$/i],
+  ["fecha", /^fecha:?$/i],
+  ["jornada", /^jornada:?$/i],
+  ["empresa", /^empresa:?$/i],
+  ["buque", /^buque:?$/i],
+  ["muelle", /^muelle:?$/i],
+  ["operacion", /^operaci.*n:?$/i],
+  ["mercancia", /^mercanc.*a:?$/i],
+  ["observaciones", /^observaciones:?$/i]
+];
+
+function parseWorkers(value = "") {
+  const text = normalizeCell(value);
+  const workers = [];
+  const pattern = /([A-Z]?\d{5})\s*-\s*(.*?)(?=\s+[A-Z]?\d{5}\s*-|$)/gi;
+  for (const match of text.matchAll(pattern)) {
+    workers.push({ code: match[1], name: normalizeCell(match[2]) });
+  }
+  return workers;
+}
+
+export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
+  const detail = {};
+  const specialties = [];
+
+  tables.forEach((rows) => rows.forEach((row) => {
+    for (let index = 0; index < row.length - 1; index += 1) {
+      const normalized = normalizeCell(row[index]);
+      const field = DETAIL_FIELDS.find(([, pattern]) => pattern.test(normalized))?.[0];
+      if (!field || detail[field]) continue;
+      detail[field] = normalizeCell(row[index + 1]);
+    }
+
+    const name = normalizeCell(row[0]);
+    const requested = Number(normalizeCell(row[1]));
+    if (!name || !Number.isFinite(requested) || requested <= 0) return;
+    if (/^especialidad:?$/i.test(name) || DETAIL_FIELDS.some(([, pattern]) => pattern.test(name))) return;
+    const workers = parseWorkers(row.slice(2).join(" "));
+    specialties.push({
+      name,
+      requested,
+      workers,
+      unnamed: Math.max(requested - workers.length, 0)
+    });
+  }));
+
+  const recognized = Boolean(detail.parte && specialties.length)
+    || /centro\s+portuario\s+de\s+empleo/i.test(pageText) && specialties.length > 0;
+  return { recognized, ...detail, specialties };
+}

@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
   BriefcaseBusiness,
+  Building2,
   CalendarDays,
   Check,
+  ChevronRight,
   CircleAlert,
   Clock3,
   ExternalLink,
@@ -17,9 +19,11 @@ import {
   Moon,
   RefreshCw,
   Search,
+  Ship,
   Sun,
   UserRound,
-  UsersRound
+  UsersRound,
+  X
 } from "lucide-react";
 import {
   classifyDistance,
@@ -46,6 +50,7 @@ import {
   updateUserSpecialties
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
+import { companyLogo } from "./generalBoard.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
@@ -520,6 +525,7 @@ function normalizeAssignmentShift(value) {
 }
 
 function CurrentAssignments({ snapshot }) {
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
   const assignments = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -544,29 +550,98 @@ function CurrentAssignments({ snapshot }) {
         <div className="current-assignments-icon"><ClipboardList size={21} /></div>
         <div>
           <span>Mi contratacion</span>
-          <strong>{assignments.length === 1 ? "Proximo servicio" : `${assignments.length} servicios`}</strong>
+          <strong>{assignments.length === 1 ? "Proximo jornal" : `${assignments.length} jornales`}</strong>
         </div>
       </div>
       <div className="current-assignments-list">
         {assignments.map((item, index) => (
           <article key={`${item.parte}-${item.fecha}-${item.jornada}-${index}`}>
-            <div className="current-assignment-date">
-              <strong>{formatShortPortalDate(item.fecha)}</strong>
-              <span>{normalizeAssignmentShift(item.jornada) || "--"}</span>
-            </div>
-            <div className="current-assignment-copy">
-              <strong>{item.especialidad || "Servicio asignado"}</strong>
-              <span>{[item.buque, item.empresa].filter((value) => value && !/^--?$/.test(String(value).trim())).join(" - ")}</span>
-              <small>{[item.operacion, item.muelle].filter((value) => value && !/^--?$/.test(String(value).trim())).join(" · ")}</small>
-            </div>
-            <div className="current-assignment-part">
-              <span>Parte</span>
-              <strong>{item.parte}</strong>
-            </div>
+            <button type="button" onClick={() => setSelectedAssignment(item)} aria-label={`Ver parte ${item.parte}`}>
+              <span className="current-assignment-logo">
+                {companyLogo(item.empresa) ? <img src={companyLogo(item.empresa)} alt="" /> : <Building2 size={22} />}
+              </span>
+              <span className="current-assignment-date">
+                <strong>{formatShortPortalDate(item.fecha)}</strong>
+                <span>{normalizeAssignmentShift(item.jornada) || "--"}</span>
+              </span>
+              <span className="current-assignment-copy">
+                <strong>{item.especialidad || "Jornal asignado"}</strong>
+                <span>{[item.buque, item.empresa].filter((value) => value && !/^--?$/.test(String(value).trim())).join(" - ")}</span>
+                <small>{[item.operacion, item.muelle].filter((value) => value && !/^--?$/.test(String(value).trim())).join(" · ")}</small>
+              </span>
+              <span className="current-assignment-part">
+                <span>Parte</span>
+                <strong>{item.parte}</strong>
+              </span>
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
           </article>
         ))}
       </div>
+      {selectedAssignment && (
+        <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} />
+      )}
     </section>
+  );
+}
+
+function AssignmentDetailModal({ assignment, onClose }) {
+  const detail = assignment.detail || {};
+  const logo = companyLogo(detail.empresa || assignment.empresa);
+  const specialties = detail.specialties || [];
+
+  return (
+    <div className="assignment-detail-overlay" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="assignment-detail-modal" role="dialog" aria-modal="true" aria-label={`Parte ${assignment.parte}`}>
+        <header>
+          <span className="assignment-detail-logo">
+            {logo ? <img src={logo} alt="" /> : <Building2 size={26} />}
+          </span>
+          <div>
+            <span>Parte {assignment.parte}</span>
+            <h1>{detail.empresa || assignment.empresa || "Jornal contratado"}</h1>
+          </div>
+          <button type="button" onClick={onClose} title="Cerrar"><X size={21} /></button>
+        </header>
+
+        <div className="assignment-detail-summary">
+          <div><span>Fecha</span><strong>{formatShortPortalDate(detail.fecha || assignment.fecha)}</strong></div>
+          <div><span>Jornada</span><strong>{normalizeAssignmentShift(detail.jornada || assignment.jornada)}</strong></div>
+          <div><span>Buque</span><strong>{detail.buque || assignment.buque || "Sin buque"}</strong></div>
+          <div><span>Muelle</span><strong>{detail.muelle || assignment.muelle || "-"}</strong></div>
+        </div>
+
+        <div className="assignment-detail-operation">
+          <Ship size={20} />
+          <div><span>Operacion</span><strong>{detail.operacion || assignment.operacion || "-"}</strong></div>
+        </div>
+
+        <div className="assignment-detail-workers">
+          <div className="assignment-detail-section-title">
+            <span>Equipo del parte</span>
+            <strong>{specialties.reduce((total, item) => total + Number(item.requested || 0), 0)} trabajadores</strong>
+          </div>
+          {specialties.length === 0 && (
+            <p className="assignment-detail-empty">Actualiza el portal para cargar los nombres del parte.</p>
+          )}
+          {specialties.map((specialty) => (
+            <article key={specialty.name}>
+              <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
+              <div>
+                {specialty.workers?.map((worker) => (
+                  <p key={`${specialty.name}-${worker.code}-${worker.name}`}>
+                    <b>{worker.code}</b><span>{worker.name}</span>
+                  </p>
+                ))}
+                {specialty.unnamed > 0 && <p className="unnamed"><span>{specialty.unnamed} sin nombre publicado</span></p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -965,11 +1040,50 @@ function formatVacationRange(period) {
 
 function PortalVacationPreview({ vacaciones }) {
   const periods = vacaciones?.rows || [];
-  if (!vacaciones?.recognized || periods.length === 0) return null;
+  const months = useMemo(() => {
+    const byMonth = new Map();
+    periods.forEach((period) => {
+      const start = parsePortalDate(period.inicio);
+      const end = parsePortalDate(period.fin);
+      if (!start || !end) return;
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const finalMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (cursor <= finalMonth) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+        if (!byMonth.has(key)) byMonth.set(key, { key, year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    });
+    return [...byMonth.values()].sort((a, b) => a.key.localeCompare(b.key));
+  }, [periods]);
+  const [selectedMonthKey, setSelectedMonthKey] = useState("");
+
+  useEffect(() => {
+    if (months.length && !months.some((month) => month.key === selectedMonthKey)) {
+      setSelectedMonthKey(months[0].key);
+    }
+  }, [months, selectedMonthKey]);
+
+  if (!vacaciones?.recognized || periods.length === 0 || months.length === 0) return null;
   const accumulatedDays = Math.max(
     Number(vacaciones.totalDays) || 0,
     ...periods.map((period) => Number(period.acumulado) || 0)
   );
+  const selectedMonth = months.find((month) => month.key === selectedMonthKey) || months[0];
+  const totalDaysInMonth = new Date(selectedMonth.year, selectedMonth.month, 0).getDate();
+  const firstDay = new Date(selectedMonth.year, selectedMonth.month - 1, 1).getDay();
+  const leadingBlanks = (firstDay + 6) % 7;
+  const vacationDays = new Set();
+  periods.forEach((period) => {
+    const start = parsePortalDate(period.inicio);
+    const end = parsePortalDate(period.fin);
+    if (!start || !end) return;
+    for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+      if (cursor.getFullYear() === selectedMonth.year && cursor.getMonth() + 1 === selectedMonth.month) {
+        vacationDays.add(cursor.getDate());
+      }
+    }
+  });
 
   return (
     <section className="portal-vacation-card">
@@ -981,26 +1095,29 @@ function PortalVacationPreview({ vacaciones }) {
         </div>
         <strong>{periods.length} {periods.length === 1 ? "periodo" : "periodos"}</strong>
       </div>
-      <div className="portal-vacation-periods">
+      <div className="portal-vacation-month-tabs">
+        {months.map((month) => (
+          <button className={month.key === selectedMonth.key ? "is-active" : ""} type="button" key={month.key} onClick={() => setSelectedMonthKey(month.key)}>
+            {MONTHS_ES[month.month - 1]} {month.year}
+          </button>
+        ))}
+      </div>
+      <div className="portal-vacation-calendar">
+        {["L", "M", "X", "J", "V", "S", "D"].map((day) => <span className="portal-vacation-weekday" key={day}>{day}</span>)}
+        {Array.from({ length: leadingBlanks }, (_, index) => <i key={`blank-${index}`} />)}
+        {Array.from({ length: totalDaysInMonth }, (_, index) => {
+          const day = index + 1;
+          const isVacation = vacationDays.has(day);
+          return <span className={isVacation ? "is-vacation" : ""} key={day}>{day}{isVacation && <small>VA</small>}</span>;
+        })}
+      </div>
+      <div className="portal-vacation-periods compact">
         {periods.map((period, index) => {
-          const start = parsePortalDate(period.inicio);
-          const end = parsePortalDate(period.fin);
-          const daysInMonth = start ? new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() : 31;
-          const sameMonth = start && end
-            && start.getMonth() === end.getMonth()
-            && start.getFullYear() === end.getFullYear();
-          const left = start ? ((start.getDate() - 1) / daysInMonth) * 100 : 0;
-          const width = sameMonth
-            ? Math.max((Number(period.dias) / daysInMonth) * 100, 4)
-            : 100 - left;
           return (
             <article key={`${period.inicio}-${period.fin}-${index}`}>
               <div>
                 <strong>{formatVacationRange(period)}</strong>
                 <span>{period.dias} {Number(period.dias) === 1 ? "dia" : "dias"}</span>
-              </div>
-              <div className="portal-vacation-track" aria-hidden="true">
-                <i style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }} />
               </div>
             </article>
           );

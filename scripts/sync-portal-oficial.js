@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { parseAssignmentsFromTables } from "./portal-assignments.js";
+import { parseAssignmentDetailFromTables, parseAssignmentsFromTables } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -131,6 +131,10 @@ function parseSl(html = "") {
 
 function parseAssignments(html = "") {
   return parseAssignmentsFromTables([parseRowsFromTable(html)], textFromHtml(html));
+}
+
+function parseAssignmentDetail(html = "") {
+  return parseAssignmentDetailFromTables([parseRowsFromTable(html)], textFromHtml(html));
 }
 
 function parseVacaciones(html = "") {
@@ -607,20 +611,57 @@ async function collectVacacionesViaMenu(page) {
   throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
 }
 
-async function collectAssignments(page) {
+function assignmentYear(item) {
+  return String(item?.fecha || "").match(/(\d{4})/)?.[1] || String(new Date().getFullYear());
+}
+
+async function enrichAssignmentsWithDetails(context, result, previousResult) {
+  const previousByPart = new Map((previousResult?.rows || [])
+    .filter((item) => item.parte && item.detail?.recognized)
+    .map((item) => [String(item.parte), item.detail]));
+  const rows = [...(result?.rows || [])];
+
+  for (let index = 0; index < rows.length; index += 2) {
+    const batch = rows.slice(index, index + 2);
+    const details = await Promise.all(batch.map(async (item) => {
+      try {
+        const url = `https://portal.cpevalencia.com/Noray/partenombres.asp?anyo=${encodeURIComponent(assignmentYear(item))}&parte=${encodeURIComponent(item.parte)}`;
+        const detail = await readDirectPortalPage(
+          context,
+          url,
+          parseAssignmentDetail,
+          (parsed) => parsed.specialties?.length || 0,
+          5000
+        );
+        return detail.recognized ? detail : previousByPart.get(String(item.parte)) || null;
+      } catch {
+        return previousByPart.get(String(item.parte)) || null;
+      }
+    }));
+    details.forEach((detail, offset) => {
+      if (detail) rows[index + offset] = { ...rows[index + offset], detail };
+    });
+  }
+
+  return { ...result, rows };
+}
+
+async function collectAssignments(page, previousResult) {
+  let result;
   try {
-    const result = await readDirectPortalPage(
+    result = await readDirectPortalPage(
       page.context(),
       "https://portal.cpevalencia.com/Noray/DondeVoy.asp",
       parseAssignments,
       (parsed) => parsed.rows?.length || 0,
       8000
     );
-    if (result.recognized && result.rows?.length) return result;
+    if (!(result.recognized && result.rows?.length)) result = null;
   } catch {
     // The menu fallback handles portal-side route changes.
   }
-  return collectAssignmentsViaMenu(page);
+  if (!result) result = await collectAssignmentsViaMenu(page);
+  return enrichAssignmentsWithDetails(page.context(), result, previousResult);
 }
 
 async function collectVacaciones(page) {
@@ -806,7 +847,7 @@ async function main() {
     const jornales = await readSection("jornales", () => collectJornales(page), existingSnapshot?.payload?.jornales, hasRows);
     const asignaciones = await readOptionalSection(
       "contratacion actual",
-      () => collectAssignments(page),
+      () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
       existingSnapshot?.payload?.asignaciones,
       { recognized: false, rows: [] },
       hasVacationData
