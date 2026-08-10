@@ -1063,11 +1063,13 @@ function PortalResultPreview({ snapshot }) {
                 <div>
                   <strong>{item.especialidad || "Jornal"}</strong>
                   <small>{item.jornada || ""}</small>
-                  <em>{[item.buque, item.empresa].filter(Boolean).join(" - ")}</em>
+                  <em>{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" - ")}</em>
                   {item.operacion && <em>{item.operacion}</em>}
                   <em>
                     Base {formatEuro(item.payroll?.base)} - Compl. {formatEuro(item.payroll?.complement)}
-                    {item.payroll?.prima > 0 ? ` - Prima ${formatEuro(item.payroll.prima)}` : " - Prima pendiente"}
+                    {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
+                      item.payroll?.prima > 0 ? ` - Prima ${formatEuro(item.payroll.prima)}` : " - Prima pendiente"
+                    )}
                   </em>
                 </div>
                 <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>

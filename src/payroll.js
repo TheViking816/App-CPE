@@ -39,6 +39,40 @@ const SALARY_TABLE = {
       FESTIVO_TO_FESTIVO: { "20-02": 386.98 },
       LABORABLE_TO_FESTIVO: { "20-02": 169.25 }
     }
+  },
+  RECEPCION_ENTREGA: {
+    I: {
+      LABORABLE: { "02-08": 291.41, "08-14": 148.63, "14-20": 148.63, "20-02": 222.91 },
+      SABADO: { "02-08": 291.41, "08-14": 165.13, "14-20": 267.50, "20-02": 393.35 },
+      FESTIVO: { "02-08": 524.52, "08-14": 267.50, "14-20": 378.82, "20-02": 509.96 },
+      FESTIVO_TO_LABORABLE: { "02-08": 333.73, "20-02": 451.76 },
+      FESTIVO_TO_FESTIVO: { "02-08": 572.01, "20-02": 509.96 },
+      LABORABLE_TO_FESTIVO: { "20-02": 282.35 }
+    },
+    II: {
+      LABORABLE: { "02-08": 297.97, "08-14": 151.92, "14-20": 151.92, "20-02": 227.93 },
+      SABADO: { "02-08": 297.97, "08-14": 168.39, "14-20": 273.51, "20-02": 402.20 },
+      FESTIVO: { "02-08": 536.26, "08-14": 273.51, "14-20": 387.29, "20-02": 521.37 },
+      FESTIVO_TO_LABORABLE: { "02-08": 348.54, "20-02": 461.81 },
+      FESTIVO_TO_FESTIVO: { "02-08": 584.93, "20-02": 521.37 },
+      LABORABLE_TO_FESTIVO: { "20-02": 288.69 }
+    },
+    III: {
+      LABORABLE: { "02-08": 297.53, "08-14": 151.74, "14-20": 151.74, "20-02": 227.62 },
+      SABADO: { "02-08": 297.53, "08-14": 167.80, "14-20": 273.08, "20-02": 401.64 },
+      FESTIVO: { "02-08": 535.51, "08-14": 273.08, "14-20": 386.78, "20-02": 520.67 },
+      FESTIVO_TO_LABORABLE: { "02-08": 355.88, "20-02": 461.19 },
+      FESTIVO_TO_FESTIVO: { "02-08": 584.07, "20-02": 520.67 },
+      LABORABLE_TO_FESTIVO: { "20-02": 288.32 }
+    },
+    IV: {
+      LABORABLE: { "02-08": 309.70, "08-14": 157.90, "14-20": 157.90, "20-02": 236.91 },
+      SABADO: { "02-08": 309.70, "08-14": 173.96, "14-20": 284.30, "20-02": 418.06 },
+      FESTIVO: { "02-08": 557.42, "08-14": 284.30, "14-20": 402.56, "20-02": 541.99 },
+      FESTIVO_TO_LABORABLE: { "02-08": 382.71, "20-02": 480.01 },
+      FESTIVO_TO_FESTIVO: { "02-08": 607.79, "20-02": 541.99 },
+      LABORABLE_TO_FESTIVO: { "20-02": 300.04 }
+    }
   }
 };
 
@@ -139,6 +173,13 @@ function normalizeSpecialty(value = "") {
     .trim();
 }
 
+function getOperationType(operation = "") {
+  const normalized = normalizeSpecialty(operation);
+  return /RECEPCION\s*(?:Y|\/)?\s*ENTREGA/.test(normalized)
+    ? "RECEPCION_ENTREGA"
+    : "ESTIBA";
+}
+
 function getGroup(specialty = "") {
   const normalized = normalizeSpecialty(specialty);
   if (/CONDUCTOR(?:\s+DE)?\s*[12]\s*A\b/.test(normalized)) return "II";
@@ -186,12 +227,18 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "") {
     const date = `${year}-${pad(month)}-${pad(day || 1)}`;
     const shift = parseShift(jornal.jornada);
     const group = getGroup(jornal.especialidad);
+    const operationType = getOperationType(jornal.operacion);
     const rateKey = getRateKey(date, shift);
-    const table = SALARY_TABLE.ESTIBA[group] || SALARY_TABLE.ESTIBA.II;
+    const operationTable = SALARY_TABLE[operationType] || SALARY_TABLE.ESTIBA;
+    const table = operationTable[group] || operationTable.II;
     const base = Number((table[rateKey]?.[shift] ?? table[getDayType(date)]?.[shift] ?? 0).toFixed(2));
     const complement = Number(getComplement(jornal.especialidad).toFixed(2));
-    const production = Number(parseAmount(jornal.produccion).toFixed(2));
-    const primaAmount = findMatchingPrima(jornal, primas);
+    const production = operationType === "RECEPCION_ENTREGA"
+      ? 0
+      : Number(parseAmount(jornal.produccion).toFixed(2));
+    const primaAmount = operationType === "RECEPCION_ENTREGA"
+      ? null
+      : findMatchingPrima(jornal, primas);
     const prima = primaAmount == null ? null : Number(primaAmount.toFixed(2));
     const total = Number((base + complement + production + (prima || 0)).toFixed(2));
 
@@ -201,12 +248,13 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "") {
         date,
         shift,
         group,
+        operationType,
         rateKey,
         base,
         complement,
         production,
         prima,
-        primaPending: prima == null,
+        primaPending: operationType !== "RECEPCION_ENTREGA" && prima == null,
         total
       }
     };
