@@ -348,43 +348,113 @@ async function waitForParsedContent(page, parser, score, timeout = 12000) {
   return bestResult;
 }
 
+async function readPortalAuthState(page) {
+  const roots = [page, ...page.frames()];
+  const textParts = [];
+  let loginVisible = false;
+  let authenticatedControlVisible = false;
+
+  for (const root of roots) {
+    const text = await root.locator("body").innerText().catch(() => "");
+    if (text) textParts.push(text);
+
+    const loginButton = root.getByRole("button", { name: /Iniciar sesi/i }).first();
+    if (await loginButton.isVisible().catch(() => false)) loginVisible = true;
+
+    const logoutButton = root.getByRole("button", { name: /Finalizar sesi/i }).first();
+    const logoutInput = root.locator('input[value*="Finalizar sesi" i]:visible').first();
+    const serviceMenu = root.locator(".norayService:visible").first();
+    if (
+      await logoutButton.isVisible().catch(() => false)
+      || await logoutInput.isVisible().catch(() => false)
+      || await serviceMenu.isVisible().catch(() => false)
+    ) {
+      authenticatedControlVisible = true;
+    }
+  }
+
+  const body = cleanText(textParts.join("\n"));
+  const normalizedBody = body.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const securityChallenge = /Verificacion de seguridad|verifica que tu no eres un bot|Ray ID|challenges\.cloudflare/i.test(normalizedBody);
+  if (securityChallenge) return "security_challenge";
+  const rejected = /(?:usuario|contrasena|credenciales?).{0,45}(?:incorrect|invalid|errone)|acceso\s+denegado|no\s+se\s+ha\s+podido\s+identificar/i.test(normalizedBody);
+  if (rejected) return "rejected";
+
+  const userPattern = new RegExp(`(?:^|\\s)${portalUser}\\s*-`, "m");
+  const authenticatedText = /Finalizar sesion/i.test(normalizedBody)
+    || userPattern.test(body)
+    || (/Consultas/i.test(body) && !loginVisible);
+  if (authenticatedControlVisible || authenticatedText) return "authenticated";
+  return loginVisible ? "login" : "pending";
+}
+
+async function waitForPortalEntry(page, timeout = 20000) {
+  const deadline = Date.now() + timeout;
+  let state = "pending";
+
+  while (Date.now() < deadline) {
+    state = await readPortalAuthState(page);
+    if (state === "authenticated" || state === "login" || state === "rejected") return state;
+    await page.waitForTimeout(250);
+  }
+
+  return state;
+}
+
+async function waitForPortalAuthState(page, timeout = 20000) {
+  const deadline = Date.now() + timeout;
+  let state = "pending";
+
+  while (Date.now() < deadline) {
+    state = await readPortalAuthState(page);
+    if (state === "authenticated" || state === "rejected") return state;
+    await page.waitForTimeout(250);
+  }
+
+  return state;
+}
+
 async function login(page, attempt = 0) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
-  let body = await page.locator("body").innerText().catch(() => "");
-  if (/Finalizar sesi|LUJAN MARIN|Usuario/i.test(body) && /Finalizar sesi/i.test(body)) return;
+  const entryState = await waitForPortalEntry(page);
+  if (entryState === "authenticated") return;
+  if (entryState === "security_challenge") {
+    if (attempt < 1) return login(page, attempt + 1);
+    throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
+  }
 
   if (!portalUser || !portalPassword) {
     throw new Error("Faltan CPE_PORTAL_USER y CPE_PORTAL_PASSWORD para iniciar sesion.");
   }
 
-  const visibleInputs = page.locator("input:visible");
-  const userInput = page.locator('input[title="Usuario"]:visible').or(visibleInputs.nth(0)).first();
-  const passwordInput = page.locator('input[title*="Contrase"]:visible').or(visibleInputs.nth(1)).first();
+  const loginForm = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.locator('input[title="Usuario"]:visible, input[type="text"]:visible'),
+    10000
+  );
+  if (!loginForm) {
+    const state = await readPortalAuthState(page);
+    if (state === "security_challenge") {
+      throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
+    }
+    throw new Error("El portal oficial no ha mostrado el formulario de acceso. Vuelve a intentarlo.");
+  }
+
+  const { frame: loginFrame, locator: userInput } = loginForm;
+  const passwordInput = loginFrame.locator('input[title*="Contrase"]:visible, input[type="password"]:visible').first();
+  const loginButton = loginFrame.getByRole("button", { name: /Iniciar sesi/i }).first();
   await userInput.fill(portalUser, { timeout: 45000 });
   await passwordInput.fill(portalPassword, { timeout: 15000 });
-  await page.getByRole("button", { name: /Iniciar sesi/i }).click();
-  const logoutButton = page.locator("button:visible", { hasText: /Finalizar sesi/i }).first();
-  const userHeader = page.getByText(new RegExp(`^\\s*${portalUser}\\s*-`)).first();
-  const serviceMenu = page.locator(".norayService:visible").first();
-  await Promise.any([
-    logoutButton.waitFor({ state: "visible", timeout: 45000 }),
-    userHeader.waitFor({ state: "visible", timeout: 45000 }),
-    serviceMenu.waitFor({ state: "visible", timeout: 45000 })
-  ]).catch(() => {});
-
-  body = await page.locator("body").innerText().catch(() => "");
-  const authenticated = await logoutButton.isVisible().catch(() => false)
-    || await userHeader.isVisible().catch(() => false)
-    || await serviceMenu.isVisible().catch(() => false);
-  if (!authenticated) {
-    if (attempt < 1) {
-      await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
-      return login(page, attempt + 1);
-    }
-    throw new Error("No se pudo iniciar sesion en el portal oficial.");
+  await loginButton.click({ timeout: 15000 });
+  const state = await waitForPortalAuthState(page);
+  if (state === "authenticated") return;
+  if (state === "rejected") {
+    throw new Error("Usuario o contrasena del portal oficial incorrectos.");
   }
+  if (attempt < 1) return login(page, attempt + 1);
+  throw new Error("El portal oficial no confirmo el inicio de sesion a tiempo. Vuelve a intentarlo.");
 }
 
 async function openMenu(page, group, text, framePattern) {
