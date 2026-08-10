@@ -473,9 +473,12 @@ async function collectPrimas(page) {
   }
 
   const securityInput = securityControl.frame
-    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):visible')
+    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([role="presentation"]):not([tabindex="-1"]):visible')
     .first();
-  await securityInput.fill(portalSecurityKey);
+  await securityInput.click();
+  await securityInput.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+  await securityInput.pressSequentially(portalSecurityKey, { delay: 80 });
+  await securityInput.press("Tab");
   await securityControl.locator.click({ noWaitAfter: true });
 
   const invalidKey = await waitForFrameAndLocator(
