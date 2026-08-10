@@ -1,17 +1,17 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-08-10T07:13:59.621Z",
-  "pageDate": "10/08/2026 - 09:13",
+  "updatedAt": "2026-08-10T09:15:42.225Z",
+  "pageDate": "10/08/2026 - 11:15",
   "jornadaText": "ULTIMA JORNADA CONTRATADA: 10/08/26 - DE 08 A 14 H.",
   "jornadaDate": "10/08/26",
   "fromHour": "08",
   "toHour": "14",
   "shiftKey": "LAB",
   "summary": {
-    "contratado": 497,
-    "anticipado": 326,
-    "falta": 723,
-    "nocontratado": 25,
+    "contratado": 496,
+    "anticipado": 324,
+    "falta": 728,
+    "nocontratado": 23,
     "excepcion": 9
   },
   "workers": [
@@ -5070,8 +5070,8 @@
     {
       "rawChapa": "1630",
       "chapa": "71630",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1631",
@@ -6144,8 +6144,8 @@
     {
       "rawChapa": "1911",
       "chapa": "71911",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1912",
@@ -6456,8 +6456,8 @@
     {
       "rawChapa": "1989",
       "chapa": "71989",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1990",
@@ -7656,8 +7656,8 @@
     {
       "rawChapa": "2260",
       "chapa": "72260",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2261",
@@ -9462,8 +9462,8 @@
     {
       "rawChapa": "2739",
       "chapa": "72739",
-      "status": "nocontratado",
-      "label": "No contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2740",
