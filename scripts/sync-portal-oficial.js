@@ -411,40 +411,24 @@ async function readDirectPortalPage(context, url, parser, score, timeout = 8000)
   }
 }
 
-async function readAssignmentDetailViaPortal(context, sourcePage, assignment) {
-  let detailPage = null;
-  try {
-    let partLink = null;
-    const deadline = Date.now() + 6000;
-    while (!partLink && Date.now() < deadline) {
-      for (const frame of sourcePage.frames()) {
-        const candidate = frame.getByRole("link", { name: String(assignment.parte), exact: true }).first();
-        if (await candidate.isVisible().catch(() => false)) {
-          partLink = candidate;
-          break;
-        }
-      }
-      if (!partLink) await sourcePage.waitForTimeout(150);
-    }
-    if (!partLink) throw new Error(`No se encontro el enlace del parte ${assignment.parte}.`);
+async function readAssignmentDetailViaPortal(sourcePage, assignment) {
+  const year = String(assignment.fecha || "").match(/\b(20\d{2})\b/)?.[1]
+    || String(new Date().getFullYear());
+  const detailUrl = new URL("https://portal.cpevalencia.com/Noray/ParteA.asp");
+  detailUrl.searchParams.set("anyo", year);
+  detailUrl.searchParams.set("parte", String(assignment.parte));
 
-    const popupPromise = context.waitForEvent("page", { timeout: 4000 }).catch(() => null);
-    await partLink.click({ timeout: 6000 });
-    const popup = await popupPromise;
-    if (popup) {
-      detailPage = popup;
-      await detailPage.waitForLoadState("domcontentloaded", { timeout: 8000 }).catch(() => {});
-    }
+  await sourcePage.goto(detailUrl.toString(), {
+    waitUntil: "domcontentloaded",
+    timeout: 20000
+  });
 
-    return await waitForParsedContent(
-      detailPage || sourcePage,
-      parseAssignmentDetail,
-      (parsed) => parsed.specialties?.length || 0,
-      8000
-    );
-  } finally {
-    if (detailPage) await detailPage.close().catch(() => {});
-  }
+  return waitForParsedContent(
+    sourcePage,
+    parseAssignmentDetail,
+    (parsed) => parsed.specialties?.length || 0,
+    12000
+  );
 }
 
 async function readPortalAuthState(page) {
@@ -663,9 +647,15 @@ async function enrichAssignmentsWithDetails(context, result, previousResult) {
       const item = rows[index];
       let detail = previousByPart.get(String(item.parte)) || null;
       try {
-        const freshDetail = await readAssignmentDetailViaPortal(context, sourcePage, item);
-        if (freshDetail.recognized) detail = freshDetail;
-      } catch {
+        const freshDetail = await readAssignmentDetailViaPortal(sourcePage, item);
+        if (freshDetail.recognized) {
+          detail = freshDetail;
+          console.log(`Parte ${item.parte}: ${freshDetail.specialties.length} especialidades leidas.`);
+        } else {
+          console.warn(`Parte ${item.parte}: la ventana se abrio, pero no contenia un equipo reconocible.`);
+        }
+      } catch (error) {
+        console.warn(`Parte ${item.parte}: no se pudo leer el detalle. ${error instanceof Error ? error.message : "Error desconocido"}`);
         // Keep the previous detail when the legacy portal fails to open a part.
       }
       if (detail) rows[index] = { ...item, detail };

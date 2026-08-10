@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  BadgeCheck,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -248,10 +247,6 @@ async function loadLocalChaperoSnapshot() {
   } catch {
     return null;
   }
-}
-
-function isActiveChaperoStatus(status) {
-  return status === "contratado" || status === "anticipado";
 }
 
 function normalizeLegacyDoor(door) {
@@ -696,12 +691,6 @@ function HomePanel({
           <div className="chapero-status-copy">
             <span>Estado:</span>
             <strong>{formatChaperoStatus(chaperoWorker?.status, chaperoLoading)}</strong>
-          </div>
-          <div className="chapero-status-badge">
-            {chaperoLoading
-              ? <Clock3 size={17} />
-              : isActiveChaperoStatus(chaperoWorker?.status) ? <BadgeCheck size={17} /> : <CircleAlert size={17} />}
-            <span>Chapero</span>
           </div>
         </div>
 
