@@ -77,7 +77,7 @@ const DETAIL_FIELDS = [
 function parseWorkers(value = "") {
   const text = normalizeCell(value);
   const workers = [];
-  const pattern = /([A-Z]?\d{5})\s*-\s*(.*?)(?=\s+[A-Z]?\d{5}\s*-|$)/gi;
+  const pattern = /([A-Z]?\d{5})\s*-\s*(.*?)(?=\s+(?:[A-Z]?\d{5}\s*-|00000\b)|$)/gi;
   for (const match of text.matchAll(pattern)) {
     workers.push({ code: match[1], name: normalizeCell(match[2]) });
   }
@@ -100,12 +100,15 @@ export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
     const requested = Number(normalizeCell(row[1]));
     if (!name || !Number.isFinite(requested) || requested <= 0) return;
     if (/^especialidad:?$/i.test(name) || DETAIL_FIELDS.some(([, pattern]) => pattern.test(name))) return;
-    const workers = parseWorkers(row.slice(2).join(" "));
+    const workerText = row.slice(2).join(" ");
+    const workers = parseWorkers(workerText);
+    const bolsa = Math.min((workerText.match(/\b00000\b/g) || []).length, requested);
     specialties.push({
       name,
       requested,
       workers,
-      unnamed: Math.max(requested - workers.length, 0)
+      bolsa,
+      unnamed: Math.max(requested - workers.length - bolsa, 0)
     });
   }));
 

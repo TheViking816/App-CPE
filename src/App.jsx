@@ -554,11 +554,18 @@ function CurrentAssignments({ snapshot }) {
         </div>
       </div>
       <div className="current-assignments-list">
-        {assignments.map((item, index) => (
+        {assignments.map((item, index) => {
+          const logo = companyLogo(item.empresa);
+          return (
           <article key={`${item.parte}-${item.fecha}-${item.jornada}-${index}`}>
-            <button type="button" onClick={() => setSelectedAssignment(item)} aria-label={`Ver parte ${item.parte}`}>
+            <button
+              type="button"
+              onClick={() => setSelectedAssignment(item)}
+              aria-label={`Ver parte ${item.parte}`}
+              style={{ "--assignment-logo": logo ? `url("${logo}")` : "none" }}
+            >
               <span className="current-assignment-logo">
-                {companyLogo(item.empresa) ? <img src={companyLogo(item.empresa)} alt="" /> : <Building2 size={22} />}
+                {logo ? <img src={logo} alt="" /> : <Building2 size={22} />}
               </span>
               <span className="current-assignment-date">
                 <strong>{formatShortPortalDate(item.fecha)}</strong>
@@ -576,7 +583,8 @@ function CurrentAssignments({ snapshot }) {
               <ChevronRight size={18} aria-hidden="true" />
             </button>
           </article>
-        ))}
+          );
+        })}
       </div>
       {selectedAssignment && (
         <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} />
@@ -635,6 +643,9 @@ function AssignmentDetailModal({ assignment, onClose }) {
                     <b>{worker.code}</b><span>{worker.name}</span>
                   </p>
                 ))}
+                {specialty.bolsa > 0 && (
+                  <p className="bolsa"><b>Bolsa</b><span>{specialty.bolsa} trabajadores</span></p>
+                )}
                 {specialty.unnamed > 0 && <p className="unnamed"><span>{specialty.unnamed} sin nombre publicado</span></p>}
               </div>
             </article>
