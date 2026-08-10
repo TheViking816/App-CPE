@@ -388,6 +388,13 @@ async function login(page, attempt = 0) {
 }
 
 async function openMenu(page, group, text, framePattern) {
+  const childItem = await findMenuItem(page, text);
+  const groupItem = await findVisibleMatchAcrossFrames(page, ".gwt-TreeItem", group);
+  if (!childItem && !groupItem) {
+    // Result pages hide the navigation tree. Reloading the portal root keeps the
+    // authenticated session and restores the menu before reading the next section.
+    await login(page);
+  }
   await ensureExpanded(page, group, text);
   const item = await findMenuItem(page, text, 10000);
   if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
@@ -471,6 +478,15 @@ async function collectPrimas(page) {
   await securityInput.fill(portalSecurityKey);
   await securityControl.locator.click({ noWaitAfter: true });
 
+  const invalidKey = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByText(/La clave de seguridad es incorrecta/i),
+    3000
+  );
+  if (invalidKey) {
+    throw new Error("La clave de seguridad de primas es incorrecta. Cambia las claves guardadas e intentalo de nuevo.");
+  }
+
   const accept = await waitForFrameLocator(
     page,
     (frame) => frame.getByRole("button", { name: /Aceptar/i }),
@@ -480,13 +496,17 @@ async function collectPrimas(page) {
     await accept.click({ noWaitAfter: true });
   }
 
-  return waitForParsedContent(
+  const result = await waitForParsedContent(
     page,
     parsePrimas,
     (result) => (result.rows || []).filter((row) => row.jornal).length * 1000
       + (result.monthLabel ? 100 : 0),
     15000
   );
+  if (result.locked) {
+    throw new Error("La clave de seguridad de primas no fue validada.");
+  }
+  return result;
 }
 
 async function upsertSupabase(snapshot) {
@@ -570,7 +590,7 @@ async function main() {
         console.log(`${name} actualizado.`);
         return value;
       } catch (error) {
-        if (!fallback) throw error;
+        if (!fallback || (isMeaningful && !isMeaningful(fallback))) throw error;
         console.warn(`${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim());
         return fallback;
       }
