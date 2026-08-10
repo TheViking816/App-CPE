@@ -559,10 +559,14 @@ async function main() {
     await login(page);
     const updatedAt = new Date().toISOString();
     const existingSnapshot = await getExistingSupabaseSnapshot();
-    const readSection = async (name, reader, fallback) => {
+    const readSection = async (name, reader, fallback, isMeaningful) => {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
+        if (isMeaningful && !isMeaningful(value) && isMeaningful(fallback)) {
+          console.warn(`${name} devolvio una respuesta vacia; se conservan los datos anteriores.`);
+          return fallback;
+        }
         console.log(`${name} actualizado.`);
         return value;
       } catch (error) {
@@ -572,10 +576,12 @@ async function main() {
       }
     };
 
-    const jornales = await readSection("jornales", () => collectJornales(page), existingSnapshot?.payload?.jornales);
-    const primas = await readSection("primas", () => collectPrimas(page), existingSnapshot?.payload?.primas);
-    const sl = await readSection("lista SL", () => collectSl(page), existingSnapshot?.payload?.sl);
-    const descansos = await readSection("descansos", () => collectDescansos(page), existingSnapshot?.payload?.descansos);
+    const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
+    const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
+    const jornales = await readSection("jornales", () => collectJornales(page), existingSnapshot?.payload?.jornales, hasRows);
+    const primas = await readSection("primas", () => collectPrimas(page), existingSnapshot?.payload?.primas, hasRows);
+    const sl = await readSection("lista SL", () => collectSl(page), existingSnapshot?.payload?.sl, hasRows);
+    const descansos = await readSection("descansos", () => collectDescansos(page), existingSnapshot?.payload?.descansos, hasMonths);
     const payload = {
       jornales,
       descansos,
