@@ -137,7 +137,8 @@ function companyInfo(value) {
     [/MEDITERRANEAN SHIPPING|\bMSC\b/, "MSC", "MSC TERMINAL VALENCIA"],
     [/VALENCIA TERMINAL EUROPA|\bVTEU\b|GRIMALDI/, "VTEU", "VALENCIA TERMINAL EUROPA"],
     [/SEVASA|CENTRO PORTUARIO|\bCPE\b/, "SEVASA", "SEVASA"],
-    [/EUROPEA DE HANDLING|\bERH\b/, "ERH", "EUROPEA DE HANDLING"]
+    [/EUROPEA DE HANDLING|\bERH\b|ERSHIP/, "ERH", "EUROPEA DE HANDLING"],
+    [/BALEARIA|\bBAL\b/, "BALEARIA", "BALEARIA"]
   ];
   const alias = aliases.find(([matcher]) => matcher.test(normalized));
   return alias ? { key: alias[1], name: alias[2] } : { key: normalized || "SIN EMPRESA", name: value || "Sin empresa" };
@@ -294,6 +295,9 @@ export function companyLogo(name) {
   if (/APM/i.test(name)) return `${base}/apm.jpeg`;
   if (/CSP/i.test(name)) return `${base}/csp.jpeg`;
   if (/MSC|MEDITERRANEAN/i.test(name)) return `${base}/msc.jpeg`;
+  if (/VALENCIA TERMINAL EUROPA|\bVTEU\b|GRIMALDI/i.test(name)) return "/assets/empresas/vteu.jpeg";
+  if (/EUROPEA DE HANDLING|\bERH\b|ERSHIP/i.test(name)) return "/assets/empresas/erh.png";
+  if (/BALEARIA|BALEÀRIA|\bBAL\b/i.test(name)) return "/assets/empresas/balearia.png";
   if (/TRASMED/i.test(name)) return `${base}/trasmed.png`;
   if (/SEVASA|CPE/i.test(name)) return `${base}/cpe.jpg`;
   return "";
