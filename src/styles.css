@@ -1760,6 +1760,109 @@ select {
   box-shadow: inset 0 0 0 1px rgba(17, 185, 129, 0.12);
 }
 
+.portal-irpf-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.06);
+}
+
+.portal-irpf-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portal-irpf-heading > div,
+.portal-irpf-heading > label {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-irpf-heading > label {
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-irpf-heading span,
+.portal-irpf-breakdown span,
+.portal-irpf-card > small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-irpf-heading strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.portal-irpf-input {
+  display: grid;
+  grid-template-columns: 58px 24px;
+  min-height: 40px;
+  overflow: hidden;
+  border: 1px solid rgba(13, 53, 103, 0.24);
+  border-radius: 7px;
+  background: #f8fafc;
+}
+
+.portal-irpf-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--navy);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 950;
+  text-align: right;
+}
+
+.portal-irpf-input b {
+  display: grid;
+  place-items: center;
+  background: var(--navy);
+  color: #fff;
+  font-size: 12px;
+}
+
+.portal-irpf-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.portal-irpf-breakdown > div {
+  display: grid;
+  gap: 2px;
+  padding: 9px;
+  border-radius: 7px;
+  background: #f3f6fa;
+}
+
+.portal-irpf-breakdown strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.portal-irpf-breakdown .is-net {
+  background: #e8faf3;
+}
+
+.portal-irpf-breakdown .is-net strong {
+  color: #06775e;
+}
+
 .portal-payroll-summary strong {
   color: var(--ink);
   font-size: 14px;
@@ -2803,6 +2906,7 @@ select {
 :root[data-theme="dark"] .portal-security-card,
 :root[data-theme="dark"] .portal-update-row,
 :root[data-theme="dark"] .portal-progress-card,
+:root[data-theme="dark"] .portal-irpf-card,
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-primas-list article,
 :root[data-theme="dark"] .portal-code,
@@ -2855,6 +2959,8 @@ select {
 :root[data-theme="dark"] .portal-section-total,
 :root[data-theme="dark"] .portal-jornal-total,
 :root[data-theme="dark"] .portal-payroll-summary strong,
+:root[data-theme="dark"] .portal-irpf-heading strong,
+:root[data-theme="dark"] .portal-irpf-breakdown strong,
 :root[data-theme="dark"] .portal-code,
 :root[data-theme="dark"] .portal-sync-card strong,
 :root[data-theme="dark"] .portal-empty-state strong {
@@ -2978,6 +3084,24 @@ select {
   border-color: rgba(52, 211, 153, 0.45);
   background: rgba(6, 78, 59, 0.54);
   color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-irpf-input,
+:root[data-theme="dark"] .portal-irpf-breakdown > div {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(8, 22, 38, 0.72);
+}
+
+:root[data-theme="dark"] .portal-irpf-input input {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-irpf-breakdown .is-net {
+  background: rgba(6, 78, 59, 0.54);
+}
+
+:root[data-theme="dark"] .portal-irpf-breakdown .is-net strong {
+  color: #6ee7b7;
 }
 
 :root[data-theme="dark"] .portal-warning {
@@ -3218,6 +3342,22 @@ select {
 
   .portal-payroll-summary {
     grid-template-columns: 1fr;
+  }
+
+  .portal-irpf-heading {
+    align-items: flex-start;
+  }
+
+  .portal-irpf-breakdown {
+    gap: 5px;
+  }
+
+  .portal-irpf-breakdown > div {
+    padding: 8px 6px;
+  }
+
+  .portal-irpf-breakdown strong {
+    font-size: 12px;
   }
 
   .portal-update-row {

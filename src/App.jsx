@@ -1255,6 +1255,18 @@ function PortalResultPreview({ snapshot }) {
   const primas = payload?.primas?.rows || [];
   const vacaciones = payload?.vacaciones || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
+  const [irpfRate, setIrpfRate] = useState(0);
+  const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
+
+  useEffect(() => {
+    if (!irpfStorageKey) return;
+    const savedRate = Number.parseFloat(localStorage.getItem(irpfStorageKey) || "0");
+    setIrpfRate(Number.isFinite(savedRate) ? Math.min(Math.max(savedRate, 0), 60) : 0);
+  }, [irpfStorageKey]);
+
+  useEffect(() => {
+    if (irpfStorageKey) localStorage.setItem(irpfStorageKey, String(irpfRate));
+  }, [irpfRate, irpfStorageKey]);
   const enrichedJornales = useMemo(
     () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
     [jornales, primas, payload?.jornales?.monthLabel]
@@ -1270,6 +1282,8 @@ function PortalResultPreview({ snapshot }) {
     [enrichedJornales, selectedPeriod]
   );
   const selectedSummary = useMemo(() => summarizePayroll(selectedJornales), [selectedJornales]);
+  const selectedWithholding = selectedSummary.total * (irpfRate / 100);
+  const selectedNet = selectedSummary.total - selectedWithholding;
   const visibleJornales = useMemo(
     () => [...selectedJornales].sort(compareJornalesDescending),
     [selectedJornales]
@@ -1298,7 +1312,7 @@ function PortalResultPreview({ snapshot }) {
 
       <div className="portal-feature-grid">
         <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${selectedJornales.length} jornales`}>
-          {formatEuro(selectedSummary.total)} {selectedPeriodLabel}
+          Neto {formatEuro(selectedNet)} {selectedPeriodLabel}
         </PortalFeatureCard>
       </div>
 
@@ -1337,6 +1351,39 @@ function PortalResultPreview({ snapshot }) {
               <strong>{formatEuro(payrollSummary.total)}</strong>
             </button>
           </div>
+          <section className="portal-irpf-card" aria-label="Calculo estimado de IRPF">
+            <div className="portal-irpf-heading">
+              <div>
+                <span>Ajuste de IRPF</span>
+                <strong>Neto estimado</strong>
+              </div>
+              <label>
+                <span>IRPF</span>
+                <span className="portal-irpf-input">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max="60"
+                    step="0.1"
+                    value={irpfRate}
+                    onChange={(event) => {
+                      const value = Number.parseFloat(event.target.value);
+                      setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
+                    }}
+                    aria-label="Porcentaje de IRPF"
+                  />
+                  <b>%</b>
+                </span>
+              </label>
+            </div>
+            <div className="portal-irpf-breakdown">
+              <div><span>Bruto</span><strong>{formatEuro(selectedSummary.total)}</strong></div>
+              <div><span>Retencion</span><strong>-{formatEuro(selectedWithholding)}</strong></div>
+              <div className="is-net"><span>Neto estimado</span><strong>{formatEuro(selectedNet)}</strong></div>
+            </div>
+            <small>Estimacion del periodo seleccionado aplicando solo la retencion de IRPF.</small>
+          </section>
           <div className="portal-jornales-list">
             {visibleJornales.length === 0 && (
               <div className="portal-empty-state compact">
