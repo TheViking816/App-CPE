@@ -29,7 +29,7 @@ function Operation({ companyKey, group, journey, expandAll }) {
     <article className={`general-operation ${expanded ? "expanded" : ""}`}>
       <button type="button" className="general-operation-head" onClick={() => setOpen((value) => !value)}>
         <Ship size={20} />
-        <span><strong>{group.name}</strong><small>{group.operacion || group.muelle || "Operación portuaria"}</small></span>
+        <span><strong>{group.name}</strong><small>{group.operacion || (group.hasShip ? "CONT. C/SPREADER AUT" : group.muelle || "Operación portuaria")}</small></span>
         <span className="source-count turno">{counts.turno}</span><span className="source-count bolsa">{counts.bolsa}</span><b>{total}</b>
         <ChevronDown size={20} />
       </button>
