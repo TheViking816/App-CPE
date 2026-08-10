@@ -593,6 +593,31 @@ function AssignmentDetailModal({ assignment, onClose }) {
   const logo = companyLogo(detail.empresa || assignment.empresa);
   const specialties = detail.specialties || [];
 
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const root = document.documentElement;
+    const previousBodyStyles = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow
+    };
+    const previousRootOverflow = root.style.overflow;
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+
+    return () => {
+      Object.assign(body.style, previousBodyStyles);
+      root.style.overflow = previousRootOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   return (
     <div className="assignment-detail-overlay" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();

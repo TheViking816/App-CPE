@@ -1983,14 +1983,20 @@ select {
   padding: 18px;
   background: rgba(2, 17, 36, 0.62);
   backdrop-filter: blur(4px);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .assignment-detail-modal {
   display: grid;
   width: min(720px, 100%);
-  max-height: min(86vh, 820px);
+  max-height: min(86dvh, 820px);
   gap: 14px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 16px;
   border-radius: 8px 8px 0 0;
   background: var(--page-bg, #f4f7fa);
@@ -3259,7 +3265,8 @@ select {
   }
 
   .assignment-detail-modal {
-    max-height: 92vh;
+    width: 100%;
+    max-height: 92dvh;
     padding: 14px;
   }
 
