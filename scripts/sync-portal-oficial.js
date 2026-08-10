@@ -303,24 +303,24 @@ async function waitForFrame(page, pattern, timeout = 12000) {
   throw new Error(`No se cargo la pantalla esperada: ${pattern}`);
 }
 
-async function waitForFrameText(page, pattern, timeout = 12000) {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    for (const frame of page.frames()) {
-      const text = await frame.locator("body").innerText().catch(() => "");
-      if (pattern.test(text)) return frame;
-    }
-    await page.waitForTimeout(200);
-  }
-  throw new Error(`No se cargo el contenido esperado: ${pattern}`);
-}
-
 async function waitForFrameLocator(page, getLocator, timeout = 12000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
       const locator = getLocator(frame).first();
       if (await locator.isVisible().catch(() => false)) return locator;
+    }
+    await page.waitForTimeout(200);
+  }
+  return null;
+}
+
+async function waitForFrameAndLocator(page, getLocator, timeout = 12000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      const locator = getLocator(frame).first();
+      if (await locator.isVisible().catch(() => false)) return { frame, locator };
     }
     await page.waitForTimeout(200);
   }
@@ -410,6 +410,7 @@ async function collectJornales(page) {
 
 async function collectDescansos(page) {
   await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
+  const calendarFrame = await waitForFrame(page, /Prueba\.asp/i, 30000);
   let result = await waitForParsedContent(
     page,
     parseDescansos,
@@ -420,7 +421,7 @@ async function collectDescansos(page) {
 
   const directPage = await page.context().newPage();
   try {
-    await directPage.goto(new URL("/Noray/Prueba.asp", PORTAL_URL).toString(), {
+    await directPage.goto(calendarFrame.url(), {
       waitUntil: "domcontentloaded",
       timeout: 30000
     });
@@ -447,9 +448,28 @@ async function collectSl(page) {
 async function collectPrimas(page) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
   await openMenu(page, "Consultas", "Consulta de Primas Productividad");
-  const securityFrame = await waitForFrameText(page, /clave\s+de\s+seguridad[\s\S]*validar/i);
-  await securityFrame.locator('input[type="password"]:visible').first().fill(portalSecurityKey);
-  await securityFrame.getByRole("button", { name: /Validar/i }).click({ noWaitAfter: true });
+  const securityControl = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Validar/i }),
+    30000
+  );
+
+  if (!securityControl) {
+    const alreadyLoaded = await waitForParsedContent(
+      page,
+      parsePrimas,
+      (result) => (result.rows || []).filter((row) => row.jornal).length,
+      3000
+    );
+    if ((alreadyLoaded.rows || []).some((row) => row.jornal)) return alreadyLoaded;
+    throw new Error("No se encontro la validacion de la clave de primas.");
+  }
+
+  const securityInput = securityControl.frame
+    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):visible')
+    .first();
+  await securityInput.fill(portalSecurityKey);
+  await securityControl.locator.click({ noWaitAfter: true });
 
   const accept = await waitForFrameLocator(
     page,
@@ -519,6 +539,9 @@ async function main() {
   const launchOptions = {
     headless,
     viewport: { width: 1500, height: 1100 },
+    locale: "es-ES",
+    timezoneId: "Europe/Madrid",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     args: ["--disable-blink-features=AutomationControlled"]
   };
   if (browserChannel && browserChannel !== "bundled") {
@@ -526,25 +549,38 @@ async function main() {
   }
 
   const context = await chromium.launchPersistentContext(profileDir, launchOptions);
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "platform", { get: () => "Win32" });
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+  });
   const page = context.pages()[0] || await context.newPage();
 
   try {
     await login(page);
     const updatedAt = new Date().toISOString();
     const existingSnapshot = await getExistingSupabaseSnapshot();
-    let descansos;
-    try {
-      descansos = await collectDescansos(page);
-    } catch (error) {
-      descansos = existingSnapshot?.payload?.descansos || null;
-      if (!descansos) throw error;
-      console.warn(error instanceof Error ? error.message : "No se pudo actualizar el calendario de descansos.");
-    }
+    const readSection = async (name, reader, fallback) => {
+      console.log(`Leyendo ${name}...`);
+      try {
+        const value = await reader();
+        console.log(`${name} actualizado.`);
+        return value;
+      } catch (error) {
+        if (!fallback) throw error;
+        console.warn(`${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim());
+        return fallback;
+      }
+    };
+
+    const jornales = await readSection("jornales", () => collectJornales(page), existingSnapshot?.payload?.jornales);
+    const primas = await readSection("primas", () => collectPrimas(page), existingSnapshot?.payload?.primas);
+    const sl = await readSection("lista SL", () => collectSl(page), existingSnapshot?.payload?.sl);
+    const descansos = await readSection("descansos", () => collectDescansos(page), existingSnapshot?.payload?.descansos);
     const payload = {
-      jornales: await collectJornales(page),
+      jornales,
       descansos,
-      sl: await collectSl(page),
-      primas: await collectPrimas(page)
+      sl,
+      primas
     };
 
     const snapshot = {
