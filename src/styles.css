@@ -1664,8 +1664,13 @@ select {
 }
 
 .portal-jornales-list article {
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: rgba(13, 53, 103, 0.14);
+  box-shadow: 0 8px 20px rgba(7, 31, 63, 0.07);
 }
 
 .portal-primas-list article {
@@ -1680,15 +1685,49 @@ select {
   overflow-wrap: anywhere;
 }
 
-.portal-jornales-list article > span {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: #edf3ff;
-  color: var(--navy);
+.portal-jornal-date {
+  display: flex;
+  min-height: 108px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: linear-gradient(155deg, #08264b, #164a83);
+  color: #fff;
+}
+
+.portal-jornal-date strong {
+  color: inherit;
+  font-size: 25px;
+  line-height: 1;
+}
+
+.portal-jornal-date span {
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 10px;
   font-weight: 900;
+}
+
+.portal-jornal-content {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.portal-jornal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portal-jornal-destination {
+  margin-top: 2px;
+  color: var(--navy) !important;
 }
 
 .portal-jornales-list strong,
@@ -1720,7 +1759,183 @@ select {
 }
 
 .portal-jornal-total {
-  justify-self: end;
+  flex: 0 0 auto;
+  color: #0b8f70;
+  font-size: 17px !important;
+}
+
+.portal-jornal-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.portal-jornal-breakdown span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  border-radius: 5px;
+  background: #f1f5f9;
+  color: #617086;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.portal-jornal-breakdown b {
+  color: var(--ink);
+}
+
+.portal-jornal-breakdown .is-prima {
+  background: #e7f9f3;
+  color: #087f5b;
+}
+
+.portal-jornal-breakdown .is-pending {
+  background: #fff5e9;
+  color: #a95508;
+}
+
+.portal-salary-section {
+  display: grid;
+  gap: 10px;
+}
+
+.portal-salary-hero {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+  padding: 16px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #08264b 0%, #0d3567 58%, #12677a 100%);
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(8, 38, 75, 0.22);
+}
+
+.portal-salary-hero-heading,
+.portal-salary-main,
+.portal-salary-title,
+.portal-salary-metrics span {
+  display: flex;
+  align-items: center;
+}
+
+.portal-salary-hero-heading,
+.portal-salary-main {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.portal-salary-title {
+  gap: 9px;
+}
+
+.portal-salary-title > div,
+.portal-salary-main > div:first-child,
+.portal-salary-metrics > div {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-salary-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.portal-salary-title small,
+.portal-salary-main span,
+.portal-salary-main small,
+.portal-salary-metrics span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-salary-title strong {
+  font-size: 17px;
+}
+
+.portal-salary-period {
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.09);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.portal-salary-main > div:first-child > strong {
+  margin: 2px 0;
+  color: #fff;
+  font-size: clamp(31px, 9vw, 44px);
+  line-height: 1;
+}
+
+.portal-salary-ring {
+  --salary-progress: 342deg;
+  position: relative;
+  display: grid;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  place-content: center;
+  border-radius: 50%;
+  background: conic-gradient(#38d7bd var(--salary-progress), rgba(255, 255, 255, 0.16) 0);
+  text-align: center;
+}
+
+.portal-salary-ring::after {
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background: #0c3765;
+  content: "";
+}
+
+.portal-salary-ring span,
+.portal-salary-ring small {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+}
+
+.portal-salary-ring span {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.portal-salary-ring small {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.portal-salary-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portal-salary-metrics > div {
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.portal-salary-metrics span {
+  gap: 5px;
+}
+
+.portal-salary-metrics strong {
+  color: #fff;
+  font-size: 15px;
 }
 
 .portal-payroll-summary {
@@ -1737,8 +1952,8 @@ select {
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
-  min-height: 54px;
-  padding: 7px 10px;
+  min-height: 58px;
+  padding: 8px 10px;
   border: 1px solid rgba(217, 226, 236, 0.9);
   border-radius: 8px;
   background: #f8fafc;
@@ -1754,21 +1969,25 @@ select {
 }
 
 .portal-payroll-summary button.is-active {
-  border-color: rgba(17, 185, 129, 0.45);
-  background: #ecfdf5;
-  color: var(--navy);
-  box-shadow: inset 0 0 0 1px rgba(17, 185, 129, 0.12);
+  border-color: #0d3567;
+  background: #0d3567;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(13, 53, 103, 0.18);
+}
+
+.portal-payroll-summary button.is-active strong {
+  color: #fff;
 }
 
 .portal-irpf-card {
   display: grid;
   gap: 10px;
   margin-bottom: 10px;
-  padding: 12px;
+  padding: 11px 12px;
   border: 1px solid rgba(217, 226, 236, 0.9);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.06);
+  box-shadow: none;
 }
 
 .portal-irpf-heading {
@@ -3124,9 +3343,33 @@ select {
 }
 
 :root[data-theme="dark"] .portal-payroll-summary button.is-active {
-  border-color: rgba(52, 211, 153, 0.45);
-  background: rgba(6, 78, 59, 0.54);
-  color: var(--ink);
+  border-color: rgba(79, 157, 255, 0.5);
+  background: #164a83;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .portal-payroll-summary button.is-active strong,
+:root[data-theme="dark"] .portal-jornal-total {
+  color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .portal-payroll-summary button.is-active strong {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .portal-jornal-breakdown span {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .portal-jornal-breakdown .is-prima {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .portal-jornal-breakdown .is-pending {
+  background: rgba(245, 130, 32, 0.15);
+  color: #fdba74;
 }
 
 :root[data-theme="dark"] .portal-irpf-input,
@@ -3375,16 +3618,42 @@ select {
   }
 
   .portal-jornales-list article {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 64px minmax(0, 1fr);
   }
 
-  .portal-jornal-total {
-    grid-column: 2;
-    justify-self: start;
+  .portal-jornal-content {
+    padding: 11px 10px;
   }
 
   .portal-payroll-summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .portal-payroll-summary button {
+    min-height: 60px;
+    padding: 7px;
+  }
+
+  .portal-payroll-summary strong {
+    font-size: 12px;
+  }
+
+  .portal-salary-main > div:first-child > strong {
+    font-size: 32px;
+  }
+
+  .portal-salary-ring {
+    width: 66px;
+    height: 66px;
+  }
+
+  .portal-jornal-heading {
+    align-items: flex-start;
+  }
+
+  .portal-jornal-total {
+    font-size: 15px !important;
   }
 
   .portal-irpf-heading {
