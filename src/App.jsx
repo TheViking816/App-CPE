@@ -1403,47 +1403,37 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             </button>
           </div>
           <section className="portal-irpf-card" aria-label="Calculo estimado de IRPF">
-            <div className="portal-irpf-heading">
-              <div>
-                <span>Ajuste de IRPF</span>
-                <strong>Personaliza tu estimacion</strong>
-              </div>
-              <div className="portal-irpf-actions">
-                <label>
-                  <span>IRPF</span>
-                  <span className="portal-irpf-input">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      max="60"
-                      step="0.1"
-                      value={irpfRate}
-                      onChange={(event) => {
-                        const value = Number.parseFloat(event.target.value);
-                        setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
-                        setIrpfMessage("");
-                      }}
-                      aria-label="Porcentaje de IRPF"
-                    />
-                    <b>%</b>
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  className="portal-irpf-save"
-                  disabled={savingIrpf || irpfRate === savedIrpfRate}
-                  onClick={saveIrpfRate}
-                >
-                  {savingIrpf ? <RefreshCw size={16} className="is-spinning" /> : <Save size={16} />}
-                  {savingIrpf ? "Guardando" : "Guardar"}
-                </button>
-              </div>
-            </div>
+            <strong>Ajuste de IRPF</strong>
+            <span className="portal-irpf-input">
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                max="60"
+                step="0.1"
+                value={irpfRate}
+                onChange={(event) => {
+                  const value = Number.parseFloat(event.target.value);
+                  setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
+                  setIrpfMessage("");
+                }}
+                aria-label="Porcentaje de IRPF"
+              />
+              <b>%</b>
+            </span>
+            <button
+              type="button"
+              className="portal-irpf-save"
+              disabled={savingIrpf || irpfRate === savedIrpfRate}
+              onClick={saveIrpfRate}
+              aria-label={savingIrpf ? "Guardando IRPF" : "Guardar IRPF"}
+              title={savingIrpf ? "Guardando IRPF" : "Guardar IRPF"}
+            >
+              {savingIrpf ? <RefreshCw size={17} className="is-spinning" /> : <Save size={17} />}
+            </button>
             {irpfMessage && (
               <p className={`portal-irpf-message${irpfError ? " is-error" : ""}`}>{irpfMessage}</p>
             )}
-            <small>Estimacion del periodo seleccionado aplicando solo la retencion de IRPF.</small>
           </section>
           <div className="portal-jornales-list">
             {visibleJornales.length === 0 && (
@@ -1452,31 +1442,37 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
                 <strong>{selectedPeriod === "month" ? "Sin jornales este mes" : "Sin jornales en esta quincena"}</strong>
               </div>
             )}
-            {visibleJornales.map((item, index) => (
-              <article key={`${item.jornal}-${index}`}>
-                <div className="portal-jornal-date">
-                  <strong>{item.dia || "-"}</strong>
-                  <span>{item.payroll?.shift || "Jornal"}</span>
-                </div>
-                <div className="portal-jornal-content">
-                  <div className="portal-jornal-heading">
-                    <strong>{item.especialidad || "Jornal"}</strong>
-                    <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
+            {visibleJornales.map((item, index) => {
+              const logo = companyLogo(item.empresa);
+              return (
+                <article key={`${item.jornal}-${index}`} className={logo ? "has-company-logo" : ""}>
+                  <div
+                    className="portal-jornal-date"
+                    style={logo ? { "--jornal-company-logo": `url("${logo}")` } : undefined}
+                  >
+                    <strong>{item.dia || "-"}</strong>
+                    <span>{item.payroll?.shift || "Jornal"}</span>
                   </div>
-                  <em className="portal-jornal-destination">{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</em>
-                  {item.operacion && <em>{item.operacion}</em>}
-                  <div className="portal-jornal-breakdown">
-                    <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
-                    {item.payroll?.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
-                    {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
-                      <span className={item.payroll?.prima > 0 ? "is-prima" : "is-pending"}>
-                        Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
-                      </span>
-                    )}
+                  <div className="portal-jornal-content">
+                    <div className="portal-jornal-heading">
+                      <strong>{item.especialidad || "Jornal"}</strong>
+                      <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
+                    </div>
+                    <em className="portal-jornal-destination">{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</em>
+                    {item.operacion && <em>{item.operacion}</em>}
+                    <div className="portal-jornal-breakdown">
+                      <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
+                      {item.payroll?.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
+                      {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
+                        <span className={item.payroll?.prima > 0 ? "is-prima" : "is-pending"}>
+                          Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         </section>
       )}

@@ -1686,14 +1686,42 @@ select {
 }
 
 .portal-jornal-date {
+  position: relative;
   display: flex;
   min-height: 108px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background: linear-gradient(155deg, #08264b, #164a83);
-  color: #fff;
+  overflow: hidden;
+  border-right: 1px solid #dbe5ef;
+  background: linear-gradient(155deg, #edf4fa, #dfeaf4);
+  color: var(--navy);
+  isolation: isolate;
+}
+
+.portal-jornal-date::before {
+  position: absolute;
+  z-index: -2;
+  inset: 8px;
+  background-image: var(--jornal-company-logo);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  opacity: 0;
+}
+
+.portal-jornal-date::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  content: "";
+}
+
+.portal-jornales-list article.has-company-logo .portal-jornal-date::before {
+  opacity: 0.3;
 }
 
 .portal-jornal-date strong {
@@ -1705,7 +1733,8 @@ select {
 .portal-jornal-date span {
   padding: 4px 6px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 2px 7px rgba(7, 31, 63, 0.1);
   font-size: 10px;
   font-weight: 900;
 }
@@ -1981,13 +2010,22 @@ select {
 
 .portal-irpf-card {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 82px 40px;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
-  padding: 11px 12px;
+  padding: 8px 10px;
   border: 1px solid rgba(217, 226, 236, 0.9);
+  border-left: 3px solid #f58220;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: none;
+}
+
+.portal-irpf-card > strong {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .portal-irpf-heading {
@@ -2015,10 +2053,11 @@ select {
 }
 
 .portal-irpf-save {
-  min-height: 42px;
+  width: 40px;
+  min-height: 40px;
   border: 0;
   border-radius: 7px;
-  padding: 0 14px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2036,9 +2075,10 @@ select {
 }
 
 .portal-irpf-message {
-  margin: 10px 0 0;
+  grid-column: 1 / -1;
+  margin: 0;
   color: #087f5b;
-  font-size: 0.82rem;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -2068,7 +2108,7 @@ select {
 
 .portal-irpf-input {
   display: grid;
-  grid-template-columns: 58px 24px;
+  grid-template-columns: 56px 24px;
   min-height: 40px;
   overflow: hidden;
   border: 1px solid rgba(13, 53, 103, 0.24);
@@ -3229,6 +3269,20 @@ select {
   color: var(--ink);
 }
 
+:root[data-theme="dark"] .portal-irpf-card > strong {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-jornal-date {
+  border-color: rgba(148, 163, 184, 0.34);
+  background: linear-gradient(155deg, #e7eef5, #cedce9);
+  color: #08264b;
+}
+
+:root[data-theme="dark"] .portal-jornal-date::after {
+  background: rgba(255, 255, 255, 0.65);
+}
+
 :root[data-theme="dark"] .current-assignments-icon {
   background: rgba(16, 185, 129, 0.16);
   color: #6ee7b7;
@@ -3656,21 +3710,8 @@ select {
     font-size: 15px !important;
   }
 
-  .portal-irpf-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .portal-irpf-actions {
-    width: 100%;
-  }
-
-  .portal-irpf-actions label {
-    flex: 0 0 auto;
-  }
-
-  .portal-irpf-save {
-    flex: 1;
+  .portal-irpf-card {
+    grid-template-columns: minmax(0, 1fr) 82px 40px;
   }
 
   .portal-irpf-breakdown {
