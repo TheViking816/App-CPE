@@ -521,7 +521,7 @@ function normalizeAssignmentShift(value) {
   return hours ? `${hours[1]}-${hours[2]}` : String(value || "").trim();
 }
 
-function CurrentAssignments({ snapshot, currentTime }) {
+function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const assignments = useMemo(() => {
     const today = new Date(currentTime || Date.now());
@@ -539,7 +539,31 @@ function CurrentAssignments({ snapshot, currentTime }) {
       });
   }, [snapshot, currentTime]);
 
-  if (!assignments.length) return null;
+  if (!assignments.length) {
+    if (snapshot?.payload) return null;
+    return (
+      <section className="current-assignments-card is-empty">
+        <div className="current-assignments-heading">
+          <div className="current-assignments-icon"><ClipboardList size={21} /></div>
+          <div>
+            <span>Mi contratacion</span>
+            <strong>Proximos jornales</strong>
+          </div>
+        </div>
+        <div className="current-assignments-empty">
+          <div aria-hidden="true">
+            <span>--/--</span>
+            <strong>Sin datos cargados</strong>
+            <small>Conecta el portal para consultar tu contratacion.</small>
+          </div>
+          <button type="button" onClick={onLoadPortal}>
+            <RefreshCw size={17} />
+            Cargar datos
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="current-assignments-card">
@@ -762,7 +786,8 @@ function HomePanel({
   activeSpecialty,
   availableSpecialties,
   activeSpecialtyId,
-  onSpecialtyChange
+  onSpecialtyChange,
+  onLoadPortal
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
@@ -805,7 +830,7 @@ function HomePanel({
         </div>
       </section>
 
-      <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} />
+      <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
 
       <div className="specialty-select">
         <span>Especialidad</span>
@@ -2280,6 +2305,7 @@ export function App() {
             activeSpecialtyId={activeSpecialtyId}
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
+            onLoadPortal={() => setActiveTab("portal")}
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
