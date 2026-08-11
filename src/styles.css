@@ -2383,7 +2383,7 @@ select {
 
 .portal-salary-alternative .portal-jornales-list article {
   position: relative;
-  grid-template-columns: 86px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   border: 1px solid #dbe5ef;
   box-shadow: 0 5px 14px rgba(7, 31, 63, 0.06);
 }
@@ -2437,15 +2437,15 @@ select {
 .portal-salary-alternative .portal-jornal-date {
   min-height: 102px;
   justify-content: space-between;
-  padding: 10px 6px;
+  padding: 10px 7px;
   border-right: 0;
   background: #f4f8fb;
 }
 
 .portal-salary-alternative .portal-jornal-date::before {
-  inset: 4px;
-  background-size: 92% auto;
-  filter: contrast(1.38) saturate(1.15);
+  inset: 0;
+  background-size: 132% auto;
+  filter: contrast(1.55) saturate(1.18);
 }
 
 .portal-salary-alternative .portal-jornales-list article.has-company-logo .portal-jornal-date::before {
@@ -2535,7 +2535,7 @@ select {
   }
 
   .portal-salary-alternative .portal-jornales-list article {
-    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-columns: 104px minmax(0, 1fr);
   }
 
   .portal-salary-alternative .portal-jornales-list article::before {
