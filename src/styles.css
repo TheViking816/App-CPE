@@ -2224,13 +2224,6 @@ select {
 @media (max-width: 620px) {
   .portal-section-shortcuts { gap: 6px; }
   .portal-section-shortcuts button { padding: 9px; font-size: 12px; }
-  .portal-jornal-detail-overlay { align-items: end; padding: 0; }
-  .portal-jornal-detail-modal { width: 100%; max-height: 92dvh; padding: 14px; border-radius: 8px 8px 0 0; }
-  .portal-jornal-detail-modal > header { grid-template-columns: 54px minmax(0, 1fr) 42px; }
-  .portal-jornal-detail-logo { width: 54px; height: 54px; }
-  .portal-jornal-detail-modal h1 { font-size: 17px; }
-  .portal-jornal-detail-total strong { font-size: 30px; }
-  .portal-jornal-detail-breakdown { grid-template-columns: 1fr; }
 }
 
 .portal-salary-alternative .portal-salary-title {
@@ -3006,6 +2999,41 @@ select {
 
 .portal-jornal-detail-breakdown {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 620px) {
+  .portal-jornal-detail-overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .portal-jornal-detail-modal {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 14px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .portal-jornal-detail-modal > header {
+    grid-template-columns: 54px minmax(0, 1fr) 42px;
+  }
+
+  .portal-jornal-detail-logo {
+    width: 54px;
+    height: 54px;
+  }
+
+  .portal-jornal-detail-modal h1 {
+    font-size: 17px;
+  }
+
+  .portal-jornal-detail-total strong {
+    font-size: 30px;
+  }
+
+  .portal-jornal-detail-breakdown {
+    grid-template-columns: 1fr;
+  }
 }
 
 .assignment-detail-overlay {
