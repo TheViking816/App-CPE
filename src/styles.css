@@ -1664,7 +1664,7 @@ select {
 }
 
 .portal-jornales-list article {
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   align-items: stretch;
   gap: 0;
   padding: 0;
@@ -3672,7 +3672,7 @@ select {
   }
 
   .portal-jornales-list article {
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 82px minmax(0, 1fr);
   }
 
   .portal-jornal-content {
