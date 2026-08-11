@@ -2265,7 +2265,7 @@ select {
   position: relative;
   display: grid;
   width: 100%;
-  grid-template-columns: 44px 60px minmax(0, 1fr) auto 18px;
+  grid-template-columns: 58px 60px minmax(0, 1fr) auto 18px;
   align-items: center;
   gap: 10px;
   padding: 9px;
@@ -2285,10 +2285,10 @@ select {
   inset: 0;
   background-image: var(--assignment-logo);
   background-repeat: no-repeat;
-  background-position: 92% center;
-  background-size: min(58%, 280px) auto;
+  background-position: 88% center;
+  background-size: min(66%, 320px) auto;
   content: "";
-  opacity: 0.08;
+  opacity: 0.16;
   pointer-events: none;
 }
 
@@ -2313,14 +2313,14 @@ select {
 }
 
 .current-assignment-logo {
-  width: 44px;
-  height: 44px;
+  width: 58px;
+  height: 58px;
 }
 
 .current-assignment-logo img,
 .assignment-detail-logo img {
-  width: 88%;
-  height: 88%;
+  width: 96%;
+  height: 96%;
   object-fit: contain;
 }
 
@@ -3752,14 +3752,14 @@ select {
   }
 
   .current-assignments-list article > button {
-    grid-template-columns: 40px 52px minmax(0, 1fr) 18px;
+    grid-template-columns: 54px 52px minmax(0, 1fr) 18px;
     gap: 7px;
     padding: 8px;
   }
 
   .current-assignment-logo {
-    width: 40px;
-    height: 40px;
+    width: 54px;
+    height: 54px;
   }
 
   .current-assignment-part {
