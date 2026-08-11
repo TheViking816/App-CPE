@@ -1348,13 +1348,13 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
       </section>
 
       {jornales.length > 0 && (
-        <section className="portal-salary-section">
+        <section className="portal-salary-section portal-salary-alternative">
           <div className="portal-salary-hero">
             <div className="portal-salary-hero-heading">
               <div className="portal-salary-title">
                 <span className="portal-salary-icon"><WalletCards size={22} /></span>
                 <div>
-                  <small>Resumen salarial</small>
+                  <small>Extracto salarial</small>
                   <strong>{payload.jornales?.monthLabel || "Ultimo mes"}</strong>
                 </div>
               </div>
