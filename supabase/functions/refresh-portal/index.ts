@@ -76,19 +76,23 @@ Deno.serve(async (request) => {
   const securityKey = typeof body.securityKey === "string" ? body.securityKey : "";
   const workflowRef = typeof body.ref === "string" && body.ref.trim() ? body.ref.trim() : defaultWorkflowRef;
 
-  if (!token || !portalPassword) {
-    return jsonResponse({ ok: false, error: "Falta la contrasena del portal" }, 400);
+  if (!token) {
+    return jsonResponse({ ok: false, error: "Sesion no valida" }, 400);
   }
 
   const supabase = createClient(projectUrl, serviceRoleKey, {
     auth: { persistSession: false }
   });
 
-  const { data, error } = await supabase.rpc("app_cpe_create_portal_sync_job", {
-    p_token: token,
-    p_portal_password: portalPassword,
-    p_security_key: securityKey
-  });
+  const { data, error } = portalPassword
+    ? await supabase.rpc("app_cpe_create_portal_sync_job", {
+        p_token: token,
+        p_portal_password: portalPassword,
+        p_security_key: securityKey
+      })
+    : await supabase.rpc("app_cpe_create_portal_sync_job_from_saved", {
+        p_token: token
+      });
 
   if (error || !data?.jobId) {
     return jsonResponse({ ok: false, error: error?.message ?? "No se pudo crear la sincronizacion" }, 400);

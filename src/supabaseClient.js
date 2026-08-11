@@ -270,6 +270,31 @@ export async function requestPortalSync({ token, portalPassword, securityKey = "
   return data || null;
 }
 
+export async function getPortalAutoSyncStatus({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_auto_sync_status", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function setPortalAutoSync({ token, enabled, portalPassword = "", securityKey = "" }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_set_portal_auto_sync", {
+    p_token: token,
+    p_enabled: enabled,
+    p_portal_password: portalPassword,
+    p_security_key: securityKey
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function getPortalSyncJob({ token, jobId }) {
   if (!supabase || !token || !jobId) return null;
 

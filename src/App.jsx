@@ -39,12 +39,14 @@ import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   getOfficialPortalSnapshot,
+  getPortalAutoSyncStatus,
   getPortalSyncJob,
   loginUser,
   registerUser,
   requestChaperoRefresh,
   requestDoorRefresh,
   requestPortalSync,
+  setPortalAutoSync,
   trackPortalOpen,
   trackUsageEvent,
   updateUserIrpf,
@@ -59,13 +61,8 @@ const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
-const PORTAL_AUTO_SYNC_ATTEMPTS_KEY = "app-cpe-portal-auto-sync-attempts";
 const DEFAULT_PORTAL_SYNC_SECONDS = 75;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
-const PORTAL_AUTO_SYNC_RETRY_MS = 30 * 60 * 1000;
-const PORTAL_AUTO_SYNC_CHECK_MS = 30_000;
-const PORTAL_AUTO_SYNC_POLL_MS = 5_000;
-const PORTAL_AUTO_SYNC_TIMES = [[7, 30], [12, 30], [15, 0]];
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
@@ -143,42 +140,6 @@ function writePortalActiveSync(chapa, activeSync) {
   } catch {
     // Si el almacenamiento no esta disponible, la lectura sigue en el servidor.
   }
-}
-
-function readPortalAutoSyncAttempt(chapa) {
-  try {
-    const stored = JSON.parse(localStorage.getItem(PORTAL_AUTO_SYNC_ATTEMPTS_KEY)) || {};
-    return Number(stored[normalizeChapa(chapa)] || 0);
-  } catch {
-    return 0;
-  }
-}
-
-function writePortalAutoSyncAttempt(chapa, attemptedAt) {
-  try {
-    const stored = JSON.parse(localStorage.getItem(PORTAL_AUTO_SYNC_ATTEMPTS_KEY)) || {};
-    stored[normalizeChapa(chapa)] = Number(attemptedAt || Date.now());
-    localStorage.setItem(PORTAL_AUTO_SYNC_ATTEMPTS_KEY, JSON.stringify(stored));
-  } catch {
-    // El control de reintentos es opcional; nunca impide usar la app.
-  }
-}
-
-function getLatestPortalSyncCutoff(now = new Date()) {
-  const current = new Date(now);
-  const candidates = PORTAL_AUTO_SYNC_TIMES.map(([hours, minutes]) => {
-    const candidate = new Date(current);
-    candidate.setHours(hours, minutes, 0, 0);
-    return candidate;
-  }).filter((candidate) => candidate <= current);
-
-  if (candidates.length) return candidates[candidates.length - 1];
-
-  const [hours, minutes] = PORTAL_AUTO_SYNC_TIMES[PORTAL_AUTO_SYNC_TIMES.length - 1];
-  const previousDay = new Date(current);
-  previousDay.setDate(previousDay.getDate() - 1);
-  previousDay.setHours(hours, minutes, 0, 0);
-  return previousDay;
 }
 
 const NAV_ITEMS = [
@@ -1520,6 +1481,8 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [rememberCredentials, setRememberCredentials] = useState(Boolean(initialCredentials));
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [autoSyncLoading, setAutoSyncLoading] = useState(true);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
   const [portalMessage, setPortalMessage] = useState(initialActiveSync ? "Recuperando la sincronizacion en curso..." : "");
@@ -1547,6 +1510,21 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
 
   useEffect(() => {
     loadSnapshot();
+  }, [session.token]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPortalAutoSyncStatus({ token: session.token })
+      .then((status) => {
+        if (!cancelled) setAutoSyncEnabled(Boolean(status?.enabled));
+      })
+      .catch((statusError) => {
+        if (!cancelled) console.warn("No se pudo leer la sincronizacion automatica:", statusError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setAutoSyncLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [session.token]);
 
   useEffect(() => {
@@ -1617,7 +1595,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const handlePortalSync = async () => {
     const passwordToUse = portalPassword.trim() || savedCredentials?.portalPassword || "";
     const securityKeyToUse = securityKey.trim() || savedCredentials?.securityKey || "";
-    if (!passwordToUse) {
+    if (!passwordToUse && !autoSyncEnabled) {
       setError("Introduce la contrasena del portal.");
       setShowCredentials(true);
       return;
@@ -1632,6 +1610,14 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     syncStartedAtRef.current = Date.now();
 
     try {
+      if (autoSyncEnabled && passwordToUse) {
+        await setPortalAutoSync({
+          token: session.token,
+          enabled: true,
+          portalPassword: passwordToUse,
+          securityKey: securityKeyToUse
+        });
+      }
       const job = await requestPortalSync({
         token: session.token,
         portalPassword: passwordToUse,
@@ -1673,6 +1659,27 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     setShowCredentials(true);
   };
 
+  const disableAutoSync = async () => {
+    setError("");
+    setAutoSyncLoading(true);
+    try {
+      await setPortalAutoSync({ token: session.token, enabled: false });
+      setAutoSyncEnabled(false);
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo desactivar la sincronizacion automatica.");
+    } finally {
+      setAutoSyncLoading(false);
+    }
+  };
+
+  const handleAutoSyncToggle = (enabled) => {
+    if (enabled) {
+      setAutoSyncEnabled(true);
+      return;
+    }
+    disableAutoSync();
+  };
+
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
 
   return (
@@ -1687,11 +1694,16 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         <div className="portal-update-row">
           <span>
             Datos guardados del portal oficial
-            {savedCredentials && <small>Actualizacion automatica: 07:30 · 12:30 · 15:00</small>}
+            {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30 y 12:30</small>}
           </span>
           <div>
             {savedCredentials && <button className="portal-forget-button" type="button" onClick={forgetCredentials}>Cambiar claves</button>}
-            <button type="button" disabled={syncingPortal} onClick={savedCredentials ? handlePortalSync : () => setShowCredentials(true)}>
+            {autoSyncEnabled && (
+              <button className="portal-forget-button" type="button" disabled={autoSyncLoading} onClick={disableAutoSync}>
+                Desactivar auto
+              </button>
+            )}
+            <button type="button" disabled={syncingPortal} onClick={(savedCredentials || autoSyncEnabled) ? handlePortalSync : () => setShowCredentials(true)}>
               <RefreshCw size={16} className={syncingPortal ? "is-spinning" : ""} />
               {syncingPortal ? "Actualizando" : "Actualizar portal"}
             </button>
@@ -1742,6 +1754,20 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
               <span>Recordar las claves en este dispositivo</span>
             </label>
             {rememberCredentials && <small className="portal-storage-note">No se envian a otro dispositivo. Puedes borrarlas desde “Cambiar claves”.</small>}
+            <label className="portal-remember-option portal-auto-sync-option">
+              <input
+                type="checkbox"
+                checked={autoSyncEnabled}
+                disabled={autoSyncLoading}
+                onChange={(event) => handleAutoSyncToggle(event.target.checked)}
+              />
+              <span>Sincronizar cada hora, tambien a las 07:30 y 12:30</span>
+            </label>
+            {autoSyncEnabled && (
+              <small className="portal-storage-note">
+                Las claves se guardaran cifradas en Supabase Vault. Al desactivar esta opcion se eliminaran del servidor.
+              </small>
+            )}
             <div className="portal-security-actions">
               {snapshot && !syncingPortal && (
                 <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
@@ -1857,7 +1883,6 @@ export function App() {
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
   const syncRefreshRequestedRef = useRef(false);
-  const portalSnapshotRef = useRef(null);
 
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -1895,10 +1920,6 @@ export function App() {
     const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    portalSnapshotRef.current = portalSnapshot;
-  }, [portalSnapshot]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2060,116 +2081,6 @@ export function App() {
       cancelled = true;
     };
   }, [session?.token]);
-
-  useEffect(() => {
-    if (!session?.token || !session?.chapa) return undefined;
-
-    let cancelled = false;
-    let launchTimer = null;
-    let checkTimer = null;
-    let pollTimer = null;
-    let monitoredJobId = "";
-
-    const refreshPortalSnapshot = async () => {
-      const data = await getOfficialPortalSnapshot({ token: session.token });
-      if (!cancelled) {
-        portalSnapshotRef.current = data || null;
-        setPortalSnapshot(data || null);
-      }
-      return data;
-    };
-
-    const monitorPortalJob = (jobId) => {
-      if (!jobId || monitoredJobId === jobId) return;
-      monitoredJobId = jobId;
-      if (pollTimer) window.clearTimeout(pollTimer);
-
-      const poll = async () => {
-        if (cancelled || monitoredJobId !== jobId) return;
-        try {
-          const job = await getPortalSyncJob({ token: session.token, jobId });
-          if (job?.status === "completed") {
-            await refreshPortalSnapshot();
-            writePortalActiveSync(session.chapa, null);
-            monitoredJobId = "";
-            return;
-          }
-          if (job?.status === "failed") {
-            writePortalActiveSync(session.chapa, null);
-            monitoredJobId = "";
-            return;
-          }
-        } catch {
-          // Los errores transitorios se comprueban de nuevo sin relanzar el trabajo.
-        }
-        pollTimer = window.setTimeout(poll, PORTAL_AUTO_SYNC_POLL_MS);
-      };
-
-      poll();
-    };
-
-    const checkAutomaticPortalSync = async () => {
-      if (cancelled || document.visibilityState !== "visible") return;
-
-      const activeSync = readPortalActiveSync(session.chapa);
-      if (activeSync?.jobId) {
-        monitorPortalJob(activeSync.jobId);
-        return;
-      }
-
-      const credentials = readPortalCredentials(session.chapa);
-      if (!credentials?.portalPassword) return;
-
-      try {
-        const latestCutoff = getLatestPortalSyncCutoff().getTime();
-        const cachedUpdatedAt = new Date(portalSnapshotRef.current?.updatedAt || 0).getTime();
-        if (Number.isFinite(cachedUpdatedAt) && cachedUpdatedAt >= latestCutoff) return;
-
-        const lastAttempt = readPortalAutoSyncAttempt(session.chapa);
-        if (lastAttempt && Date.now() - lastAttempt < PORTAL_AUTO_SYNC_RETRY_MS) return;
-
-        const snapshot = await refreshPortalSnapshot();
-        const updatedAt = new Date(snapshot?.updatedAt || 0).getTime();
-        if (Number.isFinite(updatedAt) && updatedAt >= latestCutoff) {
-          return;
-        }
-
-        writePortalAutoSyncAttempt(session.chapa, Date.now());
-        const job = await requestPortalSync({
-          token: session.token,
-          portalPassword: credentials.portalPassword,
-          securityKey: credentials.securityKey || ""
-        });
-        if (!job?.jobId) return;
-
-        const activeJob = {
-          jobId: job.jobId,
-          status: job.status || "queued",
-          startedAt: Date.now()
-        };
-        writePortalActiveSync(session.chapa, activeJob);
-        monitorPortalJob(job.jobId);
-      } catch {
-        // La lectura manual sigue disponible; el siguiente intento automatico esperara 30 minutos.
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") checkAutomaticPortalSync();
-    };
-
-    launchTimer = window.setTimeout(checkAutomaticPortalSync, 3_000);
-    checkTimer = window.setInterval(checkAutomaticPortalSync, PORTAL_AUTO_SYNC_CHECK_MS);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      cancelled = true;
-      if (launchTimer) window.clearTimeout(launchTimer);
-      if (checkTimer) window.clearInterval(checkTimer);
-      if (pollTimer) window.clearTimeout(pollTimer);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [session?.chapa, session?.token]);
 
   useEffect(() => {
     if (!session?.token || activeTab !== "portal") return;
