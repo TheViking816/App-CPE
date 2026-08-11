@@ -2753,19 +2753,6 @@ select {
   overflow: hidden;
 }
 
-.current-assignments-list article > button::before {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background-image: var(--assignment-logo);
-  background-repeat: no-repeat;
-  background-position: 88% center;
-  background-size: min(66%, 320px) auto;
-  content: "";
-  opacity: 0.16;
-  pointer-events: none;
-}
-
 .current-assignments-list article > button > * {
   position: relative;
   z-index: 1;

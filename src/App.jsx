@@ -583,7 +583,6 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
               type="button"
               onClick={() => setSelectedAssignment(item)}
               aria-label={`Ver parte ${item.parte}`}
-              style={{ "--assignment-logo": logo ? `url("${logo}")` : "none" }}
             >
               <span className="current-assignment-logo">
                 {logo ? <img src={logo} alt="" /> : <Building2 size={22} />}

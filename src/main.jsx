@@ -18,7 +18,7 @@ if ("serviceWorker" in navigator) {
       window.location.reload();
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260812-1`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260812-2`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.update().catch(() => {});
