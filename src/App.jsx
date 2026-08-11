@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -690,6 +691,64 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
   );
 }
 
+function PortalJornalDetailModal({ jornal, onClose }) {
+  const logo = companyLogo(jornal?.empresa);
+  const payroll = jornal?.payroll || {};
+
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      window.scrollTo(0, scrollY);
+    };
+  }, [onClose]);
+
+  if (!jornal) return null;
+
+  return (
+    <div className="portal-jornal-detail-overlay" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="portal-jornal-detail-modal" role="dialog" aria-modal="true" aria-label={`Detalle del jornal del dia ${jornal.dia}`}>
+        <header>
+          <span className="portal-jornal-detail-logo">
+            {logo ? <img src={logo} alt="" /> : <Building2 size={28} />}
+          </span>
+          <div>
+            <small>Jornal {jornal.dia || "-"}</small>
+            <h1>{jornal.empresa || "Jornal contratado"}</h1>
+          </div>
+          <button type="button" onClick={onClose} title="Cerrar"><X size={22} /></button>
+        </header>
+        <div className="portal-jornal-detail-total">
+          <span>Importe bruto</span>
+          <strong>{formatEuro(payroll.total)}</strong>
+        </div>
+        <div className="portal-jornal-detail-grid">
+          <div><span>Jornada</span><strong>{payroll.shift || "-"}</strong></div>
+          <div><span>Especialidad</span><strong>{jornal.especialidad || "-"}</strong></div>
+          <div><span>Buque</span><strong>{jornal.buque && !/^(?:--?)$/.test(String(jornal.buque).trim()) ? jornal.buque : "Sin buque"}</strong></div>
+          <div><span>Operacion</span><strong>{jornal.operacion || "-"}</strong></div>
+        </div>
+        <div className="portal-jornal-detail-breakdown">
+          <div><span>Base</span><strong>{formatEuro(payroll.base)}</strong></div>
+          <div><span>Complemento</span><strong>{formatEuro(payroll.complement || 0)}</strong></div>
+          {payroll.operationType !== "RECEPCION_ENTREGA" && (
+            <div><span>Prima</span><strong>{payroll.prima > 0 ? formatEuro(payroll.prima) : "Pendiente"}</strong></div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function HomePanel({
   user,
   doors,
@@ -1274,6 +1333,10 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const [savingIrpf, setSavingIrpf] = useState(false);
   const [irpfMessage, setIrpfMessage] = useState("");
   const [irpfError, setIrpfError] = useState(false);
+  const [jornalesExpanded, setJornalesExpanded] = useState(false);
+  const [selectedJornal, setSelectedJornal] = useState(null);
+  const descansosRef = useRef(null);
+  const vacacionesRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
 
   useEffect(() => {
@@ -1353,6 +1416,21 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <strong>{formatUpdatedAt(snapshot.updatedAt)}</strong>
         <small>Chapa {snapshot.chapa}</small>
       </section>
+
+      {(descansos || vacaciones?.recognized) && (
+        <nav className="portal-section-shortcuts" aria-label="Accesos al calendario">
+          {descansos && (
+            <button type="button" onClick={() => descansosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <CalendarDays size={19} /><span>Descansos</span><ChevronDown size={17} />
+            </button>
+          )}
+          {vacaciones?.recognized && (
+            <button type="button" onClick={() => vacacionesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <Sun size={19} /><span>Vacaciones</span><ChevronDown size={17} />
+            </button>
+          )}
+        </nav>
+      )}
 
       {jornales.length > 0 && (
         <section className="portal-salary-section portal-salary-alternative">
@@ -1442,11 +1520,16 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
               <p className={`portal-irpf-message${irpfError ? " is-error" : ""}`}>{irpfMessage}</p>
             )}
           </section>
-          <div className="portal-jornales-heading">
+          <button
+            type="button"
+            className={`portal-jornales-heading${jornalesExpanded ? " is-open" : ""}`}
+            aria-expanded={jornalesExpanded}
+            onClick={() => setJornalesExpanded((current) => !current)}
+          >
             <span><ReceiptText size={18} /> Desglose de jornales</span>
-            <small>{visibleJornales.length} {visibleJornales.length === 1 ? "jornal" : "jornales"}</small>
-          </div>
-          <div className="portal-jornales-list">
+            <small>{visibleJornales.length} {visibleJornales.length === 1 ? "jornal" : "jornales"} <ChevronDown size={17} /></small>
+          </button>
+          {jornalesExpanded && <div className="portal-jornales-list">
             {visibleJornales.length === 0 && (
               <div className="portal-empty-state compact">
                 <BriefcaseBusiness size={22} />
@@ -1460,6 +1543,13 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
                   key={`${item.jornal}-${index}`}
                   className={logo ? "has-company-logo" : ""}
                   style={logo ? { "--jornal-company-logo": `url("${logo}")` } : undefined}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver detalle del jornal del dia ${item.dia}`}
+                  onClick={() => setSelectedJornal(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") setSelectedJornal(item);
+                  }}
                 >
                   <div
                     className="portal-jornal-date"
@@ -1484,18 +1574,25 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
                       )}
                     </div>
                   </div>
+                  <ChevronRight className="portal-jornal-chevron" size={19} />
                 </article>
               );
             })}
-          </div>
+          </div>}
         </section>
       )}
 
       {descansos && (
-        <PortalCalendarPreview descansos={descansos} slRows={slRows} />
+        <div ref={descansosRef} className="portal-scroll-anchor">
+          <PortalCalendarPreview descansos={descansos} slRows={slRows} />
+        </div>
       )}
 
-      <PortalVacationPreview vacaciones={vacaciones} />
+      <div ref={vacacionesRef} className="portal-scroll-anchor">
+        <PortalVacationPreview vacaciones={vacaciones} />
+      </div>
+
+      {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
     </div>
   );
 }

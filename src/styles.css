@@ -2221,6 +2221,18 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+@media (max-width: 620px) {
+  .portal-section-shortcuts { gap: 6px; }
+  .portal-section-shortcuts button { padding: 9px; font-size: 12px; }
+  .portal-jornal-detail-overlay { align-items: end; padding: 0; }
+  .portal-jornal-detail-modal { width: 100%; max-height: 92dvh; padding: 14px; border-radius: 8px 8px 0 0; }
+  .portal-jornal-detail-modal > header { grid-template-columns: 54px minmax(0, 1fr) 42px; }
+  .portal-jornal-detail-logo { width: 54px; height: 54px; }
+  .portal-jornal-detail-modal h1 { font-size: 17px; }
+  .portal-jornal-detail-total strong { font-size: 30px; }
+  .portal-jornal-detail-breakdown { grid-template-columns: 1fr; }
+}
+
 .portal-salary-alternative .portal-salary-title {
   color: #fff;
 }
@@ -2329,12 +2341,17 @@ select {
 }
 
 .portal-jornales-heading {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 5px 2px 0;
+  padding: 10px 12px;
+  border: 1px solid #dbe5ef;
+  border-radius: 7px;
+  background: #f7fafc;
   color: var(--navy);
+  cursor: pointer;
 }
 
 .portal-jornales-heading > span {
@@ -2346,9 +2363,20 @@ select {
 }
 
 .portal-jornales-heading small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 850;
+}
+
+.portal-jornales-heading svg:last-child {
+  transition: transform 180ms ease;
+}
+
+.portal-jornales-heading.is-open svg:last-child {
+  transform: rotate(180deg);
 }
 
 .portal-salary-alternative .portal-jornales-list::before {
@@ -2380,6 +2408,15 @@ select {
   content: "";
   transform: translateY(-50%);
   z-index: 2;
+}
+
+.portal-salary-alternative .portal-jornales-list article[role="button"] {
+  cursor: pointer;
+}
+
+.portal-salary-alternative .portal-jornales-list article[role="button"]:focus-visible {
+  outline: 3px solid rgba(47, 125, 246, 0.3);
+  outline-offset: 2px;
 }
 
 .portal-salary-alternative .portal-jornales-list article::after {
@@ -2415,7 +2452,24 @@ select {
 }
 
 .portal-salary-alternative .portal-jornales-list article.has-company-logo .portal-jornal-date::before {
-  opacity: 0;
+  opacity: 0.78;
+}
+
+.portal-salary-alternative .portal-jornal-date::after {
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.portal-jornal-chevron {
+  position: absolute !important;
+  z-index: 3 !important;
+  top: 50%;
+  right: 8px;
+  color: var(--navy);
+  transform: translateY(-50%);
+}
+
+.portal-salary-alternative .portal-jornal-content {
+  padding-right: 34px;
 }
 
 .portal-salary-alternative .portal-jornal-content {
@@ -2504,7 +2558,28 @@ select {
 }
 
 :root[data-theme="dark"] .portal-jornales-heading {
+  border-color: #29445f;
+  background: #152c43;
   color: #e8f2fb;
+}
+
+:root[data-theme="dark"] .portal-section-shortcuts button,
+:root[data-theme="dark"] .portal-jornal-detail-modal > header > button,
+:root[data-theme="dark"] .portal-jornal-detail-grid > div,
+:root[data-theme="dark"] .portal-jornal-detail-breakdown > div {
+  border-color: #29445f;
+  background: #13263d;
+  color: #eff7ff;
+}
+
+:root[data-theme="dark"] .portal-jornal-detail-modal {
+  background: #0c1b2d;
+}
+
+:root[data-theme="dark"] .portal-jornal-detail-modal h1,
+:root[data-theme="dark"] .portal-jornal-detail-grid strong,
+:root[data-theme="dark"] .portal-jornal-detail-breakdown strong {
+  color: #eff7ff;
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-salary-icon,
@@ -2770,6 +2845,169 @@ select {
   font-weight: 950;
 }
 
+.portal-section-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portal-section-shortcuts button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 18px;
+  align-items: center;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid #d6e1ec;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+
+.portal-section-shortcuts button:first-child svg:first-child {
+  color: #2f7df6;
+}
+
+.portal-section-shortcuts button:last-child svg:first-child {
+  color: #f58220;
+}
+
+.portal-section-shortcuts button svg:last-child {
+  color: var(--muted);
+}
+
+.portal-scroll-anchor {
+  scroll-margin-top: 96px;
+}
+
+.portal-jornal-detail-overlay {
+  position: fixed;
+  z-index: 140;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 17, 36, 0.68);
+  backdrop-filter: blur(5px);
+}
+
+.portal-jornal-detail-modal {
+  display: grid;
+  width: min(660px, 100%);
+  max-height: 90dvh;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 8px;
+  background: var(--page-bg, #f4f7fa);
+  box-shadow: 0 20px 60px rgba(2, 17, 36, 0.3);
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.portal-jornal-detail-modal > header {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 12px;
+}
+
+.portal-jornal-detail-logo {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #dbe5ef;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.portal-jornal-detail-logo img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+}
+
+.portal-jornal-detail-modal > header small,
+.portal-jornal-detail-grid span,
+.portal-jornal-detail-breakdown span,
+.portal-jornal-detail-total span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.portal-jornal-detail-modal h1 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.portal-jornal-detail-modal > header > button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #d6e1ec;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.portal-jornal-detail-total {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #0d3567, #13548b);
+}
+
+.portal-jornal-detail-total span,
+.portal-jornal-detail-total strong {
+  color: #fff;
+}
+
+.portal-jornal-detail-total strong {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.portal-jornal-detail-grid,
+.portal-jornal-detail-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portal-jornal-detail-grid > div,
+.portal-jornal-detail-breakdown > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dbe5ef;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.portal-jornal-detail-grid strong,
+.portal-jornal-detail-breakdown strong {
+  color: var(--ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.portal-jornal-detail-breakdown {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .assignment-detail-overlay {
   position: fixed;
   z-index: 120;
@@ -2782,7 +3020,7 @@ select {
   backdrop-filter: blur(4px);
   overflow: hidden;
   overscroll-behavior: none;
-  touch-action: none;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .assignment-detail-modal {
@@ -2793,7 +3031,7 @@ select {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
   padding: 16px;
   border-radius: 8px 8px 0 0;
   background: var(--page-bg, #f4f7fa);
