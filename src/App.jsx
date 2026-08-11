@@ -46,8 +46,6 @@ import {
   getPortalSyncJob,
   loginUser,
   registerUser,
-  requestChaperoRefresh,
-  requestDoorRefresh,
   requestPortalSync,
   setPortalAutoSync,
   trackPortalOpen,
@@ -67,11 +65,7 @@ const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
 const DEFAULT_PORTAL_SYNC_SECONDS = 75;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
-const SNAPSHOT_REFRESH_POLL_MS = 5_000;
-const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
 const CHAPERO_POLL_MS = 60_000;
-const CHAPERO_REFRESH_POLL_MS = 5_000;
-const CHAPERO_REFRESH_POLL_ATTEMPTS = 24;
 
 function readPortalCredentials(chapa) {
   try {
@@ -1927,8 +1921,6 @@ export function App() {
   const [activeTab, setActiveTab] = useState("inicio");
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
-  const syncRefreshRequestedRef = useRef(false);
-
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
     return ids.map(getSpecialty);
@@ -1968,10 +1960,7 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    let refreshTimer = null;
     let pollTimer = null;
-    let refreshPollTimer = null;
-    let refreshPollAttempts = 0;
 
     async function loadLatestSnapshot() {
       const snapshot = await getLatestDoorSnapshot(activeSpecialty.name);
@@ -1994,35 +1983,9 @@ export function App() {
       return response;
     }
 
-    function startRefreshPolling() {
-      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
-      refreshPollAttempts = 0;
-      refreshPollTimer = window.setInterval(() => {
-        refreshPollAttempts += 1;
-        applyLatestSnapshot().catch(() => {});
-
-        if (refreshPollAttempts >= SNAPSHOT_REFRESH_POLL_ATTEMPTS && refreshPollTimer) {
-          window.clearInterval(refreshPollTimer);
-          refreshPollTimer = null;
-        }
-      }, SNAPSHOT_REFRESH_POLL_MS);
-    }
-
     applyLatestSnapshot()
       .then((response) => {
         if (!Array.isArray(response?.doors)) return null;
-        if (!syncRefreshRequestedRef.current) {
-          syncRefreshRequestedRef.current = true;
-          refreshTimer = window.setTimeout(() => {
-            requestDoorRefresh({ force: true })
-              .then((result) => {
-                if (cancelled) return;
-                if (result?.triggered) startRefreshPolling();
-                applyLatestSnapshot().catch(() => {});
-              })
-              .catch(() => {});
-          }, 1500);
-        }
         pollTimer = window.setInterval(() => {
           applyLatestSnapshot().catch(() => {});
         }, SNAPSHOT_POLL_MS);
@@ -2033,18 +1996,13 @@ export function App() {
 
     return () => {
       cancelled = true;
-      if (refreshTimer) window.clearTimeout(refreshTimer);
       if (pollTimer) window.clearInterval(pollTimer);
-      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
     };
   }, [activeSpecialty.id, activeSpecialty.name]);
 
   useEffect(() => {
     let cancelled = false;
     let pollTimer = null;
-    let refreshTimer = null;
-    let refreshPollTimer = null;
-    let refreshPollAttempts = 0;
 
     async function loadChaperoSnapshot() {
       const snapshot = await getLatestChaperoSnapshot() || await loadLocalChaperoSnapshot();
@@ -2055,46 +2013,14 @@ export function App() {
       return snapshot;
     }
 
-    function startChaperoRefreshPolling() {
-      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
-      refreshPollAttempts = 0;
-      refreshPollTimer = window.setInterval(() => {
-        refreshPollAttempts += 1;
-        loadChaperoSnapshot().catch(() => {});
-
-        if (refreshPollAttempts >= CHAPERO_REFRESH_POLL_ATTEMPTS && refreshPollTimer) {
-          window.clearInterval(refreshPollTimer);
-          refreshPollTimer = null;
-        }
-      }, CHAPERO_REFRESH_POLL_MS);
-    }
-
     loadChaperoSnapshot().catch(() => {});
-    refreshTimer = window.setTimeout(() => {
-      if (syncRefreshRequestedRef.current) {
-        startChaperoRefreshPolling();
-        loadChaperoSnapshot().catch(() => {});
-        return;
-      }
-
-      syncRefreshRequestedRef.current = true;
-      requestChaperoRefresh()
-        .then((result) => {
-          if (cancelled) return;
-          if (result?.triggered) startChaperoRefreshPolling();
-          loadChaperoSnapshot().catch(() => {});
-        })
-        .catch(() => {});
-    }, 1800);
     pollTimer = window.setInterval(() => {
       loadChaperoSnapshot().catch(() => {});
     }, CHAPERO_POLL_MS);
 
     return () => {
       cancelled = true;
-      if (refreshTimer) window.clearTimeout(refreshTimer);
       if (pollTimer) window.clearInterval(pollTimer);
-      if (refreshPollTimer) window.clearInterval(refreshPollTimer);
     };
   }, []);
 
