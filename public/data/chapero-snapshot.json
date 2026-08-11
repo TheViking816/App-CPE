@@ -1,16 +1,16 @@
 {
   "source": "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606",
-  "updatedAt": "2026-08-11T06:55:05.424Z",
-  "pageDate": "11/08/2026 - 08:55",
+  "updatedAt": "2026-08-11T09:34:43.544Z",
+  "pageDate": "11/08/2026 - 11:34",
   "jornadaText": "ULTIMA JORNADA CONTRATADA: 11/08/26 - DE 08 A 14 H.",
   "jornadaDate": "11/08/26",
   "fromHour": "08",
   "toHour": "14",
   "shiftKey": "LAB",
   "summary": {
-    "anticipado": 355,
-    "falta": 711,
-    "contratado": 500,
+    "anticipado": 351,
+    "falta": 717,
+    "contratado": 498,
     "nocontratado": 8,
     "excepcion": 6
   },
@@ -2826,8 +2826,8 @@
     {
       "rawChapa": "1055",
       "chapa": "71055",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1056",
@@ -4386,8 +4386,8 @@
     {
       "rawChapa": "1474",
       "chapa": "71474",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1475",
@@ -6330,8 +6330,8 @@
     {
       "rawChapa": "1954",
       "chapa": "71954",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "1955",
@@ -6612,8 +6612,8 @@
     {
       "rawChapa": "2022",
       "chapa": "72022",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2023",
@@ -7728,8 +7728,8 @@
     {
       "rawChapa": "2273",
       "chapa": "72273",
-      "status": "contratado",
-      "label": "Contratado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2274",
@@ -8814,8 +8814,8 @@
     {
       "rawChapa": "2614",
       "chapa": "72614",
-      "status": "anticipado",
-      "label": "Anticipado"
+      "status": "falta",
+      "label": "No disponible"
     },
     {
       "rawChapa": "2615",
