@@ -1716,12 +1716,12 @@ select {
   position: absolute;
   z-index: -1;
   inset: 0;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.58);
   content: "";
 }
 
 .portal-jornales-list article.has-company-logo .portal-jornal-date::before {
-  opacity: 0.3;
+  opacity: 0.56;
 }
 
 .portal-jornal-date strong {
@@ -3280,7 +3280,7 @@ select {
 }
 
 :root[data-theme="dark"] .portal-jornal-date::after {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.56);
 }
 
 :root[data-theme="dark"] .current-assignments-icon {
