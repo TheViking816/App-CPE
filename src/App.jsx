@@ -59,8 +59,13 @@ const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
+const PORTAL_AUTO_SYNC_ATTEMPTS_KEY = "app-cpe-portal-auto-sync-attempts";
 const DEFAULT_PORTAL_SYNC_SECONDS = 75;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
+const PORTAL_AUTO_SYNC_RETRY_MS = 30 * 60 * 1000;
+const PORTAL_AUTO_SYNC_CHECK_MS = 30_000;
+const PORTAL_AUTO_SYNC_POLL_MS = 5_000;
+const PORTAL_AUTO_SYNC_TIMES = [[7, 30], [12, 30], [15, 0]];
 const SNAPSHOT_POLL_MS = 60_000;
 const SNAPSHOT_REFRESH_POLL_MS = 5_000;
 const SNAPSHOT_REFRESH_POLL_ATTEMPTS = 24;
@@ -138,6 +143,42 @@ function writePortalActiveSync(chapa, activeSync) {
   } catch {
     // Si el almacenamiento no esta disponible, la lectura sigue en el servidor.
   }
+}
+
+function readPortalAutoSyncAttempt(chapa) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_AUTO_SYNC_ATTEMPTS_KEY)) || {};
+    return Number(stored[normalizeChapa(chapa)] || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function writePortalAutoSyncAttempt(chapa, attemptedAt) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PORTAL_AUTO_SYNC_ATTEMPTS_KEY)) || {};
+    stored[normalizeChapa(chapa)] = Number(attemptedAt || Date.now());
+    localStorage.setItem(PORTAL_AUTO_SYNC_ATTEMPTS_KEY, JSON.stringify(stored));
+  } catch {
+    // El control de reintentos es opcional; nunca impide usar la app.
+  }
+}
+
+function getLatestPortalSyncCutoff(now = new Date()) {
+  const current = new Date(now);
+  const candidates = PORTAL_AUTO_SYNC_TIMES.map(([hours, minutes]) => {
+    const candidate = new Date(current);
+    candidate.setHours(hours, minutes, 0, 0);
+    return candidate;
+  }).filter((candidate) => candidate <= current);
+
+  if (candidates.length) return candidates[candidates.length - 1];
+
+  const [hours, minutes] = PORTAL_AUTO_SYNC_TIMES[PORTAL_AUTO_SYNC_TIMES.length - 1];
+  const previousDay = new Date(current);
+  previousDay.setDate(previousDay.getDate() - 1);
+  previousDay.setHours(hours, minutes, 0, 0);
+  return previousDay;
 }
 
 const NAV_ITEMS = [
@@ -521,10 +562,10 @@ function normalizeAssignmentShift(value) {
   return hours ? `${hours[1]}-${hours[2]}` : String(value || "").trim();
 }
 
-function CurrentAssignments({ snapshot }) {
+function CurrentAssignments({ snapshot, currentTime }) {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const assignments = useMemo(() => {
-    const today = new Date();
+    const today = new Date(currentTime || Date.now());
     today.setHours(0, 0, 0, 0);
     return (snapshot?.payload?.asignaciones?.rows || [])
       .filter((item) => {
@@ -537,7 +578,7 @@ function CurrentAssignments({ snapshot }) {
         return (ASSIGNMENT_SHIFT_ORDER[normalizeAssignmentShift(a.jornada)] || 99)
           - (ASSIGNMENT_SHIFT_ORDER[normalizeAssignmentShift(b.jornada)] || 99);
       });
-  }, [snapshot]);
+  }, [snapshot, currentTime]);
 
   if (!assignments.length) return null;
 
@@ -734,7 +775,7 @@ function HomePanel({
         </div>
       </section>
 
-      <CurrentAssignments snapshot={portalSnapshot} />
+      <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} />
 
       <div className="specialty-select">
         <span>Especialidad</span>
@@ -1646,7 +1687,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         <div className="portal-update-row">
           <span>
             Datos guardados del portal oficial
-            {savedCredentials && <small>Claves recordadas en este dispositivo</small>}
+            {savedCredentials && <small>Actualizacion automatica: 07:30 · 12:30 · 15:00</small>}
           </span>
           <div>
             {savedCredentials && <button className="portal-forget-button" type="button" onClick={forgetCredentials}>Cambiar claves</button>}
@@ -1816,6 +1857,7 @@ export function App() {
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
   const syncRefreshRequestedRef = useRef(false);
+  const portalSnapshotRef = useRef(null);
 
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -1853,6 +1895,10 @@ export function App() {
     const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    portalSnapshotRef.current = portalSnapshot;
+  }, [portalSnapshot]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2014,6 +2060,116 @@ export function App() {
       cancelled = true;
     };
   }, [session?.token]);
+
+  useEffect(() => {
+    if (!session?.token || !session?.chapa) return undefined;
+
+    let cancelled = false;
+    let launchTimer = null;
+    let checkTimer = null;
+    let pollTimer = null;
+    let monitoredJobId = "";
+
+    const refreshPortalSnapshot = async () => {
+      const data = await getOfficialPortalSnapshot({ token: session.token });
+      if (!cancelled) {
+        portalSnapshotRef.current = data || null;
+        setPortalSnapshot(data || null);
+      }
+      return data;
+    };
+
+    const monitorPortalJob = (jobId) => {
+      if (!jobId || monitoredJobId === jobId) return;
+      monitoredJobId = jobId;
+      if (pollTimer) window.clearTimeout(pollTimer);
+
+      const poll = async () => {
+        if (cancelled || monitoredJobId !== jobId) return;
+        try {
+          const job = await getPortalSyncJob({ token: session.token, jobId });
+          if (job?.status === "completed") {
+            await refreshPortalSnapshot();
+            writePortalActiveSync(session.chapa, null);
+            monitoredJobId = "";
+            return;
+          }
+          if (job?.status === "failed") {
+            writePortalActiveSync(session.chapa, null);
+            monitoredJobId = "";
+            return;
+          }
+        } catch {
+          // Los errores transitorios se comprueban de nuevo sin relanzar el trabajo.
+        }
+        pollTimer = window.setTimeout(poll, PORTAL_AUTO_SYNC_POLL_MS);
+      };
+
+      poll();
+    };
+
+    const checkAutomaticPortalSync = async () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+
+      const activeSync = readPortalActiveSync(session.chapa);
+      if (activeSync?.jobId) {
+        monitorPortalJob(activeSync.jobId);
+        return;
+      }
+
+      const credentials = readPortalCredentials(session.chapa);
+      if (!credentials?.portalPassword) return;
+
+      try {
+        const latestCutoff = getLatestPortalSyncCutoff().getTime();
+        const cachedUpdatedAt = new Date(portalSnapshotRef.current?.updatedAt || 0).getTime();
+        if (Number.isFinite(cachedUpdatedAt) && cachedUpdatedAt >= latestCutoff) return;
+
+        const lastAttempt = readPortalAutoSyncAttempt(session.chapa);
+        if (lastAttempt && Date.now() - lastAttempt < PORTAL_AUTO_SYNC_RETRY_MS) return;
+
+        const snapshot = await refreshPortalSnapshot();
+        const updatedAt = new Date(snapshot?.updatedAt || 0).getTime();
+        if (Number.isFinite(updatedAt) && updatedAt >= latestCutoff) {
+          return;
+        }
+
+        writePortalAutoSyncAttempt(session.chapa, Date.now());
+        const job = await requestPortalSync({
+          token: session.token,
+          portalPassword: credentials.portalPassword,
+          securityKey: credentials.securityKey || ""
+        });
+        if (!job?.jobId) return;
+
+        const activeJob = {
+          jobId: job.jobId,
+          status: job.status || "queued",
+          startedAt: Date.now()
+        };
+        writePortalActiveSync(session.chapa, activeJob);
+        monitorPortalJob(job.jobId);
+      } catch {
+        // La lectura manual sigue disponible; el siguiente intento automatico esperara 30 minutos.
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") checkAutomaticPortalSync();
+    };
+
+    launchTimer = window.setTimeout(checkAutomaticPortalSync, 3_000);
+    checkTimer = window.setInterval(checkAutomaticPortalSync, PORTAL_AUTO_SYNC_CHECK_MS);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      if (launchTimer) window.clearTimeout(launchTimer);
+      if (checkTimer) window.clearInterval(checkTimer);
+      if (pollTimer) window.clearTimeout(pollTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [session?.chapa, session?.token]);
 
   useEffect(() => {
     if (!session?.token || activeTab !== "portal") return;
