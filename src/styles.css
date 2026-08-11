@@ -2436,8 +2436,14 @@ select {
 
 .portal-salary-alternative .portal-jornal-date {
   min-height: 102px;
+  justify-content: space-between;
+  padding: 10px 6px;
   border-right: 0;
   background: #edf4fa;
+}
+
+.portal-salary-alternative .portal-jornal-date::before {
+  inset: 34px 7px 31px;
 }
 
 .portal-salary-alternative .portal-jornal-date::after {
