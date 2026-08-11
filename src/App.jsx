@@ -1481,7 +1481,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [rememberCredentials, setRememberCredentials] = useState(Boolean(initialCredentials));
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
   const [autoSyncLoading, setAutoSyncLoading] = useState(true);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
@@ -1515,8 +1515,25 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   useEffect(() => {
     let cancelled = false;
     getPortalAutoSyncStatus({ token: session.token })
-      .then((status) => {
-        if (!cancelled) setAutoSyncEnabled(Boolean(status?.enabled));
+      .then(async (status) => {
+        if (cancelled) return;
+        if (status?.enabled) {
+          setAutoSyncEnabled(true);
+          return;
+        }
+
+        if (initialCredentials?.portalPassword) {
+          await setPortalAutoSync({
+            token: session.token,
+            enabled: true,
+            portalPassword: initialCredentials.portalPassword,
+            securityKey: initialCredentials.securityKey || ""
+          });
+          if (!cancelled) setAutoSyncEnabled(true);
+          return;
+        }
+
+        setAutoSyncEnabled(false);
       })
       .catch((statusError) => {
         if (!cancelled) console.warn("No se pudo leer la sincronizacion automatica:", statusError.message);
@@ -1525,7 +1542,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         if (!cancelled) setAutoSyncLoading(false);
       });
     return () => { cancelled = true; };
-  }, [session.token]);
+  }, [initialCredentials, session.token]);
 
   useEffect(() => {
     if (!syncingPortal || !syncStartedAtRef.current) return undefined;
@@ -1610,13 +1627,14 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     syncStartedAtRef.current = Date.now();
 
     try {
-      if (autoSyncEnabled && passwordToUse) {
+      if ((autoSyncEnabled || rememberCredentials) && passwordToUse) {
         await setPortalAutoSync({
           token: session.token,
           enabled: true,
           portalPassword: passwordToUse,
           securityKey: securityKeyToUse
         });
+        setAutoSyncEnabled(true);
       }
       const job = await requestPortalSync({
         token: session.token,
@@ -1678,6 +1696,11 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       return;
     }
     disableAutoSync();
+  };
+
+  const handleRememberCredentialsToggle = (enabled) => {
+    setRememberCredentials(enabled);
+    if (enabled) setAutoSyncEnabled(true);
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
@@ -1749,11 +1772,15 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
               <input
                 type="checkbox"
                 checked={rememberCredentials}
-                onChange={(event) => setRememberCredentials(event.target.checked)}
+                onChange={(event) => handleRememberCredentialsToggle(event.target.checked)}
               />
               <span>Recordar las claves en este dispositivo</span>
             </label>
-            {rememberCredentials && <small className="portal-storage-note">No se envian a otro dispositivo. Puedes borrarlas desde “Cambiar claves”.</small>}
+            {rememberCredentials && (
+              <small className="portal-storage-note">
+                Se guardaran en este dispositivo y cifradas en Supabase Vault para las actualizaciones automaticas.
+              </small>
+            )}
             <label className="portal-remember-option portal-auto-sync-option">
               <input
                 type="checkbox"
