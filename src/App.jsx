@@ -1335,6 +1335,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const [irpfError, setIrpfError] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
+  const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
@@ -1417,15 +1418,29 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {(descansos || vacaciones?.recognized) && (
-        <nav className="portal-section-shortcuts" aria-label="Accesos al calendario">
+      {(jornales.length > 0 || descansos || vacaciones?.recognized) && (
+        <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
+          {jornales.length > 0 && (
+            <button
+              type="button"
+              className="is-jornales"
+              onClick={() => {
+                setJornalesExpanded(true);
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => jornalesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                });
+              }}
+            >
+              <ReceiptText size={19} /><span>Jornales</span><ChevronDown size={17} />
+            </button>
+          )}
           {descansos && (
-            <button type="button" onClick={() => descansosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <button className="is-descansos" type="button" onClick={() => descansosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <CalendarDays size={19} /><span>Descansos</span><ChevronDown size={17} />
             </button>
           )}
           {vacaciones?.recognized && (
-            <button type="button" onClick={() => vacacionesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <button className="is-vacaciones" type="button" onClick={() => vacacionesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <Sun size={19} /><span>Vacaciones</span><ChevronDown size={17} />
             </button>
           )}
@@ -1521,6 +1536,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             )}
           </section>
           <button
+            ref={jornalesRef}
             type="button"
             className={`portal-jornales-heading${jornalesExpanded ? " is-open" : ""}`}
             aria-expanded={jornalesExpanded}

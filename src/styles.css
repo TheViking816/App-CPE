@@ -2439,20 +2439,29 @@ select {
   justify-content: space-between;
   padding: 10px 6px;
   border-right: 0;
-  background: #edf4fa;
+  background: #f4f8fb;
 }
 
 .portal-salary-alternative .portal-jornal-date::before {
-  inset: 34px 7px 31px;
-  filter: contrast(1.3) saturate(1.12);
+  inset: 4px;
+  background-size: 92% auto;
+  filter: contrast(1.38) saturate(1.15);
 }
 
 .portal-salary-alternative .portal-jornales-list article.has-company-logo .portal-jornal-date::before {
-  opacity: 0.96;
+  opacity: 1;
 }
 
 .portal-salary-alternative .portal-jornal-date::after {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.portal-salary-alternative .portal-jornal-date strong {
+  z-index: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 7px rgba(7, 31, 63, 0.08);
 }
 
 .portal-jornal-chevron {
@@ -2843,7 +2852,7 @@ select {
 
 .portal-section-shortcuts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2864,11 +2873,15 @@ select {
   cursor: pointer;
 }
 
-.portal-section-shortcuts button:first-child svg:first-child {
+.portal-section-shortcuts button.is-jornales svg:first-child {
+  color: #0aa789;
+}
+
+.portal-section-shortcuts button.is-descansos svg:first-child {
   color: #2f7df6;
 }
 
-.portal-section-shortcuts button:last-child svg:first-child {
+.portal-section-shortcuts button.is-vacaciones svg:first-child {
   color: #f58220;
 }
 
@@ -2877,6 +2890,10 @@ select {
 }
 
 .portal-scroll-anchor {
+  scroll-margin-top: 96px;
+}
+
+.portal-jornales-heading {
   scroll-margin-top: 96px;
 }
 
