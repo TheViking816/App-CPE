@@ -583,16 +583,21 @@ function CurrentAssignments({ snapshot, currentTime }) {
         })}
       </div>
       {selectedAssignment && (
-        <AssignmentDetailModal assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} />
+        <AssignmentDetailModal
+          assignment={selectedAssignment}
+          currentChapa={snapshot?.chapa}
+          onClose={() => setSelectedAssignment(null)}
+        />
       )}
     </section>
   );
 }
 
-function AssignmentDetailModal({ assignment, onClose }) {
+function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
   const detail = assignment.detail || {};
   const logo = companyLogo(detail.empresa || assignment.empresa);
   const specialties = detail.specialties || [];
+  const normalizedCurrentChapa = normalizeChapa(currentChapa);
 
   useEffect(() => {
     const scrollY = window.scrollY;
@@ -659,11 +664,19 @@ function AssignmentDetailModal({ assignment, onClose }) {
             <article key={specialty.name}>
               <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
               <div>
-                {specialty.workers?.map((worker) => (
-                  <p key={`${specialty.name}-${worker.code}-${worker.name}`}>
-                    <b>{worker.code}</b><span>{worker.name}</span>
-                  </p>
-                ))}
+                {specialty.workers?.map((worker) => {
+                  const isCurrentWorker = normalizeChapa(worker.code) === normalizedCurrentChapa;
+                  return (
+                    <p
+                      key={`${specialty.name}-${worker.code}-${worker.name}`}
+                      className={isCurrentWorker ? "is-current-worker" : ""}
+                    >
+                      <b>{worker.code}</b>
+                      <span>{worker.name}</span>
+                      {isCurrentWorker && <em>Tu chapa</em>}
+                    </p>
+                  );
+                })}
                 {specialty.bolsa > 0 && (
                   <p className="bolsa"><b>Bolsa</b><span>{specialty.bolsa} trabajadores</span></p>
                 )}
@@ -1429,6 +1442,10 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
               <p className={`portal-irpf-message${irpfError ? " is-error" : ""}`}>{irpfMessage}</p>
             )}
           </section>
+          <div className="portal-jornales-heading">
+            <span><ReceiptText size={18} /> Desglose de jornales</span>
+            <small>{visibleJornales.length} {visibleJornales.length === 1 ? "jornal" : "jornales"}</small>
+          </div>
           <div className="portal-jornales-list">
             {visibleJornales.length === 0 && (
               <div className="portal-empty-state compact">
@@ -1439,10 +1456,13 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             {visibleJornales.map((item, index) => {
               const logo = companyLogo(item.empresa);
               return (
-                <article key={`${item.jornal}-${index}`} className={logo ? "has-company-logo" : ""}>
+                <article
+                  key={`${item.jornal}-${index}`}
+                  className={logo ? "has-company-logo" : ""}
+                  style={logo ? { "--jornal-company-logo": `url("${logo}")` } : undefined}
+                >
                   <div
                     className="portal-jornal-date"
-                    style={logo ? { "--jornal-company-logo": `url("${logo}")` } : undefined}
                   >
                     <strong>{item.dia || "-"}</strong>
                     <span>{item.payroll?.shift || "Jornal"}</span>

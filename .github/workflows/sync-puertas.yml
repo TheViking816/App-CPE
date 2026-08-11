@@ -3,6 +3,8 @@ name: Sync puertas
 on:
   workflow_dispatch:
   schedule:
+    - cron: "0 * * * *"
+      timezone: "Europe/Madrid"
     - cron: "30 7 * * *"
       timezone: "Europe/Madrid"
     - cron: "30 12 * * *"
