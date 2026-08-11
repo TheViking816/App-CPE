@@ -2177,6 +2177,331 @@ select {
   color: #06775e;
 }
 
+/* Propuesta alternativa: extracto salarial claro y cronologia de jornales. */
+.portal-salary-alternative {
+  position: relative;
+  gap: 12px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(13, 53, 103, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, #f58220 0 5px, transparent 5px),
+    linear-gradient(155deg, #ffffff 0%, #f5f9fc 100%);
+  box-shadow: 0 18px 38px rgba(7, 31, 63, 0.1);
+}
+
+.portal-salary-alternative .portal-salary-hero {
+  grid-template-columns: minmax(210px, 1.25fr) minmax(210px, 0.9fr);
+  grid-template-areas:
+    "heading metrics"
+    "main metrics";
+  gap: 10px 22px;
+  padding: 4px 4px 14px 10px;
+  border-bottom: 1px solid #dbe5ef;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.portal-salary-alternative .portal-salary-hero-heading {
+  grid-area: heading;
+}
+
+.portal-salary-alternative .portal-salary-main {
+  grid-area: main;
+  justify-content: flex-start;
+}
+
+.portal-salary-alternative .portal-salary-metrics {
+  grid-area: metrics;
+  align-self: stretch;
+  grid-template-columns: 1fr;
+}
+
+.portal-salary-alternative .portal-salary-title {
+  color: var(--ink);
+}
+
+.portal-salary-alternative .portal-salary-icon {
+  background: #e7f1fa;
+  color: var(--navy);
+}
+
+.portal-salary-alternative .portal-salary-title small,
+.portal-salary-alternative .portal-salary-main span,
+.portal-salary-alternative .portal-salary-main small,
+.portal-salary-alternative .portal-salary-metrics span {
+  color: var(--muted);
+}
+
+.portal-salary-alternative .portal-salary-title strong {
+  color: var(--ink);
+}
+
+.portal-salary-alternative .portal-salary-period {
+  border-color: #cddbe8;
+  background: #eef4f9;
+  color: var(--navy);
+}
+
+.portal-salary-alternative .portal-salary-main > div:first-child > strong {
+  color: #087f67;
+  font-size: clamp(34px, 6vw, 48px);
+  letter-spacing: 0;
+}
+
+.portal-salary-alternative .portal-salary-ring {
+  width: 62px;
+  height: 62px;
+  margin-left: 12px;
+  background: conic-gradient(#f58220 var(--salary-progress), #e2eaf1 0);
+}
+
+.portal-salary-alternative .portal-salary-ring::after {
+  background: #fff;
+}
+
+.portal-salary-alternative .portal-salary-ring span {
+  color: var(--navy);
+}
+
+.portal-salary-alternative .portal-salary-ring small {
+  color: var(--muted);
+}
+
+.portal-salary-alternative .portal-salary-metrics > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 13px;
+  border: 1px solid #dbe5ef;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.portal-salary-alternative .portal-salary-metrics strong {
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.portal-salary-alternative .portal-payroll-summary {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  background: #edf3f8;
+}
+
+.portal-salary-alternative .portal-payroll-summary button {
+  flex: 1 1 0;
+  align-items: center;
+  min-height: 54px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.portal-salary-alternative .portal-payroll-summary button.is-active {
+  background: #fff;
+  color: var(--navy);
+  box-shadow: 0 4px 12px rgba(7, 31, 63, 0.1);
+}
+
+.portal-salary-alternative .portal-payroll-summary button.is-active strong {
+  color: #087f67;
+}
+
+.portal-salary-alternative .portal-irpf-card {
+  margin: 0;
+  border-left: 1px solid rgba(217, 226, 236, 0.9);
+  background: #fff;
+}
+
+.portal-salary-alternative .portal-jornales-list {
+  position: relative;
+  gap: 10px;
+  padding-left: 14px;
+}
+
+.portal-salary-alternative .portal-jornales-list::before {
+  position: absolute;
+  inset: 6px auto 6px 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(#f58220, #1fb99a);
+  content: "";
+}
+
+.portal-salary-alternative .portal-jornales-list article {
+  position: relative;
+  grid-template-columns: 86px minmax(0, 1fr);
+  border: 1px solid #dbe5ef;
+  box-shadow: 0 5px 14px rgba(7, 31, 63, 0.06);
+}
+
+.portal-salary-alternative .portal-jornales-list article::before {
+  position: absolute;
+  top: 50%;
+  left: -17px;
+  width: 8px;
+  height: 8px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #f58220;
+  box-shadow: 0 0 0 1px #f58220;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.portal-salary-alternative .portal-jornal-date {
+  min-height: 102px;
+  border-right: 0;
+  background: #edf4fa;
+}
+
+.portal-salary-alternative .portal-jornal-date::after {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.portal-salary-alternative .portal-jornales-list article.has-company-logo .portal-jornal-date::before {
+  opacity: 0.9;
+}
+
+.portal-salary-alternative .portal-jornal-content {
+  border-left: 1px solid #dbe5ef;
+}
+
+.portal-salary-alternative .portal-jornal-breakdown span {
+  border: 1px solid #e0e8ef;
+  background: #fff;
+}
+
+@media (max-width: 620px) {
+  .portal-salary-alternative {
+    padding: 11px;
+  }
+
+  .portal-salary-alternative .portal-salary-hero {
+    grid-template-columns: 1fr;
+    grid-template-areas: "heading" "main" "metrics";
+    gap: 11px;
+    padding: 2px 2px 12px 7px;
+  }
+
+  .portal-salary-alternative .portal-salary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .portal-salary-alternative .portal-salary-metrics > div {
+    display: grid;
+    gap: 3px;
+    padding: 9px;
+  }
+
+  .portal-salary-alternative .portal-salary-main > div:first-child > strong {
+    font-size: 34px;
+  }
+
+  .portal-salary-alternative .portal-salary-ring {
+    width: 58px;
+    height: 58px;
+  }
+
+  .portal-salary-alternative .portal-payroll-summary button {
+    min-height: 62px;
+    padding: 6px 4px;
+  }
+
+  .portal-salary-alternative .portal-payroll-summary button span {
+    font-size: 10px;
+  }
+
+  .portal-salary-alternative .portal-payroll-summary button strong {
+    font-size: 11px;
+  }
+
+  .portal-salary-alternative .portal-jornales-list {
+    padding-left: 11px;
+  }
+
+  .portal-salary-alternative .portal-jornales-list article {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .portal-salary-alternative .portal-jornales-list article::before {
+    left: -14px;
+  }
+
+  .portal-salary-alternative .portal-jornal-date strong {
+    font-size: 21px;
+  }
+}
+
+:root[data-theme="dark"] .portal-salary-alternative {
+  border-color: #29445f;
+  background: linear-gradient(90deg, #f59f3a 0 5px, transparent 5px), linear-gradient(155deg, #102338 0%, #0d1d2f 100%);
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-hero {
+  border-color: #29445f;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-title,
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-title strong,
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-metrics strong {
+  color: #f2f7fb;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-icon,
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-period,
+:root[data-theme="dark"] .portal-salary-alternative .portal-payroll-summary {
+  border-color: #29445f;
+  background: #152c43;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-period {
+  color: #cfe0ef;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-ring::after,
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-metrics > div,
+:root[data-theme="dark"] .portal-salary-alternative .portal-payroll-summary button.is-active,
+:root[data-theme="dark"] .portal-salary-alternative .portal-irpf-card,
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-breakdown span {
+  border-color: #29445f;
+  background: #102338;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-salary-ring span,
+:root[data-theme="dark"] .portal-salary-alternative .portal-payroll-summary button.is-active {
+  color: #f2f7fb;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article {
+  border-color: #29445f;
+  background: #102338;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date {
+  background: #1a324a;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date::after {
+  background: rgba(8, 23, 38, 0.48);
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-content {
+  border-color: #29445f;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article::before {
+  border-color: #102338;
+}
+
 .portal-payroll-summary strong {
   color: var(--ink);
   font-size: 14px;
