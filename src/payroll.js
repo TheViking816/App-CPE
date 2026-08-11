@@ -5,6 +5,11 @@ const VALENCIA_HOLIDAYS_2026 = new Set([
   "2026-12-08", "2026-12-25"
 ]);
 
+const SPECIAL_RATE_KEYS_2026 = new Map([
+  ["2026-08-14|20-02", "LABORABLE_TO_FESTIVO"],
+  ["2026-08-16|02-08", "FESTIVO_TO_LABORABLE"]
+]);
+
 const SALARY_TABLE = {
   ESTIBA: {
     I: {
@@ -195,6 +200,9 @@ function getComplement(specialty = "") {
 }
 
 function getRateKey(dateString, shift) {
+  const specialRateKey = SPECIAL_RATE_KEYS_2026.get(`${dateString}|${shift}`);
+  if (specialRateKey) return specialRateKey;
+
   const dayType = getDayType(dateString);
   if (shift === "02-08" && isHoliday(getAdjacentDay(dateString, -1))) {
     return dayType === "FESTIVO" ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
