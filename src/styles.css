@@ -2324,6 +2324,10 @@ select {
   object-fit: contain;
 }
 
+.current-assignment-logo img {
+  transform: scale(1.28);
+}
+
 .current-assignment-date {
   display: grid;
   min-height: 48px;
