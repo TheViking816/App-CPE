@@ -16,13 +16,16 @@ import {
   Lock,
   LogOut,
   Moon,
+  Percent,
   RefreshCw,
+  ReceiptText,
   Search,
   Ship,
   Sun,
   Save,
   UserRound,
   UsersRound,
+  WalletCards,
   X
 } from "lucide-react";
 import {
@@ -1344,20 +1347,34 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      <div className="portal-feature-grid">
-        <PortalFeatureCard icon={<BriefcaseBusiness size={20} />} title={`${selectedJornales.length} jornales`}>
-          Neto {formatEuro(selectedNet)} {selectedPeriodLabel}
-        </PortalFeatureCard>
-      </div>
-
       {jornales.length > 0 && (
-        <section>
-          <div className="section-title-row compact">
-            <div>
-              <p>Jornales</p>
-              <h1>{payload.jornales?.monthLabel || "Ultimo mes"}</h1>
+        <section className="portal-salary-section">
+          <div className="portal-salary-hero">
+            <div className="portal-salary-hero-heading">
+              <div className="portal-salary-title">
+                <span className="portal-salary-icon"><WalletCards size={22} /></span>
+                <div>
+                  <small>Resumen salarial</small>
+                  <strong>{payload.jornales?.monthLabel || "Ultimo mes"}</strong>
+                </div>
+              </div>
+              <span className="portal-salary-period">{selectedPeriodLabel}</span>
             </div>
-            <strong className="portal-section-total">{formatEuro(selectedSummary.total)}</strong>
+            <div className="portal-salary-main">
+              <div>
+                <span>Neto estimado</span>
+                <strong>{formatEuro(selectedNet)}</strong>
+                <small>{selectedJornales.length} {selectedJornales.length === 1 ? "jornal" : "jornales"} · IRPF {irpfRate}%</small>
+              </div>
+              <div className="portal-salary-ring" style={{ "--salary-progress": `${Math.min(Math.max(100 - irpfRate, 0), 100) * 3.6}deg` }}>
+                <span>{irpfRate}%</span>
+                <small>IRPF</small>
+              </div>
+            </div>
+            <div className="portal-salary-metrics">
+              <div><span><ReceiptText size={15} /> Bruto</span><strong>{formatEuro(selectedSummary.total)}</strong></div>
+              <div><span><Percent size={15} /> Retencion</span><strong>-{formatEuro(selectedWithholding)}</strong></div>
+            </div>
           </div>
           <div className="portal-payroll-summary">
             <button
@@ -1386,52 +1403,37 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             </button>
           </div>
           <section className="portal-irpf-card" aria-label="Calculo estimado de IRPF">
-            <div className="portal-irpf-heading">
-              <div>
-                <span>Ajuste de IRPF</span>
-                <strong>Neto estimado</strong>
-              </div>
-              <div className="portal-irpf-actions">
-                <label>
-                  <span>IRPF</span>
-                  <span className="portal-irpf-input">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      max="60"
-                      step="0.1"
-                      value={irpfRate}
-                      onChange={(event) => {
-                        const value = Number.parseFloat(event.target.value);
-                        setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
-                        setIrpfMessage("");
-                      }}
-                      aria-label="Porcentaje de IRPF"
-                    />
-                    <b>%</b>
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  className="portal-irpf-save"
-                  disabled={savingIrpf || irpfRate === savedIrpfRate}
-                  onClick={saveIrpfRate}
-                >
-                  {savingIrpf ? <RefreshCw size={16} className="is-spinning" /> : <Save size={16} />}
-                  {savingIrpf ? "Guardando" : "Guardar"}
-                </button>
-              </div>
-            </div>
-            <div className="portal-irpf-breakdown">
-              <div><span>Bruto</span><strong>{formatEuro(selectedSummary.total)}</strong></div>
-              <div><span>Retencion</span><strong>-{formatEuro(selectedWithholding)}</strong></div>
-              <div className="is-net"><span>Neto estimado</span><strong>{formatEuro(selectedNet)}</strong></div>
-            </div>
+            <strong>Ajuste de IRPF</strong>
+            <span className="portal-irpf-input">
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                max="60"
+                step="0.1"
+                value={irpfRate}
+                onChange={(event) => {
+                  const value = Number.parseFloat(event.target.value);
+                  setIrpfRate(Number.isFinite(value) ? Math.min(Math.max(value, 0), 60) : 0);
+                  setIrpfMessage("");
+                }}
+                aria-label="Porcentaje de IRPF"
+              />
+              <b>%</b>
+            </span>
+            <button
+              type="button"
+              className="portal-irpf-save"
+              disabled={savingIrpf || irpfRate === savedIrpfRate}
+              onClick={saveIrpfRate}
+              aria-label={savingIrpf ? "Guardando IRPF" : "Guardar IRPF"}
+              title={savingIrpf ? "Guardando IRPF" : "Guardar IRPF"}
+            >
+              {savingIrpf ? <RefreshCw size={17} className="is-spinning" /> : <Save size={17} />}
+            </button>
             {irpfMessage && (
               <p className={`portal-irpf-message${irpfError ? " is-error" : ""}`}>{irpfMessage}</p>
             )}
-            <small>Estimacion del periodo seleccionado aplicando solo la retencion de IRPF.</small>
           </section>
           <div className="portal-jornales-list">
             {visibleJornales.length === 0 && (
@@ -1440,24 +1442,37 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
                 <strong>{selectedPeriod === "month" ? "Sin jornales este mes" : "Sin jornales en esta quincena"}</strong>
               </div>
             )}
-            {visibleJornales.map((item, index) => (
-              <article key={`${item.jornal}-${index}`}>
-                <span>{item.dia || "-"}</span>
-                <div>
-                  <strong>{item.especialidad || "Jornal"}</strong>
-                  <small>{item.jornada || ""}</small>
-                  <em>{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" - ")}</em>
-                  {item.operacion && <em>{item.operacion}</em>}
-                  <em>
-                    Base {formatEuro(item.payroll?.base)} - Compl. {formatEuro(item.payroll?.complement)}
-                    {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
-                      item.payroll?.prima > 0 ? ` - Prima ${formatEuro(item.payroll.prima)}` : " - Prima pendiente"
-                    )}
-                  </em>
-                </div>
-                <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
-              </article>
-            ))}
+            {visibleJornales.map((item, index) => {
+              const logo = companyLogo(item.empresa);
+              return (
+                <article key={`${item.jornal}-${index}`} className={logo ? "has-company-logo" : ""}>
+                  <div
+                    className="portal-jornal-date"
+                    style={logo ? { "--jornal-company-logo": `url("${logo}")` } : undefined}
+                  >
+                    <strong>{item.dia || "-"}</strong>
+                    <span>{item.payroll?.shift || "Jornal"}</span>
+                  </div>
+                  <div className="portal-jornal-content">
+                    <div className="portal-jornal-heading">
+                      <strong>{item.especialidad || "Jornal"}</strong>
+                      <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
+                    </div>
+                    <em className="portal-jornal-destination">{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</em>
+                    {item.operacion && <em>{item.operacion}</em>}
+                    <div className="portal-jornal-breakdown">
+                      <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
+                      {item.payroll?.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
+                      {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
+                        <span className={item.payroll?.prima > 0 ? "is-prima" : "is-pending"}>
+                          Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       )}
@@ -1717,7 +1732,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         <div className="portal-update-row">
           <span>
             Datos guardados del portal oficial
-            {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30 y 12:30</small>}
+            {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30, 12:30 y 14:45</small>}
           </span>
           <div>
             {savedCredentials && <button className="portal-forget-button" type="button" onClick={forgetCredentials}>Cambiar claves</button>}
@@ -1740,6 +1755,9 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
             {rememberCredentials
               ? "La app guardara tus claves solo en este dispositivo para las proximas actualizaciones."
               : "La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion."}
+          </p>
+          <p className="portal-first-sync-note">
+            La espera solo es necesaria la primera vez. Si guardas tus claves, despues la app actualizara tus datos automaticamente en segundo plano.
           </p>
 
           <section className="portal-security-card">
@@ -1788,7 +1806,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
                 disabled={autoSyncLoading}
                 onChange={(event) => handleAutoSyncToggle(event.target.checked)}
               />
-              <span>Sincronizar cada hora, tambien a las 07:30 y 12:30</span>
+              <span>Sincronizar cada hora, tambien a las 07:30, 12:30 y 14:45</span>
             </label>
             {autoSyncEnabled && (
               <small className="portal-storage-note">
