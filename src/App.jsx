@@ -1732,7 +1732,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         <div className="portal-update-row">
           <span>
             Datos guardados del portal oficial
-            {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30 y 12:30</small>}
+            {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30, 12:30 y 14:45</small>}
           </span>
           <div>
             {savedCredentials && <button className="portal-forget-button" type="button" onClick={forgetCredentials}>Cambiar claves</button>}
@@ -1755,6 +1755,9 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
             {rememberCredentials
               ? "La app guardara tus claves solo en este dispositivo para las proximas actualizaciones."
               : "La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion."}
+          </p>
+          <p className="portal-first-sync-note">
+            La espera solo es necesaria la primera vez. Si guardas tus claves, despues la app actualizara tus datos automaticamente en segundo plano.
           </p>
 
           <section className="portal-security-card">
@@ -1803,7 +1806,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
                 disabled={autoSyncLoading}
                 onChange={(event) => handleAutoSyncToggle(event.target.checked)}
               />
-              <span>Sincronizar cada hora, tambien a las 07:30 y 12:30</span>
+              <span>Sincronizar cada hora, tambien a las 07:30, 12:30 y 14:45</span>
             </label>
             {autoSyncEnabled && (
               <small className="portal-storage-note">

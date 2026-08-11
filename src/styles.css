@@ -1391,6 +1391,18 @@ select {
   line-height: 1.35;
 }
 
+.portal-first-sync-note {
+  margin: -2px 0 0;
+  padding: 11px 12px;
+  border-left: 4px solid #10b981;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
 .portal-security-card {
   display: grid;
   gap: 9px;
@@ -3452,6 +3464,12 @@ select {
   border-color: rgba(251, 146, 60, 0.38);
   background: rgba(124, 45, 18, 0.28);
   color: #fdba74;
+}
+
+:root[data-theme="dark"] .portal-first-sync-note {
+  border-left-color: #34d399;
+  background: rgba(6, 78, 59, 0.32);
+  color: #a7f3d0;
 }
 
 :root[data-theme="dark"] .chapero-card {
