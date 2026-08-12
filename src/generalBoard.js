@@ -324,7 +324,7 @@ export function companyLogo(name) {
 export function shipImage(name) {
   const normalized = normalizeText(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (!normalized || /^(?:-|oc|o-c|re|r-e|apm|trincadores|remolque|faltas)$/.test(normalized)) return "";
-  return `https://portal-estiba-vlc.vercel.app/assets/barcos/${normalized}.jpg`;
+  return `https://portal-estiba-vlc.vercel.app/assets/barcos/${normalized}.jpg?v=20260812-2`;
 }
 
 export function groupImage(group) {
