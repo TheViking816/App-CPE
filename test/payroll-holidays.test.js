@@ -26,11 +26,18 @@ test("el 20-02 del 14 de agosto es laborable a festivo", () => {
   assert.equal(payroll.base, 200.51);
 });
 
-test("el 02-08 del 16 de agosto es festivo a laborable", () => {
+test("el 02-08 del domingo 16 de agosto es festivo a festivo", () => {
   const payroll = calculate(16, "DE 02 A 08 H.");
 
-  assert.equal(payroll.rateKey, "FESTIVO_TO_LABORABLE");
-  assert.equal(payroll.base, 261.16);
+  assert.equal(payroll.rateKey, "FESTIVO_TO_FESTIVO");
+  assert.equal(payroll.base, 438.26);
+});
+
+test("el 20-02 del festivo 15 hacia el domingo es festivo a festivo", () => {
+  const payroll = calculate(15, "DE 20 A 02 H.");
+
+  assert.equal(payroll.rateKey, "FESTIVO_TO_FESTIVO");
+  assert.equal(payroll.base, 362.16);
 });
 
 test("los festivos configurados sustituyen el calendario local", () => {

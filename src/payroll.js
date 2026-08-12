@@ -213,14 +213,15 @@ function getRateKey(dateString, shift, holidaySet) {
   const dayType = getDayType(dateString, holidaySet);
   const todayIsConfiguredHoliday = isConfiguredHoliday(dateString, holidaySet);
   if (shift === "02-08" && isConfiguredHoliday(getAdjacentDay(dateString, -1), holidaySet)) {
-    return todayIsConfiguredHoliday ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+    return isHoliday(dateString, holidaySet) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
   }
   if (shift === "20-02") {
-    const nextDayIsHoliday = isConfiguredHoliday(getAdjacentDay(dateString, 1), holidaySet);
+    const nextDay = getAdjacentDay(dateString, 1);
+    const nextDayIsConfiguredHoliday = isConfiguredHoliday(nextDay, holidaySet);
     if (todayIsConfiguredHoliday) {
-      return nextDayIsHoliday ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+      return isHoliday(nextDay, holidaySet) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
     }
-    if (nextDayIsHoliday) return "LABORABLE_TO_FESTIVO";
+    if (nextDayIsConfiguredHoliday) return "LABORABLE_TO_FESTIVO";
   }
   if (dayType === "SABADO" && shift === "02-08") return "LABORABLE";
   return dayType;
