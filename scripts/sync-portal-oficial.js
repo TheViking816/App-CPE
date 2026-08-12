@@ -216,6 +216,7 @@ function parsePrimas(html = "") {
 
   if (headerIndex === -1) {
     return {
+      recognized: Boolean(pageText.match(/Jornales\s+de\s+([^\n|]+)/i)),
       locked: /clave\s+de\s+seguridad|validar/i.test(pageText),
       monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
       rows: rows
@@ -231,6 +232,7 @@ function parsePrimas(html = "") {
   };
 
   return {
+    recognized: true,
     locked: false,
     monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
     rows: rows.slice(headerIndex + 1)
@@ -646,7 +648,44 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
   }
 }
 
-async function collectJornales(page, previous = null) {
+async function readPrimasPeriod(context, selectorUrl, month, year) {
+  const periodPage = await context.newPage();
+  const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
+
+  try {
+    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    const selects = periodPage.locator("select");
+    if (await selects.count() < 2) {
+      throw new Error(`No se encontraron los selectores de primas para ${expectedLabel}.`);
+    }
+
+    await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
+    await selectPortalOption(selects.nth(1), String(year));
+    await periodPage.getByRole("button", { name: /Aceptar/i }).click();
+
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      for (const root of [periodPage, ...periodPage.frames()]) {
+        const parsed = parsePrimas(await root.content().catch(() => ""));
+        if (!parsed.locked && parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
+          return {
+            year,
+            month,
+            monthLabel: parsed.monthLabel || expectedLabel,
+            rows: Array.isArray(parsed.rows) ? parsed.rows : []
+          };
+        }
+      }
+      await periodPage.waitForTimeout(200);
+    }
+
+    throw new Error(`El portal no devolvio las primas de ${expectedLabel}.`);
+  } finally {
+    await periodPage.close();
+  }
+}
+
+async function collectJornales(page, previous = null, { currentOnly = false } = {}) {
   await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
   const now = new Date();
   const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
@@ -662,9 +701,11 @@ async function collectJornales(page, previous = null) {
   const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
   const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
   const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
-  const monthsToRead = refreshFullHistory
-    ? availableMonths
-    : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month));
+  const monthsToRead = currentOnly
+    ? [currentMonth]
+    : refreshFullHistory
+      ? availableMonths
+      : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month));
   const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
   const selectorUrl = selectorFrame.url();
   const periodWarnings = [];
@@ -834,7 +875,7 @@ async function collectVacaciones(page) {
   return collectVacacionesViaMenu(page);
 }
 
-async function collectPrimas(page) {
+async function collectPrimas(page, previous = null) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
   await openMenu(page, "Consultas", "Consulta de Primas Productividad");
   const securityControl = await waitForFrameAndLocator(
@@ -850,7 +891,9 @@ async function collectPrimas(page) {
       (result) => (result.rows || []).filter((row) => row.jornal).length,
       3000
     );
-    if ((alreadyLoaded.rows || []).some((row) => row.jornal)) return alreadyLoaded;
+    if ((alreadyLoaded.rows || []).some((row) => row.jornal)) {
+      return collectPrimasHistory(page, alreadyLoaded, previous);
+    }
     throw new Error("No se encontro la validacion de la clave de primas.");
   }
 
@@ -891,7 +934,70 @@ async function collectPrimas(page) {
   if (result.locked) {
     throw new Error("La clave de seguridad de primas no fue validada.");
   }
-  return result;
+  return collectPrimasHistory(page, result, previous);
+}
+
+async function collectPrimasHistory(page, currentResult, previous = null) {
+  const now = new Date();
+  const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
+  const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  const previousHistory = Array.isArray(previous?.history)
+    ? previous.history.filter((period) => (
+        Number(period?.year) === year
+        && Number(period?.month) >= 1
+        && Number(period?.month) <= currentMonth
+        && Array.isArray(period?.rows)
+      ))
+    : [];
+  const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
+  const normalizedCurrentLabel = cleanText(currentResult?.monthLabel).toLocaleLowerCase("es");
+  const parsedCurrentMonth = MONTH_NAMES_ES.findIndex((monthName) => (
+    normalizedCurrentLabel.includes(monthName.toLocaleLowerCase("es"))
+  )) + 1;
+  if (parsedCurrentMonth > 0 && jornalesPeriodMatches(currentResult?.monthLabel, parsedCurrentMonth, year)) {
+    historyByMonth.set(parsedCurrentMonth, {
+      year,
+      month: parsedCurrentMonth,
+      monthLabel: currentResult.monthLabel,
+      rows: currentResult.rows || []
+    });
+  }
+
+  const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
+  const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
+  const monthsToRead = (refreshFullHistory
+    ? availableMonths
+    : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month)))
+    .filter((month) => month !== parsedCurrentMonth);
+  const selectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp";
+  const periodWarnings = [];
+
+  for (const month of monthsToRead) {
+    try {
+      const period = await readPrimasPeriod(page.context(), selectorUrl, month, year);
+      historyByMonth.set(month, period);
+      console.log(`Primas ${period.monthLabel}: ${period.rows.length}.`);
+    } catch (error) {
+      const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
+      periodWarnings.push(warning);
+      console.warn(`No se actualizaron las primas de ${warning}`);
+    }
+  }
+
+  const history = [...historyByMonth.values()].sort((left, right) => Number(left.month) - Number(right.month));
+  const current = historyByMonth.get(currentMonth)
+    || (Array.isArray(currentResult?.rows) ? currentResult : null)
+    || (Array.isArray(previous?.rows) ? previous : null)
+    || { monthLabel: "", rows: [] };
+  return {
+    recognized: true,
+    locked: false,
+    year,
+    monthLabel: current.monthLabel,
+    rows: current.rows,
+    history,
+    historyWarnings: periodWarnings
+  };
 }
 
 async function upsertSupabase(snapshot) {
@@ -1011,7 +1117,9 @@ async function main() {
     const hasVacationData = (value) => Boolean(value?.recognized);
     const jornales = await readSection(
       "jornales",
-      () => collectJornales(page, existingSnapshot?.payload?.jornales),
+      () => collectJornales(page, existingSnapshot?.payload?.jornales, {
+        currentOnly: Boolean(portalSecurityKey)
+      }),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
       hasRecognizedRows
@@ -1025,7 +1133,7 @@ async function main() {
     );
     const primas = await readOptionalSection(
       "primas",
-      () => collectPrimas(page),
+      () => collectPrimas(page, existingSnapshot?.payload?.primas),
       existingSnapshot?.payload?.primas,
       { locked: true, rows: [] },
       hasRows

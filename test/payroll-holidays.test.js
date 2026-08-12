@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { enrichJornales } from "../src/payroll.js";
+import { enrichJornales, summarizeAnnualPayroll } from "../src/payroll.js";
 
 function calculate(day, jornada) {
   return enrichJornales([{
@@ -80,4 +80,41 @@ test("no suma dos veces una prima presente en jornales y primas", () => {
   assert.equal(payroll.complement, 7.38);
   assert.equal(payroll.prima, 202.54);
   assert.equal(payroll.total, 530.69);
+});
+
+test("el total anual usa las primas incluidas en cada mes sin mezclarlas", () => {
+  const annual = summarizeAnnualPayroll([
+    {
+      year: 2026,
+      month: 1,
+      monthLabel: "Enero de 2026",
+      rows: [{
+        dia: "10",
+        parte: "100",
+        jornada: "DE 08 A 14 H.",
+        especialidad: "CONDUCTOR 1a",
+        operacion: "CONT. C/SPREADER AUT",
+        produccion: "50,00 EUR"
+      }]
+    },
+    {
+      year: 2026,
+      month: 2,
+      monthLabel: "Febrero de 2026",
+      rows: [{
+        dia: "10",
+        parte: "100",
+        jornada: "DE 08 A 14 H.",
+        especialidad: "CONDUCTOR 1a",
+        operacion: "CONT. C/SPREADER AUT",
+        produccion: "75,00 EUR"
+      }]
+    }
+  ]);
+
+  assert.equal(annual.count, 2);
+  assert.equal(annual.primaTotal, 125);
+  assert.equal(annual.months[0].primaTotal, 50);
+  assert.equal(annual.months[1].primaTotal, 75);
+  assert.equal(annual.total, 367.31);
 });

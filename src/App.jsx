@@ -39,7 +39,13 @@ import {
   specialties,
   specialty
 } from "./censo.js";
-import { compareJornalesDescending, enrichJornales, formatEuro, summarizePayroll } from "./payroll.js";
+import {
+  compareJornalesDescending,
+  enrichJornales,
+  formatEuro,
+  summarizeAnnualPayroll,
+  summarizePayroll
+} from "./payroll.js";
 import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
@@ -1366,8 +1372,13 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
 
 function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const payload = snapshot?.payload || null;
-  const jornales = payload?.jornales?.rows || [];
+  const primas = payload?.primas?.rows || [];
+  const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
+  const jornales = (!payload?.primas?.locked && primas.length > 0)
+    ? primas
+    : (payload?.jornales?.rows || []);
   const journalHistory = useMemo(() => {
+    if (premiumHistory.length > 0) return premiumHistory;
     const savedHistory = payload?.jornales?.history;
     if (Array.isArray(savedHistory) && savedHistory.length > 0) return savedHistory;
     if (!jornales.length) return [];
@@ -1378,10 +1389,9 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
       monthLabel: payload?.jornales?.monthLabel || "Mes actual",
       rows: jornales
     }];
-  }, [jornales, payload?.jornales?.history, payload?.jornales?.monthLabel]);
+  }, [jornales, payload?.jornales?.history, payload?.jornales?.monthLabel, premiumHistory]);
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
-  const primas = payload?.primas?.rows || [];
   const vacaciones = payload?.vacaciones || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
@@ -1446,23 +1456,19 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
     }
   };
   const enrichedJornales = useMemo(
-    () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || "", payrollConfig),
-    [jornales, primas, payload?.jornales?.monthLabel, payrollConfig]
+    () => enrichJornales(
+      jornales,
+      primas,
+      (!payload?.primas?.locked && primas.length > 0 ? payload?.primas?.monthLabel : payload?.jornales?.monthLabel) || "",
+      payrollConfig
+    ),
+    [jornales, primas, payload?.primas?.locked, payload?.primas?.monthLabel, payload?.jornales?.monthLabel, payrollConfig]
   );
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
-  const annualPayroll = useMemo(() => {
-    const months = journalHistory.map((month) => {
-      const enriched = enrichJornales(month.rows || [], primas, month.monthLabel || "", payrollConfig);
-      const summary = summarizePayroll(enriched);
-      return { ...month, count: enriched.length, total: summary.total };
-    });
-    return {
-      months,
-      count: months.reduce((sum, month) => sum + month.count, 0),
-      total: months.reduce((sum, month) => sum + month.total, 0),
-      activeMonths: months.filter((month) => month.count > 0).length
-    };
-  }, [journalHistory, primas, payrollConfig]);
+  const annualPayroll = useMemo(
+    () => summarizeAnnualPayroll(journalHistory, payrollConfig),
+    [journalHistory, payrollConfig]
+  );
   const selectedJornales = useMemo(
     () => enrichedJornales.filter((item) => {
       if (selectedPeriod === "month") return true;
@@ -1602,6 +1608,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
                 <div className="portal-annual-content">
                   <div className="portal-annual-kpis">
                     <div><span>Meses activos</span><strong>{annualPayroll.activeMonths}</strong></div>
+                    <div><span>Primas del año</span><strong>{formatEuro(annualPayroll.primaTotal)}</strong></div>
                     <div><span>Media mensual</span><strong>{formatEuro(annualPayroll.activeMonths ? annualPayroll.total / annualPayroll.activeMonths : 0)}</strong></div>
                     <div><span>Neto anual</span><strong>{formatEuro(annualPayroll.total * (1 - irpfRate / 100))}</strong></div>
                   </div>

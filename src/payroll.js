@@ -308,6 +308,29 @@ export function summarizePayroll(items = []) {
   }, { total: 0, firstHalf: 0, secondHalf: 0 });
 }
 
+export function summarizeAnnualPayroll(history = [], payrollConfig = null) {
+  const months = history.map((month) => {
+    const enriched = enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig);
+    const summary = summarizePayroll(enriched);
+    const primaTotal = enriched.reduce((sum, item) => sum + Number(item.payroll?.prima || 0), 0);
+    return {
+      ...month,
+      enriched,
+      count: enriched.length,
+      total: Number(summary.total.toFixed(2)),
+      primaTotal: Number(primaTotal.toFixed(2))
+    };
+  });
+
+  return {
+    months,
+    count: months.reduce((sum, month) => sum + month.count, 0),
+    total: Number(months.reduce((sum, month) => sum + month.total, 0).toFixed(2)),
+    primaTotal: Number(months.reduce((sum, month) => sum + month.primaTotal, 0).toFixed(2)),
+    activeMonths: months.filter((month) => month.count > 0).length
+  };
+}
+
 export function formatEuro(value = 0) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(value) || 0);
 }
