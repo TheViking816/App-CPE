@@ -120,19 +120,33 @@ function parseJornales(html = "") {
   };
 }
 
-function parseSl(html = "") {
+export function parseSl(html = "") {
   const rows = parseRowsFromTable(html);
   const headerIndex = rows.findIndex((row) => (
-    row.some((cell) => /fecha/i.test(cell)) && row.some((cell) => /posicion/i.test(cell))
+    row.some((cell) => /fecha/i.test(cell))
+    && row.some((cell) => /posici|puesto|orden/i.test(cell))
   ));
 
   if (headerIndex === -1) return { recognized: false, rows: [] };
 
+  const headers = rows[headerIndex].map((item) => cleanText(item).toLocaleLowerCase("es"));
+  const dateIndex = Math.max(0, headers.findIndex((item) => /fecha/.test(item)));
+  const positionIndex = headers.findIndex((item) => /posici|puesto|orden/.test(item));
+  const normalizeDate = (value) => {
+    const match = cleanText(value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    return match
+      ? `${match[1].padStart(2, "0")}/${match[2].padStart(2, "0")}/${match[3]}`
+      : "";
+  };
+
   return {
     recognized: true,
     rows: rows.slice(headerIndex + 1)
-      .filter((row) => /^\d{2}\/\d{2}\/\d{4}$/.test(row[0] || ""))
-      .map((row) => ({ fecha: row[0], posicion: row[1] || "" }))
+      .map((row) => ({
+        fecha: normalizeDate(row[dateIndex] || ""),
+        posicion: cleanText(row[positionIndex] || "").match(/\d+/)?.[0] || ""
+      }))
+      .filter((row) => row.fecha && row.posicion)
   };
 }
 
@@ -614,6 +628,7 @@ function jornalesPeriodMatches(monthLabel, month, year) {
 async function readJornalesPeriod(context, selectorUrl, month, year) {
   const periodPage = await context.newPage();
   const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
+  const initialPages = new Set(context.pages());
 
   try {
     await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -624,19 +639,21 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
 
     await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
     await selectPortalOption(selects.nth(1), String(year));
-    await periodPage.getByRole("button", { name: /Aceptar/i }).click();
+    await periodPage.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
 
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
-      for (const root of [periodPage, ...periodPage.frames()]) {
-        const parsed = parseJornales(await root.content().catch(() => ""));
-        if (parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
-          return {
-            year,
-            month,
-            monthLabel: parsed.monthLabel || expectedLabel,
-            rows: Array.isArray(parsed.rows) ? parsed.rows : []
-          };
+      for (const candidatePage of context.pages()) {
+        for (const root of [candidatePage, ...candidatePage.frames()]) {
+          const parsed = parseJornales(await root.content().catch(() => ""));
+          if (parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
+            return {
+              year,
+              month,
+              monthLabel: parsed.monthLabel || expectedLabel,
+              rows: Array.isArray(parsed.rows) ? parsed.rows : []
+            };
+          }
         }
       }
       await periodPage.waitForTimeout(200);
@@ -644,6 +661,9 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
 
     throw new Error(`El portal no devolvio el periodo ${expectedLabel}.`);
   } finally {
+    await Promise.all(context.pages()
+      .filter((candidatePage) => !initialPages.has(candidatePage) && candidatePage !== periodPage)
+      .map((candidatePage) => candidatePage.close().catch(() => {})));
     await periodPage.close();
   }
 }
@@ -651,6 +671,7 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
 async function readPrimasPeriod(context, selectorUrl, month, year) {
   const periodPage = await context.newPage();
   const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
+  const initialPages = new Set(context.pages());
 
   try {
     await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -661,19 +682,21 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
 
     await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
     await selectPortalOption(selects.nth(1), String(year));
-    await periodPage.getByRole("button", { name: /Aceptar/i }).click();
+    await periodPage.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
 
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
-      for (const root of [periodPage, ...periodPage.frames()]) {
-        const parsed = parsePrimas(await root.content().catch(() => ""));
-        if (!parsed.locked && parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
-          return {
-            year,
-            month,
-            monthLabel: parsed.monthLabel || expectedLabel,
-            rows: Array.isArray(parsed.rows) ? parsed.rows : []
-          };
+      for (const candidatePage of context.pages()) {
+        for (const root of [candidatePage, ...candidatePage.frames()]) {
+          const parsed = parsePrimas(await root.content().catch(() => ""));
+          if (!parsed.locked && parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
+            return {
+              year,
+              month,
+              monthLabel: parsed.monthLabel || expectedLabel,
+              rows: Array.isArray(parsed.rows) ? parsed.rows : []
+            };
+          }
         }
       }
       await periodPage.waitForTimeout(200);
@@ -681,6 +704,9 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
 
     throw new Error(`El portal no devolvio las primas de ${expectedLabel}.`);
   } finally {
+    await Promise.all(context.pages()
+      .filter((candidatePage) => !initialPages.has(candidatePage) && candidatePage !== periodPage)
+      .map((candidatePage) => candidatePage.close().catch(() => {})));
     await periodPage.close();
   }
 }
@@ -769,9 +795,14 @@ async function collectDescansos(page) {
 
 async function collectSl(page) {
   await openMenu(page, "Consultas", "Consulta posicion SL", /MostrarSL\.asp/i);
-  const frame = await waitForFrame(page, /MostrarSL\.asp/i);
-  const parsed = parseSl(await frame.content());
-  return { ...parsed, recognized: true };
+  const parsed = await waitForParsedContent(
+    page,
+    parseSl,
+    (result) => result.rows?.length || 0,
+    10000
+  );
+  if (parsed.rows?.length) return parsed;
+  throw new Error("El portal no devolvio posiciones de Lista SL.");
 }
 
 async function collectAssignmentsViaMenu(page) {
@@ -894,7 +925,16 @@ async function collectPrimas(page, previous = null) {
     if ((alreadyLoaded.rows || []).some((row) => row.jornal)) {
       return collectPrimasHistory(page, alreadyLoaded, previous);
     }
-    throw new Error("No se encontro la validacion de la clave de primas.");
+    const now = new Date();
+    const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
+    const month = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+    const current = await readPrimasPeriod(
+      page.context(),
+      "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp",
+      month,
+      year
+    );
+    return collectPrimasHistory(page, { ...current, locked: false, recognized: true }, previous);
   }
 
   const securityInput = securityControl.frame
@@ -1118,7 +1158,7 @@ async function main() {
     const jornales = await readSection(
       "jornales",
       () => collectJornales(page, existingSnapshot?.payload?.jornales, {
-        currentOnly: Boolean(portalSecurityKey)
+        currentOnly: false
       }),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
@@ -1143,7 +1183,7 @@ async function main() {
       () => collectSl(page),
       existingSnapshot?.payload?.sl,
       { rows: [] },
-      hasRecognizedRows
+      hasRows
     );
     const descansos = await readSection(
       "descansos",
@@ -1214,7 +1254,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "Error desconocido");
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : "Error desconocido");
+    process.exit(1);
+  });
+}
