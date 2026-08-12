@@ -566,6 +566,24 @@ function findFrame(page, pattern) {
   return page.frames().find((frame) => pattern.test(frame.url()));
 }
 
+function safePortalLocation(value = "") {
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return "unknown";
+  }
+}
+
+async function assignmentNavigationState(page, stage) {
+  const frames = await Promise.all(page.frames().map(async (frame) => ({
+    location: safePortalLocation(frame.url()),
+    menuItems: await frame.locator(".NorayMenu .gwt-TreeItem, .gwt-TreeItem").count().catch(() => 0),
+    partLabels: await frame.locator("td, th").filter({ hasText: /^\s*Parte:?\s*$/i }).count().catch(() => 0)
+  })));
+  console.log(`[contratacion:${stage}] ${JSON.stringify({ page: safePortalLocation(page.url()), frames })}`);
+}
+
 async function collectJornales(page) {
   await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
   const frame = await waitForFrame(page, /SelDatJor1\.asp/i);
@@ -612,7 +630,9 @@ async function collectSl(page) {
 }
 
 async function collectAssignmentsViaMenu(page) {
+  await assignmentNavigationState(page, "menu-before");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
+  await assignmentNavigationState(page, "menu-after-click");
   const result = await waitForParsedFrame(
     page,
     /DondeVoy\.asp/i,
@@ -676,6 +696,7 @@ async function enrichAssignmentsWithDetails(context, result, previousResult) {
 async function collectAssignments(page, previousResult) {
   let result;
   try {
+    await assignmentNavigationState(page, "direct-before");
     result = await readDirectPortalPage(
       page.context(),
       "https://portal.cpevalencia.com/Noray/DondeVoy.asp",
@@ -683,8 +704,10 @@ async function collectAssignments(page, previousResult) {
       (parsed) => parsed.rows?.length || 0,
       8000
     );
+    console.log(`[contratacion:direct-result] ${JSON.stringify({ recognized: result.recognized, rows: result.rows?.length || 0 })}`);
     if (!(result.recognized && result.rows?.length)) result = null;
-  } catch {
+  } catch (error) {
+    console.warn(`[contratacion:direct-error] ${error instanceof Error ? error.message : "Error desconocido"}`);
     // The menu fallback handles portal-side route changes.
   }
   if (!result) result = await collectAssignmentsViaMenu(page);
