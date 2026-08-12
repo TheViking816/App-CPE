@@ -28,6 +28,7 @@ const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "")
   .replace(/\\r|\\n/g, "")
   .trim();
 const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "main";
+const portalWorkerUrl = String(import.meta.env.VITE_PORTAL_WORKER_URL || "").replace(/\/$/, "");
 
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
@@ -268,6 +269,19 @@ export async function trackPortalOpen({ token }) {
 
 export async function requestPortalSync({ token, portalPassword, securityKey = "" }) {
   if (!supabase || !token) return null;
+
+  if (portalWorkerUrl) {
+    const response = await fetch(`${portalWorkerUrl}/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, portalPassword, securityKey })
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.ok === false) {
+      throw new Error(data?.error || "No se pudo lanzar la lectura rapida del portal.");
+    }
+    return data;
+  }
 
   const { data, error } = await supabase.functions.invoke("refresh-portal", {
     body: {

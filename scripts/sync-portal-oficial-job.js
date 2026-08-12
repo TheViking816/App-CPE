@@ -62,7 +62,9 @@ function runSync(job) {
         CPE_PORTAL_PASSWORD: job.portal_password,
         CPE_PORTAL_SECURITY_KEY: job.security_key || "",
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
-        CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled"
+        CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled",
+        CPE_PORTAL_BROWSER_WS_ENDPOINT: process.env.CPE_PORTAL_BROWSER_WS_ENDPOINT || "",
+        CPE_PORTAL_PROGRESSIVE: process.env.CPE_PORTAL_PROGRESSIVE || ""
       }
     });
 

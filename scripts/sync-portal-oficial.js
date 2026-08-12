@@ -25,6 +25,9 @@ const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
+const browserWsEndpoint = String(process.env.CPE_PORTAL_BROWSER_WS_ENDPOINT || "").trim();
+const progressiveSync = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_PROGRESSIVE || "");
+const portalSyncJobId = String(process.env.CPE_PORTAL_SYNC_JOB_ID || "").trim();
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -869,7 +872,7 @@ async function enrichAssignmentsWithDetails(context, result, previousResult) {
   return { ...result, rows };
 }
 
-async function collectAssignments(page, previousResult) {
+async function collectAssignments(page, previousResult, { enrichDetails = true } = {}) {
   let result;
   try {
     await assignmentNavigationState(page, "direct-before");
@@ -887,6 +890,7 @@ async function collectAssignments(page, previousResult) {
     // The menu fallback handles portal-side route changes.
   }
   if (!result) result = await collectAssignmentsViaMenu(page);
+  if (!enrichDetails) return result;
   return enrichAssignmentsWithDetails(page.context(), result, previousResult);
 }
 
@@ -1063,6 +1067,24 @@ async function upsertSupabase(snapshot) {
   }
 }
 
+async function updatePortalSyncJob(patch) {
+  if (!supabaseServiceRole || !portalSyncJobId) return;
+  const response = await fetch(
+    `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_sync_jobs?id=eq.${encodeURIComponent(portalSyncJobId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        apikey: supabaseServiceRole,
+        Authorization: `Bearer ${supabaseServiceRole}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify(patch)
+    }
+  );
+  if (!response.ok) throw new Error(`No se pudo actualizar el progreso del job: ${response.status}`);
+}
+
 async function getExistingSupabaseSnapshot() {
   if (!supabaseServiceRole || !portalUser) return null;
   try {
@@ -1084,22 +1106,31 @@ async function getExistingSupabaseSnapshot() {
 }
 
 async function main() {
+  const syncStartedAt = Date.now();
   await fs.mkdir(privateDataDir, { recursive: true });
   await fs.mkdir(profileDir, { recursive: true });
 
-  const launchOptions = {
-    headless,
+  const contextOptions = {
     viewport: { width: 1500, height: 1100 },
     locale: "es-ES",
     timezoneId: "Europe/Madrid",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+  };
+  const launchOptions = {
+    headless,
     args: ["--disable-blink-features=AutomationControlled"]
   };
   if (browserChannel && browserChannel !== "bundled") {
     launchOptions.channel = browserChannel;
   }
 
-  const context = await chromium.launchPersistentContext(profileDir, launchOptions);
+  let sharedBrowser = null;
+  const context = browserWsEndpoint
+    ? await (async () => {
+        sharedBrowser = await chromium.connect(browserWsEndpoint);
+        return sharedBrowser.newContext(contextOptions);
+      })()
+    : await chromium.launchPersistentContext(profileDir, { ...launchOptions, ...contextOptions });
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "platform", { get: () => "Win32" });
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
@@ -1155,22 +1186,65 @@ async function main() {
     const hasRecognizedRows = (value) => Boolean(value?.recognized) && Array.isArray(value?.rows);
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
-    const jornales = await readSection(
+    let jornales = await readSection(
       "jornales",
       () => collectJornales(page, existingSnapshot?.payload?.jornales, {
-        currentOnly: false
+        currentOnly: progressiveSync
       }),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
       hasRecognizedRows
     );
-    const asignaciones = await readOptionalSection(
+    let asignaciones = await readOptionalSection(
       "contratacion actual",
-      () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
+      () => collectAssignments(page, existingSnapshot?.payload?.asignaciones, {
+        enrichDetails: !progressiveSync
+      }),
       existingSnapshot?.payload?.asignaciones,
       { recognized: false, rows: [] },
       hasVacationData
     );
+
+    if (progressiveSync) {
+      const fastUpdatedAt = new Date().toISOString();
+      const fastDurationMs = Date.now() - syncStartedAt;
+      await upsertSupabase({
+        chapa: portalUser,
+        source: PORTAL_URL,
+        updatedAt: fastUpdatedAt,
+        payload: {
+          ...(existingSnapshot?.payload || {}),
+          jornales,
+          asignaciones,
+          sync: {
+            partial: true,
+            phase: "fast",
+            fastDurationMs,
+            freshSections,
+            warnings: sectionWarnings
+          }
+        }
+      });
+      await updatePortalSyncJob({
+        message: `Datos principales disponibles en ${Math.ceil(fastDurationMs / 1000)} s; completando primas, descansos y vacaciones`
+      });
+      console.log(`Snapshot rapido publicado para ${portalUser}.`);
+
+      jornales = await readSection(
+        "historico de jornales",
+        () => collectJornales(page, jornales, { currentOnly: false }),
+        jornales,
+        { monthLabel: "", rows: [] },
+        hasRecognizedRows
+      );
+      asignaciones = await readOptionalSection(
+        "detalle de contratacion",
+        () => enrichAssignmentsWithDetails(page.context(), asignaciones, existingSnapshot?.payload?.asignaciones),
+        asignaciones,
+        { recognized: false, rows: [] },
+        hasVacationData
+      );
+    }
     const primas = await readOptionalSection(
       "primas",
       () => collectPrimas(page, existingSnapshot?.payload?.primas),
@@ -1212,6 +1286,7 @@ async function main() {
       vacaciones,
       sync: {
         partial: sectionWarnings.length > 0,
+        phase: "complete",
         freshSections,
         warnings: sectionWarnings
       }
@@ -1251,6 +1326,7 @@ async function main() {
     throw error;
   } finally {
     await context.close();
+    if (sharedBrowser) sharedBrowser = null;
   }
 }
 

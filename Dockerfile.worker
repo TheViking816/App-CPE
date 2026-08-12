@@ -1,0 +1,15 @@
+FROM mcr.microsoft.com/playwright:v1.61.1-noble
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=optional
+COPY scripts ./scripts
+
+ENV NODE_ENV=production
+ENV CPE_PORTAL_HEADLESS=true
+ENV CPE_PORTAL_BROWSER_CHANNEL=bundled
+ENV CPE_PORTAL_WORKER_POLL_MS=1500
+ENV CPE_PORTAL_WORKER_POLL_GLOBAL=false
+EXPOSE 8080
+
+CMD ["npm", "run", "worker:portal"]

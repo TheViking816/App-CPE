@@ -1759,6 +1759,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const [syncElapsed, setSyncElapsed] = useState(initialActiveSync ? Math.floor((Date.now() - initialActiveSync.startedAt) / 1000) : 0);
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
+  const fastSnapshotLoadedRef = useRef(false);
 
   const loadSnapshot = async () => {
     setError("");
@@ -1843,6 +1844,16 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           status: job.status,
           startedAt: syncStartedAtRef.current
         });
+        if (
+          job.status === "running"
+          && String(job.message || "").startsWith("Datos principales disponibles")
+          && !fastSnapshotLoadedRef.current
+        ) {
+          fastSnapshotLoadedRef.current = true;
+          setSyncProgress((current) => Math.max(current, 72));
+          setPortalMessage("Jornales y contratacion actualizados. Completando el resto en segundo plano...");
+          await loadSnapshot();
+        }
         if (job.status === "completed") {
           const measuredSeconds = job.startedAt && job.finishedAt
             ? (new Date(job.finishedAt).getTime() - new Date(job.startedAt).getTime()) / 1000
@@ -1893,6 +1904,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     setSyncElapsed(0);
     syncEstimateRef.current = getPortalSyncEstimate(session.chapa);
     syncStartedAtRef.current = Date.now();
+    fastSnapshotLoadedRef.current = false;
 
     try {
       if ((autoSyncEnabled || rememberCredentials) && passwordToUse) {

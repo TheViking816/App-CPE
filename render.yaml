@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: app-cpe-portal-worker-test
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    healthCheckPath: /health
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: CPE_SUPABASE_URL
+        value: https://wvwdiywtlbffumshbboa.supabase.co
+      - key: CPE_SUPABASE_SERVICE_ROLE
+        sync: false
+      - key: CPE_PORTAL_WORKER_POLL_GLOBAL
+        value: "false"
+      - key: CPE_PORTAL_WORKER_ALLOWED_ORIGINS
+        sync: false
