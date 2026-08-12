@@ -211,14 +211,14 @@ function getComplement(specialty = "", complementLookup = new Map()) {
 
 function getRateKey(dateString, shift, holidaySet) {
   const dayType = getDayType(dateString, holidaySet);
-  const todayIsConfiguredHoliday = isConfiguredHoliday(dateString, holidaySet);
   if (shift === "02-08" && isConfiguredHoliday(getAdjacentDay(dateString, -1), holidaySet)) {
     return isHoliday(dateString, holidaySet) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
   }
   if (shift === "20-02") {
     const nextDay = getAdjacentDay(dateString, 1);
     const nextDayIsConfiguredHoliday = isConfiguredHoliday(nextDay, holidaySet);
-    if (todayIsConfiguredHoliday) {
+    const todayIsHoliday = isHoliday(dateString, holidaySet);
+    if (todayIsHoliday) {
       return isHoliday(nextDay, holidaySet) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
     }
     if (nextDayIsConfiguredHoliday) return "LABORABLE_TO_FESTIVO";
