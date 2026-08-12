@@ -609,9 +609,13 @@ async function collectJornales(page, previous = null) {
   const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
   const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
   const previousHistory = Array.isArray(previous?.history)
-    ? previous.history.filter((period) => Number(period?.year) === year)
+    ? previous.history.filter((period) => Number(period?.year) === year && Array.isArray(period?.rows) && period.rows.length > 0)
     : [];
-  const monthsToRead = previousHistory.length ? [currentMonth] : Array.from({ length: currentMonth }, (_, index) => index + 1);
+  // The portal keeps old GWT frames alive after returning from a result page.
+  // Reading several periods in one session can therefore resolve a stale,
+  // empty frame. Keep the regular sync scoped to the current month; historical
+  // periods are accumulated only from confirmed, non-empty reads.
+  const monthsToRead = [currentMonth];
   const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
 
   for (const [index, month] of monthsToRead.entries()) {
@@ -624,12 +628,16 @@ async function collectJornales(page, previous = null) {
 
     const resultFrame = await waitForFrame(page, /Jornales1\.asp/i);
     const parsed = parseJornales(await resultFrame.content());
-    historyByMonth.set(month, {
-      year,
-      month,
-      monthLabel: parsed.monthLabel || `${MONTH_NAMES_ES[month - 1]} de ${year}`,
-      rows: parsed.rows || []
-    });
+    const parsedRows = Array.isArray(parsed.rows) ? parsed.rows : [];
+    const previousPeriod = historyByMonth.get(month);
+    if (parsedRows.length > 0 || !previousPeriod) {
+      historyByMonth.set(month, {
+        year,
+        month,
+        monthLabel: parsed.monthLabel || `${MONTH_NAMES_ES[month - 1]} de ${year}`,
+        rows: parsedRows
+      });
+    }
 
     if (index < monthsToRead.length - 1) {
       await resultFrame.getByRole("button", { name: /Volver/i }).click();
@@ -638,7 +646,9 @@ async function collectJornales(page, previous = null) {
   }
 
   const history = [...historyByMonth.values()].sort((left, right) => Number(left.month) - Number(right.month));
-  const current = historyByMonth.get(currentMonth) || { monthLabel: "", rows: [] };
+  const current = historyByMonth.get(currentMonth)
+    || (Array.isArray(previous?.rows) && previous.rows.length > 0 ? previous : null)
+    || { monthLabel: "", rows: [] };
   return {
     recognized: true,
     year,
