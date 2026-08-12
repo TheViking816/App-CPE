@@ -88,29 +88,54 @@ export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
   const detail = {};
   const specialties = [];
 
-  tables.forEach((rows) => rows.forEach((row) => {
-    for (let index = 0; index < row.length - 1; index += 1) {
-      const normalized = normalizeCell(row[index]);
-      const field = DETAIL_FIELDS.find(([, pattern]) => pattern.test(normalized))?.[0];
-      if (!field || detail[field]) continue;
-      detail[field] = normalizeCell(row[index + 1]);
-    }
+  tables.forEach((rows) => {
+    let currentSpecialty = null;
+    rows.forEach((row) => {
+      for (let index = 0; index < row.length - 1; index += 1) {
+        const normalized = normalizeCell(row[index]);
+        const field = DETAIL_FIELDS.find(([, pattern]) => pattern.test(normalized))?.[0];
+        if (!field || detail[field]) continue;
+        detail[field] = normalizeCell(row[index + 1]);
+      }
 
-    const name = normalizeCell(row[0]);
-    const requested = Number(normalizeCell(row[1]));
-    if (!name || !Number.isFinite(requested) || requested <= 0) return;
-    if (/^especialidad:?$/i.test(name) || DETAIL_FIELDS.some(([, pattern]) => pattern.test(name))) return;
-    const workerText = row.slice(2).join(" ");
-    const workers = parseWorkers(workerText);
-    const bolsa = Math.min((workerText.match(/\b00000\b/g) || []).length, requested);
-    specialties.push({
-      name,
-      requested,
-      workers,
-      bolsa,
-      unnamed: Math.max(requested - workers.length - bolsa, 0)
+      const name = normalizeCell(row[0]);
+      const requested = Number(normalizeCell(row[1]));
+      if (!name || !Number.isFinite(requested) || requested <= 0
+        || /^especialidad:?$/i.test(name)
+        || DETAIL_FIELDS.some(([, pattern]) => pattern.test(name))) {
+        if (!currentSpecialty) return;
+        const continuationText = row.join(" ");
+        const continuationWorkers = parseWorkers(continuationText);
+        const knownCodes = new Set(currentSpecialty.workers.map((worker) => worker.code.toUpperCase()));
+        continuationWorkers.forEach((worker) => {
+          if (!knownCodes.has(worker.code.toUpperCase())) {
+            currentSpecialty.workers.push(worker);
+            knownCodes.add(worker.code.toUpperCase());
+          }
+        });
+        currentSpecialty.bolsa = Math.min(
+          currentSpecialty.bolsa + (continuationText.match(/\b00000\b/g) || []).length,
+          currentSpecialty.requested
+        );
+        currentSpecialty.unnamed = Math.max(
+          currentSpecialty.requested - currentSpecialty.workers.length - currentSpecialty.bolsa,
+          0
+        );
+        return;
+      }
+      const workerText = row.slice(2).join(" ");
+      const workers = parseWorkers(workerText);
+      const bolsa = Math.min((workerText.match(/\b00000\b/g) || []).length, requested);
+      currentSpecialty = {
+        name,
+        requested,
+        workers,
+        bolsa,
+        unnamed: Math.max(requested - workers.length - bolsa, 0)
+      };
+      specialties.push(currentSpecialty);
     });
-  }));
+  });
 
   const recognized = Boolean(detail.parte && specialties.length)
     || /centro\s+portuario\s+de\s+empleo/i.test(pageText) && specialties.length > 0;

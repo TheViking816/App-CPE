@@ -26,3 +26,21 @@ test("prefiere y acepta el parte cuando llegan todos los nombres", () => {
   assert.equal(complete.specialties[0].unnamed, 0);
   assert.equal(isAssignmentDetailComplete(complete), true);
 });
+
+test("agrega cinco nombres publicados en una fila de continuacion", () => {
+  const firstFifteen = Array.from({ length: 15 }, (_, index) => (
+    `${String(71000 + index)} - PERSONA ${index + 1}`
+  )).join(" ");
+  const lastFive = Array.from({ length: 5 }, (_, index) => (
+    `${String(72000 + index)} - PERSONA ${index + 16}`
+  )).join(" ");
+  const parsed = parseAssignmentDetailFromTables([[
+    ["Parte:", "12345"],
+    ["CONDUCTOR 1a", "20", firstFifteen],
+    [lastFive]
+  ]]);
+
+  assert.equal(parsed.specialties[0].workers.length, 20);
+  assert.equal(parsed.specialties[0].unnamed, 0);
+  assert.equal(isAssignmentDetailComplete(parsed), true);
+});
