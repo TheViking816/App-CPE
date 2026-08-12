@@ -594,12 +594,12 @@ async function collectJornales(page) {
 
 async function collectDescansos(page) {
   await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
-  const calendarFrame = await waitForFrame(page, /Prueba\.asp/i, 30000);
+  const calendarFrame = await waitForFrame(page, /Prueba\.asp/i, 12000);
   let result = await waitForParsedContent(
     page,
     parseDescansos,
     (result) => result.months?.length || 0,
-    30000
+    12000
   );
   if (result.months?.length) return result;
 
@@ -607,13 +607,13 @@ async function collectDescansos(page) {
   try {
     await directPage.goto(calendarFrame.url(), {
       waitUntil: "domcontentloaded",
-      timeout: 30000
+      timeout: 12000
     });
     result = await waitForParsedContent(
       directPage,
       parseDescansos,
       (parsed) => parsed.months?.length || 0,
-      20000
+      8000
     );
     if (result.months?.length) return result;
   } finally {
@@ -736,7 +736,7 @@ async function collectPrimas(page) {
   const securityControl = await waitForFrameAndLocator(
     page,
     (frame) => frame.getByRole("button", { name: /Validar/i }),
-    30000
+    10000
   );
 
   if (!securityControl) {
@@ -860,33 +860,43 @@ async function main() {
     await login(page);
     const updatedAt = new Date().toISOString();
     const existingSnapshot = await getExistingSupabaseSnapshot();
-    const readSection = async (name, reader, fallback, isMeaningful) => {
+    const sectionWarnings = [];
+    let freshSections = 0;
+    const readSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
-        if (isMeaningful && !isMeaningful(value) && isMeaningful(fallback)) {
-          console.warn(`${name} devolvio una respuesta vacia; se conservan los datos anteriores.`);
-          return fallback;
+        if (!isMeaningful || isMeaningful(value)) {
+          freshSections += 1;
+          console.log(`${name} actualizado.`);
+          return value;
         }
-        console.log(`${name} actualizado.`);
-        return value;
+        const message = `${name} devolvio una respuesta vacia; se conservan los datos anteriores.`;
+        sectionWarnings.push(message);
+        console.warn(message);
       } catch (error) {
-        if (!fallback || (isMeaningful && !isMeaningful(fallback))) throw error;
-        console.warn(`${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim());
-        return fallback;
+        const message = `${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim();
+        sectionWarnings.push(message);
+        console.warn(message);
       }
+      return isMeaningful(fallback) ? fallback : emptyValue;
     };
     const readOptionalSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
         if (isMeaningful(value)) {
+          freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
         }
-        console.warn(`${name} no devolvio datos; se conserva la ultima lectura disponible.`);
+        const message = `${name} no devolvio datos; se conserva la ultima lectura disponible.`;
+        sectionWarnings.push(message);
+        console.warn(message);
       } catch (error) {
-        console.warn(`${name} no se pudo actualizar. ${error instanceof Error ? error.message : ""}`.trim());
+        const message = `${name} no se pudo actualizar. ${error instanceof Error ? error.message : ""}`.trim();
+        sectionWarnings.push(message);
+        console.warn(message);
       }
       return isMeaningful(fallback) ? fallback : emptyValue;
     };
@@ -894,7 +904,13 @@ async function main() {
     const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
-    const jornales = await readSection("jornales", () => collectJornales(page), existingSnapshot?.payload?.jornales, hasRows);
+    const jornales = await readSection(
+      "jornales",
+      () => collectJornales(page),
+      existingSnapshot?.payload?.jornales,
+      { monthLabel: "", rows: [] },
+      hasRows
+    );
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
@@ -909,8 +925,20 @@ async function main() {
       { locked: true, rows: [] },
       hasRows
     );
-    const sl = await readSection("lista SL", () => collectSl(page), existingSnapshot?.payload?.sl, hasRows);
-    const descansos = await readSection("descansos", () => collectDescansos(page), existingSnapshot?.payload?.descansos, hasMonths);
+    const sl = await readSection(
+      "lista SL",
+      () => collectSl(page),
+      existingSnapshot?.payload?.sl,
+      { rows: [] },
+      hasRows
+    );
+    const descansos = await readSection(
+      "descansos",
+      () => collectDescansos(page),
+      existingSnapshot?.payload?.descansos,
+      { worker: { chapa: portalUser, name: "", group: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
+      hasMonths
+    );
     const vacaciones = await readOptionalSection(
       "vacaciones",
       () => collectVacaciones(page),
@@ -918,13 +946,22 @@ async function main() {
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
       hasVacationData
     );
+    if (freshSections === 0) {
+      throw new Error("El portal no devolvio ninguna seccion util. Se conservaran los datos anteriores.");
+    }
+
     const payload = {
       jornales,
       asignaciones,
       descansos,
       sl,
       primas,
-      vacaciones
+      vacaciones,
+      sync: {
+        partial: sectionWarnings.length > 0,
+        freshSections,
+        warnings: sectionWarnings
+      }
     };
 
     const snapshot = {
@@ -946,7 +983,9 @@ async function main() {
       sl: payload.sl.rows.length,
       primas: payload.primas.rows.length,
       descansos: payload.descansos.worker,
-      vacaciones: payload.vacaciones.rows.length
+      vacaciones: payload.vacaciones.rows.length,
+      partial: payload.sync.partial,
+      warnings: payload.sync.warnings
     });
     console.log(`OK: portal oficial sincronizado para ${portalUser}`);
   } catch (error) {
