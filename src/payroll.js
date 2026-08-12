@@ -5,12 +5,7 @@ const VALENCIA_HOLIDAYS_2026 = new Set([
   "2026-12-08", "2026-12-25"
 ]);
 
-const SPECIAL_RATE_KEYS_2026 = new Map([
-  ["2026-08-14|20-02", "LABORABLE_TO_FESTIVO"],
-  ["2026-08-16|02-08", "FESTIVO_TO_LABORABLE"]
-]);
-
-const SALARY_TABLE = {
+export const SALARY_TABLE = {
   ESTIBA: {
     I: {
       LABORABLE: { "02-08": 216.19, "08-14": 102.19, "14-20": 102.19, "20-02": 153.32 },
@@ -114,13 +109,18 @@ function toYmd(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function isHoliday(dateString) {
+function isHoliday(dateString, holidaySet = VALENCIA_HOLIDAYS_2026) {
   const date = parseLocalDate(dateString);
-  return date.getDay() === 0 || VALENCIA_HOLIDAYS_2026.has(dateString);
+  return date.getDay() === 0 || holidaySet.has(dateString);
 }
 
-function getDayType(dateString) {
-  if (isHoliday(dateString)) return "FESTIVO";
+function isConfiguredHoliday(dateString, holidaySet = VALENCIA_HOLIDAYS_2026) {
+  const date = parseLocalDate(dateString);
+  return date.getDay() !== 0 && holidaySet.has(dateString);
+}
+
+function getDayType(dateString, holidaySet) {
+  if (isHoliday(dateString, holidaySet)) return "FESTIVO";
   return parseLocalDate(dateString).getDay() === 6 ? "SABADO" : "LABORABLE";
 }
 
@@ -191,27 +191,36 @@ function getGroup(specialty = "") {
   return "II";
 }
 
-function getComplement(specialty = "") {
+function getSpecialtyKey(specialty = "") {
   const normalized = normalizeSpecialty(specialty);
-  if (/CONDUCTOR(?:\s+DE)?\s*1\s*A\b/.test(normalized)) return CONDUCTOR_1A_COMPLEMENT;
-  if (/CONDUCTOR(?:\s+DE)?\s*2\s*A\b/.test(normalized)) return CONDUCTOR_2A_COMPLEMENT;
-  if (/TRINCADOR|CAPATAZ\s+DE\s+O\s*P/.test(normalized)) return TRINCADOR_COMPLEMENT;
+  if (/CONDUCTOR(?:\s+DE)?\s*1\s*A\b/.test(normalized)) return "CONDUCTOR_1A";
+  if (/CONDUCTOR(?:\s+DE)?\s*2\s*A\b/.test(normalized)) return "CONDUCTOR_2A";
+  if (/TRINCADOR|CAPATAZ\s+DE\s+O\s*P/.test(normalized)) return "TRINCADOR";
+  return normalized.replace(/\s+/g, "_");
+}
+
+function getComplement(specialty = "", complementLookup = new Map()) {
+  const specialtyKey = getSpecialtyKey(specialty);
+  const configured = complementLookup.get(specialtyKey);
+  if (Number.isFinite(configured)) return configured;
+  if (specialtyKey === "CONDUCTOR_1A") return CONDUCTOR_1A_COMPLEMENT;
+  if (specialtyKey === "CONDUCTOR_2A") return CONDUCTOR_2A_COMPLEMENT;
+  if (specialtyKey === "TRINCADOR") return TRINCADOR_COMPLEMENT;
   return 0;
 }
 
-function getRateKey(dateString, shift) {
-  const specialRateKey = SPECIAL_RATE_KEYS_2026.get(`${dateString}|${shift}`);
-  if (specialRateKey) return specialRateKey;
-
-  const dayType = getDayType(dateString);
-  if (shift === "02-08" && isHoliday(getAdjacentDay(dateString, -1))) {
-    return dayType === "FESTIVO" ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+function getRateKey(dateString, shift, holidaySet) {
+  const dayType = getDayType(dateString, holidaySet);
+  const todayIsConfiguredHoliday = isConfiguredHoliday(dateString, holidaySet);
+  if (shift === "02-08" && isConfiguredHoliday(getAdjacentDay(dateString, -1), holidaySet)) {
+    return todayIsConfiguredHoliday ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
   }
-  if (shift === "20-02" && dayType === "LABORABLE" && isHoliday(getAdjacentDay(dateString, 1))) {
-    return "LABORABLE_TO_FESTIVO";
-  }
-  if (shift === "20-02" && dayType === "FESTIVO") {
-    return isHoliday(getAdjacentDay(dateString, 1)) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+  if (shift === "20-02") {
+    const nextDayIsHoliday = isConfiguredHoliday(getAdjacentDay(dateString, 1), holidaySet);
+    if (todayIsConfiguredHoliday) {
+      return nextDayIsHoliday ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+    }
+    if (nextDayIsHoliday) return "LABORABLE_TO_FESTIVO";
   }
   if (dayType === "SABADO" && shift === "02-08") return "LABORABLE";
   return dayType;
@@ -228,19 +237,36 @@ function findMatchingPrima(jornal, primas = []) {
   return amount > 0 ? amount : null;
 }
 
-export function enrichJornales(jornales = [], primas = [], monthLabel = "") {
+export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null) {
   const { month, year } = parseMonthLabel(monthLabel);
+  const configuredHolidays = payrollConfig?.holidays
+    ?.filter((item) => item.enabled !== false)
+    .map((item) => item.holiday_date || item.holidayDate)
+    .filter(Boolean);
+  const holidaySet = payrollConfig?.holidays
+    ? new Set(configuredHolidays)
+    : VALENCIA_HOLIDAYS_2026;
+  const rateLookup = new Map((payrollConfig?.rates || []).map((item) => [
+    [item.operation_type, item.worker_group, item.rate_key, item.shift_key].join("|"),
+    item.amount == null ? null : Number(item.amount)
+  ]));
+  const complementLookup = new Map((payrollConfig?.complements || []).map((item) => [
+    item.specialty_key,
+    item.amount == null ? null : Number(item.amount)
+  ]));
   return jornales.map((jornal) => {
     const day = Number(jornal.dia);
     const date = `${year}-${pad(month)}-${pad(day || 1)}`;
     const shift = parseShift(jornal.jornada);
     const group = getGroup(jornal.especialidad);
     const operationType = getOperationType(jornal.operacion);
-    const rateKey = getRateKey(date, shift);
+    const rateKey = getRateKey(date, shift, holidaySet);
     const operationTable = SALARY_TABLE[operationType] || SALARY_TABLE.ESTIBA;
     const table = operationTable[group] || operationTable.II;
-    const base = Number((table[rateKey]?.[shift] ?? table[getDayType(date)]?.[shift] ?? 0).toFixed(2));
-    const complement = Number(getComplement(jornal.especialidad).toFixed(2));
+    const configuredRate = rateLookup.get([operationType, group, rateKey, shift].join("|"));
+    const fallbackRate = table[rateKey]?.[shift] ?? table[getDayType(date, holidaySet)]?.[shift] ?? 0;
+    const base = Number((Number.isFinite(configuredRate) ? configuredRate : fallbackRate).toFixed(2));
+    const complement = Number(getComplement(jornal.especialidad, complementLookup).toFixed(2));
     const production = operationType === "RECEPCION_ENTREGA"
       ? 0
       : Number(parseAmount(jornal.produccion).toFixed(2));

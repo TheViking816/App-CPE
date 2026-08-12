@@ -84,6 +84,25 @@ export async function updateUserIrpf({ token, irpfRate }) {
   return data;
 }
 
+export async function loadPayrollConfig() {
+  if (!supabase) return null;
+
+  const [holidaysResult, ratesResult, complementsResult] = await Promise.all([
+    supabase.from("app_cpe_payroll_holidays").select("holiday_date, name, enabled").eq("enabled", true),
+    supabase.from("app_cpe_payroll_rates").select("operation_type, worker_group, rate_key, shift_key, amount, enabled").eq("enabled", true),
+    supabase.from("app_cpe_specialty_complements").select("specialty_key, specialty_name, amount, enabled").eq("enabled", true)
+  ]);
+
+  const error = holidaysResult.error || ratesResult.error || complementsResult.error;
+  if (error) throw error;
+
+  return {
+    holidays: holidaysResult.data || [],
+    rates: ratesResult.data || [],
+    complements: complementsResult.data || []
+  };
+}
+
 export async function trackUsageEvent({ eventType, chapa, metadata = {} }) {
   if (!supabase || !eventType) return null;
   const normalizedChapa = String(chapa || "").replace(/\D/g, "").slice(-5);

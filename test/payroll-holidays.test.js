@@ -32,3 +32,19 @@ test("el 02-08 del 16 de agosto es festivo a laborable", () => {
   assert.equal(payroll.rateKey, "FESTIVO_TO_LABORABLE");
   assert.equal(payroll.base, 261.16);
 });
+
+test("los festivos configurados sustituyen el calendario local", () => {
+  const payroll = enrichJornales([{
+    dia: "13",
+    jornada: "DE 20 A 02 H.",
+    especialidad: "CONDUCTOR 1a",
+    operacion: "CONT. C/SPREADER AUT"
+  }], [], "Agosto de 2026", {
+    holidays: [{ holiday_date: "2026-08-14", enabled: true }],
+    rates: [],
+    complements: []
+  })[0].payroll;
+
+  assert.equal(payroll.rateKey, "LABORABLE_TO_FESTIVO");
+  assert.equal(payroll.base, 200.51);
+});

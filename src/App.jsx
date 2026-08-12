@@ -42,6 +42,7 @@ import { compareJornalesDescending, enrichJornales, formatEuro, summarizePayroll
 import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
+  loadPayrollConfig,
   getOfficialPortalSnapshot,
   getPortalAutoSyncStatus,
   getPortalSyncJob,
@@ -1359,10 +1360,23 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const [irpfError, setIrpfError] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
+  const [payrollConfig, setPayrollConfig] = useState(null);
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
+
+  useEffect(() => {
+    let active = true;
+    loadPayrollConfig()
+      .then((config) => {
+        if (active) setPayrollConfig(config);
+      })
+      .catch((error) => console.warn("No se pudo cargar la configuracion salarial:", error.message));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const remoteRate = Number.parseFloat(session?.irpfRate);
@@ -1400,8 +1414,8 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
     }
   };
   const enrichedJornales = useMemo(
-    () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || ""),
-    [jornales, primas, payload?.jornales?.monthLabel]
+    () => enrichJornales(jornales, primas, payload?.jornales?.monthLabel || "", payrollConfig),
+    [jornales, primas, payload?.jornales?.monthLabel, payrollConfig]
   );
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const selectedJornales = useMemo(
