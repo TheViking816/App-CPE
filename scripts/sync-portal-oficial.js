@@ -92,7 +92,7 @@ function parseJornales(html = "") {
   const pageText = textFromHtml(html);
   const monthLabel = pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "";
 
-  if (headerIndex === -1) return { monthLabel, rows: [] };
+  if (headerIndex === -1) return { recognized: Boolean(monthLabel), monthLabel, rows: [] };
 
   const headers = rows[headerIndex].map((item) => item.toLowerCase());
   const indexOf = (pattern, fallback) => {
@@ -101,6 +101,7 @@ function parseJornales(html = "") {
   };
 
   return {
+    recognized: true,
     monthLabel,
     rows: rows.slice(headerIndex + 1)
       .filter((row) => row.length >= 6 && /^\d+$/.test(String(row[0] || "")))
@@ -125,9 +126,10 @@ function parseSl(html = "") {
     row.some((cell) => /fecha/i.test(cell)) && row.some((cell) => /posicion/i.test(cell))
   ));
 
-  if (headerIndex === -1) return { rows: [] };
+  if (headerIndex === -1) return { recognized: false, rows: [] };
 
   return {
+    recognized: true,
     rows: rows.slice(headerIndex + 1)
       .filter((row) => /^\d{2}\/\d{2}\/\d{4}$/.test(row[0] || ""))
       .map((row) => ({ fecha: row[0], posicion: row[1] || "" }))
@@ -902,6 +904,7 @@ async function main() {
     };
 
     const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
+    const hasRecognizedRows = (value) => Boolean(value?.recognized) && Array.isArray(value?.rows);
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
     const jornales = await readSection(
@@ -909,7 +912,7 @@ async function main() {
       () => collectJornales(page),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
-      hasRows
+      hasRecognizedRows
     );
     const asignaciones = await readOptionalSection(
       "contratacion actual",
@@ -930,7 +933,7 @@ async function main() {
       () => collectSl(page),
       existingSnapshot?.payload?.sl,
       { rows: [] },
-      hasRows
+      hasRecognizedRows
     );
     const descansos = await readSection(
       "descansos",
