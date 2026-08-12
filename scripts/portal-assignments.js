@@ -116,3 +116,18 @@ export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
     || /centro\s+portuario\s+de\s+empleo/i.test(pageText) && specialties.length > 0;
   return { recognized, ...detail, specialties };
 }
+
+export function assignmentDetailScore(detail = {}) {
+  const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
+  const resolvedWorkers = specialties.reduce((total, specialty) => (
+    total + (specialty.workers?.length || 0) + Number(specialty.bolsa || 0)
+  ), 0);
+  return specialties.length * 1_000_000 + resolvedWorkers;
+}
+
+export function isAssignmentDetailComplete(detail = {}) {
+  const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
+  return Boolean(detail.recognized && specialties.length) && specialties.every((specialty) => (
+    (specialty.workers?.length || 0) + Number(specialty.bolsa || 0) >= Number(specialty.requested || 0)
+  ));
+}

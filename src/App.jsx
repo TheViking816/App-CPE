@@ -57,6 +57,7 @@ import {
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
 import { companyLogo } from "./generalBoard.js";
+import { hashForTab, tabFromHash } from "./navigation.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
@@ -2089,7 +2090,7 @@ export function App() {
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState("inicio");
+  const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
   const availableSpecialties = useMemo(() => {
@@ -2108,6 +2109,24 @@ export function App() {
     () => findChaperoWorker(chaperoSnapshot, session?.chapa),
     [chaperoSnapshot, session?.chapa]
   );
+
+  useEffect(() => {
+    const syncTabFromHash = () => {
+      const nextTab = tabFromHash(window.location.hash);
+      setActiveTab(nextTab);
+      const canonicalHash = hashForTab(nextTab);
+      if (window.location.hash !== canonicalHash) window.history.replaceState(null, "", canonicalHash);
+    };
+    syncTabFromHash();
+    window.addEventListener("hashchange", syncTabFromHash);
+    return () => window.removeEventListener("hashchange", syncTabFromHash);
+  }, []);
+
+  const navigateToTab = (tab) => {
+    const nextTab = tabFromHash(hashForTab(tab));
+    setActiveTab(nextTab);
+    if (window.location.hash !== hashForTab(nextTab)) window.location.hash = hashForTab(nextTab);
+  };
 
   useEffect(() => {
     if (!availableSpecialties.some((item) => item.id === activeSpecialtyId)) {
@@ -2273,7 +2292,7 @@ export function App() {
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     setSession(null);
-    setActiveTab("inicio");
+    navigateToTab("inicio");
   };
 
   if (!session) {
@@ -2318,7 +2337,7 @@ export function App() {
             activeSpecialtyId={activeSpecialtyId}
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
-            onLoadPortal={() => setActiveTab("portal")}
+            onLoadPortal={() => navigateToTab("portal")}
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
@@ -2335,7 +2354,7 @@ export function App() {
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
       </main>
-      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onChange={navigateToTab} />
     </div>
   );
 }

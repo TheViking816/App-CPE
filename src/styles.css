@@ -4131,6 +4131,15 @@ select {
   background: rgba(13, 148, 136, 0.17);
 }
 
+:root[data-theme="dark"] .assignment-detail-workers > article > header {
+  background: #123a66;
+  color: #edf6ff;
+}
+
+:root[data-theme="dark"] .assignment-detail-workers > article > header span {
+  background: rgba(8, 22, 38, 0.4);
+}
+
 :root[data-theme="dark"] .portal-vacation-calendar > span.is-vacation,
 :root[data-theme="dark"] .portal-vacation-month-tabs button.is-active {
   border-color: rgba(167, 139, 250, 0.55);

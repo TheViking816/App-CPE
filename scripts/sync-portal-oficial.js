@@ -2,7 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { parseAssignmentDetailFromTables, parseAssignmentsFromTables } from "./portal-assignments.js";
+import {
+  assignmentDetailScore,
+  isAssignmentDetailComplete,
+  parseAssignmentDetailFromTables,
+  parseAssignmentsFromTables
+} from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -345,7 +350,7 @@ async function waitForFrameAndLocator(page, getLocator, timeout = 12000) {
   return null;
 }
 
-async function waitForParsedContent(page, parser, score, timeout = 12000) {
+async function waitForParsedContent(page, parser, score, timeout = 12000, isComplete = (_result, resultScore) => resultScore > 0) {
   const deadline = Date.now() + timeout;
   let bestResult = parser("");
   let bestScore = score(bestResult);
@@ -359,7 +364,7 @@ async function waitForParsedContent(page, parser, score, timeout = 12000) {
         bestScore = resultScore;
       }
     }
-    if (bestScore > 0) return bestResult;
+    if (isComplete(bestResult, bestScore)) return bestResult;
     await page.waitForTimeout(200);
   }
 
@@ -426,8 +431,9 @@ async function readAssignmentDetailViaPortal(sourcePage, assignment) {
   return waitForParsedContent(
     sourcePage,
     parseAssignmentDetail,
-    (parsed) => parsed.specialties?.length || 0,
-    12000
+    assignmentDetailScore,
+    12000,
+    isAssignmentDetailComplete
   );
 }
 
