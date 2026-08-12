@@ -2628,13 +2628,15 @@ select {
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date::after {
-  background: rgba(8, 23, 38, 0.78);
+  background: transparent;
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date::before {
   inset: 10px;
+  border-radius: 6px;
+  background-color: #fff;
   background-size: contain;
-  filter: saturate(0.9) brightness(1.08);
+  filter: none;
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.has-company-logo::after {
@@ -4084,20 +4086,21 @@ select {
 }
 
 :root[data-theme="dark"] .current-assignment-logo::after {
-  position: absolute;
-  inset: 0;
-  background: rgba(8, 22, 38, 0.46);
-  content: "";
-  pointer-events: none;
+  content: none;
 }
 
 :root[data-theme="dark"] .current-assignment-logo img,
 :root[data-theme="dark"] .assignment-detail-logo img {
-  filter: brightness(0.82) contrast(0.92);
+  filter: none;
 }
 
 :root[data-theme="dark"] .current-assignment-logo img {
-  transform: none;
+  transform: scale(1.28);
+}
+
+:root[data-theme="dark"] .current-assignment-logo,
+:root[data-theme="dark"] .assignment-detail-logo {
+  background: #fff;
 }
 
 :root[data-theme="dark"] .current-assignment-date {
