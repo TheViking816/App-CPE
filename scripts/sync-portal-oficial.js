@@ -902,7 +902,13 @@ async function main() {
       { recognized: false, rows: [] },
       hasVacationData
     );
-    const primas = await readSection("primas", () => collectPrimas(page), existingSnapshot?.payload?.primas, hasRows);
+    const primas = await readOptionalSection(
+      "primas",
+      () => collectPrimas(page),
+      existingSnapshot?.payload?.primas,
+      { locked: true, rows: [] },
+      hasRows
+    );
     const sl = await readSection("lista SL", () => collectSl(page), existingSnapshot?.payload?.sl, hasRows);
     const descansos = await readSection("descansos", () => collectDescansos(page), existingSnapshot?.payload?.descansos, hasMonths);
     const vacaciones = await readOptionalSection(
