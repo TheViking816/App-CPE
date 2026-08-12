@@ -2624,11 +2624,21 @@ select {
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date {
-  background: #1a324a;
+  background: #132b43;
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date::after {
-  background: rgba(8, 23, 38, 0.48);
+  background: rgba(8, 23, 38, 0.78);
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date::before {
+  inset: 10px;
+  background-size: contain;
+  filter: saturate(0.9) brightness(1.08);
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.has-company-logo::after {
+  opacity: 0;
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornal-content {
@@ -4032,12 +4042,18 @@ select {
 
 :root[data-theme="dark"] .portal-jornal-date {
   border-color: rgba(148, 163, 184, 0.34);
-  background: linear-gradient(155deg, #e7eef5, #cedce9);
-  color: #08264b;
+  background: linear-gradient(155deg, #10243a, #0a192a);
+  color: var(--ink);
 }
 
 :root[data-theme="dark"] .portal-jornal-date::after {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(8, 22, 38, 0.58);
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date strong,
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornal-date span {
+  background: rgba(8, 22, 38, 0.82);
+  color: var(--ink);
 }
 
 :root[data-theme="dark"] .current-assignments-icon {
@@ -4061,6 +4077,43 @@ select {
 :root[data-theme="dark"] .portal-vacation-month-tabs button {
   border-color: rgba(148, 163, 184, 0.24);
   background: rgba(8, 22, 38, 0.72);
+}
+
+:root[data-theme="dark"] .current-assignment-logo {
+  position: relative;
+}
+
+:root[data-theme="dark"] .current-assignment-logo::after {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 22, 38, 0.46);
+  content: "";
+  pointer-events: none;
+}
+
+:root[data-theme="dark"] .current-assignment-logo img,
+:root[data-theme="dark"] .assignment-detail-logo img {
+  filter: brightness(0.82) contrast(0.92);
+}
+
+:root[data-theme="dark"] .current-assignment-logo img {
+  transform: none;
+}
+
+:root[data-theme="dark"] .current-assignment-date {
+  background: #123a66;
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .current-assignment-copy span,
+:root[data-theme="dark"] .current-assignment-copy small,
+:root[data-theme="dark"] .portal-jornales-list small,
+:root[data-theme="dark"] .portal-jornales-list em {
+  color: #aebed0;
+}
+
+:root[data-theme="dark"] .portal-jornal-destination {
+  color: #c7d5e5 !important;
 }
 
 :root[data-theme="dark"] .assignment-detail-modal h1,
@@ -4196,6 +4249,11 @@ select {
 
 :root[data-theme="dark"] .portal-irpf-input input {
   color: var(--ink);
+}
+
+:root[data-theme="dark"] .portal-irpf-input b {
+  background: #123a66;
+  color: #dbeafe;
 }
 
 :root[data-theme="dark"] .portal-irpf-breakdown .is-net {
