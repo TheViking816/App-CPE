@@ -28,6 +28,7 @@ const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled
 const browserWsEndpoint = String(process.env.CPE_PORTAL_BROWSER_WS_ENDPOINT || "").trim();
 const progressiveSync = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_PROGRESSIVE || "");
 const portalSyncJobId = String(process.env.CPE_PORTAL_SYNC_JOB_ID || "").trim();
+const portalStorageStatePath = String(process.env.CPE_PORTAL_STORAGE_STATE_PATH || "").trim();
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -495,7 +496,11 @@ async function readPortalAuthState(page) {
 
   const body = cleanText(textParts.join("\n"));
   const normalizedBody = body.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const securityChallenge = /Verificacion de seguridad|verifica que tu no eres un bot|Ray ID|challenges\.cloudflare/i.test(normalizedBody);
+  const pageTitle = await page.title().catch(() => "");
+  const challengeFrame = page.frames().some((frame) => /challenges\.cloudflare\.com|\/cdn-cgi\/challenge-platform/i.test(frame.url()));
+  const securityChallenge = challengeFrame
+    || /Just a moment|Performing security verification|Enable JavaScript and cookies to continue|cf-chl-/i.test(`${pageTitle}\n${normalizedBody}`)
+    || (/Ray ID/i.test(normalizedBody) && /Cloudflare/i.test(normalizedBody));
   if (securityChallenge) return "security_challenge";
   const rejected = /(?:usuario|contrasena|credenciales?).{0,45}(?:incorrect|invalid|errone)|acceso\s+denegado|no\s+se\s+ha\s+podido\s+identificar/i.test(normalizedBody);
   if (rejected) return "rejected";
@@ -514,7 +519,7 @@ async function waitForPortalEntry(page, timeout = 20000) {
 
   while (Date.now() < deadline) {
     state = await readPortalAuthState(page);
-    if (state === "authenticated" || state === "login" || state === "rejected") return state;
+    if (state === "authenticated" || state === "login" || state === "rejected" || state === "security_challenge") return state;
     await page.waitForTimeout(250);
   }
 
@@ -527,7 +532,7 @@ async function waitForPortalAuthState(page, timeout = 20000) {
 
   while (Date.now() < deadline) {
     state = await readPortalAuthState(page);
-    if (state === "authenticated" || state === "rejected") return state;
+    if (state === "authenticated" || state === "rejected" || state === "security_challenge") return state;
     await page.waitForTimeout(250);
   }
 
@@ -1126,6 +1131,10 @@ async function main() {
     timezoneId: "Europe/Madrid",
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
   };
+  if (portalStorageStatePath) {
+    const hasSavedSession = await fs.access(portalStorageStatePath).then(() => true).catch(() => false);
+    if (hasSavedSession) contextOptions.storageState = portalStorageStatePath;
+  }
   const launchOptions = {
     headless,
     args: ["--disable-blink-features=AutomationControlled"]
@@ -1149,6 +1158,10 @@ async function main() {
 
   try {
     await login(page);
+    if (portalStorageStatePath) {
+      await fs.mkdir(path.dirname(portalStorageStatePath), { recursive: true });
+      await context.storageState({ path: portalStorageStatePath });
+    }
     const updatedAt = new Date().toISOString();
     const existingSnapshot = await getExistingSupabaseSnapshot();
     const sectionWarnings = [];

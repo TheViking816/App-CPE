@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import path from "node:path";
 
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 const jobId = process.env.CPE_PORTAL_SYNC_JOB_ID || process.argv[2];
@@ -64,7 +65,11 @@ function runSync(job) {
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled",
         CPE_PORTAL_BROWSER_WS_ENDPOINT: process.env.CPE_PORTAL_BROWSER_WS_ENDPOINT || "",
-        CPE_PORTAL_PROGRESSIVE: process.env.CPE_PORTAL_PROGRESSIVE || ""
+        CPE_PORTAL_PROGRESSIVE: process.env.CPE_PORTAL_PROGRESSIVE || "",
+        CPE_PORTAL_STORAGE_STATE_PATH: path.resolve(
+          process.env.CPE_PORTAL_SESSION_DIR || "data/portal-worker-sessions",
+          `${String(job.chapa).replace(/[^0-9]/g, "")}.json`
+        )
       }
     });
 
