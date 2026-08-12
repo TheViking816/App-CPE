@@ -603,45 +603,81 @@ async function selectPortalOption(select, expectedLabel) {
   await select.selectOption(match.value);
 }
 
+function jornalesPeriodMatches(monthLabel, month, year) {
+  const normalizedLabel = cleanText(monthLabel).toLocaleLowerCase("es");
+  return normalizedLabel.includes(MONTH_NAMES_ES[month - 1].toLocaleLowerCase("es"))
+    && normalizedLabel.includes(String(year));
+}
+
+async function readJornalesPeriod(context, selectorUrl, month, year) {
+  const periodPage = await context.newPage();
+  const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
+
+  try {
+    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    const selects = periodPage.locator("select");
+    if (await selects.count() < 2) {
+      throw new Error(`No se encontraron los selectores para ${expectedLabel}.`);
+    }
+
+    await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
+    await selectPortalOption(selects.nth(1), String(year));
+    await periodPage.getByRole("button", { name: /Aceptar/i }).click();
+
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      for (const root of [periodPage, ...periodPage.frames()]) {
+        const parsed = parseJornales(await root.content().catch(() => ""));
+        if (parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
+          return {
+            year,
+            month,
+            monthLabel: parsed.monthLabel || expectedLabel,
+            rows: Array.isArray(parsed.rows) ? parsed.rows : []
+          };
+        }
+      }
+      await periodPage.waitForTimeout(200);
+    }
+
+    throw new Error(`El portal no devolvio el periodo ${expectedLabel}.`);
+  } finally {
+    await periodPage.close();
+  }
+}
+
 async function collectJornales(page, previous = null) {
   await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
   const now = new Date();
   const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
   const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
   const previousHistory = Array.isArray(previous?.history)
-    ? previous.history.filter((period) => Number(period?.year) === year && Array.isArray(period?.rows) && period.rows.length > 0)
+    ? previous.history.filter((period) => (
+        Number(period?.year) === year
+        && Number(period?.month) >= 1
+        && Number(period?.month) <= currentMonth
+        && Array.isArray(period?.rows)
+      ))
     : [];
-  // The portal keeps old GWT frames alive after returning from a result page.
-  // Reading several periods in one session can therefore resolve a stale,
-  // empty frame. Keep the regular sync scoped to the current month; historical
-  // periods are accumulated only from confirmed, non-empty reads.
-  const monthsToRead = [currentMonth];
   const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
+  const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
+  const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
+  const monthsToRead = refreshFullHistory
+    ? availableMonths
+    : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month));
+  const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
+  const selectorUrl = selectorFrame.url();
+  const periodWarnings = [];
 
-  for (const [index, month] of monthsToRead.entries()) {
-    const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
-    const selects = selectorFrame.locator("select");
-    if (await selects.count() < 2) throw new Error("No se encontraron los selectores de mes y ano de jornales.");
-    await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
-    await selectPortalOption(selects.nth(1), String(year));
-    await selectorFrame.getByRole("button", { name: /Aceptar/i }).click();
-
-    const resultFrame = await waitForFrame(page, /Jornales1\.asp/i);
-    const parsed = parseJornales(await resultFrame.content());
-    const parsedRows = Array.isArray(parsed.rows) ? parsed.rows : [];
-    const previousPeriod = historyByMonth.get(month);
-    if (parsedRows.length > 0 || !previousPeriod) {
-      historyByMonth.set(month, {
-        year,
-        month,
-        monthLabel: parsed.monthLabel || `${MONTH_NAMES_ES[month - 1]} de ${year}`,
-        rows: parsedRows
-      });
-    }
-
-    if (index < monthsToRead.length - 1) {
-      await resultFrame.getByRole("button", { name: /Volver/i }).click();
-      await waitForFrame(page, /SelDatJor1\.asp/i);
+  for (const month of monthsToRead) {
+    try {
+      const period = await readJornalesPeriod(page.context(), selectorUrl, month, year);
+      historyByMonth.set(month, period);
+      console.log(`Jornales ${period.monthLabel}: ${period.rows.length}.`);
+    } catch (error) {
+      const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
+      periodWarnings.push(warning);
+      console.warn(`No se actualizaron los jornales de ${warning}`);
     }
   }
 
@@ -654,7 +690,8 @@ async function collectJornales(page, previous = null) {
     year,
     monthLabel: current.monthLabel,
     rows: current.rows,
-    history
+    history,
+    historyWarnings: periodWarnings
   };
 }
 
