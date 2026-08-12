@@ -62,3 +62,22 @@ test("los festivos configurados sustituyen el calendario local", () => {
   assert.equal(payroll.rateKey, "LABORABLE_TO_FESTIVO");
   assert.equal(payroll.base, 200.51);
 });
+
+test("no suma dos veces una prima presente en jornales y primas", () => {
+  const payroll = enrichJornales([{
+    dia: "09",
+    parte: "22585",
+    jornada: "DE 20 A 02 H.",
+    especialidad: "CONDUCTOR 1a",
+    operacion: "CONT. C/SPREADER AUT",
+    produccion: "202,54 EUR"
+  }], [{
+    parte: "22585",
+    produccion: "202,54 EUR"
+  }], "Agosto de 2026")[0].payroll;
+
+  assert.equal(payroll.base, 320.77);
+  assert.equal(payroll.complement, 7.38);
+  assert.equal(payroll.prima, 202.54);
+  assert.equal(payroll.total, 530.69);
+});

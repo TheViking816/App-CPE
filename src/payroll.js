@@ -268,14 +268,15 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const fallbackRate = table[rateKey]?.[shift] ?? table[getDayType(date, holidaySet)]?.[shift] ?? 0;
     const base = Number((Number.isFinite(configuredRate) ? configuredRate : fallbackRate).toFixed(2));
     const complement = Number(getComplement(jornal.especialidad, complementLookup).toFixed(2));
-    const production = operationType === "RECEPCION_ENTREGA"
-      ? 0
-      : Number(parseAmount(jornal.produccion).toFixed(2));
-    const primaAmount = operationType === "RECEPCION_ENTREGA"
+    const embeddedPrima = operationType === "RECEPCION_ENTREGA"
+      ? null
+      : parseAmount(jornal.produccion) || null;
+    const matchedPrima = operationType === "RECEPCION_ENTREGA"
       ? null
       : findMatchingPrima(jornal, primas);
+    const primaAmount = matchedPrima ?? embeddedPrima;
     const prima = primaAmount == null ? null : Number(primaAmount.toFixed(2));
-    const total = Number((base + complement + production + (prima || 0)).toFixed(2));
+    const total = Number((base + complement + (prima || 0)).toFixed(2));
 
     return {
       ...jornal,
@@ -287,7 +288,7 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         rateKey,
         base,
         complement,
-        production,
+        production: 0,
         prima,
         primaPending: operationType !== "RECEPCION_ENTREGA" && prima == null,
         total
