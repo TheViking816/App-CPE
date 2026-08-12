@@ -413,6 +413,16 @@ async function waitForParsedFrame(page, pattern, parser, score, timeout = 8000) 
 }
 
 async function readDirectPortalPage(context, url, parser, score, timeout = 8000) {
+  try {
+    const response = await context.request.get(url, { timeout: Math.min(timeout, 8000) });
+    if (response.ok()) {
+      const result = parser(await response.text());
+      if (score(result) > 0) return result;
+    }
+  } catch {
+    // Algunas pantallas del portal solo terminan de cargar dentro de Chromium.
+  }
+
   const directPage = await context.newPage();
   try {
     await directPage.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
