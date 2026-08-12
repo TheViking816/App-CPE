@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/playwright:v1.61.1-noble
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=optional
+COPY scripts ./scripts
+CMD ["npm", "run", "worker:portal"]

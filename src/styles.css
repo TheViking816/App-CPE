@@ -2333,6 +2333,116 @@ select {
   padding-left: 14px;
 }
 
+.portal-annual-summary {
+  overflow: hidden;
+  border: 1px solid #d7e2ec;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.portal-annual-summary > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 20px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 0;
+  background: transparent;
+  color: var(--navy);
+  text-align: left;
+  cursor: pointer;
+}
+
+.portal-annual-summary > button > span:first-child,
+.portal-annual-summary > button > span:first-child > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-annual-summary > button > span:first-child > span {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.portal-annual-summary small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-annual-summary strong { font-weight: 950; }
+.portal-annual-summary > button > svg { transition: transform 180ms ease; }
+.portal-annual-summary.is-open > button > svg { transform: rotate(180deg); }
+
+.portal-annual-total {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+}
+
+.portal-annual-content {
+  padding: 0 15px 15px;
+  border-top: 1px solid #e2e9f0;
+}
+
+.portal-annual-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.portal-annual-kpis > div {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 6px;
+  background: #f2f7fb;
+}
+
+.portal-annual-kpis span,
+.portal-annual-kpis strong { display: block; }
+.portal-annual-kpis span { color: var(--muted); font-size: 10px; font-weight: 800; }
+.portal-annual-kpis strong { margin-top: 3px; color: var(--navy); font-size: 14px; }
+
+.portal-annual-chart {
+  height: 104px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #e6edf3;
+}
+
+.portal-annual-chart > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.portal-annual-chart span { min-height: 13px; color: var(--muted); font-size: 9px; font-weight: 850; }
+.portal-annual-chart i { width: min(18px, 80%); min-height: 2px; border-radius: 3px 3px 1px 1px; background: linear-gradient(#18b99a, #0b6a91); }
+.portal-annual-chart small { font-size: 8px; text-transform: uppercase; }
+
+@media (max-width: 520px) {
+  .portal-annual-summary > button { grid-template-columns: minmax(0, 1fr) 20px; }
+  .portal-annual-total { display: none; }
+  .portal-annual-kpis { grid-template-columns: 1fr; }
+  .portal-annual-chart { gap: 2px; }
+}
+
+:root[data-theme="dark"] .portal-annual-summary { border-color: #29435d; background: #102238; }
+:root[data-theme="dark"] .portal-annual-content { border-color: #29435d; }
+:root[data-theme="dark"] .portal-annual-kpis > div { background: #172d45; }
+:root[data-theme="dark"] .portal-annual-kpis strong,
+:root[data-theme="dark"] .portal-annual-summary > button { color: #f4f8fc; }
+
 .portal-jornales-heading {
   width: 100%;
   display: flex;

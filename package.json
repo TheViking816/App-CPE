@@ -14,6 +14,7 @@
     "sync:puertas": "node scripts/sync-puertas.js",
     "sync:portal": "node scripts/sync-portal-oficial.js",
     "sync:portal:job": "node scripts/sync-portal-oficial-job.js",
+    "worker:portal": "node scripts/portal-sync-worker.js",
     "push:supabase": "node scripts/push-latest-to-supabase.js"
   },
   "dependencies": {

@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  CalendarRange,
   Check,
   ChevronDown,
   ChevronRight,
@@ -60,6 +61,7 @@ import { companyLogo, shipImage } from "./generalBoard.js";
 import { hashForTab, tabFromHash } from "./navigation.js";
 
 const STORAGE_KEY = "app-cpe-session";
+const MONTH_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const SPECIALTY_OVERRIDES_KEY = "app-cpe-specialty-overrides";
 const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
@@ -1365,6 +1367,18 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
 function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const payload = snapshot?.payload || null;
   const jornales = payload?.jornales?.rows || [];
+  const journalHistory = useMemo(() => {
+    const savedHistory = payload?.jornales?.history;
+    if (Array.isArray(savedHistory) && savedHistory.length > 0) return savedHistory;
+    if (!jornales.length) return [];
+
+    return [{
+      year: new Date().getFullYear(),
+      month: new Date().getMonth() + 1,
+      monthLabel: payload?.jornales?.monthLabel || "Mes actual",
+      rows: jornales
+    }];
+  }, [jornales, payload?.jornales?.history, payload?.jornales?.monthLabel]);
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const primas = payload?.primas?.rows || [];
@@ -1376,6 +1390,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const [irpfMessage, setIrpfMessage] = useState("");
   const [irpfError, setIrpfError] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(false);
+  const [annualExpanded, setAnnualExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const jornalesRef = useRef(null);
@@ -1435,6 +1450,19 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
     [jornales, primas, payload?.jornales?.monthLabel, payrollConfig]
   );
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
+  const annualPayroll = useMemo(() => {
+    const months = journalHistory.map((month) => {
+      const enriched = enrichJornales(month.rows || [], primas, month.monthLabel || "", payrollConfig);
+      const summary = summarizePayroll(enriched);
+      return { ...month, count: enriched.length, total: summary.total };
+    });
+    return {
+      months,
+      count: months.reduce((sum, month) => sum + month.count, 0),
+      total: months.reduce((sum, month) => sum + month.total, 0),
+      activeMonths: months.filter((month) => month.count > 0).length
+    };
+  }, [journalHistory, primas, payrollConfig]);
   const selectedJornales = useMemo(
     () => enrichedJornales.filter((item) => {
       if (selectedPeriod === "month") return true;
@@ -1557,6 +1585,42 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
               <strong>{formatEuro(payrollSummary.total)}</strong>
             </button>
           </div>
+          {annualPayroll.months.length > 0 && (
+            <section className={`portal-annual-summary${annualExpanded ? " is-open" : ""}`}>
+              <button type="button" onClick={() => setAnnualExpanded((current) => !current)} aria-expanded={annualExpanded}>
+                <span>
+                  <CalendarRange size={20} />
+                  <span><small>Resumen anual</small><strong>{payload.jornales?.year || new Date().getFullYear()}</strong></span>
+                </span>
+                <span className="portal-annual-total">
+                  <strong>{annualPayroll.count} jornales</strong>
+                  <small>{formatEuro(annualPayroll.total)} bruto</small>
+                </span>
+                <ChevronDown size={19} />
+              </button>
+              {annualExpanded && (
+                <div className="portal-annual-content">
+                  <div className="portal-annual-kpis">
+                    <div><span>Meses activos</span><strong>{annualPayroll.activeMonths}</strong></div>
+                    <div><span>Media mensual</span><strong>{formatEuro(annualPayroll.activeMonths ? annualPayroll.total / annualPayroll.activeMonths : 0)}</strong></div>
+                    <div><span>Neto anual</span><strong>{formatEuro(annualPayroll.total * (1 - irpfRate / 100))}</strong></div>
+                  </div>
+                  <div className="portal-annual-chart" aria-label="Jornales por mes">
+                    {annualPayroll.months.map((month) => {
+                      const maxCount = Math.max(1, ...annualPayroll.months.map((item) => item.count));
+                      return (
+                        <div key={`${month.year}-${month.month}`} title={`${month.monthLabel}: ${month.count} jornales`}>
+                          <span>{month.count || ""}</span>
+                          <i style={{ height: `${Math.max(month.count ? 12 : 2, (month.count / maxCount) * 72)}px` }} />
+                          <small>{MONTH_SHORT_ES[(month.month || 1) - 1]}</small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
           <section className="portal-irpf-card" aria-label="Calculo estimado de IRPF">
             <strong>Ajuste de IRPF</strong>
             <span className="portal-irpf-input">

@@ -14,6 +14,7 @@ const githubToken = Deno.env.get("GITHUB_SYNC_TOKEN") ?? "";
 const githubRepo = Deno.env.get("GITHUB_SYNC_REPO") ?? "TheViking816/App-CPE";
 const workflowId = Deno.env.get("GITHUB_PORTAL_SYNC_WORKFLOW") ?? "sync-portal.yml";
 const defaultWorkflowRef = Deno.env.get("GITHUB_SYNC_REF") ?? "main";
+const executionMode = (Deno.env.get("CPE_PORTAL_EXECUTION_MODE") ?? "actions").toLowerCase();
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -60,7 +61,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ ok: false, configured: false, error: "Missing Supabase service configuration" }, 500);
   }
 
-  if (!githubToken) {
+  if (executionMode !== "persistent" && !githubToken) {
     return jsonResponse({ ok: false, configured: false, error: "Missing GITHUB_SYNC_TOKEN secret" }, 500);
   }
 
@@ -99,11 +100,14 @@ Deno.serve(async (request) => {
   }
 
   try {
-    await dispatchWorkflow(data.jobId, workflowRef);
+    if (executionMode !== "persistent") {
+      await dispatchWorkflow(data.jobId, workflowRef);
+    }
     return jsonResponse({
       ok: true,
       configured: true,
-      triggered: true,
+      triggered: executionMode !== "persistent",
+      executionMode,
       jobId: data.jobId,
       status: "queued",
       workflowRef

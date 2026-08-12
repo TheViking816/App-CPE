@@ -8,6 +8,7 @@ const githubToken = Deno.env.get("GITHUB_SYNC_TOKEN") ?? "";
 const githubRepo = Deno.env.get("GITHUB_SYNC_REPO") ?? "TheViking816/App-CPE";
 const workflowId = Deno.env.get("GITHUB_PORTAL_SYNC_WORKFLOW") ?? "sync-portal.yml";
 const workflowRef = Deno.env.get("GITHUB_SYNC_REF") ?? "main";
+const executionMode = (Deno.env.get("CPE_PORTAL_EXECUTION_MODE") ?? "actions").toLowerCase();
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -43,7 +44,7 @@ Deno.serve(async (request) => {
   }
 
   const schedulerSecret = request.headers.get("x-scheduler-secret") ?? "";
-  if (!schedulerSecret || !projectUrl || !serviceRoleKey || !githubToken) {
+  if (!schedulerSecret || !projectUrl || !serviceRoleKey || (executionMode !== "persistent" && !githubToken)) {
     return jsonResponse({ ok: false, error: "Scheduler no configurado" }, 401);
   }
 
@@ -64,8 +65,10 @@ Deno.serve(async (request) => {
 
   for (const job of jobs) {
     try {
-      await dispatchWorkflow(job.jobId);
-      results.push({ jobId: job.jobId, ok: true });
+      if (executionMode !== "persistent") {
+        await dispatchWorkflow(job.jobId);
+      }
+      results.push({ jobId: job.jobId, ok: true, executionMode });
     } catch (dispatchError) {
       const message = dispatchError instanceof Error ? dispatchError.message : "No se pudo lanzar GitHub Actions";
       await supabase

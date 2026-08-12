@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
-const jobId = process.env.CPE_PORTAL_SYNC_JOB_ID;
+const jobId = process.env.CPE_PORTAL_SYNC_JOB_ID || process.argv[2];
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
 const serviceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
 

@@ -586,13 +586,66 @@ async function assignmentNavigationState(page, stage) {
   console.log(`[contratacion:${stage}] ${JSON.stringify({ page: safePortalLocation(page.url()), frames })}`);
 }
 
-async function collectJornales(page) {
+const MONTH_NAMES_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+async function selectPortalOption(select, expectedLabel) {
+  const options = await select.locator("option").evaluateAll((nodes) => nodes.map((node) => ({
+    label: String(node.textContent || "").trim(),
+    value: node.value
+  })));
+  const normalizedExpected = expectedLabel.toLocaleLowerCase("es");
+  const match = options.find((option) => option.label.toLocaleLowerCase("es") === normalizedExpected)
+    || options.find((option) => option.label.toLocaleLowerCase("es").includes(normalizedExpected));
+  if (!match) throw new Error(`No se encontro el periodo ${expectedLabel} en Consulta de jornales.`);
+  await select.selectOption(match.value);
+}
+
+async function collectJornales(page, previous = null) {
   await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
-  const frame = await waitForFrame(page, /SelDatJor1\.asp/i);
-  await frame.getByRole("button", { name: /Aceptar/i }).click();
-  const resultFrame = await waitForFrame(page, /Jornales1\.asp/i);
-  const parsed = parseJornales(await resultFrame.content());
-  return { ...parsed, recognized: true };
+  const now = new Date();
+  const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
+  const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  const previousHistory = Array.isArray(previous?.history)
+    ? previous.history.filter((period) => Number(period?.year) === year)
+    : [];
+  const monthsToRead = previousHistory.length ? [currentMonth] : Array.from({ length: currentMonth }, (_, index) => index + 1);
+  const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
+
+  for (const [index, month] of monthsToRead.entries()) {
+    const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
+    const selects = selectorFrame.locator("select");
+    if (await selects.count() < 2) throw new Error("No se encontraron los selectores de mes y ano de jornales.");
+    await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
+    await selectPortalOption(selects.nth(1), String(year));
+    await selectorFrame.getByRole("button", { name: /Aceptar/i }).click();
+
+    const resultFrame = await waitForFrame(page, /Jornales1\.asp/i);
+    const parsed = parseJornales(await resultFrame.content());
+    historyByMonth.set(month, {
+      year,
+      month,
+      monthLabel: parsed.monthLabel || `${MONTH_NAMES_ES[month - 1]} de ${year}`,
+      rows: parsed.rows || []
+    });
+
+    if (index < monthsToRead.length - 1) {
+      await resultFrame.getByRole("button", { name: /Volver/i }).click();
+      await waitForFrame(page, /SelDatJor1\.asp/i);
+    }
+  }
+
+  const history = [...historyByMonth.values()].sort((left, right) => Number(left.month) - Number(right.month));
+  const current = historyByMonth.get(currentMonth) || { monthLabel: "", rows: [] };
+  return {
+    recognized: true,
+    year,
+    monthLabel: current.monthLabel,
+    rows: current.rows,
+    history
+  };
 }
 
 async function collectDescansos(page) {
@@ -911,7 +964,7 @@ async function main() {
     const hasVacationData = (value) => Boolean(value?.recognized);
     const jornales = await readSection(
       "jornales",
-      () => collectJornales(page),
+      () => collectJornales(page, existingSnapshot?.payload?.jornales),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
       hasRecognizedRows
