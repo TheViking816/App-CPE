@@ -13,6 +13,7 @@ const allowedOrigins = new Set(
     .map((value) => value.trim())
     .filter(Boolean)
 );
+const allowedVercelHostPattern = /^cpe-[a-z0-9-]+-thevikings-projects\.vercel\.app$/i;
 let stopping = false;
 let browserServer = null;
 let activeJobId = null;
@@ -73,13 +74,24 @@ async function createSyncJob({ token, portalPassword = "", securityKey = "" }) {
 }
 
 function corsHeaders(origin) {
-  const allowed = origin && allowedOrigins.has(origin);
+  const allowed = isAllowedOrigin(origin);
   return {
     "Access-Control-Allow-Origin": allowed ? origin : "null",
     "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     Vary: "Origin"
   };
+}
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (allowedOrigins.has(origin)) return true;
+  try {
+    const url = new URL(origin);
+    return url.protocol === "https:" && allowedVercelHostPattern.test(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 async function readJson(request, limit = 16_384) {
@@ -138,7 +150,7 @@ async function main() {
       return;
     }
     if (incoming.url === "/sync" && incoming.method === "POST") {
-      if (!origin || !allowedOrigins.has(origin)) {
+      if (!isAllowedOrigin(origin)) {
         response.writeHead(403, headers).end(JSON.stringify({ ok: false, error: "Origen no permitido" }));
         return;
       }
