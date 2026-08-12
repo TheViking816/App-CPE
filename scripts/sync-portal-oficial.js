@@ -591,7 +591,8 @@ async function collectJornales(page) {
   const frame = await waitForFrame(page, /SelDatJor1\.asp/i);
   await frame.getByRole("button", { name: /Aceptar/i }).click();
   const resultFrame = await waitForFrame(page, /Jornales1\.asp/i);
-  return parseJornales(await resultFrame.content());
+  const parsed = parseJornales(await resultFrame.content());
+  return { ...parsed, recognized: true };
 }
 
 async function collectDescansos(page) {
@@ -628,7 +629,8 @@ async function collectDescansos(page) {
 async function collectSl(page) {
   await openMenu(page, "Consultas", "Consulta posicion SL", /MostrarSL\.asp/i);
   const frame = await waitForFrame(page, /MostrarSL\.asp/i);
-  return parseSl(await frame.content());
+  const parsed = parseSl(await frame.content());
+  return { ...parsed, recognized: true };
 }
 
 async function collectAssignmentsViaMenu(page) {
