@@ -56,7 +56,7 @@ import {
   updateUserSpecialties
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
-import { companyLogo } from "./generalBoard.js";
+import { companyLogo, shipImage } from "./generalBoard.js";
 import { hashForTab, tabFromHash } from "./navigation.js";
 
 const STORAGE_KEY = "app-cpe-session";
@@ -622,6 +622,8 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
 function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
   const detail = assignment.detail || {};
   const logo = companyLogo(detail.empresa || assignment.empresa);
+  const shipName = detail.buque || assignment.buque || "";
+  const shipPhoto = shipImage(shipName);
   const specialties = detail.specialties || [];
   const normalizedCurrentChapa = normalizeChapa(currentChapa);
 
@@ -666,10 +668,24 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
           <button type="button" onClick={onClose} title="Cerrar"><X size={21} /></button>
         </header>
 
+        {shipPhoto && (
+          <figure className="assignment-detail-ship">
+            <img
+              src={shipPhoto}
+              alt={`Buque ${shipName}`}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = "https://portal-estiba-vlc.vercel.app/assets/barcos/barco-generico.jpeg";
+              }}
+            />
+            <figcaption><Ship size={17} /><strong>{shipName}</strong></figcaption>
+          </figure>
+        )}
+
         <div className="assignment-detail-summary">
           <div><span>Fecha</span><strong>{formatShortPortalDate(detail.fecha || assignment.fecha)}</strong></div>
           <div><span>Jornada</span><strong>{normalizeAssignmentShift(detail.jornada || assignment.jornada)}</strong></div>
-          <div><span>Buque</span><strong>{detail.buque || assignment.buque || "Sin buque"}</strong></div>
+          <div><span>Buque</span><strong>{shipName || "Sin buque"}</strong></div>
           <div><span>Muelle</span><strong>{detail.muelle || assignment.muelle || "-"}</strong></div>
         </div>
 

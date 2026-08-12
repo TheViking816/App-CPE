@@ -3195,6 +3195,45 @@ select {
   color: var(--navy);
 }
 
+.assignment-detail-ship {
+  position: relative;
+  min-height: 190px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #dfe7ef;
+  border-radius: 8px;
+  background: #dbe5ef;
+}
+
+.assignment-detail-ship img {
+  display: block;
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+}
+
+.assignment-detail-ship figcaption {
+  position: absolute;
+  inset: auto 10px 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(4, 19, 36, 0.82);
+  color: #fff;
+  backdrop-filter: blur(5px);
+}
+
+.assignment-detail-ship figcaption strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .assignment-detail-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4263,6 +4302,11 @@ select {
   color: var(--ink);
 }
 
+:root[data-theme="dark"] .assignment-detail-ship {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #081626;
+}
+
 :root[data-theme="dark"] .portal-irpf-input b {
   background: #123a66;
   color: #dbeafe;
@@ -4616,6 +4660,10 @@ select {
 
   .assignment-detail-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assignment-detail-ship img {
+    height: 190px;
   }
 
   .assignment-detail-workers > article > div {

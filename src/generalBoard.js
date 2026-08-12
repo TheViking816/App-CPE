@@ -321,11 +321,17 @@ export function companyLogo(name) {
   return "";
 }
 
+export function shipImage(name) {
+  const normalized = normalizeText(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if (!normalized || /^(?:-|oc|o-c|re|r-e|apm|trincadores|remolque|faltas)$/.test(normalized)) return "";
+  return `https://portal-estiba-vlc.vercel.app/assets/barcos/${normalized}.jpg`;
+}
+
 export function groupImage(group) {
   const base = "https://portal-estiba-vlc.vercel.app/assets";
   const normalized = normalizeText(group.name || group.operacion).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (/^gruas?$/.test(normalized)) return `${base}/maquinas/gruas.jpg`;
   if (/^(rtts?|trastainers?)$/.test(normalized)) return `${base}/maquinas/trastainer.jpg`;
   if (/^(conts?|containers?|containeras?)$/.test(normalized)) return `${base}/maquinas/containeras.jpg`;
-  return group.hasShip ? `${base}/barcos/${normalized}.jpg` : "";
+  return group.hasShip ? shipImage(group.name) : "";
 }
