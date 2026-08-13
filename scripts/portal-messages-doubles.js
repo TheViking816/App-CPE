@@ -52,6 +52,22 @@ export function cleanMessageBodyText(value = "", { title = "", signature = "" } 
     .trim();
 }
 
+export function extractAddedMessageText(before = "", after = "", options = {}) {
+  const existing = new Map();
+  String(before).split(/\r?\n/).map(cleanText).filter(Boolean).forEach((line) => {
+    existing.set(line, (existing.get(line) || 0) + 1);
+  });
+
+  const added = String(after).split(/\r?\n/).map(cleanText).filter(Boolean).filter((line) => {
+    const count = existing.get(line) || 0;
+    if (!count) return true;
+    existing.set(line, count - 1);
+    return false;
+  });
+
+  return cleanMessageBodyText(added.join("\n"), options);
+}
+
 export function parseMessagesHtml(html = "") {
   const pageText = textFromHtml(html);
   const recognized = /Consultas\s+Mensajes|\bMensajes\b/i.test(pageText);

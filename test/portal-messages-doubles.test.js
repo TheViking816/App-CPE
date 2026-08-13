@@ -4,6 +4,7 @@ import {
   buildRequestedDoubles,
   cleanMessageBodyText,
   currentMadridMonth,
+  extractAddedMessageText,
   parseMessagesHtml,
   parsePayrollsHtml
 } from "../scripts/portal-messages-doubles.js";
@@ -19,6 +20,15 @@ test("cleanMessageBodyText keeps the expanded message and removes portal metadat
   });
 
   assert.equal(body, "Tu solicitud ha sido revisada. Puedes consultar la respuesta adjunta.");
+});
+
+test("extractAddedMessageText reads content rendered outside the message card", () => {
+  const before = "MENSAJES\n24/02/26 9:02 - CPEV, Recursos Humanos\nRESPUESTA SOLICITUD\n";
+  const after = `${before}La solicitud ha sido aceptada.\nEliminar\n`;
+  assert.equal(
+    extractAddedMessageText(before, after, { title: "RESPUESTA SOLICITUD" }),
+    "La solicitud ha sido aceptada."
+  );
 });
 
 test("parseMessagesHtml reads the visible portal inbox without opening messages", () => {

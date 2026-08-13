@@ -13,6 +13,7 @@ import {
   buildRequestedDoubles,
   cleanMessageBodyText,
   currentMadridMonth,
+  extractAddedMessageText,
   parseMessagesHtml,
   parsePayrollsHtml
 } from "./portal-messages-doubles.js";
@@ -926,9 +927,12 @@ async function collectMessages(page) {
     for (let index = 0; index < domMessages.length; index += 1) {
       const message = domMessages[index];
       if (!message.body && index < titleCount) {
+        const beforeOpen = await page.locator("body").innerText().catch(() => "");
         await titles.nth(index).click({ force: true, timeout: 3000 }).catch(() => {});
-        await page.waitForTimeout(100);
-        message.body = await page.locator(".newsSignature").nth(index).evaluate((signature, title) => {
+        await page.waitForTimeout(180);
+        const afterOpen = await page.locator("body").innerText().catch(() => "");
+        message.body = extractAddedMessageText(beforeOpen, afterOpen, { title: message.title });
+        if (!message.body) message.body = await page.locator(".newsSignature").nth(index).evaluate((signature, title) => {
           const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
           let container = signature.parentElement;
           for (let depth = 0; container && depth < 7; depth += 1, container = container.parentElement) {
