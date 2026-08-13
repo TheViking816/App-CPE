@@ -53,6 +53,19 @@ async function updateJob(patch) {
 }
 
 function runSync(job) {
+  if (/^(1|true|yes)$/i.test(process.env.CPE_PORTAL_IN_PROCESS || "")) {
+    Object.assign(process.env, {
+      CPE_PORTAL_USER: job.chapa,
+      CPE_PORTAL_PASSWORD: job.portal_password,
+      CPE_PORTAL_SECURITY_KEY: job.security_key || "",
+      CPE_PORTAL_STORAGE_STATE_PATH: path.resolve(
+        process.env.CPE_PORTAL_SESSION_DIR || "data/portal-worker-sessions",
+        `${String(job.chapa).replace(/[^0-9]/g, "")}.json`
+      )
+    });
+    return import(`./sync-portal-oficial.js?job=${encodeURIComponent(job.id)}-${Date.now()}`)
+      .then((module) => module.main());
+  }
   return new Promise((resolve, reject) => {
     let diagnostic = "";
     const child = spawn(process.execPath, ["scripts/sync-portal-oficial.js"], {
@@ -102,7 +115,7 @@ function publicErrorMessage(error) {
     .slice(0, 300) || "No se pudo leer el portal oficial.";
 }
 
-async function main() {
+export async function main() {
   if (!jobId) throw new Error("Missing CPE_PORTAL_SYNC_JOB_ID");
   if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
 
@@ -152,7 +165,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "Error desconocido");
-  process.exit(1);
-});
+if (!process.send) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : "Error desconocido");
+    process.exit(1);
+  });
+}

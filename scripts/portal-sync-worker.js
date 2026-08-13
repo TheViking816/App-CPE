@@ -16,6 +16,7 @@ const allowedOrigins = new Set(
 const allowedVercelHostPattern = /^cpe-[a-z0-9-]+-thevikings-projects\.vercel\.app$/i;
 let stopping = false;
 let browserServer = null;
+let sessionRunner = null;
 let activeJobId = null;
 const requestedJobs = [];
 const startedAt = new Date().toISOString();
@@ -103,30 +104,46 @@ async function readJson(request, limit = 16_384) {
   return raw ? JSON.parse(raw) : {};
 }
 
+function startSessionRunner(wsEndpoint) {
+  if (sessionRunner && !sessionRunner.killed) return sessionRunner;
+  sessionRunner = spawn(process.execPath, ["scripts/portal-sync-session-runner.js"], {
+    cwd: process.cwd(),
+    stdio: ["ignore", "inherit", "inherit", "ipc"],
+    env: {
+      ...process.env,
+      CPE_PORTAL_BROWSER_WS_ENDPOINT: wsEndpoint,
+      CPE_PORTAL_REUSE_CONTEXT: "true",
+      CPE_PORTAL_IN_PROCESS: "true",
+      CPE_PORTAL_PROGRESSIVE: "true",
+      CPE_PORTAL_HEADLESS: "true",
+      CPE_PORTAL_BROWSER_CHANNEL: "bundled"
+    }
+  });
+  sessionRunner.on("exit", () => {
+    sessionRunner = null;
+  });
+  return sessionRunner;
+}
+
 function runJob(jobId, wsEndpoint) {
   return new Promise((resolve) => {
     activeJobId = jobId;
-    const child = spawn(process.execPath, ["scripts/sync-portal-oficial-job.js", jobId], {
-      cwd: process.cwd(),
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        CPE_PORTAL_SYNC_JOB_ID: jobId,
-        CPE_PORTAL_BROWSER_WS_ENDPOINT: wsEndpoint,
-        CPE_PORTAL_PROGRESSIVE: "true",
-        CPE_PORTAL_HEADLESS: "true",
-        CPE_PORTAL_BROWSER_CHANNEL: "bundled"
-      }
-    });
-    child.on("error", (error) => {
-      console.error(`[portal-worker] No se pudo iniciar ${jobId}:`, error);
+    const runner = startSessionRunner(wsEndpoint);
+    const onMessage = (message) => {
+      if (message?.jobId !== jobId) return;
+      runner.off("message", onMessage);
+      console.log(`[portal-worker] ${jobId} finalizo con codigo ${message.ok ? 0 : 1}`);
+      activeJobId = null;
       resolve();
-    });
-    child.on("exit", (code) => {
-      console.log(`[portal-worker] ${jobId} finalizo con codigo ${code}`);
+    };
+    runner.on("message", onMessage);
+    runner.once("error", (error) => {
+      console.error(`[portal-worker] No se pudo iniciar ${jobId}:`, error);
+      runner.off("message", onMessage);
       activeJobId = null;
       resolve();
     });
+    runner.send({ type: "run", jobId });
   });
 }
 

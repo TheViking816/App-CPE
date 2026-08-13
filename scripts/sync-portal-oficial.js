@@ -29,6 +29,9 @@ const browserWsEndpoint = String(process.env.CPE_PORTAL_BROWSER_WS_ENDPOINT || "
 const progressiveSync = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_PROGRESSIVE || "");
 const portalSyncJobId = String(process.env.CPE_PORTAL_SYNC_JOB_ID || "").trim();
 const portalStorageStatePath = String(process.env.CPE_PORTAL_STORAGE_STATE_PATH || "").trim();
+const reuseBrowserContext = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REUSE_CONTEXT || "");
+const portalContextStore = globalThis.__cpePortalContextStore
+  || (globalThis.__cpePortalContextStore = new Map());
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -1120,7 +1123,7 @@ async function getExistingSupabaseSnapshot() {
   }
 }
 
-async function main() {
+export async function main() {
   const syncStartedAt = Date.now();
   await fs.mkdir(privateDataDir, { recursive: true });
   await fs.mkdir(profileDir, { recursive: true });
@@ -1144,10 +1147,29 @@ async function main() {
   }
 
   let sharedBrowser = null;
+  let reusedContext = false;
   const context = browserWsEndpoint
     ? await (async () => {
+        if (reuseBrowserContext) {
+          const savedSession = portalContextStore.get(portalUser);
+          if (savedSession?.context?.pages) {
+            reusedContext = true;
+            savedSession.lastUsedAt = Date.now();
+            sharedBrowser = savedSession.browser;
+            console.log(`Reutilizando sesion activa del portal para ${portalUser}.`);
+            return savedSession.context;
+          }
+        }
         sharedBrowser = await chromium.connect(browserWsEndpoint);
-        return sharedBrowser.newContext(contextOptions);
+        const createdContext = await sharedBrowser.newContext(contextOptions);
+        if (reuseBrowserContext) {
+          portalContextStore.set(portalUser, {
+            browser: sharedBrowser,
+            context: createdContext,
+            lastUsedAt: Date.now()
+          });
+        }
+        return createdContext;
       })()
     : await chromium.launchPersistentContext(profileDir, { ...launchOptions, ...contextOptions });
   await context.addInitScript(() => {
@@ -1348,8 +1370,12 @@ async function main() {
     });
     throw error;
   } finally {
-    await context.close();
-    if (sharedBrowser) sharedBrowser = null;
+    if (!reuseBrowserContext || !browserWsEndpoint) await context.close();
+    else if (!reusedContext) console.log(`Sesion activa conservada para ${portalUser}.`);
+    if (reuseBrowserContext && portalContextStore.has(portalUser)) {
+      portalContextStore.get(portalUser).lastUsedAt = Date.now();
+    }
+    if (!reuseBrowserContext) sharedBrowser = null;
   }
 }
 
