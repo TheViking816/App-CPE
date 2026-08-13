@@ -12,6 +12,7 @@ import { parseVacacionesFromRows } from "./portal-vacations.js";
 import {
   buildRequestedDoubles,
   currentMadridMonth,
+  normalizePortalDate,
   parseMessagesHtml,
   parsePayrollsHtml
 } from "./portal-messages-doubles.js";
@@ -935,6 +936,31 @@ async function collectMessages(page) {
   console.log(`[portal:mensajes-requests] ${JSON.stringify([...new Set(requestedPaths)].slice(-30))}`);
   await portalSectionState(page, "mensajes");
   await portalDateStructure(page, "mensajes");
+  const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
+    const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
+    const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
+    const container = signature.closest("tr") || signature.parentElement?.parentElement || signature.parentElement;
+    const titleNode = container?.querySelector(".newsTitle, [class*='newsTitle'], [class*='title']");
+    const title = String(titleNode?.textContent || "").replace(/\s+/g, " ").trim()
+      || String(container?.textContent || "").replace(signatureText, "").replace(/^\s*\d+\s*/, "").replace(/\s+/g, " ").trim();
+    if (!dateMatch || !title) return null;
+    const tail = signatureText.slice((dateMatch.index || 0) + dateMatch[0].length).replace(/^\s*[-–—]\s*/, "");
+    const readMatch = tail.match(/\bLE[IÍ]DO\s+EL\s+(.+)$/i);
+    const sender = tail.replace(/\bLE[IÍ]DO\s+EL\s+.+$/i, "").replace(/[\s,.-]+$/, "").trim();
+    return {
+      id: `${dateMatch[1]}-${dateMatch[2]}-${index}-${title}`,
+      title,
+      date: normalizePortalDate(dateMatch[1]),
+      time: dateMatch[2].padStart(5, "0"),
+      sender,
+      read: Boolean(readMatch),
+      readAt: String(readMatch?.[1] || "").trim()
+    };
+  }).filter(Boolean)).catch(() => []);
+  if (domMessages.length) {
+    console.log(`Mensajes leidos: ${domMessages.length}.`);
+    return { recognized: true, rows: domMessages };
+  }
   const result = await waitForParsedContent(
     page,
     parseMessagesHtml,
@@ -989,8 +1015,10 @@ async function extractPayrollRowsFromDom(page) {
   const titles = [];
   for (const frame of page.frames()) {
     const bodyText = await frame.locator("body").innerText().catch(() => "");
+    titles.push(...[...String(bodyText).matchAll(/(?:Mensual|Anticipo(?:\s+1-15)?|Paga\s+extra|Revisi[oó]n\s+salarial)[^\n]{0,80}?\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/gi)]
+      .map((match) => cleanText(match[0])));
     titles.push(...String(bodyText).split(/\r?\n/).map(cleanText).filter((line) => (
-      /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(line) && line.length <= 120
+      /\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/.test(line) && line.length <= 120
     )));
     const visiblePeriods = await frame.locator("body *:visible").evaluateAll((nodes) => nodes
       .filter((node) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(node.textContent || ""))
@@ -1017,8 +1045,9 @@ async function extractPayrollRowsFromDom(page) {
 
   const rows = titles.map((value) => {
     const title = cleanText(value).replace(/^\d+\s*/, "").replace(/\s*Ver el documento\s*$/i, "");
-    const period = title.match(/\b((?:0[1-9]|1[0-2])\/\d{2})\b/)?.[1] || "";
-    const type = cleanText(title.replace(period, ""));
+    const rawPeriod = title.match(/\b((?:0[1-9]|1[0-2])\s*\/\s*\d{2})\b/)?.[1] || "";
+    const period = rawPeriod.replace(/\s/g, "");
+    const type = cleanText(title.replace(rawPeriod, ""));
     return period && type ? { id: `${period}-${type}`, title, type, period } : null;
   }).filter(Boolean);
   return [...new Map(rows.map((row) => [row.id, row])).values()];

@@ -100,9 +100,12 @@ export function parseMessagesHtml(html = "") {
 export function parsePayrollsHtml(html = "") {
   const pageText = textFromHtml(html);
   const recognized = /N[oó]mina\s+electr[oó]nica|Cerrar\s+modo\s+seguro/i.test(pageText);
+  const inlineTitles = [...pageText.matchAll(/(?:Mensual|Anticipo(?:\s+1-15)?|Paga\s+extra|Revisi[oó]n\s+salarial)[^|\n]{0,80}?\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/gi)]
+    .map((match) => cleanText(match[0]));
   const rows = rowsFromHtml(html)
     .flatMap((cells) => cells.map(cleanText))
     .concat(pageText.split("\n").map(cleanText))
+    .concat(inlineTitles)
     .map((title) => title.replace(/^\d+\s*/, ""))
     .filter((title) => title.length <= 160 && /\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/.test(title) && !/\d{1,2}:\d{2}/.test(title))
     .map((value) => {
