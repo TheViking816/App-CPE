@@ -350,6 +350,7 @@ async function ensureExpanded(page, group, child) {
 async function portalSectionState(page, section) {
   const frames = await Promise.all(page.frames().map(async (frame) => ({
     location: safePortalLocation(frame.url()),
+    hash: (() => { try { return new URL(frame.url()).hash; } catch { return ""; } })(),
     tables: await frame.locator("table").count().catch(() => 0),
     checkboxes: await frame.locator('input[type="checkbox"]').count().catch(() => 0),
     checked: await frame.locator('input[type="checkbox"]:checked').count().catch(() => 0),
@@ -357,6 +358,31 @@ async function portalSectionState(page, section) {
     securityInputs: await frame.locator('input[type="password"]').count().catch(() => 0)
   })));
   console.log(`[portal:${section}] ${JSON.stringify(frames)}`);
+}
+
+async function portalDateStructure(page, section) {
+  const structures = [];
+  for (const frame of page.frames()) {
+    const items = await frame.locator("body *").evaluateAll((nodes) => nodes
+      .filter((node) => /\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}/.test(node.textContent || ""))
+      .filter((node) => ![...node.children].some((child) => /\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}/.test(child.textContent || "")))
+      .slice(0, 12)
+      .map((node) => ({
+        tag: node.tagName,
+        className: String(node.className || "").slice(0, 100),
+        parentTag: node.parentElement?.tagName || "",
+        parentClass: String(node.parentElement?.className || "").slice(0, 100),
+        masked: String(node.textContent || "")
+          .replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "A")
+          .replace(/\d/g, "0")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 180)
+      }))
+      .catch(() => []);
+    structures.push(...items);
+  }
+  console.log(`[portal:${section}-date-structure] ${JSON.stringify(structures)}`);
 }
 
 async function waitForFrame(page, pattern, timeout = 12000) {
@@ -602,6 +628,7 @@ async function openMenu(page, group, text, framePattern) {
   if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
   await item.scrollIntoViewIfNeeded();
   await item.click({ timeout: 10000 });
+  await page.waitForTimeout(1200);
   if (framePattern) await waitForFrame(page, framePattern);
 }
 
@@ -850,6 +877,7 @@ async function collectMessages(page) {
   await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Mensajes");
   await portalSectionState(page, "mensajes");
+  await portalDateStructure(page, "mensajes");
   const result = await waitForParsedContent(
     page,
     parseMessagesHtml,
