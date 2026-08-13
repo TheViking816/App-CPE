@@ -2251,9 +2251,6 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
 
       {showCredentials && !syncingPortal && (
         <>
-          <p className="portal-warning">
-            Tus claves se guardarán cifradas para que la app pueda actualizar el portal automáticamente.
-          </p>
           <p className="portal-first-sync-note">
             La espera solo es necesaria la primera vez. Después la app actualizará tus datos automáticamente en segundo plano.
           </p>
@@ -2284,9 +2281,6 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
                 onChange={(event) => setSecurityKey(event.target.value)}
               />
             </label>
-            <small className="portal-storage-note">
-              La sincronización se realizará cada hora y también a las 07:30, 12:30 y 14:45.
-            </small>
             <div className="portal-security-actions">
               {snapshot && !syncingPortal && (
                 <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
