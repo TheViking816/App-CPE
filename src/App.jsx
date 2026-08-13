@@ -1757,7 +1757,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
   );
 }
 
-function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory, onRequestSecurityKey, onRequestCredentials, loadingHistory = false }) {
+function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory, onRequestSecurityKey, onRequestCredentials, loadingHistory = false, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
@@ -1916,7 +1916,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         </section>
       )}
 
-      {payload?.sync?.failed && (
+      {payload?.sync?.failed && !hideSyncFailure && (
         <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestCredentials}>
           <CircleAlert size={20} />
           <div>
@@ -2262,7 +2262,14 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
-      setShowCredentials(!data);
+      const credentialsRejected = Boolean(data?.payload?.sync?.failed);
+      setShowCredentials(!data || credentialsRejected);
+      if (credentialsRejected) {
+        setError("");
+        setPortalMessage("");
+        setSecurityKeyOnly(false);
+        setPortalPassword("");
+      }
     } catch (requestError) {
       if (!silent) {
         setError(requestError.message || "No se pudo leer el portal sincronizado.");
@@ -2517,7 +2524,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
               <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
               <span>{securityKeyOnly
                 ? "Introduce la clave de seguridad de primas y nóminas."
-                : "Introduce tu contraseña del portal oficial y, para primas y nóminas, la clave de seguridad."}</span>
+                : "Introduce tu contraseña del portal oficial. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
             </div>
             {!securityKeyOnly && (
               <label>
@@ -2536,7 +2543,8 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
               <input
                 autoComplete="off"
                 inputMode="numeric"
-                placeholder="Clave de seguridad"
+                aria-label="Clave de seguridad opcional"
+                placeholder="Clave de seguridad (opcional)"
                 type="password"
                 value={securityKey}
                 onChange={(event) => setSecurityKey(event.target.value)}
@@ -2599,6 +2607,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           onRequestSecurityKey={requestSecurityKey}
           onRequestCredentials={changeCredentials}
           loadingHistory={syncingPortal}
+          hideSyncFailure={showCredentials}
         />
       )}
     </section>
