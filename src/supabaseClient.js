@@ -27,8 +27,11 @@ const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "")
   .replace(/\\r|\\n/g, "")
   .trim();
-const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "main";
-const portalSnapshotChannel = import.meta.env.VITE_PORTAL_SNAPSHOT_CHANNEL || "";
+// Vercel can preserve a trailing line break/space when an environment value is
+// entered from the CLI.  These identifiers are used as exact RPC parameters,
+// so normalize them before asking Supabase for the preview snapshot.
+const syncWorkflowRef = String(import.meta.env.VITE_GITHUB_SYNC_REF || "main").trim() || "main";
+const portalSnapshotChannel = String(import.meta.env.VITE_PORTAL_SNAPSHOT_CHANNEL || "").trim();
 
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
