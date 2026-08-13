@@ -830,8 +830,24 @@ async function collectSl(page) {
   throw new Error("El portal no devolvio posiciones de Lista SL.");
 }
 
+async function openPortalHash(page, hash) {
+  await login(page);
+  const target = `https://portal.cpevalencia.com/#${hash}`;
+  await page.goto(target, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.waitForTimeout(1200);
+}
+
+async function visiblePortalMenuLabels(page) {
+  const labels = [];
+  for (const root of [page, ...page.frames()]) {
+    const visible = root.locator(".gwt-TreeItem:visible");
+    labels.push(...await visible.allTextContents().catch(() => []));
+  }
+  return [...new Set(labels.map(cleanText).filter(Boolean))].slice(0, 120);
+}
+
 async function collectMessages(page) {
-  await openMenu(page, "Consultas", "Mensajes");
+  await openPortalHash(page, "User,Query,viewMessages,,0");
   await portalSectionState(page, "mensajes");
   const result = await waitForParsedContent(
     page,
@@ -870,6 +886,8 @@ async function extractCheckedDoubles(frame, date) {
 }
 
 async function collectRequestedDoubles(page) {
+  await openPortalHash(page, "User,Request,,,");
+  console.log(`[portal:solicitudes-menu] ${JSON.stringify(await visiblePortalMenuLabels(page))}`);
   await openMenu(page, "Solicitudes", "Solicitar Dobles");
   await portalSectionState(page, "dobles-selector");
   let selector = await findDoublesSelector(page);
@@ -901,7 +919,7 @@ async function collectRequestedDoubles(page) {
 
 async function collectPayrolls(page) {
   if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
-  await openMenu(page, "Consultas", "Nómina electrónica");
+  await openPortalHash(page, "User,Query,ViewPay,Home,0");
   await portalSectionState(page, "nominas");
 
   const alreadyLoaded = await waitForParsedContent(
