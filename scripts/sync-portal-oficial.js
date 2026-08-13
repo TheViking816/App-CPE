@@ -978,8 +978,7 @@ async function collectMessages(page) {
     for (const message of hydrated) {
       message.body = cleanMessageBodyText(message.body, { title: message.title });
     }
-    const completeMessages = hydrated.filter((message) => message.body);
-    const uniqueMessages = [...new Map((completeMessages.length ? completeMessages : hydrated).map((message) => [message.id, message])).values()];
+    const uniqueMessages = [...new Map(hydrated.map((message) => [message.id, message])).values()];
     console.log(`Mensajes leidos: ${uniqueMessages.length} (${uniqueMessages.filter((message) => message.body).length} con contenido).`);
     return { recognized: true, rows: limitRecentPortalRows(uniqueMessages, messageLimit) };
   }
