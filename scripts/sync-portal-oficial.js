@@ -861,8 +861,16 @@ async function collectMessages(page) {
     await ensureExpanded(page, "Consultas", "Mensajes");
     const retryItem = await findMenuItem(page, "Mensajes", 10000);
     if (retryItem) {
-      await retryItem.dispatchEvent("click").catch(() => {});
-      await retryItem.locator("xpath=..").click({ force: true }).catch(() => {});
+      await retryItem.focus();
+      await retryItem.press("Enter").catch(() => {});
+      await page.waitForTimeout(800);
+      if (await page.locator(".newsSignature").count().catch(() => 0) === 0) {
+        await retryItem.press("Space").catch(() => {});
+        await page.waitForTimeout(800);
+      }
+      if (await page.locator(".newsSignature").count().catch(() => 0) === 0) {
+        await retryItem.locator("xpath=..").click({ force: true }).catch(() => {});
+      }
       await page.locator(".newsSignature").first().waitFor({ state: "visible", timeout: 12000 }).catch(() => {});
     }
   }
