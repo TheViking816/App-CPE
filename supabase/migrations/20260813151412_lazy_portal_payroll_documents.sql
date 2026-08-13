@@ -82,4 +82,5 @@ end;
 $$;
 
 revoke all on function public.app_cpe_create_portal_document_job(text, text) from public;
-grant execute on function public.app_cpe_create_portal_document_job(text, text) to anon, authenticated;
+revoke all on function public.app_cpe_create_portal_document_job(text, text) from anon, authenticated;
+grant execute on function public.app_cpe_create_portal_document_job(text, text) to service_role;
