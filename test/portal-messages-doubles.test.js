@@ -61,10 +61,10 @@ test("parsePayrollsHtml reads the secure electronic payroll list", () => {
 
 test("buildRequestedDoubles keeps only valid checked specialty and journey pairs", () => {
   assert.deepEqual(buildRequestedDoubles("16/8/2026", [
-    { specialty: "- CONDUCTOR 1a", journey: "20/02" },
+    { specialty: "- CONDUCTOR 1a", journey: "20/02", holiday: true },
     { specialty: "CONDUCTOR 2a", journey: "" }
   ]), [
-    { date: "16/08/2026", specialty: "CONDUCTOR 1a", journey: "20/02" }
+    { date: "16/08/2026", specialty: "CONDUCTOR 1a", journey: "20/02", holiday: true }
   ]);
 });
 

@@ -54,6 +54,7 @@ import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   loadPayrollConfig,
+  getOfficialPortalDocument,
   getOfficialPortalSnapshot,
   getPortalAutoSyncStatus,
   getPortalSyncJob,
@@ -529,6 +530,7 @@ function AppHeader({ user, theme, messages, onInboxOpen, onThemeToggle, onLogout
 }
 
 function InboxModal({ messages, onClose }) {
+  const [selectedMessage, setSelectedMessage] = useState(null);
   useEffect(() => {
     const closeOnEscape = (event) => {
       if (event.key === "Escape") onClose();
@@ -550,14 +552,70 @@ function InboxModal({ messages, onClose }) {
         {rows.length ? (
           <div className="portal-inbox-list">
             {rows.map((message) => (
-              <article className={message.read ? "is-read" : "is-unread"} key={message.id}>
+              <button className={message.read ? "is-read" : "is-unread"} key={message.id} type="button" onClick={() => setSelectedMessage(message)}>
                 <span><Mail size={17} /></span>
                 <div><strong>{message.title}</strong><small>{message.sender || "Portal CPE"}</small></div>
                 <time>{message.date}<small>{message.time}</small></time>
-              </article>
+                <ChevronRight size={17} />
+              </button>
             ))}
           </div>
         ) : <p className="portal-personal-empty">No hay mensajes disponibles. Actualiza el portal para consultar la bandeja.</p>}
+        {selectedMessage && (
+          <div className="portal-message-detail" role="dialog" aria-modal="true" aria-labelledby="portal-message-title">
+            <header>
+              <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Volver a la bandeja"><ChevronRight size={20} /></button>
+              <div><small>{selectedMessage.sender || "Portal CPE"}</small><h3 id="portal-message-title">{selectedMessage.title}</h3></div>
+              <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Cerrar mensaje"><X size={20} /></button>
+            </header>
+            <p className="portal-message-date">{selectedMessage.date} · {selectedMessage.time}</p>
+            <div className="portal-message-body">{selectedMessage.body || "El portal no ha proporcionado el contenido completo de este mensaje. Vuelve a actualizar para recuperarlo."}</div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function base64DocumentUrl(contentBase64, mimeType) {
+  const binary = window.atob(contentBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType || "application/pdf" }));
+}
+
+function PayrollDocumentModal({ payroll, session, onClose }) {
+  const [documentUrl, setDocumentUrl] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl = "";
+    getOfficialPortalDocument({ token: session.token, documentId: payroll.id })
+      .then((document) => {
+        if (!active) return;
+        if (!document?.contentBase64) throw new Error("Esta nómina todavía no tiene el documento sincronizado.");
+        objectUrl = base64DocumentUrl(document.contentBase64, document.mimeType);
+        setDocumentUrl(objectUrl);
+      })
+      .catch((requestError) => active && setError(requestError.message || "No se pudo abrir la nómina."));
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [payroll.id, session.token]);
+
+  return (
+    <div className="document-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="document-modal" role="dialog" aria-modal="true" aria-labelledby="payroll-document-title">
+        <header>
+          <div><small>Nómina electrónica</small><h2 id="payroll-document-title">{payroll.title}</h2></div>
+          {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Abrir</a>}
+          <button type="button" onClick={onClose} aria-label="Cerrar nómina"><X size={21} /></button>
+        </header>
+        {!documentUrl && !error && <p className="document-modal-status"><RefreshCw className="is-spinning" size={20} /> Abriendo documento seguro...</p>}
+        {error && <p className="document-modal-status is-error"><CircleAlert size={20} /> {error}</p>}
+        {documentUrl && <iframe src={documentUrl} title={payroll.title} />}
       </section>
     </div>
   );
@@ -702,7 +760,11 @@ function UpcomingDoubles({ snapshot, currentTime }) {
         {rows.map((request, index) => (
           <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
             <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
-            <div><strong>{request.specialty}</strong><small>Jornada {request.journey}</small></div>
+            <div>
+              <strong>{request.specialty}</strong>
+              <small>Jornada {request.journey}</small>
+              {request.holiday && <em className="portal-double-holiday">Festivo</em>}
+            </div>
             <Check size={17} />
           </article>
         ))}
@@ -1487,7 +1549,9 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const [irpfError, setIrpfError] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(false);
   const [annualExpanded, setAnnualExpanded] = useState(false);
+  const [nominasExpanded, setNominasExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
+  const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
@@ -1597,7 +1661,10 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
       {(jornales.length > 0 || descansos || vacaciones?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
           {nominas?.recognized && (
-            <button className="is-nominas" type="button" onClick={() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <button className="is-nominas" type="button" onClick={() => {
+              setNominasExpanded(true);
+              requestAnimationFrame(() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }}>
               <FileLock2 size={19} /><span>Nóminas</span><ChevronDown size={17} />
             </button>
           )}
@@ -1626,29 +1693,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             </button>
           )}
         </nav>
-      )}
-
-      {nominas?.recognized && (
-        <section ref={nominasRef} className="portal-personal-section portal-payroll-documents portal-scroll-anchor">
-          <header>
-            <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
-            <div><small>Modo seguro</small><strong>Nómina electrónica</strong></div>
-            {!nominas.locked && <b>{nominas.rows?.length || 0}</b>}
-          </header>
-          {nominas.locked ? (
-            <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Guárdala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
-          ) : (nominas.rows || []).length ? (
-            <div className="portal-payroll-document-list">
-              {nominas.rows.map((payroll) => (
-                <article key={payroll.id}>
-                  <ReceiptText size={18} />
-                  <div><strong>{payroll.type}</strong><small>Periodo {payroll.period}</small></div>
-                  <span>{payroll.period}</span>
-                </article>
-              ))}
-            </div>
-          ) : <p className="portal-personal-empty">No hay nóminas disponibles.</p>}
-        </section>
       )}
 
       {jornales.length > 0 && (
@@ -1849,7 +1893,33 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <PortalVacationPreview vacaciones={vacaciones} />
       </div>
 
+      {nominas?.recognized && (
+        <section ref={nominasRef} className={`portal-personal-section portal-payroll-documents portal-scroll-anchor${nominasExpanded ? " is-open" : ""}`}>
+          <button className="portal-payroll-toggle" type="button" onClick={() => setNominasExpanded((current) => !current)} aria-expanded={nominasExpanded}>
+            <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
+            <span><small>Modo seguro</small><strong>Nómina electrónica</strong></span>
+            {!nominas.locked && <b>{nominas.rows?.length || 0}</b>}
+            <ChevronDown size={19} />
+          </button>
+          {nominasExpanded && (nominas.locked ? (
+            <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Guárdala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
+          ) : (nominas.rows || []).length ? (
+            <div className="portal-payroll-document-list">
+              {nominas.rows.map((payroll) => (
+                <button key={payroll.id} type="button" onClick={() => setSelectedPayroll(payroll)}>
+                  <ReceiptText size={18} />
+                  <span><strong>{payroll.type}</strong><small>Periodo {payroll.period}</small></span>
+                  <em>{payroll.period}</em>
+                  <ChevronRight size={17} />
+                </button>
+              ))}
+            </div>
+          ) : <p className="portal-personal-empty">No hay nóminas disponibles.</p>)}
+        </section>
+      )}
+
       {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
+      {selectedPayroll && <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />}
     </div>
   );
 }

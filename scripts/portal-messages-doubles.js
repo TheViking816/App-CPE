@@ -125,7 +125,8 @@ export function buildRequestedDoubles(date, selections = []) {
     .map((selection) => ({
       date: normalizedDate,
       specialty: cleanText(selection?.specialty).replace(/^[-–—]\s*/, ""),
-      journey: cleanText(selection?.journey).replace(/\s+/g, "")
+      journey: cleanText(selection?.journey).replace(/\s+/g, ""),
+      holiday: Boolean(selection?.holiday)
     }))
     .filter((selection) => normalizedDate && selection.specialty && /^\d{2}\/\d{2}$/.test(selection.journey));
 }

@@ -255,6 +255,19 @@ export async function getOfficialPortalSnapshot({ token }) {
   return data;
 }
 
+export async function getOfficialPortalDocument({ token, documentId }) {
+  if (!supabase || !token || !documentId) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_document", {
+    p_token: token,
+    p_channel: portalSnapshotChannel || "main",
+    p_document_id: documentId
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function trackPortalOpen({ token }) {
   if (!supabase || !token) return null;
 

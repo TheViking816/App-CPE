@@ -33,6 +33,7 @@ const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
+let collectedPayrollDocuments = [];
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -876,8 +877,12 @@ async function collectMessages(page) {
   const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
     const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
     const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
-    const container = signature.closest("tr") || signature.parentElement?.parentElement || signature.parentElement;
-    const titleNode = container?.querySelector(".newsTitle, [class*='newsTitle'], [class*='title']");
+    let container = signature.parentElement;
+    for (let depth = 0; container && depth < 7; depth += 1, container = container.parentElement) {
+      if (container.querySelector(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']")) break;
+    }
+    container ||= signature.closest("tr") || signature.parentElement?.parentElement || signature.parentElement;
+    const titleNode = container?.querySelector(".newsTitle, [class*='newsTitle'], [class*='NewsTitle'], [class*='title']");
     const title = String(titleNode?.textContent || "").replace(/\s+/g, " ").trim()
       || String(container?.textContent || "").replace(signatureText, "").replace(/^\s*\d+\s*/, "").replace(/\s+/g, " ").trim();
     if (!dateMatch || !title) return null;
@@ -887,6 +892,15 @@ async function collectMessages(page) {
     const dateParts = dateMatch[1].split("/");
     const fullYear = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
     const normalizedDate = `${dateParts[0].padStart(2, "0")}/${dateParts[1].padStart(2, "0")}/${fullYear}`;
+    const bodyNode = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
+    const containerText = String(bodyNode?.textContent || container?.textContent || "")
+      .replace(title, "")
+      .replace(signatureText, "")
+      .replace(/\bEliminar\b/gi, "")
+      .replace(/^\s*\d+\s*/, "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n\s+/g, "\n")
+      .trim();
     return {
       id: `${dateMatch[1]}-${dateMatch[2]}-${index}-${title}`,
       title,
@@ -894,7 +908,8 @@ async function collectMessages(page) {
       time: dateMatch[2].padStart(5, "0"),
       sender,
       read: Boolean(readMatch),
-      readAt: String(readMatch?.[1] || "").trim()
+      readAt: String(readMatch?.[1] || "").trim(),
+      body: containerText
     };
   }).filter(Boolean)).catch(() => []);
   if (domMessages.length) {
@@ -1006,6 +1021,114 @@ async function extractPayrollRowsFromDom(page) {
   return [...new Map(rows.map((row) => [row.id, row])).values()];
 }
 
+async function readPayrollDocument(page, button) {
+  const context = page.context();
+  const responses = [];
+  const onResponse = (response) => {
+    const contentType = String(response.headers()["content-type"] || "").toLowerCase();
+    if (/pdf|octet-stream/.test(contentType) || /\.pdf(?:$|[?#])/i.test(response.url())) responses.push(response);
+  };
+  context.on("response", onResponse);
+  const popupPromise = context.waitForEvent("page", { timeout: 3500 }).catch(() => null);
+  const downloadPromise = page.waitForEvent("download", { timeout: 3500 }).catch(() => null);
+
+  let popup = null;
+  try {
+    await button.click({ noWaitAfter: true, timeout: 10000 });
+    [popup] = await Promise.all([popupPromise, downloadPromise.then(() => null)]);
+    const download = await downloadPromise;
+    if (download) {
+      const downloadPath = await download.path();
+      if (downloadPath) {
+        return {
+          mimeType: "application/pdf",
+          contentBase64: (await fs.readFile(downloadPath)).toString("base64")
+        };
+      }
+    }
+
+    if (popup) {
+      await popup.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+      await popup.waitForTimeout(700);
+      const popupUrl = popup.url();
+      if (/^https?:/i.test(popupUrl)) {
+        const response = await context.request.get(popupUrl, { timeout: 20000 }).catch(() => null);
+        if (response?.ok()) {
+          const contentType = String(response.headers()["content-type"] || "application/pdf").split(";")[0];
+          const bytes = await response.body();
+          if (bytes.length > 0 && !/text\/html/i.test(contentType)) {
+            return { mimeType: contentType, contentBase64: bytes.toString("base64") };
+          }
+        }
+      }
+      const embeddedUrl = await popup.locator("embed[src], iframe[src], object[data]").first()
+        .evaluate((node) => node.getAttribute("src") || node.getAttribute("data") || "")
+        .catch(() => "");
+      if (embeddedUrl && !/^blob:/i.test(embeddedUrl)) {
+        const absoluteUrl = new URL(embeddedUrl, popupUrl).href;
+        const response = await context.request.get(absoluteUrl, { timeout: 20000 }).catch(() => null);
+        if (response?.ok()) {
+          const bytes = await response.body();
+          if (bytes.length > 0) {
+            return {
+              mimeType: String(response.headers()["content-type"] || "application/pdf").split(";")[0],
+              contentBase64: bytes.toString("base64")
+            };
+          }
+        }
+      }
+    }
+
+    await page.waitForTimeout(500);
+    for (const response of responses.reverse()) {
+      const bytes = await response.body().catch(() => null);
+      if (bytes?.length) {
+        return {
+          mimeType: String(response.headers()["content-type"] || "application/pdf").split(";")[0],
+          contentBase64: bytes.toString("base64")
+        };
+      }
+    }
+    return null;
+  } finally {
+    context.off("response", onResponse);
+    if (popup && !popup.isClosed()) await popup.close().catch(() => {});
+  }
+}
+
+async function collectPayrollDocumentFiles(page, rows) {
+  const documents = [];
+  let rowIndex = 0;
+  for (const frame of page.frames()) {
+    const buttons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
+    const count = await buttons.count().catch(() => 0);
+    for (let index = 0; index < count; index += 1) {
+      const payroll = rows[rowIndex];
+      rowIndex += 1;
+      if (!payroll) continue;
+      const file = await readPayrollDocument(page, buttons.nth(index)).catch((error) => {
+        console.warn(`Nomina ${payroll.period}: no se pudo descargar. ${error instanceof Error ? error.message : "Error desconocido"}`);
+        return null;
+      });
+      if (!file?.contentBase64) continue;
+      documents.push({
+        documentId: payroll.id,
+        title: payroll.title,
+        mimeType: file.mimeType || "application/pdf",
+        contentBase64: file.contentBase64
+      });
+      console.log(`Nomina ${payroll.period}: documento disponible (${Math.round(file.contentBase64.length * 0.75 / 1024)} KB).`);
+    }
+  }
+  collectedPayrollDocuments = documents;
+  console.log(`Documentos de nomina leidos: ${documents.length}.`);
+}
+
+async function completePayrollResult(page, result) {
+  await collectPayrollDocumentFiles(page, result.rows || []);
+  return result;
+}
+
 async function findDoublesSelector(page) {
   return waitForFrameAndLocator(
     page,
@@ -1015,7 +1138,8 @@ async function findDoublesSelector(page) {
 }
 
 async function extractCheckedDoubles(frame, date) {
-  const selections = await frame.locator('input[type="checkbox"]:checked').evaluateAll((checkboxes) => checkboxes.map((input) => {
+  const holiday = await frame.locator("body").innerText().then((text) => /D[IÃ]A\s+FESTIVO/i.test(text)).catch(() => false);
+  const selections = await frame.locator('input[type="checkbox"]:checked').evaluateAll((checkboxes, isHoliday) => checkboxes.map((input) => {
     const row = input.closest("tr");
     const table = input.closest("table");
     const cell = input.closest("td,th");
@@ -1026,8 +1150,8 @@ async function extractCheckedDoubles(frame, date) {
     const journey = previousRows
       .map((headerRow) => headerRow.cells[cellIndex]?.innerText?.trim() || "")
       .find((value) => /^\d{2}\s*\/\s*\d{2}$/.test(value)) || "";
-    return { specialty, journey };
-  }).filter(Boolean));
+    return { specialty, journey, holiday: isHoliday };
+  }).filter(Boolean), holiday);
   return buildRequestedDoubles(date, selections);
 }
 
@@ -1076,13 +1200,13 @@ async function collectPayrolls(page) {
   );
   if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) {
     console.log(`Nominas leidas: ${alreadyLoaded.rows.length}.`);
-    return alreadyLoaded;
+    return completePayrollResult(page, alreadyLoaded);
   }
 
   const alreadyVisibleRows = await extractPayrollRowsFromDom(page);
   if (alreadyVisibleRows.length) {
     console.log(`Nominas leidas: ${alreadyVisibleRows.length}.`);
-    return { recognized: true, locked: false, rows: alreadyVisibleRows };
+    return completePayrollResult(page, { recognized: true, locked: false, rows: alreadyVisibleRows });
   }
 
   let securityControl = await waitForFrameAndLocator(
@@ -1096,7 +1220,7 @@ async function collectPayrolls(page) {
     const retryRows = await extractPayrollRowsFromDom(page);
     if (retryRows.length) {
       console.log(`Nominas leidas: ${retryRows.length}.`);
-      return { recognized: true, locked: false, rows: retryRows };
+      return completePayrollResult(page, { recognized: true, locked: false, rows: retryRows });
     }
     securityControl = await waitForFrameAndLocator(
       page,
@@ -1121,7 +1245,7 @@ async function collectPayrolls(page) {
   const domRows = await extractPayrollRowsFromDom(page);
   if (domRows.length) {
     console.log(`Nominas leidas: ${domRows.length}.`);
-    return { recognized: true, locked: false, rows: domRows };
+    return completePayrollResult(page, { recognized: true, locked: false, rows: domRows });
   }
 
   const invalidKey = await waitForFrameAndLocator(
@@ -1147,7 +1271,7 @@ async function collectPayrolls(page) {
   );
   if (result.recognized && !result.locked) {
     console.log(`Nominas leidas: ${result.rows?.length || 0}.`);
-    return result;
+    return completePayrollResult(page, result);
   }
   throw new Error("No se pudo leer la lista de Nómina electrónica.");
 }
@@ -1413,6 +1537,34 @@ async function upsertSupabase(snapshot) {
   }
 }
 
+async function upsertPayrollDocuments() {
+  if (!supabaseServiceRole || collectedPayrollDocuments.length === 0) return;
+  const channel = portalSnapshotChannel || "main";
+  for (const document of collectedPayrollDocuments) {
+    const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_documents?on_conflict=channel,chapa,document_id`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseServiceRole,
+        Authorization: `Bearer ${supabaseServiceRole}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify({
+        channel,
+        chapa: portalUser,
+        document_id: document.documentId,
+        title: document.title,
+        mime_type: document.mimeType,
+        content_base64: document.contentBase64,
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`Supabase documento HTTP ${response.status}: ${await response.text()}`);
+    }
+  }
+}
+
 async function getExistingSupabaseSnapshot() {
   if (!supabaseServiceRole || !portalUser) return null;
   try {
@@ -1602,6 +1754,7 @@ async function main() {
 
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
+    await upsertPayrollDocuments();
     await writeStatus({
       ok: true,
       chapa: portalUser,
