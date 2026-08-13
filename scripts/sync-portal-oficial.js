@@ -927,7 +927,58 @@ async function collectMessages(page) {
     console.log(`Mensajes leidos: ${result.rows?.length || 0}.`);
     return result;
   }
+
+  const routeCandidates = [
+    "User,ViewMessage,Home",
+    "User,ViewMessages,Home",
+    "User,ViewMsg,Home",
+    "User,Messages,Home"
+  ];
+  for (const route of routeCandidates) {
+    await page.goto(`https://portal.cpevalencia.com/#${route}`, { waitUntil: "domcontentloaded", timeout: 45000 });
+    await page.waitForTimeout(1200);
+    const candidate = await waitForParsedContent(
+      page,
+      parseMessagesHtml,
+      (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+      1800,
+      (parsed) => parsed.recognized && parsed.rows.length > 0
+    );
+    console.log(`[portal:mensajes-route] ${JSON.stringify({ route, hash: new URL(page.url()).hash, recognized: candidate.recognized, rows: candidate.rows?.length || 0 })}`);
+    if (candidate.recognized && candidate.rows.length) {
+      console.log(`Mensajes leidos: ${candidate.rows.length}.`);
+      return candidate;
+    }
+  }
   throw new Error("No se pudo leer la bandeja de mensajes.");
+}
+
+async function extractPayrollRowsFromDom(page) {
+  const titles = [];
+  for (const frame of page.frames()) {
+    const documentButtons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
+    const count = await documentButtons.count().catch(() => 0);
+    for (let index = 0; index < count; index += 1) {
+      const title = await documentButtons.nth(index).evaluate((button) => {
+        let node = button.parentElement;
+        const candidates = [];
+        for (let depth = 0; node && depth < 8; depth += 1, node = node.parentElement) {
+          const text = String(node.innerText || "").replace(/\s+/g, " ").trim();
+          if (/\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(text)) candidates.push(text);
+        }
+        return candidates.sort((a, b) => a.length - b.length)[0] || "";
+      }).catch(() => "");
+      if (title) titles.push(title);
+    }
+  }
+
+  const rows = titles.map((value) => {
+    const title = cleanText(value).replace(/^\d+\s*/, "").replace(/\s*Ver el documento\s*$/i, "");
+    const period = title.match(/\b((?:0[1-9]|1[0-2])\/\d{2})\b/)?.[1] || "";
+    const type = cleanText(title.replace(period, ""));
+    return period && type ? { id: `${period}-${type}`, title, type, period } : null;
+  }).filter(Boolean);
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
 }
 
 async function findDoublesSelector(page) {
@@ -1024,6 +1075,12 @@ async function collectPayrolls(page) {
   await page.waitForTimeout(1200);
   await portalSectionState(page, "nominas-after-security");
   await portalInteractiveStructure(page, "nominas-after-security");
+
+  const domRows = await extractPayrollRowsFromDom(page);
+  if (domRows.length) {
+    console.log(`Nominas leidas: ${domRows.length}.`);
+    return { recognized: true, locked: false, rows: domRows };
+  }
 
   const invalidKey = await waitForFrameAndLocator(
     page,
