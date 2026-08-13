@@ -1628,6 +1628,17 @@ select {
   font-weight: 700;
 }
 
+.portal-inline-status {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.96);
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .is-spinning {
   animation: spin 1s linear infinite;
 }

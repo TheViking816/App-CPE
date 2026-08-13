@@ -2133,6 +2133,10 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         </section>
       )}
 
+      {snapshot && !syncingPortal && !showCredentials && portalMessage.startsWith("No se pudo") && (
+        <p className="portal-inline-status" role="status">{portalMessage}</p>
+      )}
+
       {error && <p className="portal-warning">{error}</p>}
       {loading && !snapshot ? (
         <div className="portal-empty-state">
