@@ -947,8 +947,9 @@ async function collectMessages(page) {
       const message = recentMessages[index];
       if (!message.body && index < titleCount) {
         const beforeOpen = await page.locator("body").innerText().catch(() => "");
+        const popupPromise = page.context().waitForEvent("page", { timeout: 1500 }).catch(() => null);
         await titles.nth(index).click({ force: true, timeout: 3000 }).catch(() => {});
-        await page.waitForTimeout(180);
+        await page.waitForTimeout(350);
         const afterOpen = await page.locator("body").innerText().catch(() => "");
         message.body = extractAddedMessageText(beforeOpen, afterOpen, { title: message.title });
         if (!message.body) message.body = await page.locator(".newsSignature").nth(index).evaluate((signature, title) => {
@@ -972,6 +973,18 @@ async function collectMessages(page) {
             .replace(/^\d+\s+/, "")
             .trim();
         }, message.title).catch(() => "");
+        if (!message.body) {
+          const popup = await popupPromise;
+          if (popup) {
+            await popup.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
+            await popup.waitForTimeout(250);
+            const popupBody = await popup.locator(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='content']").first()
+              .innerText()
+              .catch(() => popup.locator("body").innerText().catch(() => ""));
+            message.body = cleanMessageBodyText(popupBody, { title: message.title });
+            await popup.close().catch(() => {});
+          }
+        }
       }
       hydrated.push(message);
     }
