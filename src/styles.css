@@ -1689,6 +1689,29 @@ select {
   line-height: 1.05;
 }
 
+.portal-history-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border: 1px solid #cad9e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--navy);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.portal-history-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .portal-sync-warning {
   display: flex;
   gap: 10px;

@@ -211,7 +211,7 @@ function getComplement(specialty = "", complementLookup = new Map()) {
 
 function getRateKey(dateString, shift, holidaySet) {
   const dayType = getDayType(dateString, holidaySet);
-  if (shift === "02-08" && isConfiguredHoliday(getAdjacentDay(dateString, -1), holidaySet)) {
+  if (shift === "02-08" && isHoliday(getAdjacentDay(dateString, -1), holidaySet)) {
     return isHoliday(dateString, holidaySet) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
   }
   if (shift === "20-02") {

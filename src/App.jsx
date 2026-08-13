@@ -111,7 +111,9 @@ function getPortalSyncEstimate(chapa) {
     const stored = JSON.parse(localStorage.getItem(PORTAL_SYNC_TIMINGS_KEY)) || {};
     const samples = Array.isArray(stored[normalizeChapa(chapa)]) ? stored[normalizeChapa(chapa)] : [];
     if (!samples.length) return DEFAULT_PORTAL_SYNC_SECONDS;
-    return Math.max(20, Math.round(samples.reduce((sum, value) => sum + Number(value || 0), 0) / samples.length));
+    const recentSamples = samples.slice(-3).map(Number).filter(Number.isFinite);
+    const average = recentSamples.reduce((sum, value) => sum + value, 0) / recentSamples.length;
+    return Math.min(60, Math.max(20, Math.round(average)));
   } catch {
     return DEFAULT_PORTAL_SYNC_SECONDS;
   }
@@ -1540,7 +1542,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
   );
 }
 
-function PortalResultPreview({ snapshot, session, onSessionChange }) {
+function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory, loadingHistory = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
@@ -1566,6 +1568,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const vacaciones = payload?.vacaciones || null;
   const nominas = payload?.nominas || null;
   const hasNominas = Boolean(nominas?.recognized && !nominas?.locked && (nominas?.rows || []).length > 0);
+  const needsSecurityKey = Boolean(payload?.primas?.locked || payload?.nominas?.locked);
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
   const [savedIrpfRate, setSavedIrpfRate] = useState(0);
@@ -1645,6 +1648,10 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
     () => summarizeAnnualPayroll(journalHistory, payrollConfig),
     [journalHistory, payrollConfig]
   );
+  const currentHistoryMonth = new Date().getMonth() + 1;
+  const hasFullCurrentYear = annualPayroll.months.filter((month) => (
+    Number(month.year) === new Date().getFullYear()
+  )).length >= currentHistoryMonth;
   const selectedJornales = useMemo(
     () => enrichedJornales.filter((item) => {
       if (selectedPeriod === "month") return true;
@@ -1697,8 +1704,10 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <section className="portal-sync-warning" role="status">
           <CircleAlert size={20} />
           <div>
-            <strong>Lectura parcial del portal</strong>
-            <span>Algunas consultas no respondieron y no se han podido cargar todos tus datos. Pulsa «Actualizar portal» para reintentarlo.</span>
+            <strong>{needsSecurityKey ? "Primas y nóminas protegidas" : "Lectura parcial del portal"}</strong>
+            <span>{needsSecurityKey
+              ? "Introduce y guarda tu clave de seguridad para consultar las primas y nóminas del portal."
+              : "Algunas consultas no respondieron y no se han podido cargar todos tus datos. Pulsa «Actualizar portal» para reintentarlo."}</span>
           </div>
         </section>
       )}
@@ -1831,6 +1840,17 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
                 </div>
               )}
             </section>
+          )}
+          {!hasFullCurrentYear && (
+            <button
+              className="portal-history-action"
+              type="button"
+              disabled={loadingHistory}
+              onClick={onLoadHistory}
+            >
+              <CalendarRange size={17} />
+              {loadingHistory ? "Cargando historial..." : "Cargar todo el año"}
+            </button>
           )}
           <section className="portal-irpf-card" aria-label="Calculo estimado de IRPF">
             <strong>Ajuste de IRPF</strong>
@@ -2117,7 +2137,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     };
   }, [portalJob?.jobId, portalJob?.status, session.token]);
 
-  const handlePortalSync = async () => {
+  const handlePortalSync = async ({ fullHistory = false } = {}) => {
     const passwordToUse = portalPassword.trim() || savedCredentials?.portalPassword || "";
     const securityKeyToUse = securityKey.trim() || savedCredentials?.securityKey || "";
     if (!passwordToUse && !autoSyncEnabled) {
@@ -2127,7 +2147,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     }
 
     setError("");
-    setPortalMessage("Lanzando lectura del portal...");
+    setPortalMessage(fullHistory ? "Lanzando la carga del historial anual..." : "Lanzando lectura del portal...");
     setSyncingPortal(true);
     setSyncProgress(3);
     setSyncElapsed(0);
@@ -2147,7 +2167,8 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       const job = await requestPortalSync({
         token: session.token,
         portalPassword: passwordToUse,
-        securityKey: securityKeyToUse
+        securityKey: securityKeyToUse,
+        fullHistory
       });
       if (rememberCredentials) {
         const nextCredentials = { portalPassword: passwordToUse, securityKey: securityKeyToUse };
@@ -2168,7 +2189,9 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         startedAt: syncStartedAtRef.current
       });
       setShowCredentials(false);
-      setPortalMessage("Lectura en curso. La app se actualizara automaticamente al terminar.");
+      setPortalMessage(fullHistory
+        ? "Cargando el historial anual. El resumen se añadirá al terminar."
+        : "Lectura en curso. La app se actualizara automaticamente al terminar.");
     } catch (requestError) {
       setPortalMessage("");
       setSyncingPortal(false);
@@ -2234,7 +2257,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
                 Desactivar auto
               </button>
             )}
-            <button type="button" disabled={syncingPortal} onClick={(savedCredentials || autoSyncEnabled) ? handlePortalSync : () => setShowCredentials(true)}>
+            <button type="button" disabled={syncingPortal} onClick={(savedCredentials || autoSyncEnabled) ? () => handlePortalSync() : () => setShowCredentials(true)}>
               <RefreshCw size={16} className={syncingPortal ? "is-spinning" : ""} />
               {syncingPortal ? "Actualizando" : "Actualizar portal"}
             </button>
@@ -2316,7 +2339,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
                 className="primary-button"
                 type="button"
                 disabled={syncingPortal || !portalPassword.trim()}
-                onClick={handlePortalSync}
+                onClick={() => handlePortalSync()}
               >
                 {syncingPortal ? "Leyendo portal..." : "Leer portal"}
               </button>
@@ -2343,7 +2366,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       )}
 
       {error && <p className="portal-warning">{error}</p>}
-      {syncingPortal && !snapshot ? (
+      {syncingPortal && !snapshot?.payload ? (
         <div className="portal-empty-state">
           <RefreshCw className="is-spinning" size={26} />
           <strong>Conectado con el portal</strong>
@@ -2356,7 +2379,13 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           <span>Buscando el ultimo sincronizado de tu chapa.</span>
         </div>
       ) : (
-        <PortalResultPreview snapshot={snapshot} session={session} onSessionChange={onSessionChange} />
+        <PortalResultPreview
+          snapshot={snapshot}
+          session={session}
+          onSessionChange={onSessionChange}
+          onLoadHistory={() => handlePortalSync({ fullHistory: true })}
+          loadingHistory={syncingPortal}
+        />
       )}
     </section>
   );

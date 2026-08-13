@@ -62,7 +62,8 @@ function runSync(job) {
         CPE_PORTAL_PASSWORD: job.portal_password,
         CPE_PORTAL_SECURITY_KEY: job.security_key || "",
         CPE_PORTAL_DOCUMENT_ID: job.document_id || "",
-        CPE_PORTAL_FAST_MODE: job.trigger_source === "scheduled" ? "false" : "true",
+        CPE_PORTAL_FAST_MODE: job.trigger_source === "scheduled" || job.request_kind === "history" ? "false" : "true",
+        CPE_PORTAL_REFRESH_HISTORY: job.request_kind === "history" ? "true" : (process.env.CPE_PORTAL_REFRESH_HISTORY || ""),
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled"
       }

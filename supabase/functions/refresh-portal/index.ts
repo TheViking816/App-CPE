@@ -76,7 +76,9 @@ Deno.serve(async (request) => {
   const portalPassword = typeof body.portalPassword === "string" ? body.portalPassword : "";
   const securityKey = typeof body.securityKey === "string" ? body.securityKey : "";
   const workflowRef = typeof body.ref === "string" && body.ref.trim() ? body.ref.trim() : defaultWorkflowRef;
-  const requestKind = body.requestKind === "document" ? "document" : "snapshot";
+  const requestKind = body.requestKind === "document"
+    ? "document"
+    : body.requestKind === "history" ? "history" : "snapshot";
   const documentId = typeof body.documentId === "string" ? body.documentId.trim() : "";
 
   if (!token) {
@@ -104,6 +106,16 @@ Deno.serve(async (request) => {
 
   if (error || !data?.jobId) {
     return jsonResponse({ ok: false, error: error?.message ?? "No se pudo crear la sincronizacion" }, 400);
+  }
+
+  if (requestKind === "history") {
+    const { error: historyError } = await supabase
+      .from("app_cpe_portal_sync_jobs")
+      .update({ request_kind: "history", message: "Preparando historial anual" })
+      .eq("id", data.jobId);
+    if (historyError) {
+      return jsonResponse({ ok: false, error: historyError.message }, 400);
+    }
   }
 
   try {

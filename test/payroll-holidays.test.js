@@ -47,6 +47,15 @@ test("el 20-02 del domingo 16 hacia el lunes es festivo a laborable", () => {
   assert.equal(payroll.base, 320.77);
 });
 
+test("el 02-08 del lunes tras domingo es festivo a laborable", () => {
+  const payroll = calculate(10, "DE 02 A 08 H.");
+
+  assert.equal(payroll.rateKey, "FESTIVO_TO_LABORABLE");
+  assert.equal(payroll.base, 261.16);
+  assert.equal(payroll.complement, 7.38);
+  assert.equal(payroll.total, 268.54);
+});
+
 test("los festivos configurados sustituyen el calendario local", () => {
   const payroll = enrichJornales([{
     dia: "13",

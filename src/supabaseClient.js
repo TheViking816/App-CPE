@@ -303,7 +303,7 @@ export async function trackPortalOpen({ token }) {
   return data;
 }
 
-export async function requestPortalSync({ token, portalPassword, securityKey = "" }) {
+export async function requestPortalSync({ token, portalPassword, securityKey = "", fullHistory = false }) {
   if (!supabase || !token) return null;
 
   const { data, error } = await supabase.functions.invoke("refresh-portal", {
@@ -311,6 +311,7 @@ export async function requestPortalSync({ token, portalPassword, securityKey = "
       token,
       portalPassword,
       securityKey,
+      requestKind: fullHistory ? "history" : "snapshot",
       ref: syncWorkflowRef
     }
   });

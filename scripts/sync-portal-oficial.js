@@ -1859,7 +1859,17 @@ async function main() {
       };
       await upsertSupabase(latestProgressSnapshot);
     };
-    await publishProgress("jornales", progressPayload.jornales || { monthLabel: "", rows: [] }, "Sesion iniciada; cargando mensajes");
+    await publishProgress("jornales", progressPayload.jornales || { monthLabel: "", rows: [] }, "Sesion iniciada; cargando jornales");
+    const jornales = await readSection(
+      "jornales",
+      () => collectJornales(page, existingSnapshot?.payload?.jornales, {
+        currentOnly: fastMode
+      }),
+      existingSnapshot?.payload?.jornales,
+      { monthLabel: "", rows: [] },
+      hasJournalData
+    );
+    await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
     const mensajes = await readOptionalSection(
       "mensajes",
       () => collectMessages(page),
@@ -1871,16 +1881,6 @@ async function main() {
     );
     mensajes.rows = limitRecentPortalRows(mensajes.rows, messageLimit);
     await publishProgress("mensajes", mensajes, "Ultimos mensajes cargados");
-    const jornales = await readSection(
-      "jornales",
-      () => collectJornales(page, existingSnapshot?.payload?.jornales, {
-        currentOnly: fastMode
-      }),
-      existingSnapshot?.payload?.jornales,
-      { monthLabel: "", rows: [] },
-      hasJournalData
-    );
-    await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
