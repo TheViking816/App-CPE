@@ -69,6 +69,7 @@ import {
   trackPortalOpen,
   trackUsageEvent,
   updateUserIrpf,
+  updateUserPassword,
   updateUserSpecialties
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
@@ -973,6 +974,112 @@ function PortalJornalDetailModal({ jornal, onClose }) {
   );
 }
 
+function ChangePasswordModal({ onClose, onSave }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError("");
+    if (!currentPassword) {
+      setError("Introduce tu contraseña actual.");
+      return;
+    }
+    if (newPassword.length < 4) {
+      setError("La nueva contraseña debe tener al menos 4 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmation) {
+      setError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await onSave({ currentPassword, newPassword });
+      setSaved(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmation("");
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo cambiar la contraseña.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="inbox-modal password-modal" role="dialog" aria-modal="true" aria-label="Cambiar contraseña">
+        <header>
+          <span><Lock size={20} /></span>
+          <div>
+            <small>Mi cuenta</small>
+            <h2>Cambiar contraseña</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
+        </header>
+
+        {saved ? (
+          <div className="password-change-success">
+            <Check size={24} />
+            <strong>Contraseña actualizada</strong>
+            <span>Ya puedes utilizar la nueva contraseña la próxima vez que entres.</span>
+            <button className="primary-button" type="button" onClick={onClose}>Cerrar</button>
+          </div>
+        ) : (
+          <form className="password-change-form" onSubmit={submit}>
+            <label>
+              <span>Contraseña actual</span>
+              <input
+                autoFocus
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Nueva contraseña</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Repite la nueva contraseña</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+              />
+            </label>
+            {error && <p className="form-error">{error}</p>}
+            <button className="primary-button" type="submit" disabled={loading}>
+              {loading ? "Guardando..." : "Guardar nueva contraseña"}
+            </button>
+          </form>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function PortalMonthDetailModal({ month, irpfRate, onClose }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
@@ -1085,7 +1192,8 @@ function HomePanel({
   availableSpecialties,
   activeSpecialtyId,
   onSpecialtyChange,
-  onLoadPortal
+  onLoadPortal,
+  onPasswordChange
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
@@ -1179,6 +1287,12 @@ function HomePanel({
       )}
 
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
+
+      <button className="home-password-button" type="button" onClick={onPasswordChange}>
+        <span><Lock size={18} /></span>
+        <span><small>Mi cuenta</small><strong>Cambiar contraseña</strong></span>
+        <ChevronRight size={19} />
+      </button>
 
       {notice && <p className="inline-notice">{notice}</p>}
     </section>
@@ -2553,6 +2667,7 @@ export function App() {
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
@@ -2759,6 +2874,18 @@ export function App() {
     navigateToTab("inicio");
   };
 
+  const savePassword = async ({ currentPassword, newPassword }) => {
+    const response = await updateUserPassword({
+      token: session.token,
+      currentPassword,
+      newPassword
+    });
+    const nextSession = response || session;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
+    trackUsageEvent({ eventType: "password_change", chapa: session.chapa });
+  };
+
   if (!session) {
     return (
       <div className="login-screen">
@@ -2804,6 +2931,7 @@ export function App() {
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
             onLoadPortal={() => navigateToTab("portal")}
+            onPasswordChange={() => setPasswordOpen(true)}
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
@@ -2821,6 +2949,7 @@ export function App() {
         <ContactFooter />
       </main>
       {inboxOpen && <InboxModal messages={portalSnapshot?.payload?.mensajes} onClose={() => setInboxOpen(false)} />}
+      {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} onSave={savePassword} />}
       <BottomNav activeTab={activeTab} onChange={navigateToTab} />
     </div>
   );

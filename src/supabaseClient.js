@@ -76,6 +76,19 @@ export async function updateUserSpecialties({ token, specialties }) {
   return data;
 }
 
+export async function updateUserPassword({ token, currentPassword, newPassword }) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_change_password", {
+    p_token: token,
+    p_current_password: currentPassword,
+    p_new_password: newPassword
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateUserIrpf({ token, irpfRate }) {
   if (!supabase) return null;
 
