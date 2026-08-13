@@ -943,12 +943,36 @@ async function collectMessages(page) {
     return result;
   }
 
+  const directPage = await page.context().newPage();
+  try {
+    await directPage.goto("https://portal.cpevalencia.com/ASP/client.asp", { waitUntil: "domcontentloaded", timeout: 45000 });
+    await directPage.waitForTimeout(1200);
+    const directResult = await waitForParsedContent(
+      directPage,
+      parseMessagesHtml,
+      (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+      5000,
+      (parsed) => parsed.recognized && parsed.rows.length > 0
+    );
+    console.log(`[portal:mensajes-direct] ${JSON.stringify({ location: safePortalLocation(directPage.url()), recognized: directResult.recognized, rows: directResult.rows?.length || 0 })}`);
+    if (directResult.recognized && directResult.rows.length) {
+      console.log(`Mensajes leidos: ${directResult.rows.length}.`);
+      return directResult;
+    }
+  } finally {
+    await directPage.close();
+  }
+
   throw new Error("No se pudo leer la bandeja de mensajes.");
 }
 
 async function extractPayrollRowsFromDom(page) {
   const titles = [];
   for (const frame of page.frames()) {
+    const bodyText = await frame.locator("body").innerText().catch(() => "");
+    titles.push(...String(bodyText).split(/\r?\n/).map(cleanText).filter((line) => (
+      /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(line) && line.length <= 120
+    )));
     const visiblePeriods = await frame.locator("body *:visible").evaluateAll((nodes) => nodes
       .filter((node) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(node.textContent || ""))
       .filter((node) => ![...node.children].some((child) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(child.textContent || "")))
