@@ -913,8 +913,38 @@ async function collectMessages(page) {
     };
   }).filter(Boolean)).catch(() => []);
   if (domMessages.length) {
-    console.log(`Mensajes leidos: ${domMessages.length}.`);
-    return { recognized: true, rows: domMessages };
+    const titles = page.locator(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']");
+    const titleCount = await titles.count().catch(() => 0);
+    const hydrated = [];
+    for (let index = 0; index < domMessages.length; index += 1) {
+      const message = domMessages[index];
+      if (!message.body && index < titleCount) {
+        await titles.nth(index).click({ force: true, timeout: 3000 }).catch(() => {});
+        await page.waitForTimeout(100);
+        message.body = await page.locator(".newsSignature").nth(index).evaluate((signature, title) => {
+          const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
+          let container = signature.parentElement;
+          for (let depth = 0; container && depth < 7; depth += 1, container = container.parentElement) {
+            const hasTitle = [...container.querySelectorAll(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']")]
+              .some((node) => String(node.textContent || "").replace(/\s+/g, " ").trim() === title);
+            if (hasTitle) break;
+          }
+          const bodyNode = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
+          return String(bodyNode?.textContent || container?.textContent || "")
+            .replace(title, "")
+            .replace(signatureText, "")
+            .replace(/\bEliminar\b/gi, "")
+            .replace(/^\s*\d+\s*/, "")
+            .replace(/[ \t]+/g, " ")
+            .replace(/\n\s+/g, "\n")
+            .trim();
+        }, message.title).catch(() => "");
+      }
+      hydrated.push(message);
+    }
+    const uniqueMessages = [...new Map(hydrated.map((message) => [message.id, message])).values()];
+    console.log(`Mensajes leidos: ${uniqueMessages.length} (${uniqueMessages.filter((message) => message.body).length} con contenido).`);
+    return { recognized: true, rows: uniqueMessages };
   }
   const result = await waitForParsedContent(
     page,
@@ -1099,13 +1129,15 @@ async function readPayrollDocument(page, button) {
 async function collectPayrollDocumentFiles(page, rows) {
   const documents = [];
   let rowIndex = 0;
-  for (const frame of page.frames()) {
-    const buttons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
+  for (const initialFrame of page.frames()) {
+    let frame = initialFrame;
+    let buttons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
     const count = await buttons.count().catch(() => 0);
     for (let index = 0; index < count; index += 1) {
       const payroll = rows[rowIndex];
       rowIndex += 1;
       if (!payroll) continue;
+      buttons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
       const file = await readPayrollDocument(page, buttons.nth(index)).catch((error) => {
         console.warn(`Nomina ${payroll.period}: no se pudo descargar. ${error instanceof Error ? error.message : "Error desconocido"}`);
         return null;
@@ -1118,6 +1150,16 @@ async function collectPayrollDocumentFiles(page, rows) {
         contentBase64: file.contentBase64
       });
       console.log(`Nomina ${payroll.period}: documento disponible (${Math.round(file.contentBase64.length * 0.75 / 1024)} KB).`);
+      if (index + 1 < count && await buttons.count().catch(() => 0) === 0) {
+        await frame.goBack({ waitUntil: "domcontentloaded", timeout: 10000 }).catch(() => null);
+        await page.waitForTimeout(500);
+        const restored = await waitForFrameAndLocator(
+          page,
+          (candidate) => candidate.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible'),
+          8000
+        );
+        if (restored) frame = restored.frame;
+      }
     }
   }
   collectedPayrollDocuments = documents;
