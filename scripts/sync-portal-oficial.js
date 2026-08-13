@@ -1541,18 +1541,18 @@ async function main() {
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
       hasVacationData
     );
-    const nominas = await readOptionalSection(
-      "nomina electronica",
-      () => collectPayrolls(page),
-      existingSnapshot?.payload?.nominas,
-      { recognized: false, locked: !portalSecurityKey, rows: [] },
-      hasVacationData
-    );
     const mensajes = await readOptionalSection(
       "mensajes",
       () => collectMessages(page),
       existingSnapshot?.payload?.mensajes,
       { recognized: false, rows: [] },
+      hasVacationData
+    );
+    const nominas = await readOptionalSection(
+      "nomina electronica",
+      () => collectPayrolls(page),
+      existingSnapshot?.payload?.nominas,
+      { recognized: false, locked: !portalSecurityKey, rows: [] },
       hasVacationData
     );
     const dobles = await readOptionalSection(
