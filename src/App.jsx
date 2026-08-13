@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import {
   BriefcaseBusiness,
   Building2,
@@ -461,6 +462,7 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
           <UserRound size={18} />
           <input
             inputMode="numeric"
+            autoComplete="username"
             placeholder="Ej. 72683"
             value={chapa}
             onChange={(event) => setChapa(event.target.value.replace(/\D/g, "").slice(0, 5))}
@@ -1008,7 +1010,7 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
     setDownloading(true);
     setDownloadError("");
     try {
-      const { downloadMonthlyPayrollPdf } = await import("./monthlyPayrollPdf.js");
+      const { downloadMonthlyPayrollPdf } = await loadMonthlyPayrollPdfModule();
       downloadMonthlyPayrollPdf(month, irpfRate);
     } catch (error) {
       console.error("No se pudo generar el PDF mensual:", error);
