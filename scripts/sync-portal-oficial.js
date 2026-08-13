@@ -32,6 +32,8 @@ const portalStorageStatePath = String(process.env.CPE_PORTAL_STORAGE_STATE_PATH 
 const reuseBrowserContext = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REUSE_CONTEXT || "");
 const portalContextStore = globalThis.__cpePortalContextStore
   || (globalThis.__cpePortalContextStore = new Map());
+const JORNALES_SELECTOR_URL = "https://portal.cpevalencia.com/Noray/SelDatJor1.asp";
+const ASSIGNMENTS_URL = "https://portal.cpevalencia.com/Noray/DondeVoy.asp";
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -542,14 +544,27 @@ async function waitForPortalAuthState(page, timeout = 20000) {
   return state;
 }
 
-async function login(page, attempt = 0) {
+async function hasReusablePortalSession(context) {
+  try {
+    const response = await context.request.get(ASSIGNMENTS_URL, { timeout: 5000 });
+    if (!response.ok()) return false;
+    const html = await response.text();
+    const normalized = cleanText(html).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (/Just a moment|Performing security verification|cf-chl-|Cloudflare/i.test(normalized)) return false;
+    if (/Iniciar sesion|title=["']Usuario["']|type=["']password["']/i.test(normalized)) return false;
+    return parseAssignments(html).recognized || /Finalizar sesion|Orden Servicio|Donde voy/i.test(normalized);
+  } catch {
+    return false;
+  }
+}
+
+async function login(page) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
   const entryState = await waitForPortalEntry(page);
   if (entryState === "authenticated") return;
   if (entryState === "security_challenge") {
-    if (attempt < 1) return login(page, attempt + 1);
     throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
   }
 
@@ -581,7 +596,6 @@ async function login(page, attempt = 0) {
   if (state === "rejected") {
     throw new Error("Usuario o contrasena del portal oficial incorrectos.");
   }
-  if (attempt < 1) return login(page, attempt + 1);
   throw new Error("El portal oficial no confirmo el inicio de sesion a tiempo. Vuelve a intentarlo.");
 }
 
@@ -733,7 +747,6 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
 }
 
 async function collectJornales(page, previous = null, { currentOnly = false } = {}) {
-  await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
   const now = new Date();
   const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
   const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
@@ -753,13 +766,11 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
     : refreshFullHistory
       ? availableMonths
       : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month));
-  const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
-  const selectorUrl = selectorFrame.url();
   const periodWarnings = [];
 
   for (const month of monthsToRead) {
     try {
-      const period = await readJornalesPeriod(page.context(), selectorUrl, month, year);
+      const period = await readJornalesPeriod(page.context(), JORNALES_SELECTOR_URL, month, year);
       historyByMonth.set(month, period);
       console.log(`Jornales ${period.monthLabel}: ${period.rows.length}.`);
     } catch (error) {
@@ -896,7 +907,7 @@ async function collectAssignments(page, previousResult, { enrichDetails = true }
     await assignmentNavigationState(page, "direct-before");
     result = await readDirectPortalPage(
       page.context(),
-      "https://portal.cpevalencia.com/Noray/DondeVoy.asp",
+      ASSIGNMENTS_URL,
       parseAssignments,
       (parsed) => parsed.rows?.length || 0,
       8000
@@ -1179,7 +1190,9 @@ export async function main() {
   const page = context.pages()[0] || await context.newPage();
 
   try {
-    await login(page);
+    const sessionIsActive = reusedContext && await hasReusablePortalSession(context);
+    if (sessionIsActive) console.log(`Sesion del portal validada directamente para ${portalUser}.`);
+    else await login(page);
     if (portalStorageStatePath) {
       await fs.mkdir(path.dirname(portalStorageStatePath), { recursive: true });
       await context.storageState({ path: portalStorageStatePath });

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { chromium } from "playwright";
 
@@ -19,6 +20,8 @@ let browserServer = null;
 let sessionRunner = null;
 let activeJobId = null;
 const requestedJobs = [];
+const requestedBySession = new Map();
+const sessionByJob = new Map();
 const startedAt = new Date().toISOString();
 const port = Math.max(1, Number(process.env.PORT || 8080));
 
@@ -72,6 +75,16 @@ async function createSyncJob({ token, portalPassword = "", securityKey = "" }) {
     ? { p_token: token, p_portal_password: portalPassword, p_security_key: securityKey }
     : { p_token: token };
   return request(`/rest/v1/rpc/${rpc}`, { method: "POST", body: JSON.stringify(body) });
+}
+
+function sessionKey(token) {
+  return createHash("sha256").update(String(token)).digest("hex");
+}
+
+function releaseRequestedJob(jobId) {
+  const key = sessionByJob.get(jobId);
+  if (key && requestedBySession.get(key) === jobId) requestedBySession.delete(key);
+  sessionByJob.delete(jobId);
 }
 
 function corsHeaders(origin) {
@@ -133,6 +146,7 @@ function runJob(jobId, wsEndpoint) {
       if (message?.jobId !== jobId) return;
       runner.off("message", onMessage);
       console.log(`[portal-worker] ${jobId} finalizo con codigo ${message.ok ? 0 : 1}`);
+      releaseRequestedJob(jobId);
       activeJobId = null;
       resolve();
     };
@@ -140,6 +154,7 @@ function runJob(jobId, wsEndpoint) {
     runner.once("error", (error) => {
       console.error(`[portal-worker] No se pudo iniciar ${jobId}:`, error);
       runner.off("message", onMessage);
+      releaseRequestedJob(jobId);
       activeJobId = null;
       resolve();
     });
@@ -174,8 +189,17 @@ async function main() {
       try {
         const body = await readJson(incoming);
         if (!body.token) throw new Error("Sesion no valida");
+        const key = sessionKey(body.token);
+        const existingJobId = requestedBySession.get(key);
+        if (existingJobId) {
+          response.writeHead(202, headers);
+          response.end(JSON.stringify({ jobId: existingJobId, executionMode: "persistent-test", triggered: false, reused: true }));
+          return;
+        }
         const job = await createSyncJob(body);
         if (!job?.jobId) throw new Error("No se pudo crear la sincronizacion");
+        requestedBySession.set(key, job.jobId);
+        sessionByJob.set(job.jobId, key);
         requestedJobs.push(job.jobId);
         response.writeHead(202, headers);
         response.end(JSON.stringify({ ...job, executionMode: "persistent-test", triggered: true }));
@@ -195,7 +219,10 @@ async function main() {
         ? await claimJob(requestedJobId)
         : pollGlobalQueue ? await claimNextJob() : null;
       if (jobId) await runJob(jobId, wsEndpoint);
-      else await new Promise((resolve) => setTimeout(resolve, pollMs));
+      else {
+        if (requestedJobId) releaseRequestedJob(requestedJobId);
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+      }
     } catch (error) {
       console.error("[portal-worker]", error);
       await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
