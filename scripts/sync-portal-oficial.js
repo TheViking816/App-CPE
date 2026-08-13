@@ -932,16 +932,17 @@ async function collectMessages(page) {
     "User,ViewMessage,Home",
     "User,ViewMessages,Home",
     "User,ViewMsg,Home",
-    "User,Messages,Home"
+    "User,Messages,Home",
+    ...Array.from({ length: 30 }, (_, index) => `User,ViewNoray,${index + 1}`)
   ];
   for (const route of routeCandidates) {
     await page.goto(`https://portal.cpevalencia.com/#${route}`, { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(route.startsWith("User,ViewNoray,") ? 700 : 1200);
     const candidate = await waitForParsedContent(
       page,
       parseMessagesHtml,
       (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
-      1800,
+      route.startsWith("User,ViewNoray,") ? 500 : 1800,
       (parsed) => parsed.recognized && parsed.rows.length > 0
     );
     console.log(`[portal:mensajes-route] ${JSON.stringify({ route, hash: new URL(page.url()).hash, recognized: candidate.recognized, rows: candidate.rows?.length || 0 })}`);
@@ -956,6 +957,13 @@ async function collectMessages(page) {
 async function extractPayrollRowsFromDom(page) {
   const titles = [];
   for (const frame of page.frames()) {
+    const visiblePeriods = await frame.locator("body *:visible").evaluateAll((nodes) => nodes
+      .filter((node) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(node.textContent || ""))
+      .filter((node) => ![...node.children].some((child) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(child.textContent || "")))
+      .map((node) => String(node.textContent || "").replace(/\s+/g, " ").trim())
+      .filter((text) => text.length <= 120));
+    titles.push(...visiblePeriods);
+
     const documentButtons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
     const count = await documentButtons.count().catch(() => 0);
     for (let index = 0; index < count; index += 1) {
