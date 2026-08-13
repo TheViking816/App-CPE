@@ -615,7 +615,14 @@ function PayrollDocumentModal({ payroll, session, onClose }) {
         </header>
         {!documentUrl && !error && <p className="document-modal-status"><RefreshCw className="is-spinning" size={20} /> Abriendo documento seguro...</p>}
         {error && <p className="document-modal-status is-error"><CircleAlert size={20} /> {error}</p>}
-        {documentUrl && <iframe src={documentUrl} title={payroll.title} />}
+        {documentUrl && (
+          <div className="document-modal-download">
+            <FileLock2 size={42} />
+            <strong>{payroll.title}</strong>
+            <span>Documento PDF protegido</span>
+            <a href={documentUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Abrir nómina</a>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -1660,14 +1667,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
 
       {(jornales.length > 0 || descansos || vacaciones?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
-          {nominas?.recognized && (
-            <button className="is-nominas" type="button" onClick={() => {
-              setNominasExpanded(true);
-              requestAnimationFrame(() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
-            }}>
-              <FileLock2 size={19} /><span>Nóminas</span><ChevronDown size={17} />
-            </button>
-          )}
           {jornales.length > 0 && (
             <button
               type="button"
@@ -1690,6 +1689,14 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
           {vacaciones?.recognized && (
             <button className="is-vacaciones" type="button" onClick={() => vacacionesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <Sun size={19} /><span>Vacaciones</span><ChevronDown size={17} />
+            </button>
+          )}
+          {nominas?.recognized && (
+            <button className="is-nominas" type="button" onClick={() => {
+              setNominasExpanded(true);
+              requestAnimationFrame(() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }}>
+              <FileLock2 size={19} /><span>Nóminas</span><ChevronDown size={17} />
             </button>
           )}
         </nav>

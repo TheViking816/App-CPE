@@ -11,6 +11,7 @@ import {
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 import {
   buildRequestedDoubles,
+  cleanMessageBodyText,
   currentMadridMonth,
   parseMessagesHtml,
   parsePayrollsHtml
@@ -875,6 +876,20 @@ async function collectMessages(page) {
     }
   }
   const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
+    const extractBody = (container, title, signatureText) => {
+      const explicitBody = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
+      const visibleText = String(explicitBody?.innerText || explicitBody?.textContent || container?.innerText || container?.textContent || "");
+      return visibleText
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\s+/g, " ").trim())
+        .filter(Boolean)
+        .filter((line) => line !== title && line !== signatureText)
+        .filter((line) => !/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b.*(?:CPEV|LE[IÍ]DO)/i.test(line))
+        .filter((line) => !/^(?:Eliminar|Borrar)$/i.test(line))
+        .join("\n")
+        .replace(/^\d+\s+/, "")
+        .trim();
+    };
     const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
     const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
     let container = signature.parentElement;
@@ -892,15 +907,7 @@ async function collectMessages(page) {
     const dateParts = dateMatch[1].split("/");
     const fullYear = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
     const normalizedDate = `${dateParts[0].padStart(2, "0")}/${dateParts[1].padStart(2, "0")}/${fullYear}`;
-    const bodyNode = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
-    const containerText = String(bodyNode?.textContent || container?.textContent || "")
-      .replace(title, "")
-      .replace(signatureText, "")
-      .replace(/\bEliminar\b/gi, "")
-      .replace(/^\s*\d+\s*/, "")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n\s+/g, "\n")
-      .trim();
+    const containerText = extractBody(container, title, signatureText);
     return {
       id: `${dateMatch[1]}-${dateMatch[2]}-${index}-${title}`,
       title,
@@ -930,17 +937,23 @@ async function collectMessages(page) {
             if (hasTitle) break;
           }
           const bodyNode = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
-          return String(bodyNode?.textContent || container?.textContent || "")
-            .replace(title, "")
-            .replace(signatureText, "")
-            .replace(/\bEliminar\b/gi, "")
-            .replace(/^\s*\d+\s*/, "")
-            .replace(/[ \t]+/g, " ")
-            .replace(/\n\s+/g, "\n")
+          const visibleText = String(bodyNode?.innerText || bodyNode?.textContent || container?.innerText || container?.textContent || "");
+          return visibleText
+            .split(/\r?\n/)
+            .map((line) => line.replace(/\s+/g, " ").trim())
+            .filter(Boolean)
+            .filter((line) => line !== title && line !== signatureText)
+            .filter((line) => !/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b.*(?:CPEV|LE[IÍ]DO)/i.test(line))
+            .filter((line) => !/^(?:Eliminar|Borrar)$/i.test(line))
+            .join("\n")
+            .replace(/^\d+\s+/, "")
             .trim();
         }, message.title).catch(() => "");
       }
       hydrated.push(message);
+    }
+    for (const message of hydrated) {
+      message.body = cleanMessageBodyText(message.body, { title: message.title });
     }
     const completeMessages = hydrated.filter((message) => message.body);
     const uniqueMessages = [...new Map((completeMessages.length ? completeMessages : hydrated).map((message) => [message.id, message])).values()];

@@ -2,10 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildRequestedDoubles,
+  cleanMessageBodyText,
   currentMadridMonth,
   parseMessagesHtml,
   parsePayrollsHtml
 } from "../scripts/portal-messages-doubles.js";
+
+test("cleanMessageBodyText keeps the expanded message and removes portal metadata", () => {
+  const body = cleanMessageBodyText(`
+    24/02/26 9:02 - CPEV, Departamento de Recursos Humanos. Leído el 24/02/26 11:55
+    RESPUESTA ADICIONAL SOLICITO E26/04619 (CARNÉ DE CAMIÓN)
+    Tu solicitud ha sido revisada. Puedes consultar la respuesta adjunta.
+    Eliminar
+  `, {
+    title: "RESPUESTA ADICIONAL SOLICITO E26/04619 (CARNÉ DE CAMIÓN)"
+  });
+
+  assert.equal(body, "Tu solicitud ha sido revisada. Puedes consultar la respuesta adjunta.");
+});
 
 test("parseMessagesHtml reads the visible portal inbox without opening messages", () => {
   const parsed = parseMessagesHtml(`

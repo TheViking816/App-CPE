@@ -39,6 +39,19 @@ export function normalizePortalDate(value = "") {
   return `${match[1].padStart(2, "0")}/${match[2].padStart(2, "0")}/${year}`;
 }
 
+export function cleanMessageBodyText(value = "", { title = "", signature = "" } = {}) {
+  return String(value)
+    .split(/\r?\n/)
+    .map(cleanText)
+    .filter(Boolean)
+    .filter((line) => line !== cleanText(title) && line !== cleanText(signature))
+    .filter((line) => !/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b.*(?:CPEV|LE[IÍ]DO)/i.test(line))
+    .filter((line) => !/^(?:Eliminar|Borrar)$/i.test(line))
+    .join("\n")
+    .replace(/^\d+\s+/, "")
+    .trim();
+}
+
 export function parseMessagesHtml(html = "") {
   const pageText = textFromHtml(html);
   const recognized = /Consultas\s+Mensajes|\bMensajes\b/i.test(pageText);
