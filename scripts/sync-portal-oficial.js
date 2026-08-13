@@ -909,7 +909,6 @@ async function collectMessages(page) {
       5000,
       (parsed) => parsed.recognized && parsed.rows.length > 0
     );
-    console.log(`[portal:mensajes-direct] ${JSON.stringify({ location: safePortalLocation(directPage.url()), recognized: directResult.recognized, rows: directResult.rows?.length || 0 })}`);
     if (directResult.recognized && directResult.rows.length) {
       console.log(`Mensajes leidos: ${directResult.rows.length}.`);
       return directResult;
