@@ -14,9 +14,11 @@ import {
   cleanMessageBodyText,
   currentMadridMonth,
   extractAddedMessageText,
+  limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
-  prioritizePortalMonths
+  prioritizePortalMonths,
+  upcomingMadridDates
 } from "./portal-messages-doubles.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +38,8 @@ const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
+const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
+const messageLimit = 5;
 let collectedPayrollDocuments = [];
 
 function resolveSupabaseUrl(value) {
@@ -935,11 +939,12 @@ async function collectMessages(page) {
     };
   }).filter(Boolean)).catch(() => []);
   if (domMessages.length) {
+    const recentMessages = limitRecentPortalRows(domMessages, messageLimit);
     const titles = page.locator(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']");
     const titleCount = await titles.count().catch(() => 0);
     const hydrated = [];
-    for (let index = 0; index < domMessages.length; index += 1) {
-      const message = domMessages[index];
+    for (let index = 0; index < recentMessages.length; index += 1) {
+      const message = recentMessages[index];
       if (!message.body && index < titleCount) {
         const beforeOpen = await page.locator("body").innerText().catch(() => "");
         await titles.nth(index).click({ force: true, timeout: 3000 }).catch(() => {});
@@ -976,7 +981,7 @@ async function collectMessages(page) {
     const completeMessages = hydrated.filter((message) => message.body);
     const uniqueMessages = [...new Map((completeMessages.length ? completeMessages : hydrated).map((message) => [message.id, message])).values()];
     console.log(`Mensajes leidos: ${uniqueMessages.length} (${uniqueMessages.filter((message) => message.body).length} con contenido).`);
-    return { recognized: true, rows: uniqueMessages };
+    return { recognized: true, rows: limitRecentPortalRows(uniqueMessages, messageLimit) };
   }
   const result = await waitForParsedContent(
     page,
@@ -987,7 +992,7 @@ async function collectMessages(page) {
   );
   if (result.recognized && result.rows.length) {
     console.log(`Mensajes leidos: ${result.rows?.length || 0}.`);
-    return result;
+    return { ...result, rows: limitRecentPortalRows(result.rows, messageLimit) };
   }
 
   for (const candidatePage of page.context().pages()) {
@@ -1001,7 +1006,7 @@ async function collectMessages(page) {
     );
     if (popupResult.recognized && popupResult.rows.length) {
       console.log(`Mensajes leidos: ${popupResult.rows.length}.`);
-      return popupResult;
+      return { ...popupResult, rows: limitRecentPortalRows(popupResult.rows, messageLimit) };
     }
   }
 
@@ -1018,7 +1023,7 @@ async function collectMessages(page) {
     );
     if (directResult.recognized && directResult.rows.length) {
       console.log(`Mensajes leidos: ${directResult.rows.length}.`);
-      return directResult;
+      return { ...directResult, rows: limitRecentPortalRows(directResult.rows, messageLimit) };
     }
   } finally {
     await directPage.close();
@@ -1257,7 +1262,7 @@ async function collectRequestedDoubles(page) {
 
   const month = currentMadridMonth();
   const rows = [];
-  for (const date of month.dates) {
+  for (const date of upcomingMadridDates(month)) {
     const { frame, locator: dateInput } = selector;
     const selectorUrl = frame.url();
     await dateInput.fill(date);
@@ -1570,9 +1575,9 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
 
   const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
   const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
-  const monthsToRead = (refreshFullHistory
+  const monthsToRead = (fastMode ? [] : (refreshFullHistory
     ? availableMonths
-    : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month)))
+    : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month))))
     .filter((month) => month !== parsedCurrentMonth);
   const selectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp";
   const periodWarnings = [];
@@ -1703,6 +1708,7 @@ async function main() {
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
   const page = context.pages()[0] || await context.newPage();
+  let latestProgressSnapshot = null;
 
   try {
     await login(page);
@@ -1757,10 +1763,28 @@ async function main() {
     );
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
+    const progressPayload = { ...(existingSnapshot?.payload || {}) };
+    const publishProgress = async (section, value, stage) => {
+      progressPayload[section] = value;
+      progressPayload.sync = {
+        inProgress: true,
+        stage,
+        partial: sectionWarnings.length > 0,
+        freshSections,
+        warnings: [...sectionWarnings]
+      };
+      latestProgressSnapshot = {
+        chapa: portalUser,
+        source: PORTAL_URL,
+        updatedAt,
+        payload: { ...progressPayload }
+      };
+      await upsertSupabase(latestProgressSnapshot);
+    };
     const jornales = await readSection(
       "jornales",
       () => collectJornales(page, existingSnapshot?.payload?.jornales, {
-        currentOnly: false
+        currentOnly: fastMode
       }),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
@@ -1769,6 +1793,18 @@ async function main() {
     if (!hasJournalData(jornales)) {
       throw new Error("El portal inicio sesion, pero la consulta de jornales no respondio tras dos intentos. Vuelve a actualizar dentro de unos minutos.");
     }
+    await publishProgress("jornales", jornales, "Jornales cargados");
+    const mensajes = await readOptionalSection(
+      "mensajes",
+      () => collectMessages(page),
+      existingSnapshot?.payload?.mensajes
+        ? { ...existingSnapshot.payload.mensajes, rows: limitRecentPortalRows(existingSnapshot.payload.mensajes.rows, messageLimit) }
+        : null,
+      { recognized: false, rows: [] },
+      hasVacationData
+    );
+    mensajes.rows = limitRecentPortalRows(mensajes.rows, messageLimit);
+    await publishProgress("mensajes", mensajes, "Ultimos mensajes cargados");
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
@@ -1776,6 +1812,7 @@ async function main() {
       { recognized: false, rows: [] },
       hasVacationData
     );
+    await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");
     const primas = await readOptionalSection(
       "primas",
       () => collectPrimas(page, existingSnapshot?.payload?.primas),
@@ -1783,6 +1820,7 @@ async function main() {
       { locked: true, rows: [] },
       hasRows
     );
+    await publishProgress("primas", primas, "Primas cargadas");
     const sl = await readSection(
       "lista SL",
       () => collectSl(page),
@@ -1790,6 +1828,7 @@ async function main() {
       { rows: [] },
       hasRows
     );
+    await publishProgress("sl", sl, "Lista SL cargada");
     const descansos = await readSection(
       "descansos",
       () => collectDescansos(page),
@@ -1797,6 +1836,7 @@ async function main() {
       { worker: { chapa: portalUser, name: "", group: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
       hasMonths
     );
+    await publishProgress("descansos", descansos, "Descansos cargados");
     const vacaciones = await readOptionalSection(
       "vacaciones",
       () => collectVacaciones(page),
@@ -1804,13 +1844,7 @@ async function main() {
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
       hasVacationData
     );
-    const mensajes = await readOptionalSection(
-      "mensajes",
-      () => collectMessages(page),
-      existingSnapshot?.payload?.mensajes,
-      { recognized: false, rows: [] },
-      hasVacationData
-    );
+    await publishProgress("vacaciones", vacaciones, "Vacaciones cargadas");
     const nominas = await readOptionalSection(
       "nomina electronica",
       () => collectPayrolls(page),
@@ -1818,6 +1852,7 @@ async function main() {
       { recognized: false, locked: !portalSecurityKey, rows: [] },
       hasVacationData
     );
+    await publishProgress("nominas", nominas, "Nominas cargadas");
     const dobles = await readOptionalSection(
       "dobles solicitados",
       () => collectRequestedDoubles(page),
@@ -1825,6 +1860,7 @@ async function main() {
       { recognized: false, month: null, year: null, monthLabel: "", rows: [] },
       hasVacationData
     );
+    await publishProgress("dobles", dobles, "Dobles solicitados cargados");
     if (freshSections === 0) {
       throw new Error("El portal no devolvio ninguna seccion util. Se conservaran los datos anteriores.");
     }
@@ -1840,6 +1876,8 @@ async function main() {
       dobles,
       nominas,
       sync: {
+        inProgress: false,
+        stage: "Completado",
         partial: sectionWarnings.length > 0,
         freshSections,
         warnings: sectionWarnings
@@ -1878,6 +1916,19 @@ async function main() {
     });
     console.log(`OK: portal oficial sincronizado para ${portalUser}`);
   } catch (error) {
+    if (latestProgressSnapshot) {
+      latestProgressSnapshot.payload.sync = {
+        ...(latestProgressSnapshot.payload.sync || {}),
+        inProgress: false,
+        stage: "Actualizacion interrumpida",
+        partial: true,
+        warnings: [
+          ...(latestProgressSnapshot.payload.sync?.warnings || []),
+          error instanceof Error ? error.message : "Error desconocido"
+        ]
+      };
+      await upsertSupabase(latestProgressSnapshot).catch(() => {});
+    }
     await writeStatus({
       ok: false,
       chapa: portalUser || null,

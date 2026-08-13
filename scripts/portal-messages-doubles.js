@@ -177,6 +177,18 @@ export function currentMadridMonth(now = new Date()) {
   };
 }
 
+export function upcomingMadridDates(month, now = new Date()) {
+  const currentDay = Number(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    day: "2-digit"
+  }).format(now));
+  return (month?.dates || []).filter((date) => Number(String(date).slice(0, 2)) >= currentDay);
+}
+
+export function limitRecentPortalRows(rows = [], limit = 5) {
+  return Array.isArray(rows) ? rows.slice(0, Math.max(0, limit)) : [];
+}
+
 export function prioritizePortalMonths(months = [], currentMonth) {
   return [...new Set(months.map(Number).filter((month) => month >= 1 && month <= 12))]
     .sort((left, right) => {

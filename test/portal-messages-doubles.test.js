@@ -5,9 +5,11 @@ import {
   cleanMessageBodyText,
   currentMadridMonth,
   extractAddedMessageText,
+  limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
-  prioritizePortalMonths
+  prioritizePortalMonths,
+  upcomingMadridDates
 } from "../scripts/portal-messages-doubles.js";
 
 test("prioritizePortalMonths checks the current month first and then recent history", () => {
@@ -104,4 +106,16 @@ test("currentMadridMonth lists every date in the current Madrid month", () => {
   assert.equal(month.dates.length, 31);
   assert.equal(month.dates[0], "01/08/2026");
   assert.equal(month.dates.at(-1), "31/08/2026");
+});
+
+test("limitRecentPortalRows keeps only the first five portal messages", () => {
+  assert.deepEqual(limitRecentPortalRows([1, 2, 3, 4, 5, 6, 7]), [1, 2, 3, 4, 5]);
+});
+
+test("upcomingMadridDates skips days that already passed", () => {
+  const month = currentMadridMonth(new Date("2026-08-13T05:30:00Z"));
+  const dates = upcomingMadridDates(month, new Date("2026-08-13T05:30:00Z"));
+  assert.equal(dates[0], "13/08/2026");
+  assert.equal(dates.at(-1), "31/08/2026");
+  assert.equal(dates.length, 19);
 });

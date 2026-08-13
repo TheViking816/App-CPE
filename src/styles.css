@@ -1699,6 +1699,23 @@ select {
   background: #fff7e8;
   color: #8a4900;
 }
+
+.portal-sync-progress {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  align-items: flex-start;
+  border: 1px solid #7db7ef;
+  border-radius: 8px;
+  background: #eef7ff;
+  color: #0b4f8a;
+}
+.portal-sync-progress > svg { flex: 0 0 auto; margin-top: 1px; animation: portal-spin 1.1s linear infinite; }
+.portal-sync-progress div { display: grid; gap: 3px; }
+.portal-sync-progress strong { font-size: 13px; font-weight: 950; }
+.portal-sync-progress span { font-size: 11px; font-weight: 750; line-height: 1.4; }
+
+@keyframes portal-spin { to { transform: rotate(360deg); } }
 .portal-sync-warning > svg { flex: 0 0 auto; margin-top: 1px; }
 .portal-sync-warning div { display: grid; gap: 3px; }
 .portal-sync-warning strong { font-size: 13px; font-weight: 950; }
@@ -1708,6 +1725,12 @@ select {
   border-color: #8b5a16;
   background: #3b2a12;
   color: #ffd28c;
+}
+
+:root[data-theme="dark"] .portal-sync-progress {
+  border-color: #285f91;
+  background: #102a42;
+  color: #abd8ff;
 }
 
 .portal-jornales-list,

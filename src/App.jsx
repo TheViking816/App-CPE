@@ -1667,7 +1667,17 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {payload?.sync?.partial && (
+      {payload?.sync?.inProgress && (
+        <section className="portal-sync-progress" role="status">
+          <RefreshCw size={20} />
+          <div>
+            <strong>{payload.sync.stage || "Actualizando el portal"}</strong>
+            <span>Puedes consultar lo que ya esta disponible mientras seguimos cargando el resto.</span>
+          </div>
+        </section>
+      )}
+
+      {payload?.sync?.partial && !payload?.sync?.inProgress && (
         <section className="portal-sync-warning" role="status">
           <CircleAlert size={20} />
           <div>
@@ -1963,20 +1973,25 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const [syncElapsed, setSyncElapsed] = useState(initialActiveSync ? Math.floor((Date.now() - initialActiveSync.startedAt) / 1000) : 0);
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
+  const lastProgressRefreshRef = useRef(0);
 
-  const loadSnapshot = async () => {
-    setError("");
-    setLoading(true);
+  const loadSnapshot = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setError("");
+      setLoading(true);
+    }
     try {
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
       setShowCredentials(!data);
     } catch (requestError) {
-      setError(requestError.message || "No se pudo leer el portal sincronizado.");
-      setShowCredentials(true);
+      if (!silent) {
+        setError(requestError.message || "No se pudo leer el portal sincronizado.");
+        setShowCredentials(true);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -2047,6 +2062,10 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           status: job.status,
           startedAt: syncStartedAtRef.current
         });
+        if (job.status === "running" && Date.now() - lastProgressRefreshRef.current >= 4000) {
+          lastProgressRefreshRef.current = Date.now();
+          await loadSnapshot({ silent: true });
+        }
         if (job.status === "completed") {
           const measuredSeconds = job.startedAt && job.finishedAt
             ? (new Date(job.finishedAt).getTime() - new Date(job.startedAt).getTime()) / 1000
