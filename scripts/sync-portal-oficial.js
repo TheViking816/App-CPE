@@ -925,6 +925,10 @@ async function collectMessages(page) {
         await messagesItem.press("Space").catch(() => {});
         await page.waitForTimeout(1200);
       }
+      if (new URL(page.url()).hash === "#Home") {
+        await messagesItem.locator("xpath=..").click({ force: true }).catch(() => {});
+        await page.waitForTimeout(1200);
+      }
     }
   }
   page.context().off("request", captureRequest);
@@ -941,6 +945,21 @@ async function collectMessages(page) {
   if (result.recognized && result.rows.length) {
     console.log(`Mensajes leidos: ${result.rows?.length || 0}.`);
     return result;
+  }
+
+  for (const candidatePage of page.context().pages()) {
+    if (candidatePage === page || candidatePage.isClosed()) continue;
+    const popupResult = await waitForParsedContent(
+      candidatePage,
+      parseMessagesHtml,
+      (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+      3000,
+      (parsed) => parsed.recognized && parsed.rows.length > 0
+    );
+    if (popupResult.recognized && popupResult.rows.length) {
+      console.log(`Mensajes leidos: ${popupResult.rows.length}.`);
+      return popupResult;
+    }
   }
 
   const directPage = await page.context().newPage();
@@ -1088,11 +1107,25 @@ async function collectPayrolls(page) {
     return { recognized: true, locked: false, rows: alreadyVisibleRows };
   }
 
-  const securityControl = await waitForFrameAndLocator(
+  let securityControl = await waitForFrameAndLocator(
     page,
     (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
     8000
   );
+  if (!securityControl) {
+    await openPortalHash(page, "User,Request,,,");
+    await openMenu(page, "Consultas", "Nómina electrónica");
+    const retryRows = await extractPayrollRowsFromDom(page);
+    if (retryRows.length) {
+      console.log(`Nominas leidas: ${retryRows.length}.`);
+      return { recognized: true, locked: false, rows: retryRows };
+    }
+    securityControl = await waitForFrameAndLocator(
+      page,
+      (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
+      8000
+    );
+  }
   if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
 
   const securityPanel = securityControl.locator.locator("xpath=ancestor::table[1]");

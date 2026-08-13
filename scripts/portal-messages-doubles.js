@@ -102,11 +102,13 @@ export function parsePayrollsHtml(html = "") {
   const recognized = /N[oó]mina\s+electr[oó]nica|Cerrar\s+modo\s+seguro/i.test(pageText);
   const rows = rowsFromHtml(html)
     .flatMap((cells) => cells.map(cleanText))
+    .concat(pageText.split("\n").map(cleanText))
     .map((title) => title.replace(/^\d+\s*/, ""))
-    .filter((title) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(title) && !/\d{1,2}:\d{2}/.test(title))
+    .filter((title) => title.length <= 160 && /\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/.test(title) && !/\d{1,2}:\d{2}/.test(title))
     .map((title) => {
-      const period = title.match(/\b((?:0[1-9]|1[0-2])\/\d{2})\b/)?.[1] || "";
-      const type = cleanText(title.replace(period, ""));
+      const rawPeriod = title.match(/\b((?:0[1-9]|1[0-2])\s*\/\s*\d{2})\b/)?.[1] || "";
+      const period = rawPeriod.replace(/\s/g, "");
+      const type = cleanText(title.replace(rawPeriod, ""));
       return { id: `${period}-${type}`, title, type, period };
     });
 
