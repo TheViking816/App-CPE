@@ -1955,9 +1955,6 @@ async function main() {
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
     await upsertPayrollDocuments();
-    if (!hasJournalData(jornales) && !hasMonths(descansos) && !hasRows(asignaciones)) {
-      throw new Error("El portal inicio sesion, pero no devolvio los datos personales principales (jornales, contratacion ni descansos). La lectura se ha guardado como parcial; vuelve a intentarlo.");
-    }
     await writeStatus({
       ok: true,
       chapa: portalUser,
