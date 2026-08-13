@@ -1375,17 +1375,26 @@ export async function main() {
     });
     console.log(`OK: portal oficial sincronizado para ${portalUser}`);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    const securityChallenge = /bloqueado temporalmente|security challenge|cloudflare/i.test(errorMessage);
+    if (securityChallenge && reuseBrowserContext && portalContextStore.has(portalUser)) {
+      const challengedSession = portalContextStore.get(portalUser);
+      portalContextStore.delete(portalUser);
+      await challengedSession?.context?.close().catch(() => {});
+      console.warn(`Contexto bloqueado descartado para ${portalUser}; se conserva el estado de sesion guardado.`);
+    }
     await writeStatus({
       ok: false,
       chapa: portalUser || null,
       updatedAt: new Date().toISOString(),
-      message: error instanceof Error ? error.message : "Error desconocido"
+      message: errorMessage
     });
     throw error;
   } finally {
+    const contextStillStored = reuseBrowserContext && portalContextStore.get(portalUser)?.context === context;
     if (!reuseBrowserContext || !browserWsEndpoint) await context.close();
-    else if (!reusedContext) console.log(`Sesion activa conservada para ${portalUser}.`);
-    if (reuseBrowserContext && portalContextStore.has(portalUser)) {
+    else if (contextStillStored && !reusedContext) console.log(`Sesion activa conservada para ${portalUser}.`);
+    if (contextStillStored) {
       portalContextStore.get(portalUser).lastUsedAt = Date.now();
     }
     if (!reuseBrowserContext) sharedBrowser = null;

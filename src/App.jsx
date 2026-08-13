@@ -1760,6 +1760,11 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
   const fastSnapshotLoadedRef = useRef(false);
+  const snapshotRef = useRef(null);
+
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
 
   const loadSnapshot = async () => {
     setError("");
@@ -1869,9 +1874,12 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           writePortalActiveSync(session.chapa, null);
         }
         if (job.status === "failed") {
-          setPortalMessage(job.message || "No se pudo leer el portal.");
+          const hasSavedSnapshot = Boolean(snapshotRef.current);
+          setPortalMessage(hasSavedSnapshot
+            ? "No se pudo renovar ahora. Se conservan los ultimos datos disponibles."
+            : (job.message || "No se pudo leer el portal."));
           setSyncingPortal(false);
-          setShowCredentials(true);
+          setShowCredentials(!hasSavedSnapshot);
           writePortalActiveSync(session.chapa, null);
           window.clearInterval(timer);
         }
@@ -1984,6 +1992,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
+  const syncContinuesInBackground = Boolean(snapshot) && syncingPortal && syncElapsed >= 8;
 
   return (
     <section className="page-panel portal-panel">
@@ -2098,7 +2107,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         </>
       )}
 
-      {syncingPortal && (
+      {syncingPortal && !syncContinuesInBackground && (
         <section className="portal-progress-card" aria-live="polite">
           <div className="portal-progress-heading">
             <span><RefreshCw size={18} className="is-spinning" />Actualizando portal</span>
@@ -2111,6 +2120,16 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
             <span>{portalJob?.status === "running" ? "Leyendo jornales, primas, descansos y vacaciones" : "Preparando la lectura segura"}</span>
             <small>{syncRemaining > 0 ? `Aproximadamente ${syncRemaining} s restantes` : "Finalizando..."} · {syncElapsed} s transcurridos</small>
           </div>
+        </section>
+      )}
+
+      {syncContinuesInBackground && (
+        <section className="portal-background-sync" aria-live="polite">
+          <RefreshCw size={17} className="is-spinning" />
+          <span>
+            <strong>Mostrando tus datos guardados</strong>
+            <small>La actualizacion continua en segundo plano. Puedes seguir usando la app.</small>
+          </span>
         </section>
       )}
 

@@ -1602,6 +1602,32 @@ select {
   text-align: right;
 }
 
+.portal-background-sync {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(16, 185, 141, 0.34);
+  border-radius: 8px;
+  background: rgba(236, 253, 245, 0.94);
+  color: #075f4b;
+}
+
+.portal-background-sync span {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-background-sync strong {
+  font-size: 12px;
+}
+
+.portal-background-sync small {
+  color: #397265;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .is-spinning {
   animation: spin 1s linear infinite;
 }
@@ -4126,6 +4152,7 @@ select {
 :root[data-theme="dark"] .portal-security-card,
 :root[data-theme="dark"] .portal-update-row,
 :root[data-theme="dark"] .portal-progress-card,
+:root[data-theme="dark"] .portal-background-sync,
 :root[data-theme="dark"] .portal-irpf-card,
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-primas-list article,
@@ -4140,6 +4167,16 @@ select {
   border-color: rgba(148, 163, 184, 0.24);
   background: rgba(16, 31, 51, 0.94);
   box-shadow: var(--shadow);
+}
+
+:root[data-theme="dark"] .portal-background-sync {
+  border-color: rgba(52, 211, 153, 0.32);
+  background: rgba(6, 78, 59, 0.3);
+  color: #a7f3d0;
+}
+
+:root[data-theme="dark"] .portal-background-sync small {
+  color: #8dd8bd;
 }
 
 :root[data-theme="dark"] .portal-update-row button {
