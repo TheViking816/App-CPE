@@ -1642,7 +1642,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
   );
 }
 
-function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory, onRequestSecurityKey, loadingHistory = false }) {
+function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory, onRequestSecurityKey, onRequestCredentials, loadingHistory = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
@@ -1801,7 +1801,18 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         </section>
       )}
 
-      {payload?.sync?.partial && !payload?.sync?.inProgress && (
+      {payload?.sync?.failed && (
+        <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestCredentials}>
+          <CircleAlert size={20} />
+          <div>
+            <strong>{payload.sync.stage || "No se pudo conectar con el portal"}</strong>
+            <span>{payload.sync.error || "Revisa la contraseña del portal y vuelve a intentarlo."}</span>
+          </div>
+          <ChevronRight size={19} />
+        </button>
+      )}
+
+      {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && (
         needsSecurityKey ? (
           <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestSecurityKey}>
             <CircleAlert size={20} />
@@ -2471,6 +2482,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           onSessionChange={onSessionChange}
           onLoadHistory={() => handlePortalSync({ fullHistory: true })}
           onRequestSecurityKey={requestSecurityKey}
+          onRequestCredentials={changeCredentials}
           loadingHistory={syncingPortal}
         />
       )}

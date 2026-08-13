@@ -51,6 +51,32 @@ async function updateJob(patch) {
   });
 }
 
+async function closeSnapshotWithError(job, message) {
+  if (!job?.chapa || job.request_kind === "document") return;
+  const rows = await supabaseRequest(
+    `/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(job.chapa)}&limit=1`
+  );
+  const payload = rows?.[0]?.payload || {};
+  await supabaseRequest(`/rest/v1/app_cpe_portal_snapshots?chapa=eq.${encodeURIComponent(job.chapa)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      payload: {
+        ...payload,
+        sync: {
+          ...(payload.sync || {}),
+          inProgress: false,
+          failed: true,
+          partial: true,
+          stage: "No se pudo conectar con el portal",
+          error: message
+        }
+      },
+      updated_at: new Date().toISOString()
+    })
+  });
+}
+
 function runSync(job) {
   return new Promise((resolve, reject) => {
     let diagnostic = "";
@@ -111,13 +137,15 @@ async function main() {
   }
 
   if (new Date(job.expires_at).getTime() < Date.now()) {
+    const expiredMessage = "La sincronizacion ha caducado. Vuelve a lanzar la lectura.";
     await updateJob({
       status: "failed",
-      message: "La sincronizacion ha caducado. Vuelve a lanzar la lectura.",
+      message: expiredMessage,
       portal_password: null,
       security_key: null,
       finished_at: new Date().toISOString()
     });
+    await closeSnapshotWithError(job, expiredMessage);
     throw new Error("Portal sync job expired");
   }
 
@@ -137,13 +165,15 @@ async function main() {
       finished_at: new Date().toISOString()
     });
   } catch (error) {
+    const message = publicErrorMessage(error);
     await updateJob({
       status: "failed",
-      message: publicErrorMessage(error),
+      message,
       portal_password: null,
       security_key: null,
       finished_at: new Date().toISOString()
     });
+    await closeSnapshotWithError(job, message);
     throw error;
   }
 }
