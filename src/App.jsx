@@ -1549,6 +1549,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
   const nominas = payload?.nominas || null;
+  const hasNominas = Boolean(nominas?.recognized && !nominas?.locked && (nominas?.rows || []).length > 0);
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
   const [savedIrpfRate, setSavedIrpfRate] = useState(0);
@@ -1676,7 +1677,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         </section>
       )}
 
-      {(jornales.length > 0 || hasDescansos || vacaciones?.recognized || nominas?.recognized) && (
+      {(jornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
           {jornales.length > 0 && (
             <button
@@ -1702,7 +1703,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
               <Sun size={19} /><span>Vacaciones</span><ChevronDown size={17} />
             </button>
           )}
-          {nominas?.recognized && (
+          {hasNominas && (
             <button className="is-nominas" type="button" onClick={() => {
               setNominasExpanded(true);
               requestAnimationFrame(() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -1911,7 +1912,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <PortalVacationPreview vacaciones={vacaciones} />
       </div>
 
-      {nominas?.recognized && (
+      {hasNominas && (
         <section ref={nominasRef} className={`portal-personal-section portal-payroll-documents portal-scroll-anchor${nominasExpanded ? " is-open" : ""}`}>
           <button className="portal-payroll-toggle" type="button" onClick={() => setNominasExpanded((current) => !current)} aria-expanded={nominasExpanded}>
             <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
