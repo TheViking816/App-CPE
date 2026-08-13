@@ -79,7 +79,7 @@ const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
-const DEFAULT_PORTAL_SYNC_SECONDS = 150;
+const DEFAULT_PORTAL_SYNC_SECONDS = 55;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
 const CHAPERO_POLL_MS = 60_000;
@@ -2343,7 +2343,13 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       )}
 
       {error && <p className="portal-warning">{error}</p>}
-      {loading && !snapshot ? (
+      {syncingPortal && !snapshot ? (
+        <div className="portal-empty-state">
+          <RefreshCw className="is-spinning" size={26} />
+          <strong>Conectado con el portal</strong>
+          <span>Los primeros datos aparecerán aquí en unos segundos mientras continúa la lectura.</span>
+        </div>
+      ) : loading && !snapshot ? (
         <div className="portal-empty-state">
           <Clock3 size={26} />
           <strong>Cargando portal</strong>
