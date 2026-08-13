@@ -923,7 +923,7 @@ async function collectMessages(page) {
     10000,
     (parsed) => parsed.recognized && parsed.rows.length > 0
   );
-  if (result.recognized) {
+  if (result.recognized && result.rows.length) {
     console.log(`Mensajes leidos: ${result.rows?.length || 0}.`);
     return result;
   }
@@ -1056,6 +1056,12 @@ async function collectPayrolls(page) {
   if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) {
     console.log(`Nominas leidas: ${alreadyLoaded.rows.length}.`);
     return alreadyLoaded;
+  }
+
+  const alreadyVisibleRows = await extractPayrollRowsFromDom(page);
+  if (alreadyVisibleRows.length) {
+    console.log(`Nominas leidas: ${alreadyVisibleRows.length}.`);
+    return { recognized: true, locked: false, rows: alreadyVisibleRows };
   }
 
   const securityControl = await waitForFrameAndLocator(
