@@ -940,16 +940,18 @@ async function extractPayrollRowsFromDom(page) {
     const documentButtons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
     const count = await documentButtons.count().catch(() => 0);
     if (count) {
-      const structure = await documentButtons.first().evaluate((button) => {
-        const masked = (value) => String(value || "").replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "A").replace(/\d/g, "0").replace(/\s+/g, " ").trim().slice(0, 160);
-        const describe = (node) => node ? { tag: node.tagName, className: String(node.className || "").slice(0, 80), masked: masked(node.textContent) } : null;
-        return {
-          parent: describe(button.parentElement),
-          siblings: [...(button.parentElement?.parentElement?.children || [])].map(describe).slice(0, 12),
-          ancestors: [button.closest("tr"), button.closest("table")].map(describe)
-        };
-      }).catch(() => null);
-      console.log(`[portal:nominas-document-structure] ${JSON.stringify(structure)}`);
+      const rowTitles = await documentButtons.evaluateAll((buttons) => {
+        const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        return buttons.map((button) => {
+          const cells = [...(button.closest("tr")?.cells || [])].map((cell) => String(cell.textContent || "").replace(/\s+/g, " ").trim());
+          const year = cells.find((cell) => /^20\d{2}$/.test(cell)) || "";
+          const monthIndex = cells.findIndex((cell) => months.includes(cell.toLocaleLowerCase("es")));
+          const month = monthIndex >= 0 ? months.indexOf(cells[monthIndex].toLocaleLowerCase("es")) + 1 : 0;
+          const type = cells.find((cell, index) => index !== monthIndex && cell !== year && /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(cell)) || "";
+          return year && month && type ? `${type} ${String(month).padStart(2, "0")}/${year.slice(-2)}` : "";
+        }).filter(Boolean);
+      }).catch(() => []);
+      titles.push(...rowTitles);
     }
     for (let index = 0; index < count; index += 1) {
       const title = await documentButtons.nth(index).evaluate((button) => {
