@@ -348,63 +348,6 @@ async function ensureExpanded(page, group, child) {
   if (!childItem) throw new Error(`No se encontro la opcion visible: ${child}`);
 }
 
-async function portalSectionState(page, section) {
-  const frames = await Promise.all(page.frames().map(async (frame) => ({
-    location: safePortalLocation(frame.url()),
-    hash: (() => { try { return new URL(frame.url()).hash; } catch { return ""; } })(),
-    tables: await frame.locator("table").count().catch(() => 0),
-    checkboxes: await frame.locator('input[type="checkbox"]').count().catch(() => 0),
-    checked: await frame.locator('input[type="checkbox"]:checked').count().catch(() => 0),
-    dateInputs: await frame.locator('input[name="fecha"], input[id*="fecha" i]').count().catch(() => 0),
-    securityInputs: await frame.locator('input[type="password"]').count().catch(() => 0)
-  })));
-  console.log(`[portal:${section}] ${JSON.stringify(frames)}`);
-}
-
-async function portalDateStructure(page, section) {
-  const structures = [];
-  for (const frame of page.frames()) {
-    const items = await frame.locator("body *").evaluateAll((nodes) => nodes
-      .filter((node) => /\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}/.test(node.textContent || ""))
-      .filter((node) => ![...node.children].some((child) => /\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}/.test(child.textContent || "")))
-      .slice(0, 12)
-      .map((node) => ({
-        tag: node.tagName,
-        className: String(node.className || "").slice(0, 100),
-        parentTag: node.parentElement?.tagName || "",
-        parentClass: String(node.parentElement?.className || "").slice(0, 100),
-        masked: String(node.textContent || "")
-          .replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "A")
-          .replace(/\d/g, "0")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 180)
-      })))
-      .catch(() => []);
-    structures.push(...items);
-  }
-  console.log(`[portal:${section}-date-structure] ${JSON.stringify(structures)}`);
-}
-
-async function portalInteractiveStructure(page, section) {
-  const structures = [];
-  for (const frame of page.frames()) {
-    const items = await frame.locator('button:visible, input:visible').evaluateAll((nodes) => nodes.slice(0, 40).map((node) => ({
-      tag: node.tagName,
-      type: node.getAttribute("type") || "",
-      name: node.getAttribute("name") || "",
-      id: node.id || "",
-      title: node.getAttribute("title") || "",
-      placeholder: node.getAttribute("placeholder") || "",
-      label: node.tagName === "BUTTON" || ["button", "submit"].includes((node.getAttribute("type") || "").toLowerCase())
-        ? String(node.textContent || node.getAttribute("value") || "").trim().slice(0, 80)
-        : ""
-    }))).catch(() => []);
-    structures.push(...items);
-  }
-  console.log(`[portal:${section}-controls] ${JSON.stringify(structures)}`);
-}
-
 async function waitForFrame(page, pattern, timeout = 12000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -646,18 +589,6 @@ async function openMenu(page, group, text, framePattern) {
   await ensureExpanded(page, group, text);
   const item = await findMenuItem(page, text, 10000);
   if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
-  const menuStructure = await item.evaluate((node) => ({
-    tag: node.tagName,
-    className: String(node.className || ""),
-    parentTag: node.parentElement?.tagName || "",
-    parentClass: String(node.parentElement?.className || ""),
-    images: [...(node.closest("tr")?.querySelectorAll("img") || [])].map((image) => ({
-      alt: image.getAttribute("alt") || "",
-      title: image.getAttribute("title") || "",
-      src: (image.getAttribute("src") || "").split("/").pop() || ""
-    }))
-  })).catch(() => null);
-  console.log(`[portal:menu-${text}] ${JSON.stringify(menuStructure)}`);
   await item.scrollIntoViewIfNeeded();
   await item.click({ timeout: 10000 });
   await page.waitForTimeout(1200);
@@ -896,25 +827,8 @@ async function openPortalHash(page, hash) {
   await page.waitForTimeout(1200);
 }
 
-async function visiblePortalMenuLabels(page) {
-  const labels = [];
-  for (const root of [page, ...page.frames()]) {
-    const visible = root.locator(".gwt-TreeItem:visible");
-    labels.push(...await visible.allTextContents().catch(() => []));
-  }
-  return [...new Set(labels.map(cleanText).filter(Boolean))].slice(0, 120);
-}
-
 async function collectMessages(page) {
   await openPortalHash(page, "User,Request,,,");
-  const requestedPaths = [];
-  const captureRequest = (request) => {
-    try {
-      const url = new URL(request.url());
-      if (url.hostname === "portal.cpevalencia.com") requestedPaths.push(url.pathname);
-    } catch {}
-  };
-  page.context().on("request", captureRequest);
   await openMenu(page, "Consultas", "Mensajes");
   if (new URL(page.url()).hash === "#Home") {
     const messagesItem = await findMenuItem(page, "Mensajes", 3000);
@@ -932,10 +846,6 @@ async function collectMessages(page) {
       }
     }
   }
-  page.context().off("request", captureRequest);
-  console.log(`[portal:mensajes-requests] ${JSON.stringify([...new Set(requestedPaths)].slice(-30))}`);
-  await portalSectionState(page, "mensajes");
-  await portalDateStructure(page, "mensajes");
   const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
     const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
     const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
@@ -1080,9 +990,7 @@ async function extractCheckedDoubles(frame, date) {
 
 async function collectRequestedDoubles(page) {
   await openPortalHash(page, "User,Request,,,");
-  console.log(`[portal:solicitudes-menu] ${JSON.stringify(await visiblePortalMenuLabels(page))}`);
   await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
-  await portalSectionState(page, "dobles-selector");
   let selector = await findDoublesSelector(page);
   if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
 
@@ -1115,8 +1023,6 @@ async function collectPayrolls(page) {
   if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
   await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Nómina electrónica");
-  await portalSectionState(page, "nominas");
-  await portalInteractiveStructure(page, "nominas");
 
   const alreadyLoaded = await waitForParsedContent(
     page,
@@ -1165,8 +1071,6 @@ async function collectPayrolls(page) {
   await securityInput.fill(portalSecurityKey);
   await securityControl.locator.click({ noWaitAfter: true });
   await page.waitForTimeout(1200);
-  await portalSectionState(page, "nominas-after-security");
-  await portalInteractiveStructure(page, "nominas-after-security");
 
   const domRows = await extractPayrollRowsFromDom(page);
   if (domRows.length) {
