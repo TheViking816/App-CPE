@@ -1704,10 +1704,10 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         <section className="portal-sync-warning" role="status">
           <CircleAlert size={20} />
           <div>
-            <strong>{needsSecurityKey ? "Primas y nóminas protegidas" : "Lectura parcial del portal"}</strong>
-            <span>{needsSecurityKey
-              ? "Introduce y guarda tu clave de seguridad para consultar las primas y nóminas del portal."
-              : "Algunas consultas no respondieron y no se han podido cargar todos tus datos. Pulsa «Actualizar portal» para reintentarlo."}</span>
+            <strong>{needsSecurityKey ? "Introduce tu clave de seguridad para cargar primas y nóminas" : "Lectura parcial del portal"}</strong>
+            {!needsSecurityKey && (
+              <span>Algunas consultas no respondieron y no se han podido cargar todos tus datos. Pulsa «Actualizar portal» para reintentarlo.</span>
+            )}
           </div>
         </section>
       )}
@@ -1998,7 +1998,6 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const [portalPassword, setPortalPassword] = useState(initialCredentials?.portalPassword || "");
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
-  const [rememberCredentials, setRememberCredentials] = useState(Boolean(initialCredentials));
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
   const [autoSyncLoading, setAutoSyncLoading] = useState(true);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
@@ -2010,6 +2009,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
   const lastProgressRefreshRef = useRef(0);
+  const portalErrorRef = useRef(null);
 
   const loadSnapshot = async ({ silent = false } = {}) => {
     if (!silent) {
@@ -2141,8 +2141,11 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     const passwordToUse = portalPassword.trim() || savedCredentials?.portalPassword || "";
     const securityKeyToUse = securityKey.trim() || savedCredentials?.securityKey || "";
     if (!passwordToUse && !autoSyncEnabled) {
-      setError("Introduce la contrasena del portal.");
+      setError("Introduce la contraseña del portal.");
       setShowCredentials(true);
+      window.requestAnimationFrame(() => {
+        portalErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
       return;
     }
 
@@ -2155,7 +2158,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     syncStartedAtRef.current = Date.now();
 
     try {
-      if ((autoSyncEnabled || rememberCredentials) && passwordToUse) {
+      if (passwordToUse) {
         await setPortalAutoSync({
           token: session.token,
           enabled: true,
@@ -2170,18 +2173,10 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         securityKey: securityKeyToUse,
         fullHistory
       });
-      if (rememberCredentials) {
-        const nextCredentials = { portalPassword: passwordToUse, securityKey: securityKeyToUse };
-        writePortalCredentials(session.chapa, nextCredentials);
-        setSavedCredentials(nextCredentials);
-        setPortalPassword(passwordToUse);
-        setSecurityKey(securityKeyToUse);
-      } else {
-        writePortalCredentials(session.chapa, null);
-        setSavedCredentials(null);
-        setPortalPassword("");
-        setSecurityKey("");
-      }
+      writePortalCredentials(session.chapa, null);
+      setSavedCredentials(null);
+      setPortalPassword("");
+      setSecurityKey("");
       setPortalJob(job);
       writePortalActiveSync(session.chapa, {
         jobId: job.jobId,
@@ -2199,12 +2194,12 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     }
   };
 
-  const forgetCredentials = () => {
+  const changeCredentials = () => {
     writePortalCredentials(session.chapa, null);
     setSavedCredentials(null);
-    setRememberCredentials(false);
     setPortalPassword("");
     setSecurityKey("");
+    setError("");
     setShowCredentials(true);
   };
 
@@ -2219,19 +2214,6 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
     } finally {
       setAutoSyncLoading(false);
     }
-  };
-
-  const handleAutoSyncToggle = (enabled) => {
-    if (enabled) {
-      setAutoSyncEnabled(true);
-      return;
-    }
-    disableAutoSync();
-  };
-
-  const handleRememberCredentialsToggle = (enabled) => {
-    setRememberCredentials(enabled);
-    if (enabled) setAutoSyncEnabled(true);
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
@@ -2251,7 +2233,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
             {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30, 12:30 y 14:45</small>}
           </span>
           <div>
-            {savedCredentials && <button className="portal-forget-button" type="button" onClick={forgetCredentials}>Cambiar claves</button>}
+            {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar claves</button>}
             {autoSyncEnabled && (
               <button className="portal-forget-button" type="button" disabled={autoSyncLoading} onClick={disableAutoSync}>
                 Desactivar auto
@@ -2265,15 +2247,15 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         </div>
       )}
 
+      {error && <p ref={portalErrorRef} className="portal-warning">{error}</p>}
+
       {showCredentials && !syncingPortal && (
         <>
           <p className="portal-warning">
-            {rememberCredentials
-              ? "La app guardara tus claves solo en este dispositivo para las proximas actualizaciones."
-              : "La app usara tus claves solo para leer el portal y borrarlas al terminar la sincronizacion."}
+            Tus claves se guardarán cifradas para que la app pueda actualizar el portal automáticamente.
           </p>
           <p className="portal-first-sync-note">
-            La espera solo es necesaria la primera vez. Si guardas tus claves, despues la app actualizara tus datos automaticamente en segundo plano.
+            La espera solo es necesaria la primera vez. Después la app actualizará tus datos automáticamente en segundo plano.
           </p>
 
           <section className="portal-security-card">
@@ -2302,33 +2284,9 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
                 onChange={(event) => setSecurityKey(event.target.value)}
               />
             </label>
-            <label className="portal-remember-option">
-              <input
-                type="checkbox"
-                checked={rememberCredentials}
-                onChange={(event) => handleRememberCredentialsToggle(event.target.checked)}
-              />
-              <span>Recordar las claves en este dispositivo</span>
-            </label>
-            {rememberCredentials && (
-              <small className="portal-storage-note">
-                Se guardaran en este dispositivo y cifradas en Supabase Vault para las actualizaciones automaticas.
-              </small>
-            )}
-            <label className="portal-remember-option portal-auto-sync-option">
-              <input
-                type="checkbox"
-                checked={autoSyncEnabled}
-                disabled={autoSyncLoading}
-                onChange={(event) => handleAutoSyncToggle(event.target.checked)}
-              />
-              <span>Sincronizar cada hora, tambien a las 07:30, 12:30 y 14:45</span>
-            </label>
-            {autoSyncEnabled && (
-              <small className="portal-storage-note">
-                Las claves se guardaran cifradas en Supabase Vault. Al desactivar esta opcion se eliminaran del servidor.
-              </small>
-            )}
+            <small className="portal-storage-note">
+              La sincronización se realizará cada hora y también a las 07:30, 12:30 y 14:45.
+            </small>
             <div className="portal-security-actions">
               {snapshot && !syncingPortal && (
                 <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
@@ -2365,7 +2323,6 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         </section>
       )}
 
-      {error && <p className="portal-warning">{error}</p>}
       {syncingPortal && !snapshot?.payload ? (
         <div className="portal-empty-state">
           <RefreshCw className="is-spinning" size={26} />
