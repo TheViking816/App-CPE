@@ -66,6 +66,33 @@ export function parseMessagesHtml(html = "") {
     });
   }
 
+  // En la vista GWT real el titulo y los metadatos pueden quedar en filas
+  // anidadas distintas. Recuperamos tambien ese formato desde el texto visible.
+  const lines = pageText.split("\n").map(cleanText).filter(Boolean);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const dateMatch = line.match(DATE_PATTERN);
+    if (!dateMatch) continue;
+    const inlineTitle = cleanText(line.slice(0, dateMatch.index)).replace(/^\s*\|?\s*\d*\s*\|?\s*/, "");
+    const previousTitle = cleanText(lines[index - 1] || "").replace(/^\s*\|?\s*\d*\s*\|?\s*/, "");
+    const title = inlineTitle || previousTitle;
+    const afterDate = cleanText(line.slice((dateMatch.index || 0) + dateMatch[0].length))
+      .replace(/^[-–—]\s*/, "")
+      .replace(/\s*\|\s*$/, "");
+    if (!title || !afterDate || /^(Consultas|Mensajes)$/i.test(title)) continue;
+    const readMatch = afterDate.match(/\bLE[IÍ]DO\s+EL\s+(.+)$/i);
+    const sender = cleanText(afterDate.replace(/\bLE[IÍ]DO\s+EL\s+.+$/i, "").replace(/[\s,.-]+$/, ""));
+    messages.push({
+      id: `${normalizePortalDate(dateMatch[1])}-${dateMatch[2]}-${title}`,
+      title,
+      date: normalizePortalDate(dateMatch[1]),
+      time: dateMatch[2].padStart(5, "0"),
+      sender,
+      read: Boolean(readMatch),
+      readAt: cleanText(readMatch?.[1] || "")
+    });
+  }
+
   const unique = new Map(messages.map((message) => [message.id, message]));
   return { recognized, rows: [...unique.values()] };
 }

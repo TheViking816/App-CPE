@@ -494,7 +494,8 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   );
 }
 
-function AppHeader({ user, theme, onThemeToggle, onLogout }) {
+function AppHeader({ user, theme, messages, onInboxOpen, onThemeToggle, onLogout }) {
+  const unreadCount = (messages?.rows || []).filter((message) => !message.read).length;
   return (
     <header className="app-header">
       <div className="logo-box">
@@ -503,6 +504,12 @@ function AppHeader({ user, theme, onThemeToggle, onLogout }) {
       <div className="header-title">
         <strong>App CPE</strong>
       </div>
+      {user && (
+        <button className="header-inbox-button" type="button" onClick={onInboxOpen} aria-label="Abrir bandeja de entrada">
+          <Mail size={20} />
+          {unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}
+        </button>
+      )}
       <button
         className="theme-button"
         type="button"
@@ -518,6 +525,41 @@ function AppHeader({ user, theme, onThemeToggle, onLogout }) {
         </button>
       )}
     </header>
+  );
+}
+
+function InboxModal({ messages, onClose }) {
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const rows = messages?.rows || [];
+  return (
+    <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="inbox-modal" role="dialog" aria-modal="true" aria-labelledby="inbox-title">
+        <header>
+          <span className="portal-personal-icon is-inbox"><Inbox size={22} /></span>
+          <div><small>Consultas</small><h2 id="inbox-title">Bandeja de entrada</h2></div>
+          <b>{rows.length}</b>
+          <button type="button" onClick={onClose} aria-label="Cerrar bandeja"><X size={21} /></button>
+        </header>
+        {rows.length ? (
+          <div className="portal-inbox-list">
+            {rows.map((message) => (
+              <article className={message.read ? "is-read" : "is-unread"} key={message.id}>
+                <span><Mail size={17} /></span>
+                <div><strong>{message.title}</strong><small>{message.sender || "Portal CPE"}</small></div>
+                <time>{message.date}<small>{message.time}</small></time>
+              </article>
+            ))}
+          </div>
+        ) : <p className="portal-personal-empty">No hay mensajes disponibles. Actualiza el portal para consultar la bandeja.</p>}
+      </section>
+    </div>
   );
 }
 
@@ -1397,7 +1439,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
-  const mensajes = payload?.mensajes || null;
   const dobles = payload?.dobles || null;
   const nominas = payload?.nominas || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
@@ -1413,7 +1454,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
-  const mensajesRef = useRef(null);
   const doblesRef = useRef(null);
   const nominasRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
@@ -1517,13 +1557,8 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {(jornales.length > 0 || descansos || vacaciones?.recognized || mensajes?.recognized || dobles?.recognized || nominas?.recognized) && (
+      {(jornales.length > 0 || descansos || vacaciones?.recognized || dobles?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
-          {mensajes?.recognized && (
-            <button className="is-mensajes" type="button" onClick={() => mensajesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-              <Inbox size={19} /><span>Mensajes</span><ChevronDown size={17} />
-            </button>
-          )}
           {dobles?.recognized && (
             <button className="is-dobles" type="button" onClick={() => doblesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <CalendarCheck2 size={19} /><span>Dobles</span><ChevronDown size={17} />
@@ -1559,30 +1594,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             </button>
           )}
         </nav>
-      )}
-
-      {mensajes?.recognized && (
-        <section ref={mensajesRef} className="portal-personal-section portal-inbox-section portal-scroll-anchor">
-          <header>
-            <span className="portal-personal-icon is-inbox"><Inbox size={21} /></span>
-            <div><small>Consultas</small><strong>Bandeja de entrada</strong></div>
-            <b>{mensajes.rows?.length || 0}</b>
-          </header>
-          {(mensajes.rows || []).length ? (
-            <div className="portal-inbox-list">
-              {mensajes.rows.map((message) => (
-                <article className={message.read ? "is-read" : "is-unread"} key={message.id}>
-                  <span><Mail size={17} /></span>
-                  <div>
-                    <strong>{message.title}</strong>
-                    <small>{message.sender || "Portal CPE"}</small>
-                  </div>
-                  <time>{message.date}<small>{message.time}</small></time>
-                </article>
-              ))}
-            </div>
-          ) : <p className="portal-personal-empty">No hay mensajes disponibles.</p>}
-        </section>
       )}
 
       {dobles?.recognized && (
@@ -2269,6 +2280,7 @@ export function App() {
   const [doorConfig, setDoorConfig] = useState(null);
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
@@ -2498,6 +2510,8 @@ export function App() {
       <AppHeader
         user={session}
         theme={theme}
+        messages={portalSnapshot?.payload?.mensajes}
+        onInboxOpen={() => setInboxOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}
       />
@@ -2534,6 +2548,7 @@ export function App() {
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
       </main>
+      {inboxOpen && <InboxModal messages={portalSnapshot?.payload?.mensajes} onClose={() => setInboxOpen(false)} />}
       <BottomNav activeTab={activeTab} onChange={navigateToTab} />
     </div>
   );

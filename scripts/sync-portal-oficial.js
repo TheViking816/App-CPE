@@ -923,7 +923,7 @@ async function collectRequestedDoubles(page) {
 
 async function collectPayrolls(page) {
   if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
-  await openPortalHash(page, "User,Query,,,");
+  await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Nómina electrónica");
   await portalSectionState(page, "nominas");
 
