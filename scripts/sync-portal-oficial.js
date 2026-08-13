@@ -848,6 +848,13 @@ async function collectMessages(page) {
       }
     }
   }
+  if (!/viewMessages/i.test(new URL(page.url()).hash)) {
+    await page.goto("https://portal.cpevalencia.com/#User,viewMessages,Home", {
+      waitUntil: "domcontentloaded",
+      timeout: 45000
+    });
+    await page.waitForTimeout(1500);
+  }
   const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
     const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
     const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
