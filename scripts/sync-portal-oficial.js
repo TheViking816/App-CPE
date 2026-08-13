@@ -9,6 +9,12 @@ import {
   parseAssignmentsFromTables
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
+import {
+  buildRequestedDoubles,
+  currentMadridMonth,
+  parseMessagesHtml,
+  parsePayrollsHtml
+} from "./portal-messages-doubles.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -805,6 +811,124 @@ async function collectSl(page) {
   throw new Error("El portal no devolvio posiciones de Lista SL.");
 }
 
+async function collectMessages(page) {
+  await openMenu(page, "Consultas", "Mensajes");
+  const result = await waitForParsedContent(
+    page,
+    parseMessagesHtml,
+    (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+    10000,
+    (parsed) => parsed.recognized && parsed.rows.length > 0
+  );
+  if (result.recognized) return result;
+  throw new Error("No se pudo leer la bandeja de mensajes.");
+}
+
+async function findDoublesSelector(page) {
+  return waitForFrameAndLocator(
+    page,
+    (frame) => frame.locator('input[name="fecha"]:visible, input[id*="fecha" i]:visible'),
+    12000
+  );
+}
+
+async function extractCheckedDoubles(frame, date) {
+  const selections = await frame.locator('input[type="checkbox"]:checked').evaluateAll((checkboxes) => checkboxes.map((input) => {
+    const row = input.closest("tr");
+    const table = input.closest("table");
+    const cell = input.closest("td,th");
+    if (!row || !table || !cell) return null;
+    const cellIndex = [...row.cells].indexOf(cell);
+    const specialty = row.cells[0]?.innerText || "";
+    const previousRows = [...table.rows].slice(0, [...table.rows].indexOf(row)).reverse();
+    const journey = previousRows
+      .map((headerRow) => headerRow.cells[cellIndex]?.innerText?.trim() || "")
+      .find((value) => /^\d{2}\s*\/\s*\d{2}$/.test(value)) || "";
+    return { specialty, journey };
+  }).filter(Boolean));
+  return buildRequestedDoubles(date, selections);
+}
+
+async function collectRequestedDoubles(page) {
+  await openMenu(page, "Solicitudes", "Solicitar Dobles");
+  let selector = await findDoublesSelector(page);
+  if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
+
+  const month = currentMadridMonth();
+  const rows = [];
+  for (const date of month.dates) {
+    const { frame, locator: dateInput } = selector;
+    const selectorUrl = frame.url();
+    await dateInput.fill(date);
+    const submit = frame.locator('input[type="submit"][value="Solicitar" i], button:has-text("Solicitar")').first();
+    if (!await submit.isVisible().catch(() => false)) {
+      throw new Error("No se encontro el boton para consultar los dobles.");
+    }
+    await Promise.all([
+      frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => null),
+      submit.click({ timeout: 10000 })
+    ]);
+    await frame.locator("body").waitFor({ state: "visible", timeout: 10000 });
+    rows.push(...await extractCheckedDoubles(frame, date));
+    await frame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
+    selector = await findDoublesSelector(page);
+    if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
+  }
+
+  return { recognized: true, month: month.month, year: month.year, monthLabel: month.label, rows };
+}
+
+async function collectPayrolls(page) {
+  if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
+  await openMenu(page, "Consultas", "Nómina electrónica");
+
+  const alreadyLoaded = await waitForParsedContent(
+    page,
+    parsePayrollsHtml,
+    (result) => (result.locked ? 0 : 1000) + (result.rows?.length || 0),
+    2500,
+    (result) => result.recognized && !result.locked && result.rows.length > 0
+  );
+  if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) return alreadyLoaded;
+
+  const securityControl = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Validar/i }),
+    8000
+  );
+  if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
+
+  const securityInput = securityControl.frame
+    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([role="presentation"]):not([tabindex="-1"]):visible')
+    .first();
+  await securityInput.fill(portalSecurityKey);
+  await securityControl.locator.click({ noWaitAfter: true });
+
+  const invalidKey = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByText(/La clave de seguridad es incorrecta/i),
+    3000
+  );
+  if (invalidKey) throw new Error("La clave de seguridad de Nómina electrónica es incorrecta.");
+
+  const accept = await waitForFrameLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Aceptar/i }),
+    8000
+  );
+  if (accept) await accept.click({ noWaitAfter: true });
+
+  const result = await waitForParsedContent(
+    page,
+    parsePayrollsHtml,
+    (parsed) => (parsed.locked ? 0 : 1000) + (parsed.rows?.length || 0),
+    12000,
+    (parsed) => parsed.recognized && !parsed.locked
+  );
+  if (result.recognized && !result.locked) return result;
+  throw new Error("No se pudo leer la lista de Nómina electrónica.");
+}
+
 async function collectAssignmentsViaMenu(page) {
   await assignmentNavigationState(page, "menu-before");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
@@ -1199,6 +1323,27 @@ async function main() {
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
       hasVacationData
     );
+    const mensajes = await readOptionalSection(
+      "mensajes",
+      () => collectMessages(page),
+      existingSnapshot?.payload?.mensajes,
+      { recognized: false, rows: [] },
+      hasVacationData
+    );
+    const dobles = await readOptionalSection(
+      "dobles solicitados",
+      () => collectRequestedDoubles(page),
+      existingSnapshot?.payload?.dobles,
+      { recognized: false, month: null, year: null, monthLabel: "", rows: [] },
+      hasVacationData
+    );
+    const nominas = await readOptionalSection(
+      "nomina electronica",
+      () => collectPayrolls(page),
+      existingSnapshot?.payload?.nominas,
+      { recognized: false, locked: !portalSecurityKey, rows: [] },
+      hasVacationData
+    );
     if (freshSections === 0) {
       throw new Error("El portal no devolvio ninguna seccion util. Se conservaran los datos anteriores.");
     }
@@ -1210,6 +1355,9 @@ async function main() {
       sl,
       primas,
       vacaciones,
+      mensajes,
+      dobles,
+      nominas,
       sync: {
         partial: sectionWarnings.length > 0,
         freshSections,
@@ -1237,6 +1385,9 @@ async function main() {
       primas: payload.primas.rows.length,
       descansos: payload.descansos.worker,
       vacaciones: payload.vacaciones.rows.length,
+      mensajes: payload.mensajes.rows.length,
+      dobles: payload.dobles.rows.length,
+      nominas: payload.nominas.rows.length,
       partial: payload.sync.partial,
       warnings: payload.sync.warnings
     });

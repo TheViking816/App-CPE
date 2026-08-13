@@ -10,20 +10,24 @@ import {
   CircleAlert,
   Clock3,
   ExternalLink,
+  FileLock2,
   Eye,
   EyeOff,
   Home,
+  Inbox,
   Link as LinkIcon,
   ClipboardList,
   Lock,
   LogOut,
   Moon,
+  Mail,
   Percent,
   RefreshCw,
   ReceiptText,
   Search,
   Ship,
   Sun,
+  CalendarCheck2,
   Save,
   UserRound,
   UsersRound,
@@ -73,7 +77,7 @@ const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
-const DEFAULT_PORTAL_SYNC_SECONDS = 75;
+const DEFAULT_PORTAL_SYNC_SECONDS = 150;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
 const CHAPERO_POLL_MS = 60_000;
@@ -1393,6 +1397,9 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
+  const mensajes = payload?.mensajes || null;
+  const dobles = payload?.dobles || null;
+  const nominas = payload?.nominas || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
   const [savedIrpfRate, setSavedIrpfRate] = useState(0);
@@ -1406,6 +1413,9 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
+  const mensajesRef = useRef(null);
+  const doblesRef = useRef(null);
+  const nominasRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
 
   useEffect(() => {
@@ -1494,7 +1504,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
       <div className="portal-empty-state">
         <BriefcaseBusiness size={26} />
         <strong>Sin datos sincronizados</strong>
-        <span>Lee el portal oficial para cargar jornales, descansos y vacaciones.</span>
+        <span>Lee el portal oficial para cargar jornales, mensajes, dobles, nóminas y calendarios.</span>
       </div>
     );
   }
@@ -1507,8 +1517,23 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {(jornales.length > 0 || descansos || vacaciones?.recognized) && (
+      {(jornales.length > 0 || descansos || vacaciones?.recognized || mensajes?.recognized || dobles?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
+          {mensajes?.recognized && (
+            <button className="is-mensajes" type="button" onClick={() => mensajesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <Inbox size={19} /><span>Mensajes</span><ChevronDown size={17} />
+            </button>
+          )}
+          {dobles?.recognized && (
+            <button className="is-dobles" type="button" onClick={() => doblesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <CalendarCheck2 size={19} /><span>Dobles</span><ChevronDown size={17} />
+            </button>
+          )}
+          {nominas?.recognized && (
+            <button className="is-nominas" type="button" onClick={() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <FileLock2 size={19} /><span>Nóminas</span><ChevronDown size={17} />
+            </button>
+          )}
           {jornales.length > 0 && (
             <button
               type="button"
@@ -1534,6 +1559,74 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             </button>
           )}
         </nav>
+      )}
+
+      {mensajes?.recognized && (
+        <section ref={mensajesRef} className="portal-personal-section portal-inbox-section portal-scroll-anchor">
+          <header>
+            <span className="portal-personal-icon is-inbox"><Inbox size={21} /></span>
+            <div><small>Consultas</small><strong>Bandeja de entrada</strong></div>
+            <b>{mensajes.rows?.length || 0}</b>
+          </header>
+          {(mensajes.rows || []).length ? (
+            <div className="portal-inbox-list">
+              {mensajes.rows.map((message) => (
+                <article className={message.read ? "is-read" : "is-unread"} key={message.id}>
+                  <span><Mail size={17} /></span>
+                  <div>
+                    <strong>{message.title}</strong>
+                    <small>{message.sender || "Portal CPE"}</small>
+                  </div>
+                  <time>{message.date}<small>{message.time}</small></time>
+                </article>
+              ))}
+            </div>
+          ) : <p className="portal-personal-empty">No hay mensajes disponibles.</p>}
+        </section>
+      )}
+
+      {dobles?.recognized && (
+        <section ref={doblesRef} className="portal-personal-section portal-doubles-section portal-scroll-anchor">
+          <header>
+            <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
+            <div><small>Solicitudes</small><strong>Dobles solicitados</strong><em>{dobles.monthLabel || "Mes actual"}</em></div>
+            <b>{dobles.rows?.length || 0}</b>
+          </header>
+          {(dobles.rows || []).length ? (
+            <div className="portal-doubles-list">
+              {dobles.rows.map((request, index) => (
+                <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
+                  <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
+                  <div><strong>{request.specialty}</strong><small>Jornada {request.journey}</small></div>
+                  <Check size={18} />
+                </article>
+              ))}
+            </div>
+          ) : <p className="portal-personal-empty">No hay dobles solicitados este mes.</p>}
+        </section>
+      )}
+
+      {nominas?.recognized && (
+        <section ref={nominasRef} className="portal-personal-section portal-payroll-documents portal-scroll-anchor">
+          <header>
+            <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
+            <div><small>Modo seguro</small><strong>Nómina electrónica</strong></div>
+            {!nominas.locked && <b>{nominas.rows?.length || 0}</b>}
+          </header>
+          {nominas.locked ? (
+            <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Guárdala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
+          ) : (nominas.rows || []).length ? (
+            <div className="portal-payroll-document-list">
+              {nominas.rows.map((payroll) => (
+                <article key={payroll.id}>
+                  <ReceiptText size={18} />
+                  <div><strong>{payroll.type}</strong><small>Periodo {payroll.period}</small></div>
+                  <span>{payroll.period}</span>
+                </article>
+              ))}
+            </div>
+          ) : <p className="portal-personal-empty">No hay nóminas disponibles.</p>}
+        </section>
       )}
 
       {jornales.length > 0 && (
@@ -1978,7 +2071,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       <div className="section-heading">
         <p>Portal oficial</p>
         <h1>Mi portal</h1>
-        <span>Jornales, primas, descansos y vacaciones en formato claro.</span>
+        <span>Jornales, mensajes, dobles, nóminas, descansos y vacaciones en formato claro.</span>
       </div>
 
       {snapshot && !showCredentials && (
@@ -2016,7 +2109,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           <section className="portal-security-card">
             <div>
               <p>{snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
-              <span>Introduce tu contrasena del portal oficial y, si quieres primas, la clave de seguridad.</span>
+              <span>Introduce tu contraseña del portal oficial y, para primas y nóminas, la clave de seguridad.</span>
             </div>
             <label>
               <Lock size={17} />
@@ -2096,7 +2189,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
             <span style={{ width: `${syncProgress}%` }} />
           </div>
           <div className="portal-progress-meta">
-            <span>{portalJob?.status === "running" ? "Leyendo jornales, primas, descansos y vacaciones" : "Preparando la lectura segura"}</span>
+            <span>{portalJob?.status === "running" ? "Leyendo jornales, mensajes, dobles, nóminas y calendarios" : "Preparando la lectura segura"}</span>
             <small>{syncRemaining > 0 ? `Aproximadamente ${syncRemaining} s restantes` : "Finalizando..."} · {syncElapsed} s transcurridos</small>
           </div>
         </section>
