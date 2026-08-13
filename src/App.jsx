@@ -673,6 +673,44 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
   );
 }
 
+function upcomingDoubleStart(request) {
+  const date = parsePortalDate(request.date);
+  const startHour = Number.parseInt(String(request.journey || "").match(/^(\d{2})/)?.[1], 10);
+  if (!date || !Number.isFinite(startHour)) return null;
+  date.setHours(startHour, 0, 0, 0);
+  return date;
+}
+
+function UpcomingDoubles({ snapshot, currentTime }) {
+  const rows = useMemo(() => {
+    const now = new Date(currentTime || Date.now());
+    return (snapshot?.payload?.dobles?.rows || [])
+      .map((request) => ({ ...request, startsAt: upcomingDoubleStart(request) }))
+      .filter((request) => request.startsAt && request.startsAt > now)
+      .sort((a, b) => a.startsAt - b.startsAt);
+  }, [snapshot, currentTime]);
+
+  if (!rows.length) return null;
+  return (
+    <section className="upcoming-doubles-card">
+      <header>
+        <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
+        <div><small>Solicitudes activas</small><strong>Próximos dobles</strong></div>
+        <b>{rows.length}</b>
+      </header>
+      <div className="portal-doubles-list">
+        {rows.map((request, index) => (
+          <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
+            <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
+            <div><strong>{request.specialty}</strong><small>Jornada {request.journey}</small></div>
+            <Check size={17} />
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
   const detail = assignment.detail || {};
   const logo = companyLogo(detail.empresa || assignment.empresa);
@@ -902,6 +940,7 @@ function HomePanel({
       </section>
 
       <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
+      <UpcomingDoubles snapshot={portalSnapshot} currentTime={currentTime} />
 
       <div className="specialty-select">
         <span>Especialidad</span>
@@ -1439,7 +1478,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
-  const dobles = payload?.dobles || null;
   const nominas = payload?.nominas || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
@@ -1454,7 +1492,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
-  const doblesRef = useRef(null);
   const nominasRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
 
@@ -1557,13 +1594,8 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {(jornales.length > 0 || descansos || vacaciones?.recognized || dobles?.recognized || nominas?.recognized) && (
+      {(jornales.length > 0 || descansos || vacaciones?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
-          {dobles?.recognized && (
-            <button className="is-dobles" type="button" onClick={() => doblesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-              <CalendarCheck2 size={19} /><span>Dobles</span><ChevronDown size={17} />
-            </button>
-          )}
           {nominas?.recognized && (
             <button className="is-nominas" type="button" onClick={() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <FileLock2 size={19} /><span>Nóminas</span><ChevronDown size={17} />
@@ -1594,27 +1626,6 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
             </button>
           )}
         </nav>
-      )}
-
-      {dobles?.recognized && (
-        <section ref={doblesRef} className="portal-personal-section portal-doubles-section portal-scroll-anchor">
-          <header>
-            <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
-            <div><small>Solicitudes</small><strong>Dobles solicitados</strong><em>{dobles.monthLabel || "Mes actual"}</em></div>
-            <b>{dobles.rows?.length || 0}</b>
-          </header>
-          {(dobles.rows || []).length ? (
-            <div className="portal-doubles-list">
-              {dobles.rows.map((request, index) => (
-                <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
-                  <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
-                  <div><strong>{request.specialty}</strong><small>Jornada {request.journey}</small></div>
-                  <Check size={18} />
-                </article>
-              ))}
-            </div>
-          ) : <p className="portal-personal-empty">No hay dobles solicitados este mes.</p>}
-        </section>
       )}
 
       {nominas?.recognized && (

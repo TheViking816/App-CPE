@@ -3011,6 +3011,27 @@ select {
   box-shadow: 0 7px 20px rgba(7, 31, 63, 0.06);
 }
 
+.upcoming-doubles-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #cfe9df;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #f8fffc, #eefaf6);
+  box-shadow: 0 7px 20px rgba(7, 90, 68, 0.07);
+}
+
+.upcoming-doubles-card > header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.upcoming-doubles-card > header > div { display: grid; gap: 1px; }
+.upcoming-doubles-card > header small { color: #4d7b6d; font-size: 10px; font-weight: 850; text-transform: uppercase; }
+.upcoming-doubles-card > header strong { color: var(--ink); font-size: 16px; font-weight: 950; }
+.upcoming-doubles-card > header > b { display: grid; min-width: 34px; min-height: 34px; place-items: center; border-radius: 8px; background: #dff7ee; color: #087f66; font-size: 13px; }
+
 .portal-personal-section > header {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto;
@@ -3193,6 +3214,8 @@ select {
 :root[data-theme="dark"] .inbox-modal h2 { color: #f4f8fc; }
 :root[data-theme="dark"] .inbox-modal > header > b,
 :root[data-theme="dark"] .inbox-modal > header > button { background: #172d45; color: #f4f8fc; }
+:root[data-theme="dark"] .upcoming-doubles-card { border-color: #235949; background: linear-gradient(145deg, #102b28, #102238); }
+:root[data-theme="dark"] .upcoming-doubles-card > header strong { color: #f4f8fc; }
 
 .current-assignments-card.is-empty {
   border-style: solid;
