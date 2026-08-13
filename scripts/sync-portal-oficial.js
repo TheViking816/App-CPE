@@ -906,14 +906,29 @@ async function visiblePortalMenuLabels(page) {
 
 async function collectMessages(page) {
   await openPortalHash(page, "User,Request,,,");
+  const requestedPaths = [];
+  const captureRequest = (request) => {
+    try {
+      const url = new URL(request.url());
+      if (url.hostname === "portal.cpevalencia.com") requestedPaths.push(url.pathname);
+    } catch {}
+  };
+  page.context().on("request", captureRequest);
   await openMenu(page, "Consultas", "Mensajes");
   if (new URL(page.url()).hash === "#Home") {
     const messagesItem = await findMenuItem(page, "Mensajes", 3000);
     if (messagesItem) {
-      await messagesItem.dblclick({ timeout: 10000 });
+      await messagesItem.focus();
+      await messagesItem.press("Enter").catch(() => {});
       await page.waitForTimeout(1200);
+      if (new URL(page.url()).hash === "#Home") {
+        await messagesItem.press("Space").catch(() => {});
+        await page.waitForTimeout(1200);
+      }
     }
   }
+  page.context().off("request", captureRequest);
+  console.log(`[portal:mensajes-requests] ${JSON.stringify([...new Set(requestedPaths)].slice(-30))}`);
   await portalSectionState(page, "mensajes");
   await portalDateStructure(page, "mensajes");
   const result = await waitForParsedContent(
@@ -928,29 +943,6 @@ async function collectMessages(page) {
     return result;
   }
 
-  const routeCandidates = [
-    "User,ViewMessage,Home",
-    "User,ViewMessages,Home",
-    "User,ViewMsg,Home",
-    "User,Messages,Home",
-    ...Array.from({ length: 30 }, (_, index) => `User,ViewNoray,${index + 1}`)
-  ];
-  for (const route of routeCandidates) {
-    await page.goto(`https://portal.cpevalencia.com/#${route}`, { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.waitForTimeout(route.startsWith("User,ViewNoray,") ? 700 : 1200);
-    const candidate = await waitForParsedContent(
-      page,
-      parseMessagesHtml,
-      (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
-      route.startsWith("User,ViewNoray,") ? 500 : 1800,
-      (parsed) => parsed.recognized && parsed.rows.length > 0
-    );
-    console.log(`[portal:mensajes-route] ${JSON.stringify({ route, hash: new URL(page.url()).hash, recognized: candidate.recognized, rows: candidate.rows?.length || 0 })}`);
-    if (candidate.recognized && candidate.rows.length) {
-      console.log(`Mensajes leidos: ${candidate.rows.length}.`);
-      return candidate;
-    }
-  }
   throw new Error("No se pudo leer la bandeja de mensajes.");
 }
 
