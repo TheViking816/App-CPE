@@ -907,6 +907,13 @@ async function visiblePortalMenuLabels(page) {
 async function collectMessages(page) {
   await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Mensajes");
+  if (new URL(page.url()).hash === "#Home") {
+    const messagesItem = await findMenuItem(page, "Mensajes", 3000);
+    if (messagesItem) {
+      await messagesItem.dblclick({ timeout: 10000 });
+      await page.waitForTimeout(1200);
+    }
+  }
   await portalSectionState(page, "mensajes");
   await portalDateStructure(page, "mensajes");
   const result = await waitForParsedContent(
@@ -1007,9 +1014,16 @@ async function collectPayrolls(page) {
   );
   if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
 
-  const securityInput = securityControl.frame.locator('input[type="password"]:visible').last();
+  const securityPanel = securityControl.locator.locator("xpath=ancestor::table[1]");
+  const panelInput = securityPanel.locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):visible');
+  const securityInput = await panelInput.count()
+    ? panelInput.last()
+    : securityControl.frame.locator('input[type="password"]:visible').last();
   await securityInput.fill(portalSecurityKey);
   await securityControl.locator.click({ noWaitAfter: true });
+  await page.waitForTimeout(1200);
+  await portalSectionState(page, "nominas-after-security");
+  await portalInteractiveStructure(page, "nominas-after-security");
 
   const invalidKey = await waitForFrameAndLocator(
     page,
