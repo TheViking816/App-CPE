@@ -12,7 +12,6 @@ import { parseVacacionesFromRows } from "./portal-vacations.js";
 import {
   buildRequestedDoubles,
   currentMadridMonth,
-  normalizePortalDate,
   parseMessagesHtml,
   parsePayrollsHtml
 } from "./portal-messages-doubles.js";
@@ -885,10 +884,13 @@ async function collectMessages(page) {
     const tail = signatureText.slice((dateMatch.index || 0) + dateMatch[0].length).replace(/^\s*[-–—]\s*/, "");
     const readMatch = tail.match(/\bLE[IÍ]DO\s+EL\s+(.+)$/i);
     const sender = tail.replace(/\bLE[IÍ]DO\s+EL\s+.+$/i, "").replace(/[\s,.-]+$/, "").trim();
+    const dateParts = dateMatch[1].split("/");
+    const fullYear = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
+    const normalizedDate = `${dateParts[0].padStart(2, "0")}/${dateParts[1].padStart(2, "0")}/${fullYear}`;
     return {
       id: `${dateMatch[1]}-${dateMatch[2]}-${index}-${title}`,
       title,
-      date: normalizePortalDate(dateMatch[1]),
+      date: normalizedDate,
       time: dateMatch[2].padStart(5, "0"),
       sender,
       read: Boolean(readMatch),
