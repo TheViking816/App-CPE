@@ -1071,9 +1071,11 @@ async function readPayrollDocument(page, button) {
     if (download) {
       const downloadPath = await download.path();
       if (downloadPath) {
+        const bytes = await fs.readFile(downloadPath);
+        if (bytes.subarray(0, 4).toString() !== "%PDF") return null;
         return {
           mimeType: "application/pdf",
-          contentBase64: (await fs.readFile(downloadPath)).toString("base64")
+          contentBase64: bytes.toString("base64")
         };
       }
     }
@@ -1087,22 +1089,22 @@ async function readPayrollDocument(page, button) {
         if (response?.ok()) {
           const contentType = String(response.headers()["content-type"] || "application/pdf").split(";")[0];
           const bytes = await response.body();
-          if (bytes.length > 0 && !/text\/html/i.test(contentType)) {
-            return { mimeType: contentType, contentBase64: bytes.toString("base64") };
+          if (bytes.subarray(0, 4).toString() === "%PDF") {
+            return { mimeType: "application/pdf", contentBase64: bytes.toString("base64") };
           }
         }
       }
-      const embeddedUrl = await popup.locator("embed[src], iframe[src], object[data]").first()
-        .evaluate((node) => node.getAttribute("src") || node.getAttribute("data") || "")
+      const embeddedUrl = await popup.locator("embed[original-url], embed[src], iframe[src], object[data]").first()
+        .evaluate((node) => node.getAttribute("original-url") || node.getAttribute("src") || node.getAttribute("data") || "")
         .catch(() => "");
-      if (embeddedUrl && !/^blob:/i.test(embeddedUrl)) {
+      if (embeddedUrl && !/^(?:blob|chrome-extension):/i.test(embeddedUrl)) {
         const absoluteUrl = new URL(embeddedUrl, popupUrl).href;
         const response = await context.request.get(absoluteUrl, { timeout: 20000 }).catch(() => null);
         if (response?.ok()) {
           const bytes = await response.body();
-          if (bytes.length > 0) {
+          if (bytes.subarray(0, 4).toString() === "%PDF") {
             return {
-              mimeType: String(response.headers()["content-type"] || "application/pdf").split(";")[0],
+              mimeType: "application/pdf",
               contentBase64: bytes.toString("base64")
             };
           }
@@ -1113,9 +1115,9 @@ async function readPayrollDocument(page, button) {
     await page.waitForTimeout(500);
     for (const response of responses.reverse()) {
       const bytes = await response.body().catch(() => null);
-      if (bytes?.length) {
+      if (bytes?.subarray(0, 4).toString() === "%PDF") {
         return {
-          mimeType: String(response.headers()["content-type"] || "application/pdf").split(";")[0],
+          mimeType: "application/pdf",
           contentBase64: bytes.toString("base64")
         };
       }
