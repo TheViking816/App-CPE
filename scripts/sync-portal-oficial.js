@@ -29,6 +29,8 @@ const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || process.env.CPE
 const portalSecurityKey = String(process.env.CPE_PORTAL_SECURITY_KEY || "");
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
+  || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== "main" ? process.env.GITHUB_REF_NAME : "")).trim();
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
@@ -1359,7 +1361,9 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
 
 async function upsertSupabase(snapshot) {
   if (!supabaseServiceRole) return;
-  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_snapshots?on_conflict=chapa`, {
+  const table = portalSnapshotChannel ? "app_cpe_portal_preview_snapshots" : "app_cpe_portal_snapshots";
+  const conflict = portalSnapshotChannel ? "channel,chapa" : "chapa";
+  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?on_conflict=${conflict}`, {
     method: "POST",
     headers: {
       "apikey": supabaseServiceRole,
@@ -1368,6 +1372,7 @@ async function upsertSupabase(snapshot) {
       "Prefer": "resolution=merge-duplicates,return=minimal"
     },
     body: JSON.stringify({
+      ...(portalSnapshotChannel ? { channel: portalSnapshotChannel } : {}),
       chapa: snapshot.chapa,
       source: snapshot.source,
       payload: snapshot.payload,
@@ -1383,8 +1388,10 @@ async function upsertSupabase(snapshot) {
 async function getExistingSupabaseSnapshot() {
   if (!supabaseServiceRole || !portalUser) return null;
   try {
+    const table = portalSnapshotChannel ? "app_cpe_portal_preview_snapshots" : "app_cpe_portal_snapshots";
+    const channelFilter = portalSnapshotChannel ? `&channel=eq.${encodeURIComponent(portalSnapshotChannel)}` : "";
     const response = await fetch(
-      `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(portalUser)}&limit=1`,
+      `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?select=payload&chapa=eq.${encodeURIComponent(portalUser)}${channelFilter}&limit=1`,
       {
         headers: {
           apikey: supabaseServiceRole,

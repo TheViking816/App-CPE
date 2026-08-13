@@ -28,6 +28,7 @@ const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "")
   .replace(/\\r|\\n/g, "")
   .trim();
 const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "main";
+const portalSnapshotChannel = import.meta.env.VITE_PORTAL_SNAPSHOT_CHANNEL || "";
 
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
@@ -239,9 +240,12 @@ export async function requestChaperoRefresh() {
 export async function getOfficialPortalSnapshot({ token }) {
   if (!supabase || !token) return null;
 
-  const { data, error } = await supabase.rpc("app_cpe_get_portal_snapshot", {
-    p_token: token
-  });
+  const { data, error } = portalSnapshotChannel
+    ? await supabase.rpc("app_cpe_get_portal_preview_snapshot", {
+        p_token: token,
+        p_channel: portalSnapshotChannel
+      })
+    : await supabase.rpc("app_cpe_get_portal_snapshot", { p_token: token });
 
   if (error) {
     console.warn("No se pudo leer el portal oficial sincronizado:", error.message);

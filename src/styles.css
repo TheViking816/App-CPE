@@ -4874,17 +4874,37 @@ select {
 
 @media (max-width: 430px) {
   .app-header {
-    grid-template-columns: 82px minmax(0, 1fr) auto auto;
-    gap: 8px;
+    grid-template-columns: 62px minmax(70px, 1fr) 40px 40px auto;
+    gap: 6px;
+    min-height: 70px;
+    padding: 4px 8px;
+  }
+
+  .logo-box {
+    width: 62px;
+    height: 62px;
+  }
+
+  .logo-box img {
+    width: 58px;
+    height: 58px;
+  }
+
+  .header-title strong {
+    font-size: 19px;
   }
 
   .logout-button {
-    padding: 0 13px;
+    min-height: 40px;
+    gap: 5px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
-  .theme-button {
-    width: 44px;
-    height: 44px;
+  .theme-button,
+  .header-inbox-button {
+    width: 40px;
+    height: 40px;
   }
 
   .doors-table th,
