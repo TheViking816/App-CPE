@@ -111,7 +111,7 @@ a {
   top: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 82px minmax(0, 1fr) auto auto auto auto;
   align-items: center;
   gap: 10px;
   min-height: 90px;
@@ -193,7 +193,8 @@ a {
   background: rgba(255, 255, 255, 0.18);
 }
 
-.header-inbox-button {
+.header-inbox-button,
+.header-settings-button {
   position: relative;
   display: grid;
   width: 48px;
@@ -205,7 +206,8 @@ a {
   color: #fff;
 }
 
-.header-inbox-button:hover { background: rgba(255, 255, 255, 0.18); }
+.header-inbox-button:hover,
+.header-settings-button:hover { background: rgba(255, 255, 255, 0.18); }
 .header-inbox-button > span {
   position: absolute;
   top: -6px;
@@ -3342,26 +3344,6 @@ select {
 .password-change-success span { color: var(--muted); font-size: 12px; font-weight: 750; }
 .password-change-success .primary-button { width: 100%; margin-top: 8px; }
 
-.home-password-button {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 12px;
-  border: 1px solid #d8e3ed;
-  border-radius: 10px;
-  background: #fff;
-  color: var(--navy);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.home-password-button > span:first-child { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 9px; background: #edf4fa; }
-.home-password-button > span:nth-child(2) { display: grid; gap: 1px; }
-.home-password-button small { color: var(--muted); font-size: 9px; font-weight: 850; text-transform: uppercase; }
-.home-password-button strong { color: var(--ink); font-size: 13px; }
-
 .portal-inbox-list > button,
 .portal-doubles-list article,
 .portal-payroll-document-list > button {
@@ -3477,13 +3459,10 @@ select {
 :root[data-theme="dark"] .inbox-modal h2 { color: #f4f8fc; }
 :root[data-theme="dark"] .inbox-modal > header > b,
 :root[data-theme="dark"] .inbox-modal > header > button { background: #172d45; color: #f4f8fc; }
-:root[data-theme="dark"] .password-modal > header > span,
-:root[data-theme="dark"] .home-password-button > span:first-child { background: #172d45; color: #f4f8fc; }
+:root[data-theme="dark"] .password-modal > header > span { background: #172d45; color: #f4f8fc; }
 :root[data-theme="dark"] .password-change-form input { border-color: #29435d; background: #172d45; color: #f4f8fc; }
 :root[data-theme="dark"] .password-change-form label,
-:root[data-theme="dark"] .password-change-success strong,
-:root[data-theme="dark"] .home-password-button strong { color: #f4f8fc; }
-:root[data-theme="dark"] .home-password-button { border-color: #29435d; background: #102238; color: #f4f8fc; }
+:root[data-theme="dark"] .password-change-success strong { color: #f4f8fc; }
 :root[data-theme="dark"] .upcoming-doubles-card { border-color: #235949; background: linear-gradient(145deg, #102b28, #102238); }
 :root[data-theme="dark"] .upcoming-doubles-card > header strong { color: #f4f8fc; }
 
@@ -5211,7 +5190,7 @@ select {
 
 @media (max-width: 430px) {
   .app-header {
-    grid-template-columns: 62px minmax(70px, 1fr) 40px 40px auto;
+    grid-template-columns: 62px minmax(54px, 1fr) 40px 40px 40px auto;
     gap: 6px;
     min-height: 70px;
     padding: 4px 8px;
@@ -5239,7 +5218,8 @@ select {
   }
 
   .theme-button,
-  .header-inbox-button {
+  .header-inbox-button,
+  .header-settings-button {
     width: 40px;
     height: 40px;
   }

@@ -27,6 +27,7 @@ import {
   RefreshCw,
   ReceiptText,
   Search,
+  Settings,
   Ship,
   Sun,
   CalendarCheck2,
@@ -503,7 +504,7 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   );
 }
 
-function AppHeader({ user, theme, messages, onInboxOpen, onThemeToggle, onLogout }) {
+function AppHeader({ user, theme, messages, onInboxOpen, onSettingsOpen, onThemeToggle, onLogout }) {
   const unreadCount = (messages?.rows || []).filter((message) => !message.read).length;
   return (
     <header className="app-header">
@@ -517,6 +518,11 @@ function AppHeader({ user, theme, messages, onInboxOpen, onThemeToggle, onLogout
         <button className="header-inbox-button" type="button" onClick={onInboxOpen} aria-label="Abrir bandeja de entrada">
           <Mail size={20} />
           {unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}
+        </button>
+      )}
+      {user && (
+        <button className="header-settings-button" type="button" onClick={onSettingsOpen} aria-label="Cambiar contraseña">
+          <Settings size={20} />
         </button>
       )}
       <button
@@ -1192,8 +1198,7 @@ function HomePanel({
   availableSpecialties,
   activeSpecialtyId,
   onSpecialtyChange,
-  onLoadPortal,
-  onPasswordChange
+  onLoadPortal
 }) {
   const nearest = getNearestDoor(doors);
   const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
@@ -1287,12 +1292,6 @@ function HomePanel({
       )}
 
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
-
-      <button className="home-password-button" type="button" onClick={onPasswordChange}>
-        <span><Lock size={18} /></span>
-        <span><small>Mi cuenta</small><strong>Cambiar contraseña</strong></span>
-        <ChevronRight size={19} />
-      </button>
 
       {notice && <p className="inline-notice">{notice}</p>}
     </section>
@@ -2911,6 +2910,7 @@ export function App() {
         theme={theme}
         messages={portalSnapshot?.payload?.mensajes}
         onInboxOpen={() => setInboxOpen(true)}
+        onSettingsOpen={() => setPasswordOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}
       />
@@ -2931,7 +2931,6 @@ export function App() {
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
             onLoadPortal={() => navigateToTab("portal")}
-            onPasswordChange={() => setPasswordOpen(true)}
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
