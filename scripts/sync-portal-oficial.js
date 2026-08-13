@@ -1133,23 +1133,27 @@ async function collectPayrollDocumentFiles(page, rows) {
   const documents = [];
   for (let index = 0; index < rows.length; index += 1) {
     const payroll = rows[index];
-    if (index > 0 && !await restoreSecurePayrollList(page)) {
-      console.warn(`Nomina ${payroll.period}: no se pudo restaurar la lista segura.`);
-      continue;
+    let file = null;
+    for (let attempt = 0; attempt < 2 && !file; attempt += 1) {
+      if ((index > 0 || attempt > 0) && !await restoreSecurePayrollList(page)) {
+        console.warn(`Nomina ${payroll.period}: no se pudo restaurar la lista segura.`);
+        continue;
+      }
+      const documentControl = await waitForFrameAndLocator(
+        page,
+        (candidate) => candidate.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible').nth(index),
+        5000
+      );
+      if (!documentControl) {
+        console.warn(`Nomina ${payroll.period}: no se encontro el acceso al documento.`);
+        continue;
+      }
+      file = await readPayrollDocument(page, documentControl.locator).catch((error) => {
+        console.warn(`Nomina ${payroll.period}: no se pudo descargar. ${error instanceof Error ? error.message : "Error desconocido"}`);
+        return null;
+      });
+      if (!file && attempt === 0) console.warn(`Nomina ${payroll.period}: reintentando el PDF.`);
     }
-    const documentControl = await waitForFrameAndLocator(
-      page,
-      (candidate) => candidate.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible').nth(index),
-      5000
-    );
-    if (!documentControl) {
-      console.warn(`Nomina ${payroll.period}: no se encontro el acceso al documento.`);
-      continue;
-    }
-    const file = await readPayrollDocument(page, documentControl.locator).catch((error) => {
-      console.warn(`Nomina ${payroll.period}: no se pudo descargar. ${error instanceof Error ? error.message : "Error desconocido"}`);
-      return null;
-    });
     if (file?.contentBase64) {
       documents.push({
         documentId: payroll.id,
