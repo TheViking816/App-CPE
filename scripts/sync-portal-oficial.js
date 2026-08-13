@@ -305,7 +305,7 @@ async function findVisibleMatch(page, selector, text, timeout = 0) {
 }
 
 function findMenuItem(page, text, timeout = 0) {
-  return findVisibleMatchAcrossFrames(page, ".NorayMenu .gwt-TreeItem", text, timeout);
+  return findVisibleMatchAcrossFrames(page, ".NorayMenu .gwt-TreeItem, .gwt-TreeItem", text, timeout);
 }
 
 async function findVisibleMatchAcrossFrames(page, selector, text, timeout = 0) {
@@ -847,7 +847,8 @@ async function visiblePortalMenuLabels(page) {
 }
 
 async function collectMessages(page) {
-  await openPortalHash(page, "User,Query,viewMessages,,0");
+  await openPortalHash(page, "User,Request,,,");
+  await openMenu(page, "Consultas", "Mensajes");
   await portalSectionState(page, "mensajes");
   const result = await waitForParsedContent(
     page,
