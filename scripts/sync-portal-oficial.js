@@ -1128,39 +1128,41 @@ async function readPayrollDocument(page, button) {
 
 async function collectPayrollDocumentFiles(page, rows) {
   const documents = [];
-  let rowIndex = 0;
-  for (const initialFrame of page.frames()) {
-    let frame = initialFrame;
-    let buttons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
-    const count = await buttons.count().catch(() => 0);
-    for (let index = 0; index < count; index += 1) {
-      const payroll = rows[rowIndex];
-      rowIndex += 1;
-      if (!payroll) continue;
-      buttons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
-      const file = await readPayrollDocument(page, buttons.nth(index)).catch((error) => {
+  for (let index = 0; index < rows.length; index += 1) {
+      const payroll = rows[index];
+      const titleControl = await waitForFrameAndLocator(
+        page,
+        (candidate) => candidate.getByText(payroll.title, { exact: true }).first(),
+        5000
+      );
+      if (!titleControl) {
+        console.warn(`Nomina ${payroll.period}: no se encontro el acceso al documento.`);
+        continue;
+      }
+      const clickableAncestor = titleControl.locator.locator("xpath=ancestor-or-self::*[self::button or self::a or @onclick or @role='button'][1]");
+      const target = await clickableAncestor.count().catch(() => 0) ? clickableAncestor : titleControl.locator;
+      const file = await readPayrollDocument(page, target).catch((error) => {
         console.warn(`Nomina ${payroll.period}: no se pudo descargar. ${error instanceof Error ? error.message : "Error desconocido"}`);
         return null;
       });
-      if (!file?.contentBase64) continue;
-      documents.push({
-        documentId: payroll.id,
-        title: payroll.title,
-        mimeType: file.mimeType || "application/pdf",
-        contentBase64: file.contentBase64
-      });
-      console.log(`Nomina ${payroll.period}: documento disponible (${Math.round(file.contentBase64.length * 0.75 / 1024)} KB).`);
-      if (index + 1 < count && await buttons.count().catch(() => 0) === 0) {
-        await frame.goBack({ waitUntil: "domcontentloaded", timeout: 10000 }).catch(() => null);
-        await page.waitForTimeout(500);
-        const restored = await waitForFrameAndLocator(
-          page,
-          (candidate) => candidate.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible'),
-          8000
-        );
-        if (restored) frame = restored.frame;
+      if (file?.contentBase64) {
+        documents.push({
+          documentId: payroll.id,
+          title: payroll.title,
+          mimeType: file.mimeType || "application/pdf",
+          contentBase64: file.contentBase64
+        });
+        console.log(`Nomina ${payroll.period}: documento disponible (${Math.round(file.contentBase64.length * 0.75 / 1024)} KB).`);
       }
-    }
+      if (index + 1 < rows.length) {
+        const nextTitle = rows[index + 1].title;
+        const nextVisible = await titleControl.frame.getByText(nextTitle, { exact: true }).first().isVisible().catch(() => false);
+        if (!nextVisible) {
+          await titleControl.frame.goBack({ waitUntil: "domcontentloaded", timeout: 10000 }).catch(() => null);
+          await page.goBack({ waitUntil: "domcontentloaded", timeout: 10000 }).catch(() => null);
+        }
+        await page.waitForTimeout(500);
+      }
   }
   collectedPayrollDocuments = documents;
   console.log(`Documentos de nomina leidos: ${documents.length}.`);
