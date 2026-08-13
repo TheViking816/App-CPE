@@ -1689,6 +1689,27 @@ select {
   line-height: 1.05;
 }
 
+.portal-sync-warning {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  align-items: flex-start;
+  border: 1px solid #f0b35a;
+  border-radius: 8px;
+  background: #fff7e8;
+  color: #8a4900;
+}
+.portal-sync-warning > svg { flex: 0 0 auto; margin-top: 1px; }
+.portal-sync-warning div { display: grid; gap: 3px; }
+.portal-sync-warning strong { font-size: 13px; font-weight: 950; }
+.portal-sync-warning span { font-size: 11px; font-weight: 750; line-height: 1.4; }
+
+:root[data-theme="dark"] .portal-sync-warning {
+  border-color: #8b5a16;
+  background: #3b2a12;
+  color: #ffd28c;
+}
+
 .portal-jornales-list,
 .portal-primas-list {
   display: grid;

@@ -15,7 +15,8 @@ import {
   currentMadridMonth,
   extractAddedMessageText,
   parseMessagesHtml,
-  parsePayrollsHtml
+  parsePayrollsHtml,
+  prioritizePortalMonths
 } from "./portal-messages-doubles.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -746,11 +747,12 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
   const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
   const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
   const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
-  const monthsToRead = currentOnly
+  const pendingMonths = currentOnly
     ? [currentMonth]
     : refreshFullHistory
       ? availableMonths
       : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month));
+  const monthsToRead = prioritizePortalMonths(pendingMonths, currentMonth);
   const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
   const selectorUrl = selectorFrame.url();
   const periodWarnings = [];
@@ -764,6 +766,18 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
       const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
       periodWarnings.push(warning);
       console.warn(`No se actualizaron los jornales de ${warning}`);
+      if (month === currentMonth && historyByMonth.size === 0) {
+        console.warn("Reintentando una vez los jornales del mes actual...");
+        await page.waitForTimeout(800);
+        try {
+          const retryPeriod = await readJornalesPeriod(page.context(), selectorUrl, month, year);
+          historyByMonth.set(month, retryPeriod);
+          console.log(`Jornales ${retryPeriod.monthLabel}: ${retryPeriod.rows.length} (reintento).`);
+          continue;
+        } catch (retryError) {
+          throw new Error(`El portal no devolvio los jornales del mes actual tras dos intentos. ${retryError instanceof Error ? retryError.message : warning}`);
+        }
+      }
     }
   }
 
@@ -1736,7 +1750,11 @@ async function main() {
     };
 
     const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
-    const hasRecognizedRows = (value) => Boolean(value?.recognized) && Array.isArray(value?.rows);
+    const hasJournalData = (value) => (
+      Array.isArray(value?.rows) && value.rows.length > 0
+    ) || (
+      Array.isArray(value?.history) && value.history.length > 0
+    );
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
     const jornales = await readSection(
@@ -1746,8 +1764,11 @@ async function main() {
       }),
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
-      hasRecognizedRows
+      hasJournalData
     );
+    if (!hasJournalData(jornales)) {
+      throw new Error("El portal inicio sesion, pero la consulta de jornales no respondio tras dos intentos. Vuelve a actualizar dentro de unos minutos.");
+    }
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
@@ -1835,6 +1856,9 @@ async function main() {
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
     await upsertPayrollDocuments();
+    if (!hasJournalData(jornales) && !hasMonths(descansos) && !hasRows(asignaciones)) {
+      throw new Error("El portal inicio sesion, pero no devolvio los datos personales principales (jornales, contratacion ni descansos). La lectura se ha guardado como parcial; vuelve a intentarlo.");
+    }
     await writeStatus({
       ok: true,
       chapa: portalUser,

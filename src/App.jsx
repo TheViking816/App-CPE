@@ -1545,6 +1545,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
     }];
   }, [jornales, payload?.jornales?.history, payload?.jornales?.monthLabel, premiumHistory]);
   const descansos = payload?.descansos || null;
+  const hasDescansos = Array.isArray(descansos?.months) && descansos.months.length > 0;
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
   const nominas = payload?.nominas || null;
@@ -1665,7 +1666,17 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {(jornales.length > 0 || descansos || vacaciones?.recognized || nominas?.recognized) && (
+      {payload?.sync?.partial && (
+        <section className="portal-sync-warning" role="status">
+          <CircleAlert size={20} />
+          <div>
+            <strong>Lectura parcial del portal</strong>
+            <span>Algunas consultas no respondieron y no se han podido cargar todos tus datos. Pulsa «Actualizar portal» para reintentarlo.</span>
+          </div>
+        </section>
+      )}
+
+      {(jornales.length > 0 || hasDescansos || vacaciones?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
           {jornales.length > 0 && (
             <button
@@ -1681,7 +1692,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
               <ReceiptText size={19} /><span>Jornales</span><ChevronDown size={17} />
             </button>
           )}
-          {descansos && (
+          {hasDescansos && (
             <button className="is-descansos" type="button" onClick={() => descansosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <CalendarDays size={19} /><span>Descansos</span><ChevronDown size={17} />
             </button>
@@ -2055,6 +2066,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           setShowCredentials(true);
           writePortalActiveSync(session.chapa, null);
           window.clearInterval(timer);
+          await loadSnapshot();
         }
       } catch (requestError) {
         if (!stopped) {

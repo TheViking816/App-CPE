@@ -176,3 +176,12 @@ export function currentMadridMonth(now = new Date()) {
     dates: Array.from({ length: totalDays }, (_, index) => `${String(index + 1).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`)
   };
 }
+
+export function prioritizePortalMonths(months = [], currentMonth) {
+  return [...new Set(months.map(Number).filter((month) => month >= 1 && month <= 12))]
+    .sort((left, right) => {
+      if (left === Number(currentMonth)) return -1;
+      if (right === Number(currentMonth)) return 1;
+      return right - left;
+    });
+}

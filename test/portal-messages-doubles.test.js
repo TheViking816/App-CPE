@@ -6,8 +6,13 @@ import {
   currentMadridMonth,
   extractAddedMessageText,
   parseMessagesHtml,
-  parsePayrollsHtml
+  parsePayrollsHtml,
+  prioritizePortalMonths
 } from "../scripts/portal-messages-doubles.js";
+
+test("prioritizePortalMonths checks the current month first and then recent history", () => {
+  assert.deepEqual(prioritizePortalMonths([1, 2, 8, 7, 6], 8), [8, 7, 6, 2, 1]);
+});
 
 test("cleanMessageBodyText keeps the expanded message and removes portal metadata", () => {
   const body = cleanMessageBodyText(`
