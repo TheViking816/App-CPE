@@ -830,17 +830,17 @@ async function openPortalHash(page, hash) {
 async function collectMessages(page) {
   await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Mensajes");
-  if (new URL(page.url()).hash === "#Home") {
+  if (!/viewMessages/i.test(new URL(page.url()).hash)) {
     const messagesItem = await findMenuItem(page, "Mensajes", 3000);
     if (messagesItem) {
       await messagesItem.focus();
       await messagesItem.press("Enter").catch(() => {});
       await page.waitForTimeout(1200);
-      if (new URL(page.url()).hash === "#Home") {
+      if (!/viewMessages/i.test(new URL(page.url()).hash)) {
         await messagesItem.press("Space").catch(() => {});
         await page.waitForTimeout(1200);
       }
-      if (new URL(page.url()).hash === "#Home") {
+      if (!/viewMessages/i.test(new URL(page.url()).hash)) {
         await messagesItem.locator("xpath=..").click({ force: true }).catch(() => {});
         await page.waitForTimeout(1200);
       }
@@ -1076,11 +1076,14 @@ async function collectPayrolls(page) {
   if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
 
   const securityInput = securityControl.frame.locator('input[type="password"]').last();
-  await securityInput.evaluate((input, value) => {
-    input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }, portalSecurityKey);
+  if (await securityInput.isVisible().catch(() => false)) {
+    await securityInput.fill(portalSecurityKey, { timeout: 10000 });
+  } else {
+    await securityControl.locator.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Control+A");
+    await page.keyboard.type(portalSecurityKey);
+  }
   await securityControl.locator.click({ noWaitAfter: true });
   await page.waitForTimeout(1200);
 
