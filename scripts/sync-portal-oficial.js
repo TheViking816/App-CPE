@@ -947,7 +947,6 @@ async function collectMessages(page) {
     await directPage.close();
   }
 
-  await page.screenshot({ path: path.join(privateDataDir, "messages-debug.png"), fullPage: true }).catch(() => {});
   throw new Error("No se pudo leer la bandeja de mensajes.");
 }
 

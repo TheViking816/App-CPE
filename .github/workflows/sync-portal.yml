@@ -53,12 +53,3 @@ jobs:
           CPE_PORTAL_BROWSER_CHANNEL: bundled
           CPE_PORTAL_HEADLESS: "false"
         run: xvfb-run -a npm run sync:portal:job
-
-      - name: Upload private portal diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: portal-diagnostic-${{ github.run_id }}
-          path: data/portal-oficial/messages-debug.png
-          if-no-files-found: ignore
-          retention-days: 1
