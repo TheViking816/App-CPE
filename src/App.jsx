@@ -1607,8 +1607,8 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
               {annualExpanded && (
                 <div className="portal-annual-content">
                   <div className="portal-annual-kpis">
-                    <div><span>Meses activos</span><strong>{annualPayroll.activeMonths}</strong></div>
-                    <div><span>Primas del año</span><strong>{formatEuro(annualPayroll.primaTotal)}</strong></div>
+                    <div><span>Número de jornales</span><strong>{annualPayroll.count}</strong></div>
+                    <div><span>Bruto anual</span><strong>{formatEuro(annualPayroll.total)}</strong></div>
                     <div><span>Media mensual</span><strong>{formatEuro(annualPayroll.activeMonths ? annualPayroll.total / annualPayroll.activeMonths : 0)}</strong></div>
                     <div><span>Neto anual</span><strong>{formatEuro(annualPayroll.total * (1 - irpfRate / 100))}</strong></div>
                   </div>
