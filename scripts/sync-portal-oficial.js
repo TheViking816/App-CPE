@@ -334,10 +334,29 @@ async function ensureExpanded(page, group, child) {
   if (!groupItem) throw new Error(`No se encontro el menu visible: ${group}`);
 
   await groupItem.scrollIntoViewIfNeeded();
-  await groupItem.click({ timeout: 10000 });
+  // El arbol GWT no expande siempre al pulsar el texto: el portal indica que
+  // hay que usar el icono Plus situado en la misma fila del grupo.
+  const toggle = groupItem.locator("xpath=ancestor::tr[1]//img").first();
+  if (await toggle.isVisible().catch(() => false)) {
+    await toggle.click({ timeout: 10000 });
+  } else {
+    await groupItem.click({ timeout: 10000 });
+  }
 
   const childItem = await findMenuItem(page, child, 10000);
   if (!childItem) throw new Error(`No se encontro la opcion visible: ${child}`);
+}
+
+async function portalSectionState(page, section) {
+  const frames = await Promise.all(page.frames().map(async (frame) => ({
+    location: safePortalLocation(frame.url()),
+    tables: await frame.locator("table").count().catch(() => 0),
+    checkboxes: await frame.locator('input[type="checkbox"]').count().catch(() => 0),
+    checked: await frame.locator('input[type="checkbox"]:checked').count().catch(() => 0),
+    dateInputs: await frame.locator('input[name="fecha"], input[id*="fecha" i]').count().catch(() => 0),
+    securityInputs: await frame.locator('input[type="password"]').count().catch(() => 0)
+  })));
+  console.log(`[portal:${section}] ${JSON.stringify(frames)}`);
 }
 
 async function waitForFrame(page, pattern, timeout = 12000) {
@@ -813,6 +832,7 @@ async function collectSl(page) {
 
 async function collectMessages(page) {
   await openMenu(page, "Consultas", "Mensajes");
+  await portalSectionState(page, "mensajes");
   const result = await waitForParsedContent(
     page,
     parseMessagesHtml,
@@ -851,6 +871,7 @@ async function extractCheckedDoubles(frame, date) {
 
 async function collectRequestedDoubles(page) {
   await openMenu(page, "Solicitudes", "Solicitar Dobles");
+  await portalSectionState(page, "dobles-selector");
   let selector = await findDoublesSelector(page);
   if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
 
@@ -881,6 +902,7 @@ async function collectRequestedDoubles(page) {
 async function collectPayrolls(page) {
   if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
   await openMenu(page, "Consultas", "Nómina electrónica");
+  await portalSectionState(page, "nominas");
 
   const alreadyLoaded = await waitForParsedContent(
     page,
