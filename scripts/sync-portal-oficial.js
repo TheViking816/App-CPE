@@ -1075,8 +1075,12 @@ async function collectPayrolls(page) {
   }
   if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
 
-  const securityInput = securityControl.frame.locator('input[type="password"]:visible').last();
-  await securityInput.fill(portalSecurityKey, { timeout: 10000 });
+  const securityInput = securityControl.frame.locator('input[type="password"]').last();
+  await securityInput.evaluate((input, value) => {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, portalSecurityKey);
   await securityControl.locator.click({ noWaitAfter: true });
   await page.waitForTimeout(1200);
 
