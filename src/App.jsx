@@ -2098,7 +2098,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           status: job.status,
           startedAt: syncStartedAtRef.current
         });
-        if (job.status === "running" && Date.now() - lastProgressRefreshRef.current >= 4000) {
+        if (["queued", "running"].includes(job.status) && Date.now() - lastProgressRefreshRef.current >= 4000) {
           lastProgressRefreshRef.current = Date.now();
           await loadSnapshot({ silent: true });
         }

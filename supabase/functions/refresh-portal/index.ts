@@ -108,6 +108,37 @@ Deno.serve(async (request) => {
     return jsonResponse({ ok: false, error: error?.message ?? "No se pudo crear la sincronizacion" }, 400);
   }
 
+  if (requestKind !== "document") {
+    const { data: jobRow } = await supabase
+      .from("app_cpe_portal_sync_jobs")
+      .select("chapa")
+      .eq("id", data.jobId)
+      .maybeSingle();
+    if (jobRow?.chapa) {
+      const { data: existingSnapshot } = await supabase
+        .from("app_cpe_portal_snapshots")
+        .select("chapa")
+        .eq("chapa", jobRow.chapa)
+        .maybeSingle();
+      if (!existingSnapshot) {
+        await supabase.from("app_cpe_portal_snapshots").insert({
+          chapa: jobRow.chapa,
+          source: "https://portal.cpevalencia.com/#User",
+          payload: {
+            sync: {
+              inProgress: true,
+              stage: "Conectando con el portal",
+              partial: false,
+              freshSections: 0,
+              warnings: []
+            }
+          },
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+  }
+
   if (requestKind === "history") {
     const { error: historyError } = await supabase
       .from("app_cpe_portal_sync_jobs")
