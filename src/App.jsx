@@ -970,6 +970,83 @@ function PortalJornalDetailModal({ jornal, onClose }) {
   );
 }
 
+function PortalMonthDetailModal({ month, irpfRate, onClose }) {
+  const rows = useMemo(
+    () => [...(month?.enriched || [])].sort(compareJornalesDescending),
+    [month]
+  );
+  const totals = useMemo(() => rows.reduce((summary, item) => ({
+    base: summary.base + Number(item.payroll?.base || 0),
+    complement: summary.complement + Number(item.payroll?.complement || 0),
+    prima: summary.prima + Number(item.payroll?.prima || 0),
+    gross: summary.gross + Number(item.payroll?.total || 0)
+  }), { base: 0, complement: 0, prima: 0, gross: 0 }), [rows]);
+  const withholding = totals.gross * (Number(irpfRate || 0) / 100);
+  const net = totals.gross - withholding;
+
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      window.scrollTo(0, scrollY);
+    };
+  }, [onClose]);
+
+  if (!month) return null;
+
+  return (
+    <div className="portal-month-detail-overlay" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="portal-month-detail-modal" role="dialog" aria-modal="true" aria-label={`Resumen de ${month.monthLabel}`}>
+        <header>
+          <span><CalendarRange size={25} /></span>
+          <div><small>Resumen mensual</small><h1>{month.monthLabel}</h1></div>
+          <button type="button" onClick={onClose} title="Cerrar"><X size={22} /></button>
+        </header>
+        <div className="portal-month-financials">
+          <div className="is-gross"><span>Bruto</span><strong>{formatEuro(totals.gross)}</strong></div>
+          <div><span>Retención · {irpfRate}%</span><strong>-{formatEuro(withholding)}</strong></div>
+          <div className="is-net"><span>Neto estimado</span><strong>{formatEuro(net)}</strong></div>
+        </div>
+        <div className="portal-month-breakdown">
+          <div><span>Jornales</span><strong>{rows.length}</strong></div>
+          <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
+          <div><span>Complementos</span><strong>{formatEuro(totals.complement)}</strong></div>
+          <div><span>Primas</span><strong>{formatEuro(totals.prima)}</strong></div>
+        </div>
+        <div className="portal-month-jornales">
+          <h2>Jornales del mes</h2>
+          {rows.length === 0 && <p>Este mes no tiene jornales cargados.</p>}
+          {rows.map((item, index) => (
+            <article key={`${item.jornal || item.parte || item.dia}-${index}`}>
+              <div className="portal-month-jornal-heading">
+                <span><b>{item.dia || "-"}</b><small>{item.payroll?.shift || "Jornal"}</small></span>
+                <div><strong>{item.especialidad || "Jornal"}</strong><small>{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</small></div>
+                <strong>{formatEuro(item.payroll?.total)}</strong>
+              </div>
+              <div className="portal-month-jornal-values">
+                <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
+                <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>
+                {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
+                  <span>Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b></span>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function HomePanel({
   user,
   doors,
@@ -1580,6 +1657,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
   const [annualExpanded, setAnnualExpanded] = useState(false);
   const [nominasExpanded, setNominasExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const jornalesRef = useRef(null);
@@ -1836,11 +1914,17 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
                     {annualPayroll.months.map((month) => {
                       const maxCount = Math.max(1, ...annualPayroll.months.map((item) => item.count));
                       return (
-                        <div key={`${month.year}-${month.month}`} title={`${month.monthLabel}: ${month.count} jornales`}>
+                        <button
+                          key={`${month.year}-${month.month}`}
+                          type="button"
+                          title={`Abrir ${month.monthLabel}: ${month.count} jornales`}
+                          aria-label={`Abrir detalle de ${month.monthLabel}, ${month.count} jornales`}
+                          onClick={() => setSelectedMonth(month)}
+                        >
                           <span>{month.count || ""}</span>
                           <i style={{ height: `${Math.max(month.count ? 12 : 2, (month.count / maxCount) * 72)}px` }} />
                           <small>{MONTH_SHORT_ES[(month.month || 1) - 1]}</small>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -1990,6 +2074,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         </section>
       )}
 
+      {selectedMonth && <PortalMonthDetailModal month={selectedMonth} irpfRate={irpfRate} onClose={() => setSelectedMonth(null)} />}
       {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
       {selectedPayroll && <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />}
     </div>
