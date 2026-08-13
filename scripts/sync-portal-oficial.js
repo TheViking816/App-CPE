@@ -925,7 +925,7 @@ async function extractPayrollRowsFromDom(page) {
   const titles = [];
   for (const frame of page.frames()) {
     const bodyText = await frame.locator("body").innerText().catch(() => "");
-    titles.push(...[...String(bodyText).matchAll(/(?:Mensual|Anticipo(?:\s+1-15)?|Paga\s+extra|Revisi[oó]n\s+salarial)[^\n]{0,80}?\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/gi)]
+    titles.push(...[...String(bodyText).matchAll(/(?:Mensual|Anticipo(?:\s+1-15)?|Paga\s+extra|Revisi[oó]n\s+salarial)[^\n]{0,80}?(?<!\/)\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/gi)]
       .map((match) => cleanText(match[0])));
     titles.push(...String(bodyText).split(/\r?\n/).map(cleanText).filter((line) => (
       /\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/.test(line) && line.length <= 120
@@ -939,6 +939,18 @@ async function extractPayrollRowsFromDom(page) {
 
     const documentButtons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
     const count = await documentButtons.count().catch(() => 0);
+    if (count) {
+      const structure = await documentButtons.first().evaluate((button) => {
+        const masked = (value) => String(value || "").replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "A").replace(/\d/g, "0").replace(/\s+/g, " ").trim().slice(0, 160);
+        const describe = (node) => node ? { tag: node.tagName, className: String(node.className || "").slice(0, 80), masked: masked(node.textContent) } : null;
+        return {
+          parent: describe(button.parentElement),
+          siblings: [...(button.parentElement?.parentElement?.children || [])].map(describe).slice(0, 12),
+          ancestors: [button.closest("tr"), button.closest("table")].map(describe)
+        };
+      }).catch(() => null);
+      console.log(`[portal:nominas-document-structure] ${JSON.stringify(structure)}`);
+    }
     for (let index = 0; index < count; index += 1) {
       const title = await documentButtons.nth(index).evaluate((button) => {
         let node = button.parentElement;
@@ -955,7 +967,7 @@ async function extractPayrollRowsFromDom(page) {
 
   const rows = titles.map((value) => {
     const title = cleanText(value).replace(/^\d+\s*/, "").replace(/\s*Ver el documento\s*$/i, "");
-    const rawPeriod = title.match(/\b((?:0[1-9]|1[0-2])\s*\/\s*\d{2})\b/)?.[1] || "";
+    const rawPeriod = title.match(/(?<!\/)\b((?:0[1-9]|1[0-2])\s*\/\s*\d{2})\b/)?.[1] || "";
     const period = rawPeriod.replace(/\s/g, "");
     const type = cleanText(title.replace(rawPeriod, ""));
     return period && type ? { id: `${period}-${type}`, title, type, period } : null;
