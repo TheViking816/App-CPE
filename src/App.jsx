@@ -10,6 +10,7 @@ import {
   CircleAlert,
   Clock3,
   ExternalLink,
+  FileDown,
   FileLock2,
   Eye,
   EyeOff,
@@ -971,6 +972,8 @@ function PortalJornalDetailModal({ jornal, onClose }) {
 }
 
 function PortalMonthDetailModal({ month, irpfRate, onClose }) {
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
   const rows = useMemo(
     () => [...(month?.enriched || [])].sort(compareJornalesDescending),
     [month]
@@ -1001,6 +1004,20 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
 
   if (!month) return null;
 
+  const downloadPdf = async () => {
+    setDownloading(true);
+    setDownloadError("");
+    try {
+      const { downloadMonthlyPayrollPdf } = await import("./monthlyPayrollPdf.js");
+      downloadMonthlyPayrollPdf(month, irpfRate);
+    } catch (error) {
+      console.error("No se pudo generar el PDF mensual:", error);
+      setDownloadError("No se pudo descargar el PDF. Vuelve a intentarlo.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="portal-month-detail-overlay" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
@@ -1009,8 +1026,13 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
         <header>
           <span><CalendarRange size={25} /></span>
           <div><small>Resumen mensual</small><h1>{month.monthLabel}</h1></div>
+          <button className="portal-month-download" type="button" disabled={downloading} onClick={downloadPdf}>
+            {downloading ? <RefreshCw className="is-spinning" size={18} /> : <FileDown size={18} />}
+            <b>{downloading ? "Generando..." : "Descargar PDF"}</b>
+          </button>
           <button type="button" onClick={onClose} title="Cerrar"><X size={22} /></button>
         </header>
+        {downloadError && <p className="portal-month-download-error">{downloadError}</p>}
         <div className="portal-month-financials">
           <div className="is-gross"><span>Bruto</span><strong>{formatEuro(totals.gross)}</strong></div>
           <div><span>Retención · {irpfRate}%</span><strong>-{formatEuro(withholding)}</strong></div>

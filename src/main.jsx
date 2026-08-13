@@ -18,9 +18,10 @@ if ("serviceWorker" in navigator) {
       window.location.reload();
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260812-2`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260813-4`, {
       updateViaCache: "none"
     }).then((registration) => {
+      registration.waiting?.postMessage({ type: "SKIP_WAITING" });
       registration.update().catch(() => {});
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
@@ -29,6 +30,9 @@ if ("serviceWorker" in navigator) {
             worker.postMessage({ type: "SKIP_WAITING" });
           }
         });
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") registration.update().catch(() => {});
       });
     }).catch(() => {});
   });

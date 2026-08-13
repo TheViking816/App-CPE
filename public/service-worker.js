@@ -1,3 +1,5 @@
+self.__APP_CPE_SW_VERSION__ = "20260813-4";
+
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -12,4 +14,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data?.type === "GET_VERSION") {
+    event.source?.postMessage({ type: "SW_VERSION", version: self.__APP_CPE_SW_VERSION__ });
+  }
 });
