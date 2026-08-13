@@ -856,7 +856,10 @@ async function collectMessages(page) {
     10000,
     (parsed) => parsed.recognized && parsed.rows.length > 0
   );
-  if (result.recognized) return result;
+  if (result.recognized) {
+    console.log(`Mensajes leidos: ${result.rows?.length || 0}.`);
+    return result;
+  }
   throw new Error("No se pudo leer la bandeja de mensajes.");
 }
 
@@ -888,7 +891,7 @@ async function extractCheckedDoubles(frame, date) {
 async function collectRequestedDoubles(page) {
   await openPortalHash(page, "User,Request,,,");
   console.log(`[portal:solicitudes-menu] ${JSON.stringify(await visiblePortalMenuLabels(page))}`);
-  await openMenu(page, "Solicitudes", "Solicitar Dobles");
+  await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
   await portalSectionState(page, "dobles-selector");
   let selector = await findDoublesSelector(page);
   if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
@@ -914,12 +917,14 @@ async function collectRequestedDoubles(page) {
     if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
   }
 
+  console.log(`Dobles solicitados leidos: ${rows.length}.`);
   return { recognized: true, month: month.month, year: month.year, monthLabel: month.label, rows };
 }
 
 async function collectPayrolls(page) {
   if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
-  await openPortalHash(page, "User,Query,ViewPay,Home,0");
+  await openPortalHash(page, "User,Query,,,");
+  await openMenu(page, "Consultas", "Nómina electrónica");
   await portalSectionState(page, "nominas");
 
   const alreadyLoaded = await waitForParsedContent(
@@ -929,7 +934,10 @@ async function collectPayrolls(page) {
     2500,
     (result) => result.recognized && !result.locked && result.rows.length > 0
   );
-  if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) return alreadyLoaded;
+  if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) {
+    console.log(`Nominas leidas: ${alreadyLoaded.rows.length}.`);
+    return alreadyLoaded;
+  }
 
   const securityControl = await waitForFrameAndLocator(
     page,
@@ -965,7 +973,10 @@ async function collectPayrolls(page) {
     12000,
     (parsed) => parsed.recognized && !parsed.locked
   );
-  if (result.recognized && !result.locked) return result;
+  if (result.recognized && !result.locked) {
+    console.log(`Nominas leidas: ${result.rows?.length || 0}.`);
+    return result;
+  }
   throw new Error("No se pudo leer la lista de Nómina electrónica.");
 }
 
