@@ -27,7 +27,11 @@ const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "")
   .replace(/\\r|\\n/g, "")
   .trim();
-const syncWorkflowRef = import.meta.env.VITE_GITHUB_SYNC_REF || "main";
+// Vercel can preserve a trailing line break/space when an environment value is
+// entered from the CLI.  These identifiers are used as exact RPC parameters,
+// so normalize them before asking Supabase for the preview snapshot.
+const syncWorkflowRef = String(import.meta.env.VITE_GITHUB_SYNC_REF || "main").trim() || "main";
+const portalSnapshotChannel = String(import.meta.env.VITE_PORTAL_SNAPSHOT_CHANNEL || "").trim();
 
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
@@ -239,9 +243,12 @@ export async function requestChaperoRefresh() {
 export async function getOfficialPortalSnapshot({ token }) {
   if (!supabase || !token) return null;
 
-  const { data, error } = await supabase.rpc("app_cpe_get_portal_snapshot", {
-    p_token: token
-  });
+  const { data, error } = portalSnapshotChannel
+    ? await supabase.rpc("app_cpe_get_portal_preview_snapshot", {
+        p_token: token,
+        p_channel: portalSnapshotChannel
+      })
+    : await supabase.rpc("app_cpe_get_portal_snapshot", { p_token: token });
 
   if (error) {
     console.warn("No se pudo leer el portal oficial sincronizado:", error.message);
@@ -249,6 +256,19 @@ export async function getOfficialPortalSnapshot({ token }) {
   }
 
   return data;
+}
+
+export async function getOfficialPortalDocument({ token, documentId }) {
+  if (!supabase || !token || !documentId) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_portal_document", {
+    p_token: token,
+    p_channel: portalSnapshotChannel || "main",
+    p_document_id: documentId
+  });
+
+  if (error) throw error;
+  return data || null;
 }
 
 export async function trackPortalOpen({ token }) {

@@ -10,20 +10,24 @@ import {
   CircleAlert,
   Clock3,
   ExternalLink,
+  FileLock2,
   Eye,
   EyeOff,
   Home,
+  Inbox,
   Link as LinkIcon,
   ClipboardList,
   Lock,
   LogOut,
   Moon,
+  Mail,
   Percent,
   RefreshCw,
   ReceiptText,
   Search,
   Ship,
   Sun,
+  CalendarCheck2,
   Save,
   UserRound,
   UsersRound,
@@ -50,6 +54,7 @@ import {
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   loadPayrollConfig,
+  getOfficialPortalDocument,
   getOfficialPortalSnapshot,
   getPortalAutoSyncStatus,
   getPortalSyncJob,
@@ -73,7 +78,7 @@ const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
-const DEFAULT_PORTAL_SYNC_SECONDS = 75;
+const DEFAULT_PORTAL_SYNC_SECONDS = 150;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
 const CHAPERO_POLL_MS = 60_000;
@@ -490,7 +495,8 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   );
 }
 
-function AppHeader({ user, theme, onThemeToggle, onLogout }) {
+function AppHeader({ user, theme, messages, onInboxOpen, onThemeToggle, onLogout }) {
+  const unreadCount = (messages?.rows || []).filter((message) => !message.read).length;
   return (
     <header className="app-header">
       <div className="logo-box">
@@ -499,6 +505,12 @@ function AppHeader({ user, theme, onThemeToggle, onLogout }) {
       <div className="header-title">
         <strong>App CPE</strong>
       </div>
+      {user && (
+        <button className="header-inbox-button" type="button" onClick={onInboxOpen} aria-label="Abrir bandeja de entrada">
+          <Mail size={20} />
+          {unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}
+        </button>
+      )}
       <button
         className="theme-button"
         type="button"
@@ -514,6 +526,105 @@ function AppHeader({ user, theme, onThemeToggle, onLogout }) {
         </button>
       )}
     </header>
+  );
+}
+
+function InboxModal({ messages, onClose }) {
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const rows = messages?.rows || [];
+  return (
+    <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="inbox-modal" role="dialog" aria-modal="true" aria-labelledby="inbox-title">
+        <header>
+          <span className="portal-personal-icon is-inbox"><Inbox size={22} /></span>
+          <div><small>Consultas</small><h2 id="inbox-title">Bandeja de entrada</h2></div>
+          <b>{rows.length}</b>
+          <button type="button" onClick={onClose} aria-label="Cerrar bandeja"><X size={21} /></button>
+        </header>
+        {rows.length ? (
+          <div className="portal-inbox-list">
+            {rows.map((message) => (
+              <button className={message.read ? "is-read" : "is-unread"} key={message.id} type="button" onClick={() => setSelectedMessage(message)}>
+                <span><Mail size={17} /></span>
+                <div><strong>{message.title}</strong><small>{message.sender || "Portal CPE"}</small></div>
+                <time>{message.date}<small>{message.time}</small></time>
+                <ChevronRight size={17} />
+              </button>
+            ))}
+          </div>
+        ) : <p className="portal-personal-empty">No hay mensajes disponibles. Actualiza el portal para consultar la bandeja.</p>}
+        {selectedMessage && (
+          <div className="portal-message-detail" role="dialog" aria-modal="true" aria-labelledby="portal-message-title">
+            <header>
+              <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Volver a la bandeja"><ChevronRight size={20} /></button>
+              <div><small>{selectedMessage.sender || "Portal CPE"}</small><h3 id="portal-message-title">{selectedMessage.title}</h3></div>
+              <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Cerrar mensaje"><X size={20} /></button>
+            </header>
+            <p className="portal-message-date">{selectedMessage.date} · {selectedMessage.time}</p>
+            <div className="portal-message-body">{selectedMessage.body || "El portal no ha proporcionado el contenido completo de este mensaje. Vuelve a actualizar para recuperarlo."}</div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function base64DocumentUrl(contentBase64, mimeType) {
+  const binary = window.atob(contentBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return URL.createObjectURL(new Blob([bytes], { type: mimeType || "application/pdf" }));
+}
+
+function PayrollDocumentModal({ payroll, session, onClose }) {
+  const [documentUrl, setDocumentUrl] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl = "";
+    getOfficialPortalDocument({ token: session.token, documentId: payroll.id })
+      .then((document) => {
+        if (!active) return;
+        if (!document?.contentBase64) throw new Error("Esta nómina todavía no tiene el documento sincronizado.");
+        objectUrl = base64DocumentUrl(document.contentBase64, document.mimeType);
+        setDocumentUrl(objectUrl);
+      })
+      .catch((requestError) => active && setError(requestError.message || "No se pudo abrir la nómina."));
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [payroll.id, session.token]);
+
+  return (
+    <div className="document-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="document-modal" role="dialog" aria-modal="true" aria-labelledby="payroll-document-title">
+        <header>
+          <div><small>Nómina electrónica</small><h2 id="payroll-document-title">{payroll.title}</h2></div>
+          {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Abrir</a>}
+          <button type="button" onClick={onClose} aria-label="Cerrar nómina"><X size={21} /></button>
+        </header>
+        {!documentUrl && !error && <p className="document-modal-status"><RefreshCw className="is-spinning" size={20} /> Abriendo documento seguro...</p>}
+        {error && <p className="document-modal-status is-error"><CircleAlert size={20} /> {error}</p>}
+        {documentUrl && (
+          <div className="document-modal-download">
+            <FileLock2 size={42} />
+            <strong>{payroll.title}</strong>
+            <span>Documento PDF protegido</span>
+            <a href={documentUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Abrir nómina</a>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -623,6 +734,48 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
           onClose={() => setSelectedAssignment(null)}
         />
       )}
+    </section>
+  );
+}
+
+function upcomingDoubleStart(request) {
+  const date = parsePortalDate(request.date);
+  const startHour = Number.parseInt(String(request.journey || "").match(/^(\d{2})/)?.[1], 10);
+  if (!date || !Number.isFinite(startHour)) return null;
+  date.setHours(startHour, 0, 0, 0);
+  return date;
+}
+
+function UpcomingDoubles({ snapshot, currentTime }) {
+  const rows = useMemo(() => {
+    const now = new Date(currentTime || Date.now());
+    return (snapshot?.payload?.dobles?.rows || [])
+      .map((request) => ({ ...request, startsAt: upcomingDoubleStart(request) }))
+      .filter((request) => request.startsAt && request.startsAt > now)
+      .sort((a, b) => a.startsAt - b.startsAt);
+  }, [snapshot, currentTime]);
+
+  if (!rows.length) return null;
+  return (
+    <section className="upcoming-doubles-card">
+      <header>
+        <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
+        <div><small>Solicitudes activas</small><strong>Próximos dobles</strong></div>
+        <b>{rows.length}</b>
+      </header>
+      <div className="portal-doubles-list">
+        {rows.map((request, index) => (
+          <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
+            <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
+            <div>
+              <strong>{request.specialty}</strong>
+              <small>Jornada {request.journey}</small>
+              {request.holiday && <em className="portal-double-holiday">Festivo</em>}
+            </div>
+            <Check size={17} />
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -856,6 +1009,7 @@ function HomePanel({
       </section>
 
       <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
+      <UpcomingDoubles snapshot={portalSnapshot} currentTime={currentTime} />
 
       <div className="specialty-select">
         <span>Especialidad</span>
@@ -1393,6 +1547,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const descansos = payload?.descansos || null;
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
+  const nominas = payload?.nominas || null;
   const [selectedPeriod, setSelectedPeriod] = useState("first");
   const [irpfRate, setIrpfRate] = useState(0);
   const [savedIrpfRate, setSavedIrpfRate] = useState(0);
@@ -1401,11 +1556,14 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
   const [irpfError, setIrpfError] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(false);
   const [annualExpanded, setAnnualExpanded] = useState(false);
+  const [nominasExpanded, setNominasExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
+  const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
+  const nominasRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
 
   useEffect(() => {
@@ -1494,7 +1652,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
       <div className="portal-empty-state">
         <BriefcaseBusiness size={26} />
         <strong>Sin datos sincronizados</strong>
-        <span>Lee el portal oficial para cargar jornales, descansos y vacaciones.</span>
+        <span>Lee el portal oficial para cargar jornales, mensajes, dobles, nóminas y calendarios.</span>
       </div>
     );
   }
@@ -1507,7 +1665,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <small>Chapa {snapshot.chapa}</small>
       </section>
 
-      {(jornales.length > 0 || descansos || vacaciones?.recognized) && (
+      {(jornales.length > 0 || descansos || vacaciones?.recognized || nominas?.recognized) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
           {jornales.length > 0 && (
             <button
@@ -1531,6 +1689,14 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
           {vacaciones?.recognized && (
             <button className="is-vacaciones" type="button" onClick={() => vacacionesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <Sun size={19} /><span>Vacaciones</span><ChevronDown size={17} />
+            </button>
+          )}
+          {nominas?.recognized && (
+            <button className="is-nominas" type="button" onClick={() => {
+              setNominasExpanded(true);
+              requestAnimationFrame(() => nominasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }}>
+              <FileLock2 size={19} /><span>Nóminas</span><ChevronDown size={17} />
             </button>
           )}
         </nav>
@@ -1734,7 +1900,33 @@ function PortalResultPreview({ snapshot, session, onSessionChange }) {
         <PortalVacationPreview vacaciones={vacaciones} />
       </div>
 
+      {nominas?.recognized && (
+        <section ref={nominasRef} className={`portal-personal-section portal-payroll-documents portal-scroll-anchor${nominasExpanded ? " is-open" : ""}`}>
+          <button className="portal-payroll-toggle" type="button" onClick={() => setNominasExpanded((current) => !current)} aria-expanded={nominasExpanded}>
+            <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
+            <span><small>Modo seguro</small><strong>Nómina electrónica</strong></span>
+            {!nominas.locked && <b>{nominas.rows?.length || 0}</b>}
+            <ChevronDown size={19} />
+          </button>
+          {nominasExpanded && (nominas.locked ? (
+            <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Guárdala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
+          ) : (nominas.rows || []).length ? (
+            <div className="portal-payroll-document-list">
+              {nominas.rows.map((payroll) => (
+                <button key={payroll.id} type="button" onClick={() => setSelectedPayroll(payroll)}>
+                  <ReceiptText size={18} />
+                  <span><strong>{payroll.type}</strong><small>Periodo {payroll.period}</small></span>
+                  <em>{payroll.period}</em>
+                  <ChevronRight size={17} />
+                </button>
+              ))}
+            </div>
+          ) : <p className="portal-personal-empty">No hay nóminas disponibles.</p>)}
+        </section>
+      )}
+
       {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
+      {selectedPayroll && <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />}
     </div>
   );
 }
@@ -1978,7 +2170,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
       <div className="section-heading">
         <p>Portal oficial</p>
         <h1>Mi portal</h1>
-        <span>Jornales, primas, descansos y vacaciones en formato claro.</span>
+        <span>Jornales, mensajes, dobles, nóminas, descansos y vacaciones en formato claro.</span>
       </div>
 
       {snapshot && !showCredentials && (
@@ -2016,7 +2208,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
           <section className="portal-security-card">
             <div>
               <p>{snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
-              <span>Introduce tu contrasena del portal oficial y, si quieres primas, la clave de seguridad.</span>
+              <span>Introduce tu contraseña del portal oficial y, para primas y nóminas, la clave de seguridad.</span>
             </div>
             <label>
               <Lock size={17} />
@@ -2096,7 +2288,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
             <span style={{ width: `${syncProgress}%` }} />
           </div>
           <div className="portal-progress-meta">
-            <span>{portalJob?.status === "running" ? "Leyendo jornales, primas, descansos y vacaciones" : "Preparando la lectura segura"}</span>
+            <span>{portalJob?.status === "running" ? "Leyendo jornales, mensajes, dobles, nóminas y calendarios" : "Preparando la lectura segura"}</span>
             <small>{syncRemaining > 0 ? `Aproximadamente ${syncRemaining} s restantes` : "Finalizando..."} · {syncElapsed} s transcurridos</small>
           </div>
         </section>
@@ -2176,6 +2368,7 @@ export function App() {
   const [doorConfig, setDoorConfig] = useState(null);
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
+  const [inboxOpen, setInboxOpen] = useState(false);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
@@ -2405,6 +2598,8 @@ export function App() {
       <AppHeader
         user={session}
         theme={theme}
+        messages={portalSnapshot?.payload?.mensajes}
+        onInboxOpen={() => setInboxOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}
       />
@@ -2441,6 +2636,7 @@ export function App() {
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
       </main>
+      {inboxOpen && <InboxModal messages={portalSnapshot?.payload?.mensajes} onClose={() => setInboxOpen(false)} />}
       <BottomNav activeTab={activeTab} onChange={navigateToTab} />
     </div>
   );

@@ -9,6 +9,14 @@ import {
   parseAssignmentsFromTables
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
+import {
+  buildRequestedDoubles,
+  cleanMessageBodyText,
+  currentMadridMonth,
+  extractAddedMessageText,
+  parseMessagesHtml,
+  parsePayrollsHtml
+} from "./portal-messages-doubles.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -22,9 +30,12 @@ const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || process.env.CPE
 const portalSecurityKey = String(process.env.CPE_PORTAL_SECURITY_KEY || "");
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
 const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
+  || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== "main" ? process.env.GITHUB_REF_NAME : "")).trim();
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
+let collectedPayrollDocuments = [];
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -299,7 +310,7 @@ async function findVisibleMatch(page, selector, text, timeout = 0) {
 }
 
 function findMenuItem(page, text, timeout = 0) {
-  return findVisibleMatchAcrossFrames(page, ".NorayMenu .gwt-TreeItem", text, timeout);
+  return findVisibleMatchAcrossFrames(page, ".NorayMenu .gwt-TreeItem, .gwt-TreeItem", text, timeout);
 }
 
 async function findVisibleMatchAcrossFrames(page, selector, text, timeout = 0) {
@@ -328,7 +339,14 @@ async function ensureExpanded(page, group, child) {
   if (!groupItem) throw new Error(`No se encontro el menu visible: ${group}`);
 
   await groupItem.scrollIntoViewIfNeeded();
-  await groupItem.click({ timeout: 10000 });
+  // El arbol GWT no expande siempre al pulsar el texto: el portal indica que
+  // hay que usar el icono Plus situado en la misma fila del grupo.
+  const toggle = groupItem.locator("xpath=ancestor::tr[1]//img").first();
+  if (await toggle.isVisible().catch(() => false)) {
+    await toggle.click({ timeout: 10000 });
+  } else {
+    await groupItem.click({ timeout: 10000 });
+  }
 
   const childItem = await findMenuItem(page, child, 10000);
   if (!childItem) throw new Error(`No se encontro la opcion visible: ${child}`);
@@ -577,6 +595,7 @@ async function openMenu(page, group, text, framePattern) {
   if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
   await item.scrollIntoViewIfNeeded();
   await item.click({ timeout: 10000 });
+  await page.waitForTimeout(1200);
   if (framePattern) await waitForFrame(page, framePattern);
 }
 
@@ -803,6 +822,538 @@ async function collectSl(page) {
   );
   if (parsed.rows?.length) return parsed;
   throw new Error("El portal no devolvio posiciones de Lista SL.");
+}
+
+async function openPortalHash(page, hash) {
+  await login(page);
+  const target = `https://portal.cpevalencia.com/#${hash}`;
+  await page.goto(target, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.waitForTimeout(1200);
+}
+
+async function collectMessages(page) {
+  await openPortalHash(page, "User,Request,,,");
+  await openMenu(page, "Consultas", "Mensajes");
+  if (!/viewMessages/i.test(new URL(page.url()).hash)) {
+    const messagesItem = await findMenuItem(page, "Mensajes", 3000);
+    if (messagesItem) {
+      await messagesItem.focus();
+      await messagesItem.press("Enter").catch(() => {});
+      await page.waitForTimeout(1200);
+      if (!/viewMessages/i.test(new URL(page.url()).hash)) {
+        await messagesItem.press("Space").catch(() => {});
+        await page.waitForTimeout(1200);
+      }
+      if (!/viewMessages/i.test(new URL(page.url()).hash)) {
+        await messagesItem.locator("xpath=..").click({ force: true }).catch(() => {});
+        await page.waitForTimeout(1200);
+      }
+    }
+  }
+  if (!/viewMessages/i.test(new URL(page.url()).hash)) {
+    await page.goto("https://portal.cpevalencia.com/#User,viewMessages,Home", {
+      waitUntil: "domcontentloaded",
+      timeout: 45000
+    });
+    await page.waitForTimeout(1500);
+  }
+  await page.locator(".newsSignature").first().waitFor({ state: "visible", timeout: 12000 }).catch(() => {});
+  if (await page.locator(".newsSignature").count().catch(() => 0) === 0) {
+    await openPortalHash(page, "User,Request,,,");
+    await ensureExpanded(page, "Consultas", "Mensajes");
+    const retryItem = await findMenuItem(page, "Mensajes", 10000);
+    if (retryItem) {
+      await retryItem.focus();
+      await retryItem.press("Enter").catch(() => {});
+      await page.waitForTimeout(800);
+      if (await page.locator(".newsSignature").count().catch(() => 0) === 0) {
+        await retryItem.press("Space").catch(() => {});
+        await page.waitForTimeout(800);
+      }
+      if (await page.locator(".newsSignature").count().catch(() => 0) === 0) {
+        await retryItem.locator("xpath=..").click({ force: true }).catch(() => {});
+      }
+      await page.locator(".newsSignature").first().waitFor({ state: "visible", timeout: 12000 }).catch(() => {});
+    }
+  }
+  const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
+    const extractBody = (container, title, signatureText) => {
+      const explicitBody = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
+      const visibleText = String(explicitBody?.innerText || explicitBody?.textContent || container?.innerText || container?.textContent || "");
+      return visibleText
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\s+/g, " ").trim())
+        .filter(Boolean)
+        .filter((line) => line !== title && line !== signatureText)
+        .filter((line) => !/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b.*(?:CPEV|LE[IÍ]DO)/i.test(line))
+        .filter((line) => !/^(?:Eliminar|Borrar)$/i.test(line))
+        .join("\n")
+        .replace(/^\d+\s+/, "")
+        .trim();
+    };
+    const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
+    const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
+    let container = signature.parentElement;
+    for (let depth = 0; container && depth < 7; depth += 1, container = container.parentElement) {
+      if (container.querySelector(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']")) break;
+    }
+    container ||= signature.closest("tr") || signature.parentElement?.parentElement || signature.parentElement;
+    const titleNode = container?.querySelector(".newsTitle, [class*='newsTitle'], [class*='NewsTitle'], [class*='title']");
+    const title = String(titleNode?.textContent || "").replace(/\s+/g, " ").trim()
+      || String(container?.textContent || "").replace(signatureText, "").replace(/^\s*\d+\s*/, "").replace(/\s+/g, " ").trim();
+    if (!dateMatch || !title) return null;
+    const tail = signatureText.slice((dateMatch.index || 0) + dateMatch[0].length).replace(/^\s*[-–—]\s*/, "");
+    const readMatch = tail.match(/\bLE[IÍ]DO\s+EL\s+(.+)$/i);
+    const sender = tail.replace(/\bLE[IÍ]DO\s+EL\s+.+$/i, "").replace(/[\s,.-]+$/, "").trim();
+    const dateParts = dateMatch[1].split("/");
+    const fullYear = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
+    const normalizedDate = `${dateParts[0].padStart(2, "0")}/${dateParts[1].padStart(2, "0")}/${fullYear}`;
+    const containerText = extractBody(container, title, signatureText);
+    return {
+      id: `${dateMatch[1]}-${dateMatch[2]}-${index}-${title}`,
+      title,
+      date: normalizedDate,
+      time: dateMatch[2].padStart(5, "0"),
+      sender,
+      read: Boolean(readMatch),
+      readAt: String(readMatch?.[1] || "").trim(),
+      body: containerText
+    };
+  }).filter(Boolean)).catch(() => []);
+  if (domMessages.length) {
+    const titles = page.locator(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']");
+    const titleCount = await titles.count().catch(() => 0);
+    const hydrated = [];
+    for (let index = 0; index < domMessages.length; index += 1) {
+      const message = domMessages[index];
+      if (!message.body && index < titleCount) {
+        const beforeOpen = await page.locator("body").innerText().catch(() => "");
+        await titles.nth(index).click({ force: true, timeout: 3000 }).catch(() => {});
+        await page.waitForTimeout(180);
+        const afterOpen = await page.locator("body").innerText().catch(() => "");
+        message.body = extractAddedMessageText(beforeOpen, afterOpen, { title: message.title });
+        if (!message.body) message.body = await page.locator(".newsSignature").nth(index).evaluate((signature, title) => {
+          const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
+          let container = signature.parentElement;
+          for (let depth = 0; container && depth < 7; depth += 1, container = container.parentElement) {
+            const hasTitle = [...container.querySelectorAll(".newsTitle, [class*='newsTitle'], [class*='NewsTitle']")]
+              .some((node) => String(node.textContent || "").replace(/\s+/g, " ").trim() === title);
+            if (hasTitle) break;
+          }
+          const bodyNode = container?.querySelector(".newsText, .newsBody, [class*='newsText'], [class*='newsBody'], [class*='NewsText'], [class*='NewsBody'], [class*='content']");
+          const visibleText = String(bodyNode?.innerText || bodyNode?.textContent || container?.innerText || container?.textContent || "");
+          return visibleText
+            .split(/\r?\n/)
+            .map((line) => line.replace(/\s+/g, " ").trim())
+            .filter(Boolean)
+            .filter((line) => line !== title && line !== signatureText)
+            .filter((line) => !/^\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b.*(?:CPEV|LE[IÍ]DO)/i.test(line))
+            .filter((line) => !/^(?:Eliminar|Borrar)$/i.test(line))
+            .join("\n")
+            .replace(/^\d+\s+/, "")
+            .trim();
+        }, message.title).catch(() => "");
+      }
+      hydrated.push(message);
+    }
+    for (const message of hydrated) {
+      message.body = cleanMessageBodyText(message.body, { title: message.title });
+    }
+    const completeMessages = hydrated.filter((message) => message.body);
+    const uniqueMessages = [...new Map((completeMessages.length ? completeMessages : hydrated).map((message) => [message.id, message])).values()];
+    console.log(`Mensajes leidos: ${uniqueMessages.length} (${uniqueMessages.filter((message) => message.body).length} con contenido).`);
+    return { recognized: true, rows: uniqueMessages };
+  }
+  const result = await waitForParsedContent(
+    page,
+    parseMessagesHtml,
+    (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+    10000,
+    (parsed) => parsed.recognized && parsed.rows.length > 0
+  );
+  if (result.recognized && result.rows.length) {
+    console.log(`Mensajes leidos: ${result.rows?.length || 0}.`);
+    return result;
+  }
+
+  for (const candidatePage of page.context().pages()) {
+    if (candidatePage === page || candidatePage.isClosed()) continue;
+    const popupResult = await waitForParsedContent(
+      candidatePage,
+      parseMessagesHtml,
+      (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+      3000,
+      (parsed) => parsed.recognized && parsed.rows.length > 0
+    );
+    if (popupResult.recognized && popupResult.rows.length) {
+      console.log(`Mensajes leidos: ${popupResult.rows.length}.`);
+      return popupResult;
+    }
+  }
+
+  const directPage = await page.context().newPage();
+  try {
+    await directPage.goto("https://portal.cpevalencia.com/ASP/client.asp", { waitUntil: "domcontentloaded", timeout: 45000 });
+    await directPage.waitForTimeout(1200);
+    const directResult = await waitForParsedContent(
+      directPage,
+      parseMessagesHtml,
+      (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.rows?.length || 0),
+      5000,
+      (parsed) => parsed.recognized && parsed.rows.length > 0
+    );
+    if (directResult.recognized && directResult.rows.length) {
+      console.log(`Mensajes leidos: ${directResult.rows.length}.`);
+      return directResult;
+    }
+  } finally {
+    await directPage.close();
+  }
+
+  throw new Error("No se pudo leer la bandeja de mensajes.");
+}
+
+async function extractPayrollRowsFromDom(page) {
+  const titles = [];
+  for (const frame of page.frames()) {
+    const bodyText = await frame.locator("body").innerText().catch(() => "");
+    titles.push(...[...String(bodyText).matchAll(/(?:Mensual|Anticipo(?:\s+1-15)?|Paga\s+extra|Revisi[oó]n\s+salarial)[^\n]{0,80}?(?<!\/)\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/gi)]
+      .map((match) => cleanText(match[0])));
+    titles.push(...String(bodyText).split(/\r?\n/).map(cleanText).filter((line) => (
+      /\b(?:0[1-9]|1[0-2])\s*\/\s*\d{2}\b/.test(line) && line.length <= 120
+    )));
+    const visiblePeriods = await frame.locator("body *:visible").evaluateAll((nodes) => nodes
+      .filter((node) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(node.textContent || ""))
+      .filter((node) => ![...node.children].some((child) => /\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(child.textContent || "")))
+      .map((node) => String(node.textContent || "").replace(/\s+/g, " ").trim())
+      .filter((text) => text.length <= 120));
+    titles.push(...visiblePeriods);
+
+    const documentButtons = frame.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible');
+    const count = await documentButtons.count().catch(() => 0);
+    if (count) {
+      const rowTitles = await documentButtons.evaluateAll((buttons) => {
+        const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+        return buttons.map((button) => {
+          const cells = [...(button.closest("tr")?.cells || [])].map((cell) => String(cell.textContent || "").replace(/\s+/g, " ").trim());
+          const year = cells.find((cell) => /^20\d{2}$/.test(cell)) || "";
+          const monthIndex = cells.findIndex((cell) => months.includes(cell.toLocaleLowerCase("es")));
+          const month = monthIndex >= 0 ? months.indexOf(cells[monthIndex].toLocaleLowerCase("es")) + 1 : 0;
+          const type = cells.find((cell, index) => index !== monthIndex && cell !== year && /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(cell)) || "";
+          return year && month && type ? `${type} ${String(month).padStart(2, "0")}/${year.slice(-2)}` : "";
+        }).filter(Boolean);
+      }).catch(() => []);
+      titles.push(...rowTitles);
+    }
+    for (let index = 0; index < count; index += 1) {
+      const title = await documentButtons.nth(index).evaluate((button) => {
+        let node = button.parentElement;
+        const candidates = [];
+        for (let depth = 0; node && depth < 8; depth += 1, node = node.parentElement) {
+          const text = String(node.innerText || "").replace(/\s+/g, " ").trim();
+          if (/\b(?:0[1-9]|1[0-2])\/\d{2}\b/.test(text)) candidates.push(text);
+        }
+        return candidates.sort((a, b) => a.length - b.length)[0] || "";
+      }).catch(() => "");
+      if (title) titles.push(title);
+    }
+  }
+
+  const rows = titles.map((value) => {
+    const title = cleanText(value).replace(/^\d+\s*/, "").replace(/\s*Ver el documento\s*$/i, "");
+    const rawPeriod = title.match(/(?<!\/)\b((?:0[1-9]|1[0-2])\s*\/\s*\d{2})\b/)?.[1] || "";
+    const period = rawPeriod.replace(/\s/g, "");
+    const type = cleanText(title.replace(rawPeriod, ""));
+    return period && type ? { id: `${period}-${type}`, title, type, period } : null;
+  }).filter(Boolean);
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
+}
+
+async function readPayrollDocument(page, button) {
+  const context = page.context();
+  const responses = [];
+  const onResponse = (response) => {
+    const contentType = String(response.headers()["content-type"] || "").toLowerCase();
+    if (/pdf|octet-stream/.test(contentType) || /\.pdf(?:$|[?#])/i.test(response.url())) responses.push(response);
+  };
+  context.on("response", onResponse);
+  const popupPromise = context.waitForEvent("page", { timeout: 3500 }).catch(() => null);
+  const downloadPromise = page.waitForEvent("download", { timeout: 3500 }).catch(() => null);
+
+  let popup = null;
+  try {
+    await button.click({ noWaitAfter: true, timeout: 10000 });
+    [popup] = await Promise.all([popupPromise, downloadPromise.then(() => null)]);
+    const download = await downloadPromise;
+    if (download) {
+      const downloadPath = await download.path();
+      if (downloadPath) {
+        const bytes = await fs.readFile(downloadPath);
+        if (bytes.subarray(0, 4).toString() !== "%PDF") return null;
+        return {
+          mimeType: "application/pdf",
+          contentBase64: bytes.toString("base64")
+        };
+      }
+    }
+
+    if (popup) {
+      await popup.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+      await popup.waitForTimeout(700);
+      const popupUrl = popup.url();
+      if (/^https?:/i.test(popupUrl)) {
+        const response = await context.request.get(popupUrl, { timeout: 20000 }).catch(() => null);
+        if (response?.ok()) {
+          const contentType = String(response.headers()["content-type"] || "application/pdf").split(";")[0];
+          const bytes = await response.body();
+          if (bytes.subarray(0, 4).toString() === "%PDF") {
+            return { mimeType: "application/pdf", contentBase64: bytes.toString("base64") };
+          }
+        }
+      }
+      const embeddedUrl = await popup.locator("embed[original-url], embed[src], iframe[src], object[data]").first()
+        .evaluate((node) => node.getAttribute("original-url") || node.getAttribute("src") || node.getAttribute("data") || "")
+        .catch(() => "");
+      if (embeddedUrl && !/^(?:blob|chrome-extension):/i.test(embeddedUrl)) {
+        const absoluteUrl = new URL(embeddedUrl, popupUrl).href;
+        const response = await context.request.get(absoluteUrl, { timeout: 20000 }).catch(() => null);
+        if (response?.ok()) {
+          const bytes = await response.body();
+          if (bytes.subarray(0, 4).toString() === "%PDF") {
+            return {
+              mimeType: "application/pdf",
+              contentBase64: bytes.toString("base64")
+            };
+          }
+        }
+      }
+    }
+
+    await page.waitForTimeout(500);
+    for (const response of responses.reverse()) {
+      const bytes = await response.body().catch(() => null);
+      if (bytes?.subarray(0, 4).toString() === "%PDF") {
+        return {
+          mimeType: "application/pdf",
+          contentBase64: bytes.toString("base64")
+        };
+      }
+    }
+    return null;
+  } finally {
+    context.off("response", onResponse);
+    if (popup && !popup.isClosed()) await popup.close().catch(() => {});
+  }
+}
+
+async function collectPayrollDocumentFiles(page, rows) {
+  const documents = [];
+  for (let index = 0; index < rows.length; index += 1) {
+    const payroll = rows[index];
+    let file = null;
+    for (let attempt = 0; attempt < 2 && !file; attempt += 1) {
+      if ((index > 0 || attempt > 0) && !await restoreSecurePayrollList(page)) {
+        console.warn(`Nomina ${payroll.period}: no se pudo restaurar la lista segura.`);
+        continue;
+      }
+      const documentControl = await waitForFrameAndLocator(
+        page,
+        (candidate) => candidate.locator('button[title*="Ver el documento" i]:visible, input[title*="Ver el documento" i]:visible').nth(index),
+        5000
+      );
+      if (!documentControl) {
+        console.warn(`Nomina ${payroll.period}: no se encontro el acceso al documento.`);
+        continue;
+      }
+      file = await readPayrollDocument(page, documentControl.locator).catch((error) => {
+        console.warn(`Nomina ${payroll.period}: no se pudo descargar. ${error instanceof Error ? error.message : "Error desconocido"}`);
+        return null;
+      });
+      if (!file && attempt === 0) console.warn(`Nomina ${payroll.period}: reintentando el PDF.`);
+    }
+    if (file?.contentBase64) {
+      documents.push({
+        documentId: payroll.id,
+        title: payroll.title,
+        mimeType: file.mimeType || "application/pdf",
+        contentBase64: file.contentBase64
+      });
+      console.log(`Nomina ${payroll.period}: documento disponible (${Math.round(file.contentBase64.length * 0.75 / 1024)} KB).`);
+    }
+  }
+  collectedPayrollDocuments = documents;
+  console.log(`Documentos de nomina leidos: ${documents.length}.`);
+}
+
+async function completePayrollResult(page, result) {
+  await collectPayrollDocumentFiles(page, result.rows || []);
+  return result;
+}
+
+async function restoreSecurePayrollList(page) {
+  await openPortalHash(page, "User,Request,,,");
+  await openMenu(page, "Consultas", "NÃ³mina electrÃ³nica");
+  if ((await extractPayrollRowsFromDom(page)).length) return true;
+  const securityControl = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
+    8000
+  );
+  if (!securityControl) return false;
+  const securityInput = securityControl.frame.locator('input[type="password"]').last();
+  if (await securityInput.isVisible().catch(() => false)) {
+    await securityInput.fill(portalSecurityKey, { timeout: 10000 });
+  }
+  await securityControl.locator.click({ noWaitAfter: true });
+  await page.waitForTimeout(1200);
+  return (await extractPayrollRowsFromDom(page)).length > 0;
+}
+
+async function findDoublesSelector(page) {
+  return waitForFrameAndLocator(
+    page,
+    (frame) => frame.locator('input[name="fecha"]:visible, input[id*="fecha" i]:visible'),
+    12000
+  );
+}
+
+async function extractCheckedDoubles(frame, date) {
+  const holiday = await frame.locator("body").innerText().then((text) => /D[IÃ]A\s+FESTIVO/i.test(text)).catch(() => false);
+  const selections = await frame.locator('input[type="checkbox"]:checked').evaluateAll((checkboxes, isHoliday) => checkboxes.map((input) => {
+    const row = input.closest("tr");
+    const table = input.closest("table");
+    const cell = input.closest("td,th");
+    if (!row || !table || !cell) return null;
+    const cellIndex = [...row.cells].indexOf(cell);
+    const specialty = row.cells[0]?.innerText || "";
+    const previousRows = [...table.rows].slice(0, [...table.rows].indexOf(row)).reverse();
+    const journey = previousRows
+      .map((headerRow) => headerRow.cells[cellIndex]?.innerText?.trim() || "")
+      .find((value) => /^\d{2}\s*\/\s*\d{2}$/.test(value)) || "";
+    return { specialty, journey, holiday: isHoliday };
+  }).filter(Boolean), holiday);
+  return buildRequestedDoubles(date, selections);
+}
+
+async function collectRequestedDoubles(page) {
+  await openPortalHash(page, "User,Request,,,");
+  await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
+  let selector = await findDoublesSelector(page);
+  if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
+
+  const month = currentMadridMonth();
+  const rows = [];
+  for (const date of month.dates) {
+    const { frame, locator: dateInput } = selector;
+    const selectorUrl = frame.url();
+    await dateInput.fill(date);
+    const submit = frame.locator('input[type="submit"][value="Solicitar" i], button:has-text("Solicitar")').first();
+    if (!await submit.isVisible().catch(() => false)) {
+      throw new Error("No se encontro el boton para consultar los dobles.");
+    }
+    await Promise.all([
+      frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => null),
+      submit.click({ timeout: 10000 })
+    ]);
+    await frame.locator("body").waitFor({ state: "visible", timeout: 10000 });
+    rows.push(...await extractCheckedDoubles(frame, date));
+    await frame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
+    selector = await findDoublesSelector(page);
+    if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
+  }
+
+  console.log(`Dobles solicitados leidos: ${rows.length}.`);
+  return { recognized: true, month: month.month, year: month.year, monthLabel: month.label, rows };
+}
+
+async function collectPayrolls(page) {
+  if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
+  await openPortalHash(page, "User,Request,,,");
+  await openMenu(page, "Consultas", "Nómina electrónica");
+
+  const alreadyLoaded = await waitForParsedContent(
+    page,
+    parsePayrollsHtml,
+    (result) => (result.locked ? 0 : 1000) + (result.rows?.length || 0),
+    2500,
+    (result) => result.recognized && !result.locked && result.rows.length > 0
+  );
+  if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) {
+    console.log(`Nominas leidas: ${alreadyLoaded.rows.length}.`);
+    return completePayrollResult(page, alreadyLoaded);
+  }
+
+  const alreadyVisibleRows = await extractPayrollRowsFromDom(page);
+  if (alreadyVisibleRows.length) {
+    console.log(`Nominas leidas: ${alreadyVisibleRows.length}.`);
+    return completePayrollResult(page, { recognized: true, locked: false, rows: alreadyVisibleRows });
+  }
+
+  let securityControl = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
+    8000
+  );
+  if (!securityControl) {
+    await openPortalHash(page, "User,Request,,,");
+    await openMenu(page, "Consultas", "Nómina electrónica");
+    const retryRows = await extractPayrollRowsFromDom(page);
+    if (retryRows.length) {
+      console.log(`Nominas leidas: ${retryRows.length}.`);
+      return completePayrollResult(page, { recognized: true, locked: false, rows: retryRows });
+    }
+    securityControl = await waitForFrameAndLocator(
+      page,
+      (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
+      8000
+    );
+  }
+  if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
+
+  const securityInput = securityControl.frame.locator('input[type="password"]').last();
+  if (await securityInput.isVisible().catch(() => false)) {
+    await securityInput.fill(portalSecurityKey, { timeout: 10000 });
+  } else {
+    await securityControl.locator.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Control+A");
+    await page.keyboard.type(portalSecurityKey);
+  }
+  await securityControl.locator.click({ noWaitAfter: true });
+  await page.waitForTimeout(1200);
+
+  const domRows = await extractPayrollRowsFromDom(page);
+  if (domRows.length) {
+    console.log(`Nominas leidas: ${domRows.length}.`);
+    return completePayrollResult(page, { recognized: true, locked: false, rows: domRows });
+  }
+
+  const invalidKey = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.getByText(/La clave de seguridad es incorrecta/i),
+    3000
+  );
+  if (invalidKey) throw new Error("La clave de seguridad de Nómina electrónica es incorrecta.");
+
+  const accept = await waitForFrameLocator(
+    page,
+    (frame) => frame.getByRole("button", { name: /Aceptar/i }),
+    8000
+  );
+  if (accept) await accept.click({ noWaitAfter: true });
+
+  const result = await waitForParsedContent(
+    page,
+    parsePayrollsHtml,
+    (parsed) => (parsed.locked ? 0 : 1000) + (parsed.rows?.length || 0),
+    12000,
+    (parsed) => parsed.recognized && !parsed.locked
+  );
+  if (result.recognized && !result.locked) {
+    console.log(`Nominas leidas: ${result.rows?.length || 0}.`);
+    return completePayrollResult(page, result);
+  }
+  throw new Error("No se pudo leer la lista de Nómina electrónica.");
 }
 
 async function collectAssignmentsViaMenu(page) {
@@ -1042,7 +1593,9 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
 
 async function upsertSupabase(snapshot) {
   if (!supabaseServiceRole) return;
-  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_snapshots?on_conflict=chapa`, {
+  const table = portalSnapshotChannel ? "app_cpe_portal_preview_snapshots" : "app_cpe_portal_snapshots";
+  const conflict = portalSnapshotChannel ? "channel,chapa" : "chapa";
+  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?on_conflict=${conflict}`, {
     method: "POST",
     headers: {
       "apikey": supabaseServiceRole,
@@ -1051,6 +1604,7 @@ async function upsertSupabase(snapshot) {
       "Prefer": "resolution=merge-duplicates,return=minimal"
     },
     body: JSON.stringify({
+      ...(portalSnapshotChannel ? { channel: portalSnapshotChannel } : {}),
       chapa: snapshot.chapa,
       source: snapshot.source,
       payload: snapshot.payload,
@@ -1063,11 +1617,41 @@ async function upsertSupabase(snapshot) {
   }
 }
 
+async function upsertPayrollDocuments() {
+  if (!supabaseServiceRole || collectedPayrollDocuments.length === 0) return;
+  const channel = portalSnapshotChannel || "main";
+  for (const document of collectedPayrollDocuments) {
+    const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_documents?on_conflict=channel,chapa,document_id`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseServiceRole,
+        Authorization: `Bearer ${supabaseServiceRole}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify({
+        channel,
+        chapa: portalUser,
+        document_id: document.documentId,
+        title: document.title,
+        mime_type: document.mimeType,
+        content_base64: document.contentBase64,
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`Supabase documento HTTP ${response.status}: ${await response.text()}`);
+    }
+  }
+}
+
 async function getExistingSupabaseSnapshot() {
   if (!supabaseServiceRole || !portalUser) return null;
   try {
+    const table = portalSnapshotChannel ? "app_cpe_portal_preview_snapshots" : "app_cpe_portal_snapshots";
+    const channelFilter = portalSnapshotChannel ? `&channel=eq.${encodeURIComponent(portalSnapshotChannel)}` : "";
     const response = await fetch(
-      `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(portalUser)}&limit=1`,
+      `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?select=payload&chapa=eq.${encodeURIComponent(portalUser)}${channelFilter}&limit=1`,
       {
         headers: {
           apikey: supabaseServiceRole,
@@ -1199,6 +1783,27 @@ async function main() {
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
       hasVacationData
     );
+    const mensajes = await readOptionalSection(
+      "mensajes",
+      () => collectMessages(page),
+      existingSnapshot?.payload?.mensajes,
+      { recognized: false, rows: [] },
+      hasVacationData
+    );
+    const nominas = await readOptionalSection(
+      "nomina electronica",
+      () => collectPayrolls(page),
+      existingSnapshot?.payload?.nominas,
+      { recognized: false, locked: !portalSecurityKey, rows: [] },
+      hasVacationData
+    );
+    const dobles = await readOptionalSection(
+      "dobles solicitados",
+      () => collectRequestedDoubles(page),
+      existingSnapshot?.payload?.dobles,
+      { recognized: false, month: null, year: null, monthLabel: "", rows: [] },
+      hasVacationData
+    );
     if (freshSections === 0) {
       throw new Error("El portal no devolvio ninguna seccion util. Se conservaran los datos anteriores.");
     }
@@ -1210,6 +1815,9 @@ async function main() {
       sl,
       primas,
       vacaciones,
+      mensajes,
+      dobles,
+      nominas,
       sync: {
         partial: sectionWarnings.length > 0,
         freshSections,
@@ -1226,6 +1834,7 @@ async function main() {
 
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
+    await upsertPayrollDocuments();
     await writeStatus({
       ok: true,
       chapa: portalUser,
@@ -1237,6 +1846,9 @@ async function main() {
       primas: payload.primas.rows.length,
       descansos: payload.descansos.worker,
       vacaciones: payload.vacaciones.rows.length,
+      mensajes: payload.mensajes.rows.length,
+      dobles: payload.dobles.rows.length,
+      nominas: payload.nominas.rows.length,
       partial: payload.sync.partial,
       warnings: payload.sync.warnings
     });
