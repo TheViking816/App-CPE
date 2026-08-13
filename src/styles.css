@@ -1744,6 +1744,19 @@ select {
 .portal-sync-warning strong { font-size: 13px; font-weight: 950; }
 .portal-sync-warning span { font-size: 11px; font-weight: 750; line-height: 1.4; }
 
+.portal-security-prompt {
+  width: 100%;
+  align-items: center;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.portal-security-prompt div { flex: 1; }
+.portal-security-prompt > svg:last-child { flex: 0 0 auto; }
+.portal-security-prompt:hover { border-color: #d98a1c; background: #ffefd2; }
+.portal-security-prompt:focus-visible { outline: 3px solid rgba(217, 138, 28, 0.28); outline-offset: 2px; }
+
 :root[data-theme="dark"] .portal-sync-warning {
   border-color: #8b5a16;
   background: #3b2a12;
