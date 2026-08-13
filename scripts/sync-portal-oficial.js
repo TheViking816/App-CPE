@@ -385,6 +385,25 @@ async function portalDateStructure(page, section) {
   console.log(`[portal:${section}-date-structure] ${JSON.stringify(structures)}`);
 }
 
+async function portalInteractiveStructure(page, section) {
+  const structures = [];
+  for (const frame of page.frames()) {
+    const items = await frame.locator('button:visible, input:visible').evaluateAll((nodes) => nodes.slice(0, 40).map((node) => ({
+      tag: node.tagName,
+      type: node.getAttribute("type") || "",
+      name: node.getAttribute("name") || "",
+      id: node.id || "",
+      title: node.getAttribute("title") || "",
+      placeholder: node.getAttribute("placeholder") || "",
+      label: node.tagName === "BUTTON" || ["button", "submit"].includes((node.getAttribute("type") || "").toLowerCase())
+        ? String(node.textContent || node.getAttribute("value") || "").trim().slice(0, 80)
+        : ""
+    }))).catch(() => []);
+    structures.push(...items);
+  }
+  console.log(`[portal:${section}-controls] ${JSON.stringify(structures)}`);
+}
+
 async function waitForFrame(page, pattern, timeout = 12000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -626,6 +645,18 @@ async function openMenu(page, group, text, framePattern) {
   await ensureExpanded(page, group, text);
   const item = await findMenuItem(page, text, 10000);
   if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
+  const menuStructure = await item.evaluate((node) => ({
+    tag: node.tagName,
+    className: String(node.className || ""),
+    parentTag: node.parentElement?.tagName || "",
+    parentClass: String(node.parentElement?.className || ""),
+    images: [...(node.closest("tr")?.querySelectorAll("img") || [])].map((image) => ({
+      alt: image.getAttribute("alt") || "",
+      title: image.getAttribute("title") || "",
+      src: (image.getAttribute("src") || "").split("/").pop() || ""
+    }))
+  })).catch(() => null);
+  console.log(`[portal:menu-${text}] ${JSON.stringify(menuStructure)}`);
   await item.scrollIntoViewIfNeeded();
   await item.click({ timeout: 10000 });
   await page.waitForTimeout(1200);
@@ -955,6 +986,7 @@ async function collectPayrolls(page) {
   await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Nómina electrónica");
   await portalSectionState(page, "nominas");
+  await portalInteractiveStructure(page, "nominas");
 
   const alreadyLoaded = await waitForParsedContent(
     page,
@@ -970,14 +1002,12 @@ async function collectPayrolls(page) {
 
   const securityControl = await waitForFrameAndLocator(
     page,
-    (frame) => frame.getByRole("button", { name: /Validar/i }),
+    (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
     8000
   );
   if (!securityControl) throw new Error("No se pudo abrir el modo seguro de Nómina electrónica.");
 
-  const securityInput = securityControl.frame
-    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([role="presentation"]):not([tabindex="-1"]):visible')
-    .first();
+  const securityInput = securityControl.frame.locator('input[type="password"]:visible').last();
   await securityInput.fill(portalSecurityKey);
   await securityControl.locator.click({ noWaitAfter: true });
 
