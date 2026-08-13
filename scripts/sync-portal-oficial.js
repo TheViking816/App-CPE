@@ -378,7 +378,7 @@ async function portalDateStructure(page, section) {
           .replace(/\s+/g, " ")
           .trim()
           .slice(0, 180)
-      }))
+      })))
       .catch(() => []);
     structures.push(...items);
   }
