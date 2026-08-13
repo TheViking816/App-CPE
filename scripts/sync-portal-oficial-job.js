@@ -61,7 +61,7 @@ function runSync(job) {
         CPE_PORTAL_USER: job.chapa,
         CPE_PORTAL_PASSWORD: job.portal_password,
         CPE_PORTAL_SECURITY_KEY: job.security_key || "",
-        CPE_PORTAL_FAST_MODE: job.trigger_source === "manual" ? "true" : "false",
+        CPE_PORTAL_FAST_MODE: job.trigger_source === "scheduled" ? "false" : "true",
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled"
       }
