@@ -40,6 +40,7 @@ const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/port
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
+const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 
 function resolveSupabaseUrl(value) {
@@ -665,7 +666,7 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
     await selectPortalOption(selects.nth(1), String(year));
     await periodPage.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
 
-    const deadline = Date.now() + 20000;
+    const deadline = Date.now() + (fastMode ? 4000 : 20000);
     while (Date.now() < deadline) {
       for (const candidatePage of context.pages()) {
         for (const root of [candidatePage, ...candidatePage.frames()]) {
@@ -770,7 +771,7 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
       const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
       periodWarnings.push(warning);
       console.warn(`No se actualizaron los jornales de ${warning}`);
-      if (month === currentMonth && historyByMonth.size === 0) {
+      if (!fastMode && month === currentMonth && historyByMonth.size === 0) {
         console.warn("Reintentando una vez los jornales del mes actual...");
         await page.waitForTimeout(800);
         try {
@@ -1177,10 +1178,12 @@ async function readPayrollDocument(page, button) {
   }
 }
 
-async function collectPayrollDocumentFiles(page, rows) {
+async function collectPayrollDocumentFiles(page, rows, documentId) {
   const documents = [];
   const storedDocumentIds = await getStoredPayrollDocumentIds();
-  for (let index = 0; index < rows.length; index += 1) {
+  const targetIndex = rows.findIndex((payroll) => payroll.id === documentId);
+  if (targetIndex < 0) throw new Error("La nomina solicitada ya no aparece en el portal.");
+  for (const index of [targetIndex]) {
     const payroll = rows[index];
     if (storedDocumentIds.has(payroll.id)) {
       console.log(`Nomina ${payroll.period}: documento ya guardado; se omite la descarga.`);
@@ -1243,7 +1246,9 @@ async function getStoredPayrollDocumentIds() {
 }
 
 async function completePayrollResult(page, result) {
-  await collectPayrollDocumentFiles(page, result.rows || []);
+  if (portalDocumentId) {
+    await collectPayrollDocumentFiles(page, result.rows || [], portalDocumentId);
+  }
   return result;
 }
 
@@ -1751,6 +1756,26 @@ async function main() {
   try {
     await login(page);
     const updatedAt = new Date().toISOString();
+    if (portalDocumentId) {
+      const payrolls = await collectPayrolls(page);
+      if (payrolls.locked) throw new Error("Hace falta la clave de seguridad guardada para abrir esta nomina.");
+      if (!(payrolls.rows || []).some((payroll) => payroll.id === portalDocumentId)) {
+        throw new Error("La nomina solicitada ya no esta disponible en el portal.");
+      }
+      await upsertPayrollDocuments();
+      const storedDocumentIds = await getStoredPayrollDocumentIds();
+      if (!storedDocumentIds.has(portalDocumentId)) {
+        throw new Error("El portal no devolvio el PDF de la nomina solicitada.");
+      }
+      await writeStatus({
+        ok: true,
+        chapa: portalUser,
+        updatedAt,
+        documentId: portalDocumentId
+      });
+      console.log(`OK: nomina ${portalDocumentId} disponible para ${portalUser}`);
+      return;
+    }
     const existingSnapshot = await getExistingSupabaseSnapshot();
     const sectionWarnings = [];
     let freshSections = 0;
@@ -1819,19 +1844,7 @@ async function main() {
       };
       await upsertSupabase(latestProgressSnapshot);
     };
-    const jornales = await readSection(
-      "jornales",
-      () => collectJornales(page, existingSnapshot?.payload?.jornales, {
-        currentOnly: fastMode
-      }),
-      existingSnapshot?.payload?.jornales,
-      { monthLabel: "", rows: [] },
-      hasJournalData
-    );
-    if (!hasJournalData(jornales)) {
-      throw new Error("El portal inicio sesion, pero la consulta de jornales no respondio tras dos intentos. Vuelve a actualizar dentro de unos minutos.");
-    }
-    await publishProgress("jornales", jornales, "Jornales cargados");
+    await publishProgress("jornales", progressPayload.jornales || { monthLabel: "", rows: [] }, "Sesion iniciada; cargando mensajes");
     const mensajes = await readOptionalSection(
       "mensajes",
       () => collectMessages(page),
@@ -1843,6 +1856,16 @@ async function main() {
     );
     mensajes.rows = limitRecentPortalRows(mensajes.rows, messageLimit);
     await publishProgress("mensajes", mensajes, "Ultimos mensajes cargados");
+    const jornales = await readSection(
+      "jornales",
+      () => collectJornales(page, existingSnapshot?.payload?.jornales, {
+        currentOnly: fastMode
+      }),
+      existingSnapshot?.payload?.jornales,
+      { monthLabel: "", rows: [] },
+      hasJournalData
+    );
+    await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),

@@ -60,6 +60,7 @@ import {
   getPortalSyncJob,
   loginUser,
   registerUser,
+  requestOfficialPortalDocument,
   requestPortalSync,
   setPortalAutoSync,
   trackPortalOpen,
@@ -587,17 +588,32 @@ function base64DocumentUrl(contentBase64, mimeType) {
 function PayrollDocumentModal({ payroll, session, onClose }) {
   const [documentUrl, setDocumentUrl] = useState("");
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("Buscando documento seguro...");
 
   useEffect(() => {
     let active = true;
     let objectUrl = "";
-    getOfficialPortalDocument({ token: session.token, documentId: payroll.id })
-      .then((document) => {
-        if (!active) return;
-        if (!document?.contentBase64) throw new Error("Esta nómina todavía no tiene el documento sincronizado.");
-        objectUrl = base64DocumentUrl(document.contentBase64, document.mimeType);
-        setDocumentUrl(objectUrl);
-      })
+    const loadDocument = async () => {
+      let document = await getOfficialPortalDocument({ token: session.token, documentId: payroll.id });
+      if (!document?.contentBase64) {
+        setStatus("Descargando esta nómina del portal...");
+        const job = await requestOfficialPortalDocument({ token: session.token, documentId: payroll.id });
+        const deadline = Date.now() + 120000;
+        while (active && Date.now() < deadline) {
+          const jobStatus = await getPortalSyncJob({ token: session.token, jobId: job.jobId });
+          if (jobStatus?.status === "failed") throw new Error(jobStatus.message || "No se pudo descargar la nómina.");
+          document = await getOfficialPortalDocument({ token: session.token, documentId: payroll.id });
+          if (document?.contentBase64) break;
+          if (jobStatus?.status === "completed") throw new Error("El portal no devolvió el PDF de esta nómina.");
+          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        }
+      }
+      if (!active) return;
+      if (!document?.contentBase64) throw new Error("La descarga de la nómina ha tardado demasiado.");
+      objectUrl = base64DocumentUrl(document.contentBase64, document.mimeType);
+      setDocumentUrl(objectUrl);
+    };
+    loadDocument()
       .catch((requestError) => active && setError(requestError.message || "No se pudo abrir la nómina."));
     return () => {
       active = false;
@@ -613,7 +629,7 @@ function PayrollDocumentModal({ payroll, session, onClose }) {
           {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Abrir</a>}
           <button type="button" onClick={onClose} aria-label="Cerrar nómina"><X size={21} /></button>
         </header>
-        {!documentUrl && !error && <p className="document-modal-status"><RefreshCw className="is-spinning" size={20} /> Abriendo documento seguro...</p>}
+        {!documentUrl && !error && <p className="document-modal-status"><RefreshCw className="is-spinning" size={20} /> {status}</p>}
         {error && <p className="document-modal-status is-error"><CircleAlert size={20} /> {error}</p>}
         {documentUrl && (
           <div className="document-modal-download">

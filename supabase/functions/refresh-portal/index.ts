@@ -76,6 +76,8 @@ Deno.serve(async (request) => {
   const portalPassword = typeof body.portalPassword === "string" ? body.portalPassword : "";
   const securityKey = typeof body.securityKey === "string" ? body.securityKey : "";
   const workflowRef = typeof body.ref === "string" && body.ref.trim() ? body.ref.trim() : defaultWorkflowRef;
+  const requestKind = body.requestKind === "document" ? "document" : "snapshot";
+  const documentId = typeof body.documentId === "string" ? body.documentId.trim() : "";
 
   if (!token) {
     return jsonResponse({ ok: false, error: "Sesion no valida" }, 400);
@@ -85,13 +87,18 @@ Deno.serve(async (request) => {
     auth: { persistSession: false }
   });
 
-  const { data, error } = portalPassword
-    ? await supabase.rpc("app_cpe_create_portal_sync_job", {
+  const { data, error } = requestKind === "document"
+    ? await supabase.rpc("app_cpe_create_portal_document_job", {
+        p_token: token,
+        p_document_id: documentId
+      })
+    : portalPassword
+      ? await supabase.rpc("app_cpe_create_portal_sync_job", {
         p_token: token,
         p_portal_password: portalPassword,
         p_security_key: securityKey
       })
-    : await supabase.rpc("app_cpe_create_portal_sync_job_from_saved", {
+      : await supabase.rpc("app_cpe_create_portal_sync_job_from_saved", {
         p_token: token
       });
 

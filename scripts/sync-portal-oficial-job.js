@@ -61,6 +61,7 @@ function runSync(job) {
         CPE_PORTAL_USER: job.chapa,
         CPE_PORTAL_PASSWORD: job.portal_password,
         CPE_PORTAL_SECURITY_KEY: job.security_key || "",
+        CPE_PORTAL_DOCUMENT_ID: job.document_id || "",
         CPE_PORTAL_FAST_MODE: job.trigger_source === "scheduled" ? "false" : "true",
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled"
@@ -100,7 +101,7 @@ async function main() {
   if (!jobId) throw new Error("Missing CPE_PORTAL_SYNC_JOB_ID");
   if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
 
-  const rows = await supabaseRequest(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,portal_password,security_key,status,expires_at,trigger_source&id=eq.${encodeURIComponent(jobId)}&limit=1`);
+  const rows = await supabaseRequest(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,portal_password,security_key,status,expires_at,trigger_source,request_kind,document_id&id=eq.${encodeURIComponent(jobId)}&limit=1`);
   const job = rows?.[0];
   if (!job) throw new Error("Portal sync job not found");
 
@@ -121,7 +122,7 @@ async function main() {
 
   await updateJob({
     status: "running",
-    message: "Leyendo portal oficial",
+    message: job.request_kind === "document" ? "Descargando nomina segura" : "Leyendo portal oficial",
     started_at: new Date().toISOString()
   });
 

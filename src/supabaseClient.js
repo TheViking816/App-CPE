@@ -271,6 +271,23 @@ export async function getOfficialPortalDocument({ token, documentId }) {
   return data || null;
 }
 
+export async function requestOfficialPortalDocument({ token, documentId }) {
+  if (!supabase || !token || !documentId) return null;
+
+  const { data, error } = await supabase.functions.invoke("refresh-portal", {
+    body: {
+      token,
+      requestKind: "document",
+      documentId,
+      ref: syncWorkflowRef
+    }
+  });
+
+  if (error) throw error;
+  if (data?.ok === false) throw new Error(data.error || "No se pudo solicitar la nomina.");
+  return data || null;
+}
+
 export async function trackPortalOpen({ token }) {
   if (!supabase || !token) return null;
 
