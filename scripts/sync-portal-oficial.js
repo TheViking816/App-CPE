@@ -855,6 +855,7 @@ async function collectMessages(page) {
     });
     await page.waitForTimeout(1500);
   }
+  await page.locator(".newsSignature").first().waitFor({ state: "visible", timeout: 12000 }).catch(() => {});
   const domMessages = await page.locator(".newsSignature").evaluateAll((signatures) => signatures.map((signature, index) => {
     const signatureText = String(signature.textContent || "").replace(/\s+/g, " ").trim();
     const dateMatch = signatureText.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2})/);
