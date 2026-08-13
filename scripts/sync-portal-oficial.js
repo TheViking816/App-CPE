@@ -1754,17 +1754,31 @@ async function main() {
   let latestProgressSnapshot = null;
 
   try {
-    await login(page);
     const updatedAt = new Date().toISOString();
     if (portalDocumentId) {
-      const payrolls = await collectPayrolls(page);
+      const storedDocumentIds = await getStoredPayrollDocumentIds();
+      if (storedDocumentIds.has(portalDocumentId)) {
+        await writeStatus({ ok: true, chapa: portalUser, updatedAt, documentId: portalDocumentId, cached: true });
+        console.log(`OK: nomina ${portalDocumentId} ya disponible para ${portalUser}`);
+        return;
+      }
+      await login(page);
+      let payrolls;
+      try {
+        payrolls = await collectPayrolls(page);
+      } catch (firstError) {
+        console.warn(`Reintentando la nomina solicitada. ${firstError instanceof Error ? firstError.message : ""}`);
+        await page.waitForTimeout(1000);
+        await login(page);
+        payrolls = await collectPayrolls(page);
+      }
       if (payrolls.locked) throw new Error("Hace falta la clave de seguridad guardada para abrir esta nomina.");
       if (!(payrolls.rows || []).some((payroll) => payroll.id === portalDocumentId)) {
         throw new Error("La nomina solicitada ya no esta disponible en el portal.");
       }
       await upsertPayrollDocuments();
-      const storedDocumentIds = await getStoredPayrollDocumentIds();
-      if (!storedDocumentIds.has(portalDocumentId)) {
+      const refreshedDocumentIds = await getStoredPayrollDocumentIds();
+      if (!refreshedDocumentIds.has(portalDocumentId)) {
         throw new Error("El portal no devolvio el PDF de la nomina solicitada.");
       }
       await writeStatus({
@@ -1776,6 +1790,7 @@ async function main() {
       console.log(`OK: nomina ${portalDocumentId} disponible para ${portalUser}`);
       return;
     }
+    await login(page);
     const existingSnapshot = await getExistingSupabaseSnapshot();
     const sectionWarnings = [];
     let freshSections = 0;
