@@ -1167,8 +1167,13 @@ async function readPayrollDocument(page, button) {
 
 async function collectPayrollDocumentFiles(page, rows) {
   const documents = [];
+  const storedDocumentIds = await getStoredPayrollDocumentIds();
   for (let index = 0; index < rows.length; index += 1) {
     const payroll = rows[index];
+    if (storedDocumentIds.has(payroll.id)) {
+      console.log(`Nomina ${payroll.period}: documento ya guardado; se omite la descarga.`);
+      continue;
+    }
     let file = null;
     for (let attempt = 0; attempt < 2 && !file; attempt += 1) {
       if ((index > 0 || attempt > 0) && !await restoreSecurePayrollList(page)) {
@@ -1202,6 +1207,27 @@ async function collectPayrollDocumentFiles(page, rows) {
   }
   collectedPayrollDocuments = documents;
   console.log(`Documentos de nomina leidos: ${documents.length}.`);
+}
+
+async function getStoredPayrollDocumentIds() {
+  if (!supabaseServiceRole) return new Set();
+  const channel = portalSnapshotChannel || "main";
+  try {
+    const response = await fetch(
+      `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_documents?select=document_id&channel=eq.${encodeURIComponent(channel)}&chapa=eq.${encodeURIComponent(portalUser)}`,
+      {
+        headers: {
+          apikey: supabaseServiceRole,
+          Authorization: `Bearer ${supabaseServiceRole}`
+        }
+      }
+    );
+    if (!response.ok) return new Set();
+    const rows = await response.json();
+    return new Set((rows || []).map((row) => String(row.document_id || "")).filter(Boolean));
+  } catch {
+    return new Set();
+  }
 }
 
 async function completePayrollResult(page, result) {
