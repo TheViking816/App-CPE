@@ -2,6 +2,11 @@ export const DEFAULT_TAB = "inicio";
 
 export const VALID_TABS = new Set([
   "inicio",
+  "contratacion",
+  "sueldometro",
+  "descansos",
+  "vacaciones",
+  "estado",
   "puertas",
   "censo",
   "portal",

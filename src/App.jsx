@@ -21,6 +21,7 @@ import {
   ClipboardList,
   Lock,
   LogOut,
+  Menu,
   Moon,
   Mail,
   Percent,
@@ -163,13 +164,31 @@ function writePortalActiveSync(chapa, activeSync) {
   }
 }
 
-const NAV_ITEMS = [
+const BOTTOM_NAV_ITEMS = [
   { id: "inicio", label: "Inicio", Icon: Home },
-  { id: "puertas", label: "Puertas", Icon: CalendarDays },
-  { id: "censo", label: "Censo", Icon: UsersRound },
-  { id: "portal", label: "Portal", Icon: BriefcaseBusiness },
-  { id: "tablon", label: "Tablón", Icon: ClipboardList },
-  { id: "enlaces", label: "Enlaces", Icon: LinkIcon }
+  { id: "contratacion", label: "Contratación", Icon: ClipboardList },
+  { id: "sueldometro", label: "Sueldómetro", Icon: WalletCards },
+  { id: "descansos", label: "Descansos", Icon: CalendarDays },
+  { id: "vacaciones", label: "Vacaciones", Icon: Sun }
+];
+
+const SIDE_NAV_GROUPS = [
+  {
+    label: "Operativa",
+    items: [
+      { id: "estado", label: "Estado operativo", Icon: BriefcaseBusiness },
+      { id: "puertas", label: "Detalle de puertas", Icon: CalendarRange },
+      { id: "tablon", label: "Tablón general", Icon: ClipboardList },
+      { id: "censo", label: "Censo", Icon: UsersRound }
+    ]
+  },
+  {
+    label: "Recursos y cuenta",
+    items: [
+      { id: "enlaces", label: "Enlaces útiles", Icon: LinkIcon },
+      { id: "portal", label: "Sincronización del portal", Icon: RefreshCw }
+    ]
+  }
 ];
 
 function getInitialSession() {
@@ -504,10 +523,13 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   );
 }
 
-function AppHeader({ user, theme, messages, onInboxOpen, onSettingsOpen, onThemeToggle, onLogout }) {
+function AppHeader({ user, messages, onInboxOpen, onMenuOpen }) {
   const unreadCount = (messages?.rows || []).filter((message) => !message.read).length;
   return (
     <header className="app-header">
+      <button className="header-menu-button" type="button" onClick={onMenuOpen} aria-label="Abrir menú">
+        <Menu size={23} />
+      </button>
       <div className="logo-box">
         <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="App CPE" />
       </div>
@@ -520,26 +542,58 @@ function AppHeader({ user, theme, messages, onInboxOpen, onSettingsOpen, onTheme
           {unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}
         </button>
       )}
-      {user && (
-        <button className="header-settings-button" type="button" onClick={onSettingsOpen} aria-label="Cambiar contraseña">
-          <Settings size={20} />
-        </button>
-      )}
-      <button
-        className="theme-button"
-        type="button"
-        onClick={onThemeToggle}
-        aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
-      >
-        {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-      </button>
-      {user && (
-        <button className="logout-button" type="button" onClick={onLogout}>
-          <LogOut size={17} />
-          Salir
-        </button>
-      )}
     </header>
+  );
+}
+
+function SideMenu({ open, activeTab, theme, onClose, onNavigate, onSettingsOpen, onThemeToggle, onLogout }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  const navigate = (tab) => {
+    onNavigate(tab);
+    onClose();
+  };
+
+  return (
+    <div className="side-menu-layer">
+      <button className="side-menu-overlay" type="button" onClick={onClose} aria-label="Cerrar menú" />
+      <aside className="side-menu" aria-label="Menú de navegación">
+        <header>
+          <div className="side-menu-brand">
+            <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="" />
+            <span><strong>App CPE</strong><small>Panel personal</small></span>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Cerrar menú"><X size={21} /></button>
+        </header>
+        <button className={activeTab === "inicio" ? "side-home-link active" : "side-home-link"} type="button" onClick={() => navigate("inicio")}>
+          <Home size={20} /><span>Inicio</span><ChevronRight size={18} />
+        </button>
+        {SIDE_NAV_GROUPS.map((group) => (
+          <section key={group.label}>
+            <p>{group.label}</p>
+            {group.items.map(({ id, label, Icon }) => (
+              <button key={id} className={activeTab === id ? "active" : ""} type="button" onClick={() => navigate(id)}>
+                <Icon size={19} /><span>{label}</span><ChevronRight size={17} />
+              </button>
+            ))}
+          </section>
+        ))}
+        <section className="side-menu-settings">
+          <p>Ajustes</p>
+          <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
+          <button type="button" onClick={onThemeToggle}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}<span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span><ChevronRight size={17} /></button>
+          <button className="side-logout" type="button" onClick={onLogout}><LogOut size={19} /><span>Cerrar sesión</span></button>
+        </section>
+      </aside>
+    </div>
   );
 }
 
@@ -1203,13 +1257,31 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
   );
 }
 
+function portalFirstName(snapshot) {
+  const fullName = String(snapshot?.payload?.descansos?.worker?.name || "").trim();
+  if (!fullName) return "";
+  const [firstName] = fullName.split(/\s+/);
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLocaleLowerCase("es");
+}
+
+function PortalConnectCallout({ compact = false, onConnect }) {
+  return (
+    <button className={`home-connect-callout${compact ? " compact" : ""}`} type="button" onClick={onConnect}>
+      <span className="home-connect-icon"><RefreshCw size={22} /></span>
+      <span>
+        <small>Activa toda la aplicación</small>
+        <strong>Conecta tu Portal CPE</strong>
+        <span>Introduce la contraseña del portal para cargar contratación, sueldo, descansos y vacaciones.</span>
+      </span>
+      <ChevronRight size={21} />
+    </button>
+  );
+}
+
 function HomePanel({
   user,
   doors,
   doorConfig,
-  chaperoSnapshot,
-  chaperoWorker,
-  chaperoLoading,
   currentTime,
   portalSnapshot,
   notice,
@@ -1217,102 +1289,115 @@ function HomePanel({
   availableSpecialties,
   activeSpecialtyId,
   onSpecialtyChange,
-  onLoadPortal
+  onLoadPortal,
+  onNavigate
 }) {
   const nearest = getNearestDoor(doors);
-  const updatedLabel = formatUpdatedAt(doorConfig?.updatedAt);
-  const showRollOnAlert = (
-    activeSpecialty.id === "pol-especialista"
-    && nearest?.distance !== null
-    && nearest?.distance < 50
-  );
+  const firstName = portalFirstName(portalSnapshot);
+  const hasPortalData = Boolean(portalSnapshot?.payload);
+  const directAccess = [
+    { id: "sueldometro", title: "Sueldómetro", subtitle: "Jornales y resumen anual", Icon: WalletCards, tone: "salary" },
+    { id: "descansos", title: "Descansos", subtitle: "Calendario y posición SL", Icon: CalendarDays, tone: "rests" },
+    { id: "vacaciones", title: "Vacaciones", subtitle: "Periodos y calendario", Icon: Sun, tone: "holidays" }
+  ];
 
   return (
-    <section className="page-panel">
-      <section className={`chapero-card ${chaperoLoading ? "loading" : chaperoWorker?.status || "empty"}`}>
-        <div className="jornada-card">
-          <span>Ultima jornada contratada</span>
-          <strong>{formatJornadaContratada(chaperoSnapshot, chaperoLoading)}</strong>
-        </div>
+    <section className="page-panel home-dashboard">
+      <header className="home-welcome">
+        <small>{formatCurrentDateTime(currentTime)}</small>
+        <h1>{firstName ? `Hola, ${firstName}` : "Bienvenido/a"}</h1>
+        <p>Esta es tu situación para los próximos días.</p>
+        {!hasPortalData && <span className="home-demo-badge">Vista previa · faltan datos del portal</span>}
+      </header>
 
-        <div className="chapero-meta-row">
-          <span>{formatCurrentDateTime(currentTime)}</span>
-          <small>Chapa {user?.chapa || "-"}</small>
-        </div>
+      {!hasPortalData && <PortalConnectCallout onConnect={onLoadPortal} />}
 
-        <div className="chapero-status-row">
-          <div className="chapero-status-copy">
-            <span>Estado:</span>
-            <strong>{formatChaperoStatus(chaperoWorker?.status, chaperoLoading)}</strong>
+      <section className="home-section-block">
+        <div className="home-section-heading">
+          <span><ClipboardList size={18} /> Mi contratación</span>
+          <button type="button" onClick={() => onNavigate("contratacion")}>Ver todo <ChevronRight size={16} /></button>
+        </div>
+        <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
+        <UpcomingDoubles snapshot={portalSnapshot} currentTime={currentTime} />
+      </section>
+
+      <section className="home-section-block home-doors-preview">
+        <div className="home-section-heading has-select">
+          <span><CalendarRange size={18} /> Tu posición frente a las puertas</span>
+          <select aria-label="Especialidad" value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
+            {availableSpecialties.map((item) => (
+              <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
+            ))}
+          </select>
+        </div>
+        <div className="home-door-summary">
+          <div>
+            <small>Tu posición</small>
+            <strong>{user?.displayPosition || user?.position || "--"}<span> / {activeSpecialty.censo.length}</span></strong>
+            <em>Chapa {user?.chapa || "-"}</em>
+          </div>
+          <div>
+            <small>Puerta más cercana</small>
+            <strong>{nearest?.distance === null || nearest?.distance === undefined ? "--" : formatDistance(nearest.distance)}</strong>
+            <em>{nearest?.label || "Sin datos"}</em>
           </div>
         </div>
+        <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
+        <button className="home-inline-link" type="button" onClick={() => onNavigate("puertas")}>Ver detalle de puertas <ChevronRight size={17} /></button>
+      </section>
 
+      <section className="home-section-block home-direct-access">
+        <div className="home-section-heading"><span>Accesos directos</span></div>
+        <div className="home-access-list">
+          {directAccess.map(({ id, title, subtitle, Icon, tone }) => (
+            <button key={id} className={`home-access-card ${tone}`} type="button" onClick={() => onNavigate(id)}>
+              <span><Icon size={23} /></span>
+              <span><strong>{title}</strong><small>{subtitle}</small></span>
+              <ChevronRight size={20} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {notice && <p className="inline-notice">{notice}</p>}
+    </section>
+  );
+}
+
+function OperationalStatusPanel({ user, doors, doorConfig, chaperoSnapshot, chaperoWorker, chaperoLoading, currentTime, activeSpecialty, availableSpecialties, activeSpecialtyId, onSpecialtyChange }) {
+  const nearest = getNearestDoor(doors);
+  const showRollOnAlert = activeSpecialty.id === "pol-especialista" && nearest?.distance !== null && nearest?.distance < 50;
+  return (
+    <section className="page-panel">
+      <div className="section-heading"><p>Chapero y posición</p><h1>Estado operativo</h1><span>La información técnica que antes aparecía en la portada.</span></div>
+      <section className={`chapero-card ${chaperoLoading ? "loading" : chaperoWorker?.status || "empty"}`}>
+        <div className="jornada-card"><span>Última jornada contratada</span><strong>{formatJornadaContratada(chaperoSnapshot, chaperoLoading)}</strong></div>
+        <div className="chapero-meta-row"><span>{formatCurrentDateTime(currentTime)}</span><small>Chapa {user?.chapa || "-"}</small></div>
+        <div className="chapero-status-row"><div className="chapero-status-copy"><span>Estado:</span><strong>{formatChaperoStatus(chaperoWorker?.status, chaperoLoading)}</strong></div></div>
         <div className="chapero-summary">
           <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.contratado ?? "-"}</strong><span>Contr.</span></div>
           <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.anticipado ?? "-"}</strong><span>Ant.</span></div>
           <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.nocontratado ?? "-"}</strong><span>No cont.</span></div>
           <div><strong>{chaperoLoading ? "..." : chaperoSnapshot?.summary?.falta ?? "-"}</strong><span>N.D.</span></div>
         </div>
-
-        <div className="chapero-updated">
-          <Clock3 size={14} />
-          <span>{chaperoLoading ? "Cargando Chapero..." : `Actualizado: ${formatUpdatedAt(chaperoSnapshot?.updatedAt)}`}</span>
-        </div>
+        <div className="chapero-updated"><Clock3 size={14} /><span>{chaperoLoading ? "Cargando Chapero..." : `Actualizado: ${formatUpdatedAt(chaperoSnapshot?.updatedAt)}`}</span></div>
       </section>
-
-      <CurrentAssignments snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
-      <UpcomingDoubles snapshot={portalSnapshot} currentTime={currentTime} />
-
-      <div className="specialty-select">
-        <span>Especialidad</span>
-        <select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
-          {availableSpecialties.map((item) => (
-            <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="home-summary">
-        <div>
-          <p>Tu posicion</p>
-          <h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1>
-          <span>Chapa {user?.chapa || "-"}</span>
-          <div className="ring-legend" aria-label="Leyenda de circulos">
-            <span><i className="legend-dot user" /> Tu posicion</span>
-            <span><i className="legend-dot door" /> Puerta</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="quick-grid">
-        <article>
-          <span>Puerta mas cercana</span>
-          <strong>{nearest ? nearest.label : "-"}</strong>
-          <small>{nearest ? `${nearest.shift} - ${formatDistance(nearest.distance)}` : "Sin dato"}</small>
-        </article>
-        <article>
-          <span>Estado</span>
-          <strong>{doorConfig?.updatedAt ? "Actualizado" : "Sin datos"}</strong>
-          <small>{updatedLabel}</small>
-        </article>
-      </div>
-
-      {showRollOnAlert && (
-        <div className="rollon-alert">
-          <div className="rollon-alert-icon">
-            <CircleAlert size={20} />
-          </div>
-          <div>
-            <span>Estiba cerca</span>
-            <strong>Puerta a {formatDistance(nearest.distance)}</strong>
-            <small>Si el doble se pone a las 18:00 o 19:00, la opcion de salir de roll-on es alta.</small>
-          </div>
-        </div>
-      )}
-
+      <div className="specialty-select"><span>Especialidad</span><select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>{availableSpecialties.map((item) => <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>)}</select></div>
+      <div className="home-summary"><div><p>Tu posición</p><h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1><span>Chapa {user?.chapa || "-"}</span></div></div>
+      {showRollOnAlert && <div className="rollon-alert"><div className="rollon-alert-icon"><CircleAlert size={20} /></div><div><span>Estiba cerca</span><strong>Puerta a {formatDistance(nearest.distance)}</strong><small>Si el doble se pone a las 18:00 o 19:00, la opción de salir de roll-on es alta.</small></div></div>}
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
+    </section>
+  );
+}
 
-      {notice && <p className="inline-notice">{notice}</p>}
+function ContractingPanel({ snapshot, currentTime, onLoadPortal }) {
+  const hasPortalData = Boolean(snapshot?.payload);
+  return (
+    <section className="page-panel personal-route-panel">
+      <div className="section-heading"><p>Próximos días</p><h1>Mi contratación</h1><span>Jornales asignados y solicitudes de doble.</span></div>
+      {!hasPortalData && <PortalConnectCallout compact onConnect={onLoadPortal} />}
+      <CurrentAssignments snapshot={snapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
+      <UpcomingDoubles snapshot={snapshot} currentTime={currentTime} />
     </section>
   );
 }
@@ -1776,7 +1861,29 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
   );
 }
 
-function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory, onRequestSecurityKey, onRequestCredentials, loadingHistory = false, hideSyncFailure = false }) {
+function PortalFeatureTemplate({ view = "all" }) {
+  const templates = {
+    salary: { Icon: WalletCards, eyebrow: "Estimación mensual", title: "Tu Sueldómetro", copy: "Aquí verás el neto estimado, tus jornales y el resumen anual.", labels: ["Neto estimado", "Jornales del mes", "Resumen anual"] },
+    rests: { Icon: CalendarDays, eyebrow: "Calendario personal", title: "Tus descansos", copy: "Aquí aparecerán tus días DS, solicitudes SL y la posición correspondiente.", labels: ["Calendario de descansos", "Días SL", "Posiciones SL"] },
+    holidays: { Icon: Sun, eyebrow: "Planificación anual", title: "Tus vacaciones", copy: "Aquí podrás consultar los periodos reconocidos y su calendario.", labels: ["Días concedidos", "Próximo periodo", "Calendario"] },
+    all: { Icon: BriefcaseBusiness, eyebrow: "Datos personales", title: "Todo listo para empezar", copy: "Conecta el portal para cargar contratación, sueldo, descansos, vacaciones y nóminas.", labels: ["Contratación", "Sueldómetro", "Calendarios"] }
+  };
+  const template = templates[view] || templates.all;
+  const Icon = template.Icon;
+  return (
+    <section className={`portal-feature-template ${view}`} aria-label={`Vista previa de ${template.title}`}>
+      <header><span><Icon size={23} /></span><div><small>{template.eyebrow}</small><strong>{template.title}</strong></div></header>
+      <p>{template.copy}</p>
+      <div className="portal-template-metrics">
+        {template.labels.map((label, index) => <div key={label}><span>{label}</span><strong>{index === 0 && view === "salary" ? "--,-- €" : "--"}</strong></div>)}
+      </div>
+      <div className="portal-template-lines"><i /><i /><i /></div>
+      <small className="portal-template-note"><Lock size={14} /> Los datos aparecerán después de conectar el Portal CPE.</small>
+    </section>
+  );
+}
+
+function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onLoadHistory, onRequestSecurityKey, onRequestCredentials, loadingHistory = false, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
@@ -1908,13 +2015,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
     : selectedPeriod === "first" ? "1a quincena" : "2a quincena";
 
   if (!payload) {
-    return (
-      <div className="portal-empty-state">
-        <BriefcaseBusiness size={26} />
-        <strong>Sin datos sincronizados</strong>
-        <span>Lee el portal oficial para cargar jornales, mensajes, dobles, nóminas y calendarios.</span>
-      </div>
-    );
+    return <PortalFeatureTemplate view={view} />;
   }
 
   return (
@@ -1964,7 +2065,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         )
       )}
 
-      {(jornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
+      {view === "all" && (jornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
           {jornales.length > 0 && (
             <button
@@ -2001,7 +2102,7 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         </nav>
       )}
 
-      {jornales.length > 0 && (
+      {(view === "all" || view === "salary") && jornales.length > 0 && (
         <section className="portal-salary-section portal-salary-alternative">
           <div className="portal-salary-hero">
             <div className="portal-salary-hero-heading">
@@ -2208,17 +2309,19 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
         </section>
       )}
 
-      {descansos && (
+      {(view === "all" || view === "rests") && descansos && (
         <div ref={descansosRef} className="portal-scroll-anchor">
           <PortalCalendarPreview descansos={descansos} slRows={slRows} />
         </div>
       )}
 
-      <div ref={vacacionesRef} className="portal-scroll-anchor">
-        <PortalVacationPreview vacaciones={vacaciones} />
-      </div>
+      {(view === "all" || view === "holidays") && (
+        <div ref={vacacionesRef} className="portal-scroll-anchor">
+          <PortalVacationPreview vacaciones={vacaciones} />
+        </div>
+      )}
 
-      {hasNominas && (
+      {view === "all" && hasNominas && (
         <section ref={nominasRef} className={`portal-personal-section portal-payroll-documents portal-scroll-anchor${nominasExpanded ? " is-open" : ""}`}>
           <button className="portal-payroll-toggle" type="button" onClick={() => setNominasExpanded((current) => !current)} aria-expanded={nominasExpanded}>
             <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
@@ -2246,11 +2349,14 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
       {selectedMonth && <PortalMonthDetailModal month={selectedMonth} irpfRate={irpfRate} onClose={() => setSelectedMonth(null)} />}
       {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
       {selectedPayroll && <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />}
+      {view === "salary" && jornales.length === 0 && <PortalFeatureTemplate view="salary" />}
+      {view === "rests" && !descansos && <PortalFeatureTemplate view="rests" />}
+      {view === "holidays" && !vacaciones?.recognized && <PortalFeatureTemplate view="holidays" />}
     </div>
   );
 }
 
-function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
+function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange }) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
   const [loading, setLoading] = useState(true);
@@ -2502,13 +2608,19 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
+  const panelCopy = {
+    all: { eyebrow: "Portal oficial", title: "Sincronización del portal", description: "Conecta y actualiza todos tus datos personales de CPE." },
+    salary: { eyebrow: "Jornales y salario", title: "Sueldómetro", description: "Estimación mensual, consulta de jornales y resumen anual." },
+    rests: { eyebrow: "Calendario personal", title: "Descansos", description: "Calendario de descansos y consulta de posiciones SL." },
+    holidays: { eyebrow: "Planificación", title: "Vacaciones", description: "Periodos reconocidos y calendario de vacaciones." }
+  }[view] || { eyebrow: "Portal oficial", title: "Mi portal", description: "Todos tus datos personales en formato claro." };
 
   return (
     <section className="page-panel portal-panel">
       <div className="section-heading">
-        <p>Portal oficial</p>
-        <h1>Mi portal</h1>
-        <span>Jornales, mensajes, dobles, nóminas, descansos y vacaciones en formato claro.</span>
+        <p>{panelCopy.eyebrow}</p>
+        <h1>{panelCopy.title}</h1>
+        <span>{panelCopy.description}</span>
       </div>
 
       {snapshot && !showCredentials && (
@@ -2623,6 +2735,7 @@ function PortalPanel({ session, onSnapshotChange, onSessionChange }) {
         <PortalResultPreview
           snapshot={snapshot}
           session={session}
+          view={view}
           onSessionChange={onSessionChange}
           onLoadHistory={() => handlePortalSync({ fullHistory: true })}
           onRequestSecurityKey={requestSecurityKey}
@@ -2664,12 +2777,13 @@ function LinksPanel() {
 function BottomNav({ activeTab, onChange }) {
   return (
     <nav className="bottom-nav" aria-label="Navegacion inferior">
-      {NAV_ITEMS.map(({ id, label, Icon }) => (
+      {BOTTOM_NAV_ITEMS.map(({ id, label, Icon }) => (
         <button
           key={id}
           type="button"
           className={activeTab === id ? "active" : ""}
           onClick={() => onChange(id)}
+          aria-current={activeTab === id ? "page" : undefined}
         >
           <Icon size={23} />
           <span>{label}</span>
@@ -2697,6 +2811,7 @@ export function App() {
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
@@ -2852,7 +2967,7 @@ export function App() {
   }, [session?.token]);
 
   useEffect(() => {
-    if (!session?.token || activeTab !== "portal") return;
+    if (!session?.token || !["portal", "sueldometro", "descansos", "vacaciones"].includes(activeTab)) return;
     trackPortalOpen({ token: session.token });
   }, [activeTab, session?.token]);
 
@@ -2937,12 +3052,9 @@ export function App() {
     <div className="mobile-app">
       <AppHeader
         user={session}
-        theme={theme}
         messages={portalSnapshot?.payload?.mensajes}
         onInboxOpen={() => setInboxOpen(true)}
-        onSettingsOpen={() => setPasswordOpen(true)}
-        onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
-        onLogout={logout}
+        onMenuOpen={() => setMenuOpen(true)}
       />
       <main className="content">
         {activeTab === "inicio" && (
@@ -2950,9 +3062,6 @@ export function App() {
             user={displayUser}
             doors={doors}
             doorConfig={doorConfig}
-            chaperoSnapshot={chaperoSnapshot}
-            chaperoWorker={chaperoWorker}
-            chaperoLoading={!chaperoLoaded}
             currentTime={currentTime}
             portalSnapshot={portalSnapshot}
             notice={notice}
@@ -2961,6 +3070,26 @@ export function App() {
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
             onLoadPortal={() => navigateToTab("portal")}
+            onNavigate={navigateToTab}
+          />
+        )}
+        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={() => navigateToTab("portal")} />}
+        {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
+        {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
+        {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
+        {activeTab === "estado" && (
+          <OperationalStatusPanel
+            user={displayUser}
+            doors={doors}
+            doorConfig={doorConfig}
+            chaperoSnapshot={chaperoSnapshot}
+            chaperoWorker={chaperoWorker}
+            chaperoLoading={!chaperoLoaded}
+            currentTime={currentTime}
+            activeSpecialty={activeSpecialty}
+            activeSpecialtyId={activeSpecialtyId}
+            availableSpecialties={availableSpecialties}
+            onSpecialtyChange={setActiveSpecialtyId}
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
@@ -2972,13 +3101,23 @@ export function App() {
           />
         )}
         {activeTab === "portal" && (
-          <PortalPanel session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />
+          <PortalPanel view="all" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />
         )}
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
       </main>
       {inboxOpen && <InboxModal messages={portalSnapshot?.payload?.mensajes} onClose={() => setInboxOpen(false)} />}
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} onSave={savePassword} />}
+      <SideMenu
+        open={menuOpen}
+        activeTab={activeTab}
+        theme={theme}
+        onClose={() => setMenuOpen(false)}
+        onNavigate={navigateToTab}
+        onSettingsOpen={() => setPasswordOpen(true)}
+        onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+        onLogout={logout}
+      />
       <BottomNav activeTab={activeTab} onChange={navigateToTab} />
     </div>
   );
