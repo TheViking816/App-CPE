@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260814-4";
+self.__APP_CPE_SW_VERSION__ = "20260814-navigation-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -9,7 +9,18 @@ self.addEventListener("activate", (event) => {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames.map((name) => caches.delete(name)));
     await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    clients.forEach((client) => client.postMessage({
+      type: "APP_CPE_FORCE_RELOAD",
+      version: self.__APP_CPE_SW_VERSION__
+    }));
   })());
+});
+
+self.addEventListener("fetch", (event) => {
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin || event.request.method !== "GET") return;
+  event.respondWith(fetch(event.request, { cache: "no-store" }));
 });
 
 self.addEventListener("message", (event) => {

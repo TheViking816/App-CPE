@@ -12,13 +12,23 @@ createRoot(document.getElementById("root")).render(
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
+    const forceReload = (version = "controller") => {
       if (refreshing) return;
+      const reloadKey = `app-cpe-reloaded-${version}`;
+      if (sessionStorage.getItem(reloadKey)) return;
+      sessionStorage.setItem(reloadKey, "1");
       refreshing = true;
       window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      forceReload("20260814-navigation-1");
+    });
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260813-8`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260814-navigation-1`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });
@@ -34,6 +44,7 @@ if ("serviceWorker" in navigator) {
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") registration.update().catch(() => {});
       });
+      window.setInterval(() => registration.update().catch(() => {}), 5 * 60 * 1000);
     }).catch(() => {});
   });
 }
