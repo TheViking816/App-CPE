@@ -3500,6 +3500,13 @@ select {
 :root[data-theme="dark"] .password-change-success strong { color: #f4f8fc; }
 :root[data-theme="dark"] .upcoming-doubles-card { border-color: #235949; background: linear-gradient(145deg, #102b28, #102238); }
 :root[data-theme="dark"] .upcoming-doubles-card > header strong { color: #f4f8fc; }
+:root[data-theme="dark"] .portal-doubles-list time {
+  border: 1px solid #31597f;
+  background: #0b315c;
+  color: #ffffff;
+}
+:root[data-theme="dark"] .portal-doubles-list time strong { color: #ffffff; }
+:root[data-theme="dark"] .portal-doubles-list time small { color: #c7ddf4; }
 
 .portal-message-detail {
   position: absolute;
