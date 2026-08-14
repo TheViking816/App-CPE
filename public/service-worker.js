@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260814-2";
+self.__APP_CPE_SW_VERSION__ = "20260814-3";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

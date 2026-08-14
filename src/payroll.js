@@ -235,7 +235,13 @@ function findMatchingPrima(jornal, primas = []) {
   if (!row) return null;
 
   const amount = parseAmount(row.produccion || row.values?.[9] || "");
-  return amount > 0 ? amount : null;
+  if (amount <= 0) return null;
+  return {
+    amount,
+    verification: row.produccionEstado === "pending"
+      ? "pending"
+      : row.produccionEstado === "verified" ? "verified" : "unknown"
+  };
 }
 
 export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null) {
@@ -274,7 +280,7 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const matchedPrima = operationType === "RECEPCION_ENTREGA"
       ? null
       : findMatchingPrima(jornal, primas);
-    const primaAmount = matchedPrima ?? embeddedPrima;
+    const primaAmount = matchedPrima?.amount ?? embeddedPrima;
     const prima = primaAmount == null ? null : Number(primaAmount.toFixed(2));
     const total = Number((base + complement + (prima || 0)).toFixed(2));
 
@@ -291,6 +297,9 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         production: 0,
         prima,
         primaPending: operationType !== "RECEPCION_ENTREGA" && prima == null,
+        primaVerification: matchedPrima?.verification
+          || (jornal.produccionEstado === "pending" ? "pending"
+            : jornal.produccionEstado === "verified" ? "verified" : "unknown"),
         total
       }
     };

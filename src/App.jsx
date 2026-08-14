@@ -987,7 +987,9 @@ function PortalJornalDetailModal({ jornal, onClose }) {
           <div><span>Base</span><strong>{formatEuro(payroll.base)}</strong></div>
           <div><span>Complemento</span><strong>{formatEuro(payroll.complement || 0)}</strong></div>
           {payroll.operationType !== "RECEPCION_ENTREGA" && (
-            <div><span>Prima</span><strong>{payroll.prima > 0 ? formatEuro(payroll.prima) : "Pendiente"}</strong></div>
+            <div className={payroll.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
+              <span>Prima</span><strong>{payroll.prima > 0 ? formatEuro(payroll.prima) : "Pendiente"}</strong>
+            </div>
           )}
         </div>
       </section>
@@ -1188,7 +1190,9 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
                 <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
                 <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>
                 {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
-                  <span>Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b></span>
+                  <span className={item.payroll?.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
+                    Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
+                  </span>
                 )}
               </div>
             </article>
@@ -2188,7 +2192,9 @@ function PortalResultPreview({ snapshot, session, onSessionChange, onLoadHistory
                       <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
                       {item.payroll?.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
                       {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
-                        <span className={item.payroll?.prima > 0 ? "is-prima" : "is-pending"}>
+                        <span className={item.payroll?.prima > 0
+                          ? `is-prima${item.payroll?.primaVerification === "pending" ? " is-unverified" : ""}`
+                          : "is-pending"}>
                           Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
                         </span>
                       )}

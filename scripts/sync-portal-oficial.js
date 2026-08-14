@@ -100,6 +100,31 @@ function parseRowsFromTable(html = "") {
   return rows;
 }
 
+function parseDetailedRowsFromTable(html = "") {
+  const rows = [];
+  for (const rowMatch of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...rowMatch[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+      .map((match) => ({
+        html: match[0],
+        value: textFromHtml(match[1]).replace(/\|/g, " ").trim()
+      }))
+      .filter((cell) => cell.value);
+    if (cells.length) rows.push(cells);
+  }
+  return rows;
+}
+
+function parseProductionVerification(cellHtml = "") {
+  const source = String(cellHtml).toLowerCase().replace(/\s+/g, " ");
+  if (/\bred\b|#ff0000\b|#f00\b|rgb\(\s*255\s*,\s*0\s*,\s*0\s*\)/i.test(source)) {
+    return "pending";
+  }
+  if (/\bgreen\b|#008000\b|#00ff00\b|#0f0\b|rgb\(\s*0\s*,\s*(?:128|255)\s*,\s*0\s*\)/i.test(source)) {
+    return "verified";
+  }
+  return "unknown";
+}
+
 function parseJornales(html = "") {
   const rows = parseRowsFromTable(html);
   const headerIndex = rows.findIndex((row) => (
@@ -237,9 +262,10 @@ function parseDescansos(html = "") {
   };
 }
 
-function parsePrimas(html = "") {
+export function parsePrimas(html = "") {
   const pageText = textFromHtml(html);
-  const rows = parseRowsFromTable(html);
+  const detailedRows = parseDetailedRowsFromTable(html);
+  const rows = detailedRows.map((row) => row.map((cell) => cell.value));
   const headerIndex = rows.findIndex((row) => (
     row.some((cell) => /jornal/i.test(cell))
     && row.some((cell) => /producci/i.test(cell))
@@ -266,21 +292,26 @@ function parsePrimas(html = "") {
     recognized: true,
     locked: false,
     monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
-    rows: rows.slice(headerIndex + 1)
-      .filter((row) => row.length >= 6 && /^\d+$/.test(String(row[0] || "")))
-      .map((row) => ({
-        values: row,
-        jornal: row[indexOf(/jornal/, 0)] || "",
-        parte: row[indexOf(/parte/, 1)] || "",
-        dia: row[indexOf(/^dia$/, 2)] || "",
-        tipo: row[indexOf(/tipo/, 3)] || "",
-        jornada: row[indexOf(/jornada/, 4)] || "",
-        especialidad: row[indexOf(/especialidad/, 5)] || "",
-        empresa: row[indexOf(/empresa/, 6)] || "",
-        buque: row[indexOf(/buque/, 7)] || "",
-        operacion: row[indexOf(/operaci/, 8)] || "",
-        produccion: row[indexOf(/producci/, 9)] || ""
-      }))
+    rows: detailedRows.slice(headerIndex + 1)
+      .filter((row) => row.length >= 6 && /^\d+$/.test(String(row[0]?.value || "")))
+      .map((detailedRow) => {
+        const row = detailedRow.map((cell) => cell.value);
+        const productionIndex = indexOf(/producci/, 9);
+        return ({
+          values: row,
+          jornal: row[indexOf(/jornal/, 0)] || "",
+          parte: row[indexOf(/parte/, 1)] || "",
+          dia: row[indexOf(/^dia$/, 2)] || "",
+          tipo: row[indexOf(/tipo/, 3)] || "",
+          jornada: row[indexOf(/jornada/, 4)] || "",
+          especialidad: row[indexOf(/especialidad/, 5)] || "",
+          empresa: row[indexOf(/empresa/, 6)] || "",
+          buque: row[indexOf(/buque/, 7)] || "",
+          operacion: row[indexOf(/operaci/, 8)] || "",
+          produccion: row[productionIndex] || "",
+          produccionEstado: parseProductionVerification(detailedRow[productionIndex]?.html)
+        });
+      })
   };
 }
 
