@@ -2356,7 +2356,14 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   );
 }
 
-function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange }) {
+function PortalPanel({
+  session,
+  view = "all",
+  onSnapshotChange,
+  onSessionChange,
+  openCredentialsOnLoad = false,
+  onCredentialsRequestChange
+}) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
   const [loading, setLoading] = useState(true);
@@ -2412,6 +2419,17 @@ function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange 
   useEffect(() => {
     loadSnapshot();
   }, [session.token]);
+
+  useEffect(() => {
+    if (!openCredentialsOnLoad || loading || syncingPortal) return;
+    setError("");
+    setSecurityKeyOnly(false);
+    setShowCredentials(true);
+    onCredentialsRequestChange?.(false);
+    window.requestAnimationFrame(() => {
+      credentialsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [loading, onCredentialsRequestChange, openCredentialsOnLoad, syncingPortal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2852,6 +2870,7 @@ export function App() {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [portalCredentialsRequested, setPortalCredentialsRequested] = useState(false);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
@@ -2890,6 +2909,11 @@ export function App() {
     setMenuOpen(false);
     setActiveTab(nextTab);
     if (window.location.hash !== hashForTab(nextTab)) window.location.hash = hashForTab(nextTab);
+  };
+
+  const connectPortal = () => {
+    setPortalCredentialsRequested(true);
+    navigateToTab("portal");
   };
 
   useEffect(() => {
@@ -3112,11 +3136,11 @@ export function App() {
             activeSpecialtyId={activeSpecialtyId}
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
-            onLoadPortal={() => navigateToTab("portal")}
+            onLoadPortal={connectPortal}
             onNavigate={navigateToTab}
           />
         )}
-        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={() => navigateToTab("portal")} />}
+        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={connectPortal} />}
         {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
         {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
         {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
@@ -3145,7 +3169,14 @@ export function App() {
           />
         )}
         {activeTab === "portal" && (
-          <PortalPanel view="all" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />
+          <PortalPanel
+            view="all"
+            session={session}
+            onSnapshotChange={setPortalSnapshot}
+            onSessionChange={setSession}
+            openCredentialsOnLoad={portalCredentialsRequested}
+            onCredentialsRequestChange={setPortalCredentialsRequested}
+          />
         )}
         {activeTab === "enlaces" && <LinksPanel />}
         <ContactFooter />
