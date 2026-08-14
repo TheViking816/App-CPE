@@ -9,7 +9,7 @@ const html = `
   <table>
     <tr><th>Jornal</th><th>Parte</th><th>Dia</th><th>Tipo</th><th>Jornada</th><th>Especialidad</th><th>Empresa</th><th>Buque</th><th>Operacion</th><th>Produccion</th></tr>
     <tr><td>1</td><td>23045</td><td>13</td><td>TUR</td><td>DE 02 A 08 H.</td><td>CONDUCTOR 1a</td><td>APM</td><td>MAERSK</td><td>CONT. C/SPREADER AUT</td><td><font color="green">135.08 EUR</font></td></tr>
-    <tr><td>2</td><td>23046</td><td>14</td><td>TUR</td><td>DE 02 A 08 H.</td><td>CONDUCTOR 1a</td><td>MSC</td><td>MSC ARICA</td><td>CONT. C/SPREADER AUT</td><td style="color: rgb(255, 0, 0)">153.51 EUR</td></tr>
+    <tr><td>2</td><td>23046</td><td>14</td><td>TUR</td><td>DE 02 A 08 H.</td><td>CONDUCTOR 1a</td><td>MSC</td><td>MSC ARICA</td><td>CONT. C/SPREADER AUT</td><td data-app-cpe-computed-color="rgb(255, 0, 0)">153.51 EUR</td></tr>
   </table>`;
 
 test("conserva si la prima esta verificada o pendiente de verificar", () => {

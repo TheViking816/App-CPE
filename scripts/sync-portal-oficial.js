@@ -125,6 +125,64 @@ function parseProductionVerification(cellHtml = "") {
   return "unknown";
 }
 
+async function contentWithComputedProductionColors(root) {
+  await root.evaluate(() => {
+    for (const table of document.querySelectorAll("table")) {
+      const rows = [...table.querySelectorAll("tr")];
+      const headerRowIndex = rows.findIndex((row) => {
+        const text = String(row.textContent || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return /Jornal/i.test(text) && /Produccion/i.test(text);
+      });
+      if (headerRowIndex === -1) continue;
+
+      const headerCells = [...rows[headerRowIndex].querySelectorAll(":scope > th, :scope > td")];
+      const productionIndex = headerCells.findIndex((cell) => {
+        const text = String(cell.textContent || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return /Produccion/i.test(text);
+      });
+      if (productionIndex === -1) continue;
+
+      for (const row of rows.slice(headerRowIndex + 1)) {
+        const cells = [...row.querySelectorAll(":scope > th, :scope > td")];
+        const productionCell = cells[productionIndex];
+        if (!productionCell) continue;
+
+        const candidates = [productionCell, ...productionCell.querySelectorAll("*")]
+          .filter((element) => String(element.textContent || "").trim());
+        const coloredElement = candidates.find((element) => {
+          const color = getComputedStyle(element).color;
+          return color && color !== "rgb(0, 0, 0)" && color !== "rgba(0, 0, 0, 0)";
+        }) || productionCell;
+        productionCell.dataset.appCpeComputedColor = getComputedStyle(coloredElement).color;
+      }
+    }
+  }).catch(() => {});
+
+  return root.content().catch(() => "");
+}
+
+async function waitForParsedPrimasContent(page, timeout = 12000) {
+  const deadline = Date.now() + timeout;
+  let bestResult = parsePrimas("");
+  let bestScore = 0;
+
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      const result = parsePrimas(await contentWithComputedProductionColors(frame));
+      const resultScore = (result.rows || []).filter((row) => row.jornal).length * 1000
+        + (result.monthLabel ? 100 : 0);
+      if (resultScore > bestScore) {
+        bestResult = result;
+        bestScore = resultScore;
+      }
+    }
+    if (bestScore > 0) return bestResult;
+    await page.waitForTimeout(200);
+  }
+
+  return bestResult;
+}
+
 function parseJornales(html = "") {
   const rows = parseRowsFromTable(html);
   const headerIndex = rows.findIndex((row) => (
@@ -744,7 +802,7 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
     while (Date.now() < deadline) {
       for (const candidatePage of context.pages()) {
         for (const root of [candidatePage, ...candidatePage.frames()]) {
-          const parsed = parsePrimas(await root.content().catch(() => ""));
+          const parsed = parsePrimas(await contentWithComputedProductionColors(root));
           if (!parsed.locked && parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
             return {
               year,
@@ -1560,12 +1618,7 @@ async function collectPrimas(page, previous = null) {
   );
 
   if (!securityControl) {
-    const alreadyLoaded = await waitForParsedContent(
-      page,
-      parsePrimas,
-      (result) => (result.rows || []).filter((row) => row.jornal).length,
-      3000
-    );
+    const alreadyLoaded = await waitForParsedPrimasContent(page, 3000);
     if ((alreadyLoaded.rows || []).some((row) => row.jornal)) {
       return collectPrimasHistory(page, alreadyLoaded, previous);
     }
@@ -1608,13 +1661,7 @@ async function collectPrimas(page, previous = null) {
     await accept.click({ noWaitAfter: true });
   }
 
-  const result = await waitForParsedContent(
-    page,
-    parsePrimas,
-    (result) => (result.rows || []).filter((row) => row.jornal).length * 1000
-      + (result.monthLabel ? 100 : 0),
-    15000
-  );
+  const result = await waitForParsedPrimasContent(page, 15000);
   if (result.locked) {
     throw new Error("La clave de seguridad de primas no fue validada.");
   }
