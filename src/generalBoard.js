@@ -264,8 +264,10 @@ export function sortSpecialties(items) {
   });
 }
 
-export function defaultJourneyKey(journeys) {
-  return expectedContractingSelection().key;
+export function defaultJourneyKey(journeys, now = new Date()) {
+  const expectedKey = expectedContractingSelection(now).key;
+  if ((journeys || []).some((journey) => journey.key === expectedKey)) return expectedKey;
+  return journeys?.at(-1)?.key || "";
 }
 
 export async function fetchGeneralBoard() {
