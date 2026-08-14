@@ -2887,6 +2887,7 @@ export function App() {
 
   const navigateToTab = (tab) => {
     const nextTab = tabFromHash(hashForTab(tab));
+    setMenuOpen(false);
     setActiveTab(nextTab);
     if (window.location.hash !== hashForTab(nextTab)) window.location.hash = hashForTab(nextTab);
   };
@@ -3054,6 +3055,7 @@ export function App() {
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
+    setMenuOpen(false);
     setSession(null);
     navigateToTab("inicio");
   };
@@ -3078,6 +3080,7 @@ export function App() {
             theme={theme}
             onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
             onLogin={(nextSession) => {
+              setMenuOpen(false);
               setSession(nextSession);
               setActiveSpecialtyId(getEffectiveSpecialtyIds(nextSession)[0] || specialty.id);
             }}
