@@ -6,6 +6,7 @@ export const VALID_TABS = new Set([
   "sueldometro",
   "descansos",
   "vacaciones",
+  "nominas",
   "estado",
   "puertas",
   "censo",

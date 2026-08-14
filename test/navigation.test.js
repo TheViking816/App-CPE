@@ -10,6 +10,7 @@ test("restaura varias secciones internas desde su hash", () => {
   assert.equal(tabFromHash("#/sueldometro"), "sueldometro");
   assert.equal(tabFromHash("#/descansos"), "descansos");
   assert.equal(tabFromHash("#/vacaciones"), "vacaciones");
+  assert.equal(tabFromHash("#/nominas"), "nominas");
   assert.equal(tabFromHash("#/estado"), "estado");
 });
 

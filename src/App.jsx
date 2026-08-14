@@ -185,6 +185,7 @@ const SIDE_NAV_GROUPS = [
   {
     label: "Recursos y cuenta",
     items: [
+      { id: "nominas", label: "Nóminas", Icon: FileLock2 },
       { id: "enlaces", label: "Enlaces útiles", Icon: LinkIcon },
       { id: "portal", label: "Sincronización del portal", Icon: RefreshCw }
     ]
@@ -1862,6 +1863,7 @@ function PortalFeatureTemplate({ view = "all" }) {
     salary: { Icon: WalletCards, eyebrow: "Estimación mensual", title: "Tu Sueldómetro", copy: "Aquí verás el neto estimado, tus jornales y el resumen anual.", labels: ["Neto estimado", "Jornales del mes", "Resumen anual"] },
     rests: { Icon: CalendarDays, eyebrow: "Calendario personal", title: "Tus descansos", copy: "Aquí aparecerán tus días DS, solicitudes SL y la posición correspondiente.", labels: ["Calendario de descansos", "Días SL", "Posiciones SL"] },
     holidays: { Icon: Sun, eyebrow: "Planificación anual", title: "Tus vacaciones", copy: "Aquí podrás consultar los periodos reconocidos y su calendario.", labels: ["Días concedidos", "Próximo periodo", "Calendario"] },
+    payrolls: { Icon: FileLock2, eyebrow: "Documentos personales", title: "Tus nóminas", copy: "Aquí podrás consultar y abrir tus nóminas electrónicas.", labels: ["Última nómina", "Periodo", "Documentos"] },
     all: { Icon: BriefcaseBusiness, eyebrow: "Datos personales", title: "Todo listo para empezar", copy: "Conecta el portal para cargar contratación, sueldo, descansos, vacaciones y nóminas.", labels: ["Contratación", "Sueldómetro", "Calendarios"] }
   };
   const template = templates[view] || templates.all;
@@ -2317,7 +2319,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </div>
       )}
 
-      {view === "all" && hasNominas && (
+      {(view === "all" ? hasNominas : view === "payrolls" && nominas?.recognized) && (
         <section ref={nominasRef} className={`portal-personal-section portal-payroll-documents portal-scroll-anchor${nominasExpanded ? " is-open" : ""}`}>
           <button className="portal-payroll-toggle" type="button" onClick={() => setNominasExpanded((current) => !current)} aria-expanded={nominasExpanded}>
             <span className="portal-personal-icon is-payroll"><FileLock2 size={21} /></span>
@@ -2348,6 +2350,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       {view === "salary" && jornales.length === 0 && <PortalFeatureTemplate view="salary" />}
       {view === "rests" && !descansos && <PortalFeatureTemplate view="rests" />}
       {view === "holidays" && !vacaciones?.recognized && <PortalFeatureTemplate view="holidays" />}
+      {view === "payrolls" && !nominas?.recognized && <PortalFeatureTemplate view="payrolls" />}
     </div>
   );
 }
@@ -2608,7 +2611,8 @@ function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange 
     all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
     rests: { eyebrow: "Calendario personal", title: "Descansos" },
-    holidays: { eyebrow: "Planificación", title: "Vacaciones" }
+    holidays: { eyebrow: "Planificación", title: "Vacaciones" },
+    payrolls: { eyebrow: "Documentos personales", title: "Nóminas" }
   }[view] || { eyebrow: "Portal oficial", title: "Mi portal" };
 
   return (
@@ -2962,7 +2966,7 @@ export function App() {
   }, [session?.token]);
 
   useEffect(() => {
-    if (!session?.token || !["portal", "sueldometro", "descansos", "vacaciones"].includes(activeTab)) return;
+    if (!session?.token || !["portal", "sueldometro", "descansos", "vacaciones", "nominas"].includes(activeTab)) return;
     trackPortalOpen({ token: session.token });
   }, [activeTab, session?.token]);
 
@@ -3072,6 +3076,7 @@ export function App() {
         {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
         {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
         {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
+        {activeTab === "nominas" && <PortalPanel view="payrolls" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
         {activeTab === "estado" && (
           <OperationalStatusPanel
             user={displayUser}
