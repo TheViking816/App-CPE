@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260814-navigation-1";
+self.__APP_CPE_SW_VERSION__ = "20260814-admin-sync-all-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

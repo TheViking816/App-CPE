@@ -64,6 +64,7 @@ import {
   getPortalSyncJob,
   loginUser,
   registerUser,
+  requestAllPortalSyncs,
   requestOfficialPortalDocument,
   requestPortalSync,
   setPortalAutoSync,
@@ -2373,6 +2374,8 @@ function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange 
   const [securityKeyOnly, setSecurityKeyOnly] = useState(false);
   const [syncProgress, setSyncProgress] = useState(initialActiveSync ? 3 : 0);
   const [syncElapsed, setSyncElapsed] = useState(initialActiveSync ? Math.floor((Date.now() - initialActiveSync.startedAt) / 1000) : 0);
+  const [syncingAllUsers, setSyncingAllUsers] = useState(false);
+  const [allUsersMessage, setAllUsersMessage] = useState("");
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
   const lastProgressRefreshRef = useRef(0);
@@ -2607,6 +2610,28 @@ function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange 
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
+  const isPortalAdmin = normalizeChapa(session.chapa) === "72683";
+
+  const handleAllUsersSync = async () => {
+    if (!window.confirm("Se actualizaran los datos de todos los usuarios con claves guardadas. ¿Continuar?")) return;
+
+    setSyncingAllUsers(true);
+    setAllUsersMessage("");
+    try {
+      const result = await requestAllPortalSyncs({ token: session.token });
+      const queued = Number(result?.queued || 0);
+      const skipped = Number(result?.skipped || 0);
+      setAllUsersMessage(queued > 0
+        ? `${queued} usuarios puestos en cola${skipped ? `; ${skipped} ya estaban actualizandose o no pudieron incluirse` : ""}.`
+        : skipped > 0
+          ? "No se han duplicado trabajos: todos los usuarios ya estaban actualizandose o no pudieron incluirse."
+          : "No hay usuarios con sincronizacion automatica activa.");
+    } catch (requestError) {
+      setAllUsersMessage(requestError.message || "No se pudo lanzar la actualizacion general.");
+    } finally {
+      setSyncingAllUsers(false);
+    }
+  };
   const panelCopy = {
     all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
@@ -2641,6 +2666,22 @@ function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange 
             </button>
           </div>
         </div>
+      )}
+
+      {isPortalAdmin && (
+        <section className="portal-admin-sync-card">
+          <span className="portal-admin-sync-icon"><UsersRound size={22} /></span>
+          <div>
+            <small>Administracion</small>
+            <strong>Actualizar todos los usuarios</strong>
+            <p>Sincroniza las cuentas que tienen claves guardadas y la actualizacion automatica activa.</p>
+          </div>
+          <button type="button" disabled={syncingAllUsers} onClick={handleAllUsersSync}>
+            <RefreshCw size={17} className={syncingAllUsers ? "is-spinning" : ""} />
+            {syncingAllUsers ? "Lanzando..." : "Actualizar todos"}
+          </button>
+          {allUsersMessage && <p className="portal-admin-sync-message" role="status">{allUsersMessage}</p>}
+        </section>
       )}
 
       {error && <p ref={portalErrorRef} className="portal-warning">{error}</p>}
