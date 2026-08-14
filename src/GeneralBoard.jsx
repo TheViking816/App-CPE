@@ -89,7 +89,7 @@ export default function GeneralBoard({ chapa, onOpen }) {
   const normalizedQuery = normalizeText(query).toUpperCase();
   return (
     <section className="general-board page-panel">
-      <div className="section-heading"><p>Contratación completa</p><h1>Tablón general</h1><span>Bolsa y Turno en una sola vista</span></div>
+      <div className="section-heading"><p>Contratación completa</p><h1>Tablón general</h1></div>
       {loading && <div className="general-loading"><span className="spinner" />Cargando contratación...</div>}
       {error && <p className="inline-notice error">{error}</p>}
       {!loading && !error && !journey && <p className="inline-notice">Contratación pendiente. Esperando la jornada correspondiente a este horario.</p>}

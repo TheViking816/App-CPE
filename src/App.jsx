@@ -569,7 +569,7 @@ function SideMenu({ open, activeTab, theme, onClose, onNavigate, onSettingsOpen,
         <header>
           <div className="side-menu-brand">
             <img src={`${import.meta.env.BASE_URL}logo.jpg`} alt="" />
-            <span><strong>App CPE</strong><small>Panel personal</small></span>
+            <span><strong>App CPE</strong></span>
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar menú"><X size={21} /></button>
         </header>
@@ -1296,9 +1296,9 @@ function HomePanel({
   const firstName = portalFirstName(portalSnapshot);
   const hasPortalData = Boolean(portalSnapshot?.payload);
   const directAccess = [
-    { id: "sueldometro", title: "Sueldómetro", subtitle: "Jornales y resumen anual", Icon: WalletCards, tone: "salary" },
-    { id: "descansos", title: "Descansos", subtitle: "Calendario y posición SL", Icon: CalendarDays, tone: "rests" },
-    { id: "vacaciones", title: "Vacaciones", subtitle: "Periodos y calendario", Icon: Sun, tone: "holidays" }
+    { id: "sueldometro", title: "Sueldómetro", Icon: WalletCards, tone: "salary" },
+    { id: "descansos", title: "Descansos", Icon: CalendarDays, tone: "rests" },
+    { id: "vacaciones", title: "Vacaciones", Icon: Sun, tone: "holidays" }
   ];
 
   return (
@@ -1306,7 +1306,6 @@ function HomePanel({
       <header className="home-welcome">
         <small>{formatCurrentDateTime(currentTime)}</small>
         <h1>{firstName ? `Hola, ${firstName}` : "Bienvenido/a"}</h1>
-        <p>Esta es tu situación para los próximos días.</p>
         {!hasPortalData && <span className="home-demo-badge">Vista previa · faltan datos del portal</span>}
       </header>
 
@@ -1349,10 +1348,10 @@ function HomePanel({
       <section className="home-section-block home-direct-access">
         <div className="home-section-heading"><span>Accesos directos</span></div>
         <div className="home-access-list">
-          {directAccess.map(({ id, title, subtitle, Icon, tone }) => (
+          {directAccess.map(({ id, title, Icon, tone }) => (
             <button key={id} className={`home-access-card ${tone}`} type="button" onClick={() => onNavigate(id)}>
               <span><Icon size={23} /></span>
-              <span><strong>{title}</strong><small>{subtitle}</small></span>
+              <span><strong>{title}</strong></span>
               <ChevronRight size={20} />
             </button>
           ))}
@@ -1369,7 +1368,7 @@ function OperationalStatusPanel({ user, doors, doorConfig, chaperoSnapshot, chap
   const showRollOnAlert = activeSpecialty.id === "pol-especialista" && nearest?.distance !== null && nearest?.distance < 50;
   return (
     <section className="page-panel">
-      <div className="section-heading"><p>Chapero y posición</p><h1>Estado operativo</h1><span>La información técnica que antes aparecía en la portada.</span></div>
+      <div className="section-heading"><p>Chapero y posición</p><h1>Estado operativo</h1></div>
       <section className={`chapero-card ${chaperoLoading ? "loading" : chaperoWorker?.status || "empty"}`}>
         <div className="jornada-card"><span>Última jornada contratada</span><strong>{formatJornadaContratada(chaperoSnapshot, chaperoLoading)}</strong></div>
         <div className="chapero-meta-row"><span>{formatCurrentDateTime(currentTime)}</span><small>Chapa {user?.chapa || "-"}</small></div>
@@ -1394,7 +1393,7 @@ function ContractingPanel({ snapshot, currentTime, onLoadPortal }) {
   const hasPortalData = Boolean(snapshot?.payload);
   return (
     <section className="page-panel personal-route-panel">
-      <div className="section-heading"><p>Próximos días</p><h1>Mi contratación</h1><span>Jornales asignados y solicitudes de doble.</span></div>
+      <div className="section-heading"><p>Próximos días</p><h1>Mi contratación</h1></div>
       {!hasPortalData && <PortalConnectCallout compact onConnect={onLoadPortal} />}
       <CurrentAssignments snapshot={snapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
       <UpcomingDoubles snapshot={snapshot} currentTime={currentTime} />
@@ -1428,7 +1427,6 @@ function SpecialtyBlock({ title, items, selectedIds, onToggle }) {
 
 function MySpecialtiesPanel({ session, availableSpecialties, notice, onSpecialtiesSave }) {
   const [selectedSpecialties, setSelectedSpecialties] = useState(availableSpecialties.map((item) => item.id));
-  const detectedIds = useMemo(() => getDetectedSpecialtyIdsForChapa(session.chapa), [session.chapa]);
   const specialtyItems = specialties.filter((item) => getSpecialtyKind(item) === "especialidad");
   const polyvalenceItems = specialties.filter((item) => getSpecialtyKind(item) === "polivalencia");
 
@@ -1448,7 +1446,6 @@ function MySpecialtiesPanel({ session, availableSpecialties, notice, onSpecialti
       <div className="section-heading">
         <p>Chapa {session.chapa}</p>
         <h1>Mis especialidades</h1>
-        <span>Detectadas automaticamente: {detectedIds.length}</span>
       </div>
 
       <SpecialtyBlock
@@ -1564,7 +1561,6 @@ function DoorsPanel({ doors, doorConfig, activeSpecialty }) {
       <div className="section-heading">
         <p>Puertas de turno</p>
         <h1>{getSpecialtyLabel(activeSpecialty)}</h1>
-        <span>Actualizado: {formatUpdatedAt(doorConfig?.updatedAt)}</span>
       </div>
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
       <DoorsTable title="Festivas" doors={festivoDoors} tone="fes" />
@@ -2609,18 +2605,17 @@ function PortalPanel({ session, view = "all", onSnapshotChange, onSessionChange 
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
   const panelCopy = {
-    all: { eyebrow: "Portal oficial", title: "Sincronización del portal", description: "Conecta y actualiza todos tus datos personales de CPE." },
-    salary: { eyebrow: "Jornales y salario", title: "Sueldómetro", description: "Estimación mensual, consulta de jornales y resumen anual." },
-    rests: { eyebrow: "Calendario personal", title: "Descansos", description: "Calendario de descansos y consulta de posiciones SL." },
-    holidays: { eyebrow: "Planificación", title: "Vacaciones", description: "Periodos reconocidos y calendario de vacaciones." }
-  }[view] || { eyebrow: "Portal oficial", title: "Mi portal", description: "Todos tus datos personales en formato claro." };
+    all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
+    salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
+    rests: { eyebrow: "Calendario personal", title: "Descansos" },
+    holidays: { eyebrow: "Planificación", title: "Vacaciones" }
+  }[view] || { eyebrow: "Portal oficial", title: "Mi portal" };
 
   return (
     <section className="page-panel portal-panel">
       <div className="section-heading">
         <p>{panelCopy.eyebrow}</p>
         <h1>{panelCopy.title}</h1>
-        <span>{panelCopy.description}</span>
       </div>
 
       {snapshot && !showCredentials && (
