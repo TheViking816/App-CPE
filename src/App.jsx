@@ -690,7 +690,7 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
   }, [snapshot, currentTime]);
 
   if (!assignments.length) {
-    if (snapshot?.payload) return null;
+    const hasPortalData = Boolean(snapshot?.payload);
     return (
       <section className="current-assignments-card is-empty">
         <div className="current-assignments-heading">
@@ -701,15 +701,21 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
           </div>
         </div>
         <div className="current-assignments-empty">
-          <div aria-hidden="true">
+          <div>
             <span>--/--</span>
-            <strong>Sin datos cargados</strong>
-            <small>Conecta el portal para consultar tu contratacion.</small>
+            <strong>{hasPortalData ? "No hay contrataciones próximas" : "Sin datos cargados"}</strong>
+            <small>
+              {hasPortalData
+                ? "No tienes jornales para hoy ni para días posteriores."
+                : "Conecta el portal para consultar tu contratación."}
+            </small>
           </div>
-          <button type="button" onClick={onLoadPortal}>
-            <RefreshCw size={17} />
-            Cargar datos
-          </button>
+          {!hasPortalData && (
+            <button type="button" onClick={onLoadPortal}>
+              <RefreshCw size={17} />
+              Cargar datos
+            </button>
+          )}
         </div>
       </section>
     );
@@ -784,27 +790,36 @@ function UpcomingDoubles({ snapshot, currentTime }) {
       .sort((a, b) => a.startsAt - b.startsAt);
   }, [snapshot, currentTime]);
 
-  if (!rows.length) return null;
   return (
-    <section className="upcoming-doubles-card">
+    <section className={`upcoming-doubles-card${rows.length ? "" : " is-empty"}`}>
       <header>
         <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
         <div><small>Solicitudes activas</small><strong>Próximos dobles</strong></div>
         <b>{rows.length}</b>
       </header>
-      <div className="portal-doubles-list">
-        {rows.map((request, index) => (
-          <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
-            <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
-            <div>
-              <strong>{request.specialty}</strong>
-              <small>Jornada {request.journey}</small>
-              {request.holiday && <em className="portal-double-holiday">Festivo</em>}
-            </div>
-            <Check size={17} />
-          </article>
-        ))}
-      </div>
+      {rows.length ? (
+        <div className="portal-doubles-list">
+          {rows.map((request, index) => (
+            <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
+              <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
+              <div>
+                <strong>{request.specialty}</strong>
+                <small>Jornada {request.journey}</small>
+                {request.holiday && <em className="portal-double-holiday">Festivo</em>}
+              </div>
+              <Check size={17} />
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="portal-doubles-empty">
+          <CalendarCheck2 size={20} aria-hidden="true" />
+          <div>
+            <strong>No hay dobles solicitados próximos</strong>
+            <small>No tienes solicitudes de doble pendientes para los próximos días.</small>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
