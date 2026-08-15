@@ -301,15 +301,16 @@ export async function requestOfficialPortalDocument({ token, documentId }) {
   return data || null;
 }
 
-export async function trackPortalOpen({ token }) {
-  if (!supabase || !token) return null;
+export async function trackPageVisit({ token, page }) {
+  if (!supabase || !token || !page) return null;
 
-  const { data, error } = await supabase.rpc("app_cpe_track_portal_open", {
-    p_token: token
+  const { data, error } = await supabase.rpc("app_cpe_track_page_visit", {
+    p_token: token,
+    p_page: page
   });
 
   if (error) {
-    console.warn("No se pudo registrar la apertura del Portal:", error.message);
+    console.warn("No se pudo registrar la visita de página:", error.message);
     return null;
   }
 

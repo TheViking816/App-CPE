@@ -69,7 +69,7 @@ import {
   requestPortalSync,
   setPortalAutoSync,
   setPortalSecurityKey,
-  trackPortalOpen,
+  trackPageVisit,
   trackUsageEvent,
   updateUserIrpf,
   updateUserPassword,
@@ -3025,8 +3025,8 @@ export function App() {
   }, [session?.token]);
 
   useEffect(() => {
-    if (!session?.token || !["portal", "sueldometro", "descansos", "vacaciones", "nominas"].includes(activeTab)) return;
-    trackPortalOpen({ token: session.token });
+    if (!session?.token || !activeTab) return;
+    trackPageVisit({ token: session.token, page: activeTab });
   }, [activeTab, session?.token]);
 
   useEffect(() => {

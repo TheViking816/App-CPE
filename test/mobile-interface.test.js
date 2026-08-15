@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+const supabaseClientSource = await readFile(new URL("../src/supabaseClient.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
@@ -27,4 +28,10 @@ test("la navegacion movil respeta las zonas seguras y no es translucida", () => 
 test("no muestra un falso aviso de lectura parcial cuando ya hay datos", () => {
   assert.doesNotMatch(appSource, /Lectura parcial del portal/);
   assert.doesNotMatch(appSource, /Algunas consultas no respondieron/);
+});
+
+test("registra la página activa de cada visita con la sesión del usuario", () => {
+  assert.match(appSource, /trackPageVisit\(\{ token: session\.token, page: activeTab \}\)/);
+  assert.match(supabaseClientSource, /app_cpe_track_page_visit/);
+  assert.match(supabaseClientSource, /p_page: page/);
 });
