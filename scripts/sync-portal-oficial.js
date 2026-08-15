@@ -40,6 +40,7 @@ const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/port
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
+export const PORTAL_PERIOD_TIMEOUT_MS = 20000;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 
@@ -755,7 +756,7 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
     await selectPortalOption(selects.nth(1), String(year));
     await periodPage.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
 
-    const deadline = Date.now() + (fastMode ? 4000 : 20000);
+    const deadline = Date.now() + PORTAL_PERIOD_TIMEOUT_MS;
     while (Date.now() < deadline) {
       for (const candidatePage of context.pages()) {
         for (const root of [candidatePage, ...candidatePage.frames()]) {
@@ -860,7 +861,7 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
       const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
       periodWarnings.push(warning);
       console.warn(`No se actualizaron los jornales de ${warning}`);
-      if (!fastMode && month === currentMonth && historyByMonth.size === 0) {
+      if (month === currentMonth && historyByMonth.size === 0) {
         console.warn("Reintentando una vez los jornales del mes actual...");
         await page.waitForTimeout(800);
         try {
