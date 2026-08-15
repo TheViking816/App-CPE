@@ -107,7 +107,9 @@ export async function loadPayrollConfig() {
   const [holidaysResult, ratesResult, complementsResult] = await Promise.all([
     supabase.from("app_cpe_payroll_holidays").select("holiday_date, name, enabled").eq("enabled", true),
     supabase.from("app_cpe_payroll_rates").select("operation_type, worker_group, rate_key, shift_key, amount, enabled").eq("enabled", true),
-    supabase.from("app_cpe_specialty_complements").select("specialty_key, specialty_name, amount, enabled").eq("enabled", true)
+    supabase.from("app_cpe_specialty_complements")
+      .select("specialty_key, specialty_name, amount, servicio_publico_02_08, servicio_publico_08_14, servicio_publico_14_20, servicio_publico_20_02, recepcion_entrega_02_08, recepcion_entrega_08_14, recepcion_entrega_14_20, recepcion_entrega_20_02, festivo, enabled")
+      .eq("enabled", true)
   ]);
 
   const error = holidaysResult.error || ratesResult.error || complementsResult.error;

@@ -91,6 +91,93 @@ test("no suma dos veces una prima presente en jornales y primas", () => {
   assert.equal(payroll.total, 530.69);
 });
 
+test("trastainer suma jornal, complemento de servicio publico y prima", () => {
+  const payroll = enrichJornales([{
+    dia: "13",
+    parte: "30001",
+    jornada: "DE 08 A 14 H.",
+    especialidad: "TRASTAINERS RTT",
+    operacion: "CONT. C/SPREADER AUT",
+    produccion: "120,50 EUR"
+  }], [], "Agosto de 2026")[0].payroll;
+
+  assert.equal(payroll.base, 105.53);
+  assert.equal(payroll.complement, 60.57);
+  assert.equal(payroll.prima, 120.50);
+  assert.equal(payroll.total, 286.60);
+});
+
+test("containera suma complemento y prima tambien en recepcion y entrega", () => {
+  const payroll = enrichJornales([{
+    dia: "13",
+    parte: "30002",
+    jornada: "DE 20 A 02 H.",
+    especialidad: "CONTAINERA",
+    operacion: "RECEPCION / ENTREGA",
+    produccion: "90,00 EUR"
+  }], [], "Agosto de 2026")[0].payroll;
+
+  assert.equal(payroll.base, 227.93);
+  assert.equal(payroll.complement, 16.90);
+  assert.equal(payroll.prima, 90);
+  assert.equal(payroll.total, 334.83);
+  assert.equal(payroll.primaPending, false);
+});
+
+test("gruas usa el complemento festivo y suma la prima del portal", () => {
+  const payroll = enrichJornales([{
+    dia: "15",
+    parte: "30003",
+    jornada: "DE 14 A 20 H.",
+    especialidad: "GRUAS",
+    operacion: "CONT. C/SPREADER AUT",
+    produccion: "75,25 EUR"
+  }], [], "Agosto de 2026")[0].payroll;
+
+  assert.equal(payroll.rateKey, "FESTIVO");
+  assert.equal(payroll.complement, 70.26);
+  assert.equal(payroll.prima, 75.25);
+  assert.equal(payroll.total, 414.56);
+});
+
+test("los complementos de manipuladores se pueden modificar desde la tabla de especialidades", () => {
+  const payroll = enrichJornales([{
+    dia: "13",
+    parte: "30004",
+    jornada: "DE 08 A 14 H.",
+    especialidad: "TRASTAINERS RTT",
+    operacion: "CONT. C/SPREADER AUT",
+    produccion: "100,00 EUR"
+  }], [], "Agosto de 2026", {
+    complements: [{
+      specialty_key: "TRASTAINERS_RTT",
+      amount: null,
+      servicio_publico_08_14: "65.00"
+    }]
+  })[0].payroll;
+
+  assert.equal(payroll.complement, 65);
+  assert.equal(payroll.total, 270.53);
+});
+
+test("mantiene editables los complementos simples existentes en Supabase", () => {
+  const payroll = enrichJornales([{
+    dia: "13",
+    parte: "30005",
+    jornada: "DE 08 A 14 H.",
+    especialidad: "CONDUCTOR 1a",
+    operacion: "CONT. C/SPREADER AUT"
+  }], [], "Agosto de 2026", {
+    complements: [{
+      specialty_key: "CONDUCTOR_1A",
+      amount: "8.25"
+    }]
+  })[0].payroll;
+
+  assert.equal(payroll.complement, 8.25);
+  assert.equal(payroll.total, 113.78);
+});
+
 test("el total anual usa las primas incluidas en cada mes sin mezclarlas", () => {
   const annual = summarizeAnnualPayroll([
     {

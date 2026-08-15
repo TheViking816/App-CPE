@@ -80,6 +80,34 @@ const CONDUCTOR_1A_COMPLEMENT = 7.38;
 const CONDUCTOR_2A_COMPLEMENT = 6.94;
 const TRINCADOR_COMPLEMENT = 48.21;
 
+const MANIPULATOR_SPECIALTIES = new Set([
+  "TRASTAINERS_RTT",
+  "CONTAINER",
+  "GRUAS",
+  "ELEVADORAS"
+]);
+
+const MANIPULATOR_COMPLEMENTS = {
+  ESTIBA: {
+    "02-08": 84.29,
+    "08-14": 60.57,
+    "14-20": 60.57,
+    "20-02": 83.71
+  },
+  RECEPCION_ENTREGA: {
+    "02-08": 13.26,
+    "08-14": 12.15,
+    "14-20": 12.15,
+    "20-02": 16.90
+  },
+  FESTIVO: {
+    "02-08": 70.26,
+    "08-14": 70.26,
+    "14-20": 70.26,
+    "20-02": 70.26
+  }
+};
+
 const MONTHS_ES = {
   enero: 1,
   febrero: 2,
@@ -196,12 +224,38 @@ function getSpecialtyKey(specialty = "") {
   if (/CONDUCTOR(?:\s+DE)?\s*1\s*A\b/.test(normalized)) return "CONDUCTOR_1A";
   if (/CONDUCTOR(?:\s+DE)?\s*2\s*A\b/.test(normalized)) return "CONDUCTOR_2A";
   if (/TRINCADOR|CAPATAZ\s+DE\s+O\s*P/.test(normalized)) return "TRINCADOR";
+  if (/TRASTAINER/.test(normalized) || /\bRTT\b/.test(normalized)) return "TRASTAINERS_RTT";
+  if (/CONTAINERA?S?|CONTAINERS?/.test(normalized)) return "CONTAINER";
+  if (/\bGRUAS?\b|GRUISTA/.test(normalized)) return "GRUAS";
+  if (/ELEVADORAS?/.test(normalized)) return "ELEVADORAS";
   return normalized.replace(/\s+/g, "_");
 }
 
-function getComplement(specialty = "", complementLookup = new Map()) {
+function getComplement(
+  specialty = "",
+  { operationType = "ESTIBA", rateKey = "LABORABLE", shift = "" } = {},
+  complementLookup = new Map()
+) {
   const specialtyKey = getSpecialtyKey(specialty);
-  const configured = complementLookup.get(specialtyKey);
+  if (MANIPULATOR_SPECIALTIES.has(specialtyKey)) {
+    const configuredRow = complementLookup.get(specialtyKey);
+    const shiftSuffix = shift.replace("-", "_");
+    const configuredKey = rateKey.includes("FESTIVO")
+      ? "festivo"
+      : `${operationType === "RECEPCION_ENTREGA" ? "recepcion_entrega" : "servicio_publico"}_${shiftSuffix}`;
+    const configured = configuredRow?.[configuredKey] == null
+      ? null
+      : Number(configuredRow[configuredKey]);
+    if (Number.isFinite(configured)) return configured;
+
+    const fallbackTable = rateKey.includes("FESTIVO")
+      ? MANIPULATOR_COMPLEMENTS.FESTIVO
+      : MANIPULATOR_COMPLEMENTS[operationType] || MANIPULATOR_COMPLEMENTS.ESTIBA;
+    return fallbackTable[shift] || 0;
+  }
+
+  const configuredValue = complementLookup.get(specialtyKey)?.amount;
+  const configured = configuredValue == null ? null : Number(configuredValue);
   if (Number.isFinite(configured)) return configured;
   if (specialtyKey === "CONDUCTOR_1A") return CONDUCTOR_1A_COMPLEMENT;
   if (specialtyKey === "CONDUCTOR_2A") return CONDUCTOR_2A_COMPLEMENT;
@@ -259,7 +313,7 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
   ]));
   const complementLookup = new Map((payrollConfig?.complements || []).map((item) => [
     item.specialty_key,
-    item.amount == null ? null : Number(item.amount)
+    item
   ]));
   return jornales.map((jornal) => {
     const day = Number(jornal.dia);
@@ -273,11 +327,18 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const configuredRate = rateLookup.get([operationType, group, rateKey, shift].join("|"));
     const fallbackRate = table[rateKey]?.[shift] ?? table[getDayType(date, holidaySet)]?.[shift] ?? 0;
     const base = Number((Number.isFinite(configuredRate) ? configuredRate : fallbackRate).toFixed(2));
-    const complement = Number(getComplement(jornal.especialidad, complementLookup).toFixed(2));
-    const embeddedPrima = operationType === "RECEPCION_ENTREGA"
+    const specialtyKey = getSpecialtyKey(jornal.especialidad);
+    const isManipulator = MANIPULATOR_SPECIALTIES.has(specialtyKey);
+    const complement = Number(getComplement(
+      jornal.especialidad,
+      { operationType, rateKey, shift },
+      complementLookup
+    ).toFixed(2));
+    const allowsPrima = operationType !== "RECEPCION_ENTREGA" || isManipulator;
+    const embeddedPrima = !allowsPrima
       ? null
       : parseAmount(jornal.produccion) || null;
-    const matchedPrima = operationType === "RECEPCION_ENTREGA"
+    const matchedPrima = !allowsPrima
       ? null
       : findMatchingPrima(jornal, primas);
     const primaAmount = matchedPrima?.amount ?? embeddedPrima;
@@ -296,7 +357,7 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         complement,
         production: 0,
         prima,
-        primaPending: operationType !== "RECEPCION_ENTREGA" && prima == null,
+        primaPending: allowsPrima && prima == null,
         primaVerification: matchedPrima?.verification
           || (jornal.produccionEstado === "pending" ? "pending"
             : jornal.produccionEstado === "verified" ? "verified" : "unknown"),
