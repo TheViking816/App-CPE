@@ -23,3 +23,8 @@ test("la navegacion movil respeta las zonas seguras y no es translucida", () => 
   assert.match(styles, /\.bottom-nav[\s\S]*?background: #fff;/);
   assert.doesNotMatch(styles, /\.bottom-nav[\s\S]{0,500}?background: rgba\(255, 255, 255/);
 });
+
+test("no muestra un falso aviso de lectura parcial cuando ya hay datos", () => {
+  assert.doesNotMatch(appSource, /Lectura parcial del portal/);
+  assert.doesNotMatch(appSource, /Algunas consultas no respondieron/);
+});

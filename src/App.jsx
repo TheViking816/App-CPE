@@ -2046,22 +2046,12 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </button>
       )}
 
-      {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && (
-        needsSecurityKey ? (
-          <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestSecurityKey}>
-            <CircleAlert size={20} />
-            <div><strong>Introduce tu clave de seguridad para cargar primas y nóminas</strong></div>
-            <ChevronRight size={19} />
-          </button>
-        ) : (
-          <section className="portal-sync-warning" role="status">
-            <CircleAlert size={20} />
-            <div>
-              <strong>Lectura parcial del portal</strong>
-              <span>Algunas consultas no respondieron y no se han podido cargar todos tus datos. Pulsa «Actualizar portal» para reintentarlo.</span>
-            </div>
-          </section>
-        )
+      {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && needsSecurityKey && (
+        <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestSecurityKey}>
+          <CircleAlert size={20} />
+          <div><strong>Introduce tu clave de seguridad para cargar primas y nóminas</strong></div>
+          <ChevronRight size={19} />
+        </button>
       )}
 
       {view === "all" && (jornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
