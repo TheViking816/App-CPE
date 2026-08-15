@@ -1273,7 +1273,7 @@ function PortalConnectCallout({ compact = false, onConnect }) {
       <span>
         <small>Activa toda la aplicación</small>
         <strong>Conecta tu Portal CPE</strong>
-        <span>Introduce la contraseña del portal para cargar contratación, sueldo, descansos y vacaciones.</span>
+        <span>Introduce tu contraseña del portal de SEVASA para cargar contratación, sueldo, descansos y vacaciones.</span>
       </span>
       <ChevronRight size={21} />
     </button>
@@ -2705,14 +2705,14 @@ function PortalPanel({
               <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
               <span>{securityKeyOnly
                 ? "Introduce la clave de seguridad de primas y nóminas."
-                : "Introduce tu contraseña del portal oficial. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
+                : "Introduce tu contraseña del portal de SEVASA. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
             </div>
             {!securityKeyOnly && (
               <label>
                 <Lock size={17} />
                 <input
                   autoComplete="current-password"
-                  placeholder="Contrasena del portal"
+                  placeholder="Contraseña del portal de SEVASA"
                   type="password"
                   value={portalPassword}
                   onChange={(event) => setPortalPassword(event.target.value)}

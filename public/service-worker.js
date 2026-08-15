@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260815-hide-partial-warning-1";
+self.__APP_CPE_SW_VERSION__ = "20260815-sevasa-password-copy-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
