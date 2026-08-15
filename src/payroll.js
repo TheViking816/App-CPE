@@ -76,9 +76,19 @@ export const SALARY_TABLE = {
   }
 };
 
-const CONDUCTOR_1A_COMPLEMENT = 7.38;
-const CONDUCTOR_2A_COMPLEMENT = 6.94;
-const TRINCADOR_COMPLEMENT = 48.21;
+const SPECIALTY_COMPLEMENT_FALLBACKS = {
+  CAPATAZ: 86.48,
+  SOBORDISTA: 74.89,
+  TRINCADOR: 48.21,
+  CLASIFICADOR: 74.89,
+  MAFI: 74.89,
+  MANIPULADOR_OP_UNICA: 56.96,
+  APOYO_OPERACION: 113.92,
+  CONDUCTOR_1A: 7.38,
+  GARAJISTA_RO_RO: 181.41,
+  FURGONETERO_RO_RO: 47.47,
+  CONDUCTOR_2A: 6.94
+};
 
 const MANIPULATOR_SPECIALTIES = new Set([
   "TRASTAINERS_RTT",
@@ -223,7 +233,15 @@ function getSpecialtyKey(specialty = "") {
   const normalized = normalizeSpecialty(specialty);
   if (/CONDUCTOR(?:\s+DE)?\s*1\s*A\b/.test(normalized)) return "CONDUCTOR_1A";
   if (/CONDUCTOR(?:\s+DE)?\s*2\s*A\b/.test(normalized)) return "CONDUCTOR_2A";
+  if (normalized === "CAPATAZ") return "CAPATAZ";
   if (/TRINCADOR|CAPATAZ\s+DE\s+O\s*P/.test(normalized)) return "TRINCADOR";
+  if (/SOBORDISTA/.test(normalized)) return "SOBORDISTA";
+  if (/CLASIF(?:ICADOR)?/.test(normalized)) return "CLASIFICADOR";
+  if (/\bMAFIS?\b/.test(normalized)) return "MAFI";
+  if (/MANIPULADOR\s+(?:DE\s+)?OP(?:ERACION)?\s+UNICA/.test(normalized)) return "MANIPULADOR_OP_UNICA";
+  if (/APOYO\s+OPERACION/.test(normalized)) return "APOYO_OPERACION";
+  if (/GARAJISTA(?:\s+RO\s*RO)?/.test(normalized)) return "GARAJISTA_RO_RO";
+  if (/FURGONETERO(?:\s+RO\s*RO)?/.test(normalized)) return "FURGONETERO_RO_RO";
   if (/TRASTAINER/.test(normalized) || /\bRTT\b/.test(normalized)) return "TRASTAINERS_RTT";
   if (/CONTAINERA?S?|CONTAINERS?/.test(normalized)) return "CONTAINER";
   if (/\bGRUAS?\b|GRUISTA/.test(normalized)) return "GRUAS";
@@ -257,10 +275,7 @@ function getComplement(
   const configuredValue = complementLookup.get(specialtyKey)?.amount;
   const configured = configuredValue == null ? null : Number(configuredValue);
   if (Number.isFinite(configured)) return configured;
-  if (specialtyKey === "CONDUCTOR_1A") return CONDUCTOR_1A_COMPLEMENT;
-  if (specialtyKey === "CONDUCTOR_2A") return CONDUCTOR_2A_COMPLEMENT;
-  if (specialtyKey === "TRINCADOR") return TRINCADOR_COMPLEMENT;
-  return 0;
+  return SPECIALTY_COMPLEMENT_FALLBACKS[specialtyKey] || 0;
 }
 
 function getRateKey(dateString, shift, holidaySet) {

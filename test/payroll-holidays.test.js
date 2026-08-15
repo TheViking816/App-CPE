@@ -178,6 +178,45 @@ test("mantiene editables los complementos simples existentes en Supabase", () =>
   assert.equal(payroll.total, 113.78);
 });
 
+test("aplica los complementos de puesto 2026 a las demas especialidades", () => {
+  const cases = [
+    ["CAPATAZ", 86.48],
+    ["SOBORDISTA", 74.89],
+    ["TRINCADOR", 48.21],
+    ["CLASIFICADOR", 74.89],
+    ["MAFIS", 74.89],
+    ["MANIPULADOR OP. UNICA", 56.96],
+    ["APOYO OPERACION", 113.92],
+    ["GARAJISTA RO-RO", 181.41],
+    ["FURGONETERO RO-RO", 47.47],
+    ["CONDUCTOR DE 2A RORO", 6.94]
+  ];
+
+  for (const [especialidad, expected] of cases) {
+    const payroll = enrichJornales([{
+      dia: "13",
+      jornada: "DE 08 A 14 H.",
+      especialidad,
+      operacion: "CONT. C/SPREADER AUT"
+    }], [], "Agosto de 2026")[0].payroll;
+
+    assert.equal(payroll.complement, expected, especialidad);
+  }
+});
+
+test("los nuevos complementos siguen siendo editables desde Supabase", () => {
+  const payroll = enrichJornales([{
+    dia: "13",
+    jornada: "DE 08 A 14 H.",
+    especialidad: "APOYO OPERACION",
+    operacion: "CONT. C/SPREADER AUT"
+  }], [], "Agosto de 2026", {
+    complements: [{ specialty_key: "APOYO_OPERACION", amount: "120.50" }]
+  })[0].payroll;
+
+  assert.equal(payroll.complement, 120.50);
+});
+
 test("el total anual usa las primas incluidas en cada mes sin mezclarlas", () => {
   const annual = summarizeAnnualPayroll([
     {
