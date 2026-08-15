@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260815-connect-portal-1";
+self.__APP_CPE_SW_VERSION__ = "20260815-mobile-fix-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

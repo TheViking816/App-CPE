@@ -61,6 +61,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(135deg, rgba(8, 38, 75, 0.08), transparent 32%),
     linear-gradient(315deg, rgba(50, 199, 184, 0.14), transparent 38%),
@@ -92,6 +93,7 @@ a {
 .mobile-app {
   width: min(100%, 520px);
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
   background:
     radial-gradient(circle at 6% 25%, rgba(8, 38, 75, 0.08), transparent 24%),
@@ -114,8 +116,8 @@ a {
   grid-template-columns: 48px 64px minmax(0, 1fr) 48px;
   align-items: center;
   gap: 10px;
-  min-height: 74px;
-  padding: 5px 12px;
+  min-height: calc(74px + env(safe-area-inset-top));
+  padding: calc(5px + env(safe-area-inset-top)) 12px 5px;
   background: linear-gradient(135deg, #061f3f 0%, #0d3567 100%);
   color: #fff;
   box-shadow: 0 8px 18px rgba(8, 38, 75, 0.25);
@@ -226,7 +228,7 @@ a {
 }
 
 .content {
-  padding: 14px 10px 92px;
+  padding: 14px 10px calc(92px + env(safe-area-inset-bottom));
 }
 
 .home-summary,
@@ -1036,11 +1038,13 @@ select {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   width: min(100%, 520px);
-  min-height: 68px;
+  min-height: calc(68px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   transform: translateX(-50%);
   border-top: 1px solid #e1e7ef;
-  background: rgba(255, 255, 255, 0.96);
+  background: #fff;
   box-shadow: 0 -10px 24px rgba(7, 31, 63, 0.12);
+  isolation: isolate;
 }
 
 .bottom-nav button {
@@ -4767,8 +4771,9 @@ select {
 .login-screen {
   display: grid;
   min-height: 100vh;
+  min-height: 100dvh;
   place-items: center;
-  padding: 18px;
+  padding: calc(18px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom));
   background: linear-gradient(135deg, #061f3f 0%, #0d3567 55%, #0c776e 100%);
 }
 
@@ -5530,7 +5535,7 @@ select {
 
 :root[data-theme="dark"] .bottom-nav {
   border-top-color: rgba(148, 163, 184, 0.24);
-  background: rgba(8, 18, 31, 0.96);
+  background: #08121f;
   box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.38);
 }
 
@@ -5587,8 +5592,8 @@ select {
   .app-header {
     grid-template-columns: 40px 54px minmax(54px, 1fr) 40px;
     gap: 6px;
-    min-height: 70px;
-    padding: 4px 8px;
+    min-height: calc(70px + env(safe-area-inset-top));
+    padding: calc(4px + env(safe-area-inset-top)) 8px 4px;
   }
 
   .logo-box {

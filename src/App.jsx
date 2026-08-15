@@ -2733,7 +2733,10 @@ function PortalPanel({
               <Lock size={17} />
               <input
                 autoComplete="off"
-                inputMode="numeric"
+                autoCapitalize="none"
+                autoCorrect="off"
+                inputMode="text"
+                spellCheck={false}
                 aria-label="Clave de seguridad opcional"
                 placeholder="Clave de seguridad (opcional)"
                 type="password"
