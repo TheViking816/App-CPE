@@ -1893,6 +1893,9 @@ function PortalVacationPreview({ vacaciones }) {
           );
         })}
       </div>
+      <a className="portal-official-action" href="https://portal.cpevalencia.com/Noray/src/VacacionesC24UniVac/VacacionesC24.asp" target="_blank" rel="noreferrer">
+        Gestionar vacaciones en el Portal <ExternalLink size={15} />
+      </a>
     </section>
   );
 }
@@ -2056,6 +2059,9 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
           );
         })}
       </div>
+      <a className="portal-official-action" href="https://portal.cpevalencia.com/Noray/Prueba.asp" target="_blank" rel="noreferrer">
+        Gestionar descansos en el Portal <ExternalLink size={15} />
+      </a>
     </section>
   );
 }

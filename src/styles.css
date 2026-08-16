@@ -6143,6 +6143,8 @@ select {
 .portal-exceptions-info ul { display: grid; gap: 7px; margin: 0; padding: 0 0 0 18px; color: #617084; font-size: 10px; font-weight: 700; line-height: 1.4; }
 .portal-exceptions-info li::marker { color: #7654d9; }
 .portal-exceptions-info > a { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d4caef; border-radius: 9px; color: #5d43b0; background: #fff; font-size: 11px; font-weight: 900; text-decoration: none; }
+.portal-official-action { display: inline-flex; width: 100%; min-height: 42px; box-sizing: border-box; align-items: center; justify-content: center; gap: 7px; margin: 14px 0 0; border: 1px solid #cdd9e6; border-radius: 10px; color: #255f9d; background: #fff; font-size: 11px; font-weight: 900; text-decoration: none; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.portal-official-action:hover { border-color: #86afd8; background: #f4f8fc; transform: translateY(-1px); }
 
 :root[data-theme="dark"] .portal-exceptions-card { border-color: #2c4158; background: #102238; }
 :root[data-theme="dark"] .portal-exceptions-summary > div, :root[data-theme="dark"] .portal-exceptions-list article { border-color: #2b4055; background: #172c43; }
@@ -6152,6 +6154,8 @@ select {
 :root[data-theme="dark"] .portal-exceptions-info > header strong { color: #e8eff6; }
 :root[data-theme="dark"] .portal-exceptions-info ul { color: #aebdcc; }
 :root[data-theme="dark"] .portal-exceptions-info > a { border-color: #4b4074; color: #c9bbff; background: #1b2d45; }
+:root[data-theme="dark"] .portal-official-action { border-color: #38536d; color: #a9cff5; background: #172b40; }
+:root[data-theme="dark"] .portal-official-action:hover { border-color: #557da3; background: #1b334b; }
 
 @media (max-width: 430px) {
   .portal-exceptions-hero { padding: 15px; }
