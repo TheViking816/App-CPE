@@ -9,6 +9,7 @@ import {
   parseAssignmentsFromTables
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
+import { parseExceptions } from "./portal-exceptions.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
@@ -1324,6 +1325,47 @@ async function collectPayrollDocumentFiles(page, rows, documentId) {
   console.log(`Documentos de nomina leidos: ${documents.length}.`);
 }
 
+async function collectExceptions(page) {
+  const readCurrentScreen = async () => {
+    const deadline = Date.now() + 12000;
+    let bestResult = parseExceptions("");
+    let bestScore = 0;
+    let recognizedAt = 0;
+    while (Date.now() < deadline) {
+      for (const frame of page.frames()) {
+        await frame.locator('input[type="checkbox"]').evaluateAll((inputs) => {
+          inputs.forEach((input) => {
+            if (input.checked) input.setAttribute("data-app-cpe-checked", "true");
+          });
+        }).catch(() => {});
+        const result = parseExceptions(await frame.content().catch(() => ""));
+        const score = (result.recognized ? 1000 : 0) + (result.rows?.length || 0);
+        if (score > bestScore) {
+          bestResult = result;
+          bestScore = score;
+          recognizedAt = result.recognized ? Date.now() : 0;
+        }
+      }
+      if (bestResult.recognized && recognizedAt && Date.now() - recognizedAt >= 600) return bestResult;
+      await page.waitForTimeout(200);
+    }
+    return bestResult;
+  };
+
+  try {
+    await openPortalHash(page, "User,ViewNoray,17");
+    const directResult = await readCurrentScreen();
+    if (directResult.recognized) return directResult;
+  } catch {
+    // The menu fallback covers portal route changes and older sessions.
+  }
+
+  await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
+  const menuResult = await readCurrentScreen();
+  if (menuResult.recognized) return menuResult;
+  throw new Error("No se pudo leer la Bolsa de Excepciones. Se conservaran los ultimos datos disponibles.");
+}
+
 async function getStoredPayrollDocumentIds() {
   if (!supabaseServiceRole) return new Set();
   const channel = portalSnapshotChannel || "main";
@@ -1932,6 +1974,7 @@ async function main() {
     );
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
+    const hasExceptionData = (value) => Boolean(value?.recognized);
     const progressPayload = { ...(existingSnapshot?.payload || {}) };
     const publishProgress = async (section, value, stage) => {
       progressPayload[section] = value;
@@ -2004,6 +2047,14 @@ async function main() {
       hasMonths
     );
     await publishProgress("descansos", descansos, "Descansos cargados");
+    const excepciones = await readOptionalSection(
+      "bolsa de excepciones",
+      () => collectExceptions(page),
+      existingSnapshot?.payload?.excepciones,
+      { recognized: false, year: new Date().getFullYear(), maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [], rules: [] },
+      hasExceptionData
+    );
+    await publishProgress("excepciones", excepciones, "Excepciones cargadas");
     const vacaciones = await readOptionalSection(
       "vacaciones",
       () => collectVacaciones(page),
@@ -2036,6 +2087,7 @@ async function main() {
       jornales,
       asignaciones,
       descansos,
+      excepciones,
       sl,
       primas,
       vacaciones,
@@ -2071,6 +2123,7 @@ async function main() {
       sl: payload.sl.rows.length,
       primas: payload.primas.rows.length,
       descansos: payload.descansos.worker,
+      excepciones: payload.excepciones.rows.length,
       vacaciones: payload.vacaciones.rows.length,
       mensajes: payload.mensajes.rows.length,
       dobles: payload.dobles.rows.length,

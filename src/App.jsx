@@ -2,8 +2,10 @@ import { Component, useEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import {
   BriefcaseBusiness,
+  BarChart3,
   Building2,
   CalendarDays,
+  CalendarOff,
   CalendarRange,
   Check,
   ChevronDown,
@@ -17,6 +19,7 @@ import {
   EyeOff,
   Home,
   Inbox,
+  Info,
   Link as LinkIcon,
   ClipboardList,
   Lock,
@@ -81,6 +84,7 @@ import {
   updateUserSpecialties
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
+import AdminMonitor from "./AdminMonitor.jsx";
 import { companyLogo, shipImage } from "./generalBoard.js";
 import { hashForTab, tabFromHash } from "./navigation.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
@@ -185,6 +189,7 @@ const SIDE_NAV_GROUPS = [
     items: [
       { id: "estado", label: "Estado operativo", Icon: BriefcaseBusiness },
       { id: "puertas", label: "Detalle de puertas", Icon: CalendarRange },
+      { id: "excepciones", label: "Excepciones", Icon: CalendarOff },
       { id: "tablon", label: "Tablón general", Icon: ClipboardList },
       { id: "censo", label: "Censo", Icon: UsersRound }
     ]
@@ -554,7 +559,7 @@ function AppHeader({ user, messages, onInboxOpen, onMenuOpen }) {
   );
 }
 
-function SideMenu({ open, activeTab, theme, onClose, onNavigate, onSettingsOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, onClose, onNavigate, onSettingsOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -594,6 +599,14 @@ function SideMenu({ open, activeTab, theme, onClose, onNavigate, onSettingsOpen,
             ))}
           </section>
         ))}
+        {isAdmin && (
+          <section className="side-menu-admin">
+            <p>Administración</p>
+            <button className={activeTab === "monitor" ? "active" : ""} type="button" onClick={() => navigate("monitor")}>
+              <BarChart3 size={19} /><span>Monitor de actividad</span><ChevronRight size={17} />
+            </button>
+          </section>
+        )}
         <section className="side-menu-settings">
           <p>Ajustes</p>
           <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
@@ -1350,7 +1363,7 @@ function PortalConnectCallout({ compact = false, onConnect }) {
       <span>
         <small>Activa toda la aplicación</small>
         <strong>Conecta tu Portal CPE</strong>
-        <span>Introduce tu contraseña del portal de SEVASA para cargar contratación, sueldo, descansos y vacaciones.</span>
+        <span>Introduce tu contraseña del portal de SEVASA para cargar contratación, sueldo, descansos, excepciones y vacaciones.</span>
       </span>
       <ChevronRight size={21} />
     </button>
@@ -1378,6 +1391,7 @@ function HomePanel({
   const directAccess = [
     { id: "sueldometro", title: "Sueldómetro", Icon: WalletCards, tone: "salary" },
     { id: "descansos", title: "Descansos", Icon: CalendarDays, tone: "rests" },
+    { id: "excepciones", title: "Excepciones", Icon: CalendarOff, tone: "exceptions" },
     { id: "vacaciones", title: "Vacaciones", Icon: Sun, tone: "holidays" }
   ];
 
@@ -1883,6 +1897,74 @@ function PortalVacationPreview({ vacaciones }) {
   );
 }
 
+function formatExceptionDate(value) {
+  const date = parsePortalDate(value);
+  if (!date) return String(value || "—");
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(date).replace(" de ", " ");
+}
+
+function formatExceptionShift(value) {
+  const match = String(value || "").match(/(?:DE\s*)?(\d{1,2})\s*A\s*(\d{1,2})/i);
+  return match ? `${match[1].padStart(2, "0")}:00–${match[2].padStart(2, "0")}:00` : String(value || "Jornada");
+}
+
+function PortalExceptionsPreview({ exceptions }) {
+  if (!exceptions?.recognized) return null;
+  const rows = [...(exceptions.rows || [])].sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
+  const maxAnnual = Math.max(1, Number(exceptions.maxAnnual) || 15);
+  const usedTotal = Math.max(0, Number(exceptions.usedTotal) || 0);
+  const remaining = Math.max(0, Number.isFinite(Number(exceptions.remaining)) ? Number(exceptions.remaining) : maxAnnual - usedTotal);
+  const progress = Math.min(100, (usedTotal / maxAnnual) * 100);
+  const rules = exceptions.rules?.length ? exceptions.rules : [
+    "Puedes solicitar hasta 15 excepciones de jornada al año sin necesidad de justificarlas.",
+    "En un mismo día puedes pedir un máximo de dos jornadas.",
+    "No están disponibles en sábados, domingos, festivos ni días sin las cuatro jornadas principales.",
+    "Debes gestionarlas con al menos dos días laborables de antelación."
+  ];
+
+  return (
+    <section className="portal-exceptions-card">
+      <header className="portal-exceptions-hero">
+        <div className="portal-exceptions-title">
+          <span><CalendarOff size={23} /></span>
+          <div><small>Bolsa anual {exceptions.year || new Date().getFullYear()}</small><h1>Mis excepciones</h1></div>
+        </div>
+        <div className="portal-exceptions-balance"><strong>{remaining}</strong><span>disponibles</span></div>
+      </header>
+
+      <div className="portal-exceptions-summary">
+        <div><span>Utilizadas</span><strong>{usedTotal}<small> / {maxAnnual}</small></strong></div>
+        <div><span>Solicitadas</span><strong>{rows.length}</strong></div>
+        <div><span>Aceptadas</span><strong>{rows.filter((row) => /aceptad/i.test(row.status)).length}</strong></div>
+      </div>
+      <div className="portal-exceptions-progress" aria-label={`${usedTotal} excepciones utilizadas de ${maxAnnual}`}><i style={{ width: `${progress}%` }} /></div>
+
+      <div className="portal-exceptions-heading"><div><small>Historial</small><h2>Excepciones solicitadas</h2></div><span>{rows.length}</span></div>
+      {rows.length ? (
+        <div className="portal-exceptions-list">
+          {rows.map((item, index) => (
+            <article key={`${item.date}-${item.shift}-${index}`} className={item.used ? "is-used" : ""}>
+              <time><strong>{formatExceptionDate(item.date)}</strong><small>Pedida {formatExceptionDate(item.requestedAt)}</small></time>
+              <div><strong>{formatExceptionShift(item.shift)}</strong><span className={/aceptad/i.test(item.status) ? "is-accepted" : ""}>{item.status || "Pendiente"}</span></div>
+              <em>{item.used ? <><Check size={13} /> Utilizada</> : "Disponible"}</em>
+            </article>
+          ))}
+        </div>
+      ) : <p className="portal-exceptions-empty">Todavía no tienes excepciones solicitadas este año.</p>}
+
+      <section className="portal-exceptions-info">
+        <header><Info size={18} /><div><small>Información importante</small><strong>Cómo funciona la bolsa</strong></div></header>
+        <ul>{rules.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+        <a href="https://portal.cpevalencia.com/#User,ViewNoray,17" target="_blank" rel="noreferrer">Gestionar excepciones en el Portal <ExternalLink size={15} /></a>
+      </section>
+    </section>
+  );
+}
+
 function PortalCalendarPreview({ descansos, slRows = [] }) {
   const months = descansos?.months || [];
   const slPositionByDate = useMemo(() => {
@@ -1982,6 +2064,7 @@ function PortalFeatureTemplate({ view = "all" }) {
   const templates = {
     salary: { Icon: WalletCards, eyebrow: "Estimación mensual", title: "Tu Sueldómetro", copy: "Aquí verás el neto estimado, tus jornales y el resumen anual.", labels: ["Neto estimado", "Jornales del mes", "Resumen anual"] },
     rests: { Icon: CalendarDays, eyebrow: "Calendario personal", title: "Tus descansos", copy: "Aquí aparecerán tus días DS, solicitudes SL y la posición correspondiente.", labels: ["Calendario de descansos", "Días SL", "Posiciones SL"] },
+    exceptions: { Icon: CalendarOff, eyebrow: "Bolsa anual", title: "Tus excepciones", copy: "Aquí podrás consultar las jornadas solicitadas, utilizadas y disponibles.", labels: ["Disponibles", "Utilizadas", "Solicitadas"] },
     holidays: { Icon: Sun, eyebrow: "Planificación anual", title: "Tus vacaciones", copy: "Aquí podrás consultar los periodos reconocidos y su calendario.", labels: ["Días concedidos", "Próximo periodo", "Calendario"] },
     payrolls: { Icon: FileLock2, eyebrow: "Documentos personales", title: "Tus nóminas", copy: "Aquí podrás consultar y abrir tus nóminas electrónicas.", labels: ["Última nómina", "Periodo", "Documentos"] },
     all: { Icon: BriefcaseBusiness, eyebrow: "Datos personales", title: "Todo listo para empezar", copy: "Conecta el portal para cargar contratación, sueldo, descansos, vacaciones y nóminas.", labels: ["Contratación", "Sueldómetro", "Calendarios"] }
@@ -2025,6 +2108,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const hasDescansos = Array.isArray(descansos?.months) && descansos.months.length > 0;
   const slRows = payload?.sl?.rows || [];
   const vacaciones = payload?.vacaciones || null;
+  const exceptions = payload?.excepciones || null;
   const nominas = payload?.nominas || null;
   const hasNominas = Boolean(nominas?.recognized && !nominas?.locked && (nominas?.rows || []).length > 0);
   const needsSecurityKey = Boolean(payload?.primas?.locked || payload?.nominas?.locked);
@@ -2046,6 +2130,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [relayHourError, setRelayHourError] = useState("");
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
+  const exceptionsRef = useRef(null);
   const vacacionesRef = useRef(null);
   const nominasRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
@@ -2221,7 +2306,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </button>
       )}
 
-      {view === "all" && (enrichedJornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
+      {view === "all" && (enrichedJornales.length > 0 || hasDescansos || exceptions?.recognized || vacaciones?.recognized || hasNominas) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
           {enrichedJornales.length > 0 && (
             <button
@@ -2356,6 +2441,11 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                 </div>
               )}
             </section>
+          )}
+          {exceptions?.recognized && (
+            <button className="is-excepciones" type="button" onClick={() => exceptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <CalendarOff size={19} /><span>Excepciones</span><ChevronDown size={17} />
+            </button>
           )}
           {!hasFullCurrentYear && (
             <button
@@ -2517,6 +2607,12 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </div>
       )}
 
+      {(view === "all" || view === "exceptions") && exceptions?.recognized && (
+        <div ref={exceptionsRef} className="portal-scroll-anchor">
+          <PortalExceptionsPreview exceptions={exceptions} />
+        </div>
+      )}
+
       {(view === "all" ? hasNominas : view === "payrolls" && nominas?.recognized) && (
         <section ref={nominasRef} className={`portal-personal-section portal-payroll-documents portal-scroll-anchor${nominasExpanded ? " is-open" : ""}`}>
           <button className="portal-payroll-toggle" type="button" onClick={() => setNominasExpanded((current) => !current)} aria-expanded={nominasExpanded}>
@@ -2560,6 +2656,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       )}
       {view === "salary" && enrichedJornales.length === 0 && <PortalFeatureTemplate view="salary" />}
       {view === "rests" && !descansos && <PortalFeatureTemplate view="rests" />}
+      {view === "exceptions" && !exceptions?.recognized && <PortalFeatureTemplate view="exceptions" />}
       {view === "holidays" && !vacaciones?.recognized && <PortalFeatureTemplate view="holidays" />}
       {view === "payrolls" && !nominas?.recognized && <PortalFeatureTemplate view="payrolls" />}
     </div>
@@ -2872,6 +2969,7 @@ function PortalPanel({
     all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
     rests: { eyebrow: "Calendario personal", title: "Descansos" },
+    exceptions: { eyebrow: "Bolsa anual", title: "Excepciones" },
     holidays: { eyebrow: "Planificación", title: "Vacaciones" },
     payrolls: { eyebrow: "Documentos personales", title: "Nóminas" }
   }[view] || { eyebrow: "Portal oficial", title: "Mi portal" };
@@ -3097,6 +3195,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
+  const isAdmin = normalizeChapa(session?.chapa) === "72683";
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
     return ids.map(getSpecialty);
@@ -3117,14 +3216,15 @@ export function App() {
   useEffect(() => {
     const syncTabFromHash = () => {
       const nextTab = tabFromHash(window.location.hash);
-      setActiveTab(nextTab);
-      const canonicalHash = hashForTab(nextTab);
+      const allowedTab = nextTab === "monitor" && !isAdmin ? "inicio" : nextTab;
+      setActiveTab(allowedTab);
+      const canonicalHash = hashForTab(allowedTab);
       if (window.location.hash !== canonicalHash) window.history.replaceState(null, "", canonicalHash);
     };
     syncTabFromHash();
     window.addEventListener("hashchange", syncTabFromHash);
     return () => window.removeEventListener("hashchange", syncTabFromHash);
-  }, []);
+  }, [isAdmin]);
 
   const navigateToTab = (tab) => {
     const nextTab = tabFromHash(hashForTab(tab));
@@ -3275,7 +3375,7 @@ export function App() {
   }, [session?.chapa, session?.token]);
 
   useEffect(() => {
-    if (!session?.token || !activeTab) return;
+    if (!session?.token || !activeTab || activeTab === "monitor") return;
     trackPageVisit({ token: session.token, page: activeTab });
   }, [activeTab, session?.token]);
 
@@ -3387,6 +3487,7 @@ export function App() {
         {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
         {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "excepciones" && <PortalPanel view="exceptions" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "nominas" && <PortalPanel view="payrolls" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "estado" && (
@@ -3442,6 +3543,7 @@ export function App() {
           />
         )}
         {activeTab === "enlaces" && <LinksPanel />}
+        {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
         <ContactFooter />
       </main>
       {inboxOpen && <InboxModal messages={portalSnapshot?.payload?.mensajes} onClose={() => setInboxOpen(false)} />}
@@ -3450,6 +3552,7 @@ export function App() {
         open={menuOpen}
         activeTab={activeTab}
         theme={theme}
+        isAdmin={isAdmin}
         onClose={() => setMenuOpen(false)}
         onNavigate={navigateToTab}
         onSettingsOpen={() => setPasswordOpen(true)}

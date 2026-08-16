@@ -5,6 +5,7 @@ export const VALID_TABS = new Set([
   "contratacion",
   "sueldometro",
   "descansos",
+  "excepciones",
   "vacaciones",
   "nominas",
   "estado",
@@ -12,7 +13,8 @@ export const VALID_TABS = new Set([
   "censo",
   "portal",
   "tablon",
-  "enlaces"
+  "enlaces",
+  "monitor"
 ]);
 
 export function tabFromHash(hash = "") {
