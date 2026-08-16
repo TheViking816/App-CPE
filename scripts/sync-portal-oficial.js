@@ -41,7 +41,9 @@ const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/port
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
-export const PORTAL_PERIOD_TIMEOUT_MS = 20000;
+export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
+export const PORTAL_CURRENT_PERIOD_ATTEMPTS = 3;
+export const PORTAL_PERIOD_RETRY_DELAY_MS = 1500;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 
@@ -757,7 +759,7 @@ async function readJornalesPeriod(context, selectorUrl, month, year) {
   const initialPages = new Set(context.pages());
 
   try {
-    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS });
     const selects = periodPage.locator("select");
     if (await selects.count() < 2) {
       throw new Error(`No se encontraron los selectores para ${expectedLabel}.`);
@@ -864,25 +866,32 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
   const periodWarnings = [];
 
   for (const month of monthsToRead) {
-    try {
-      const period = await readJornalesPeriod(page.context(), selectorUrl, month, year);
-      historyByMonth.set(month, period);
-      console.log(`Jornales ${period.monthLabel}: ${period.rows.length}.`);
-    } catch (error) {
-      const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
+    const attempts = month === currentMonth ? PORTAL_CURRENT_PERIOD_ATTEMPTS : 1;
+    let lastError = null;
+    let updated = false;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const period = await readJornalesPeriod(page.context(), selectorUrl, month, year);
+        historyByMonth.set(month, period);
+        console.log(`Jornales ${period.monthLabel}: ${period.rows.length}${attempt > 1 ? ` (intento ${attempt})` : ""}.`);
+        updated = true;
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts) {
+          console.warn(`El mes actual sigue cargando; reintento ${attempt + 1} de ${attempts}...`);
+          await page.waitForTimeout(PORTAL_PERIOD_RETRY_DELAY_MS);
+        }
+      }
+    }
+
+    if (!updated) {
+      const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${lastError instanceof Error ? lastError.message : "lectura fallida"}`;
       periodWarnings.push(warning);
       console.warn(`No se actualizaron los jornales de ${warning}`);
-      if (month === currentMonth && historyByMonth.size === 0) {
-        console.warn("Reintentando una vez los jornales del mes actual...");
-        await page.waitForTimeout(800);
-        try {
-          const retryPeriod = await readJornalesPeriod(page.context(), selectorUrl, month, year);
-          historyByMonth.set(month, retryPeriod);
-          console.log(`Jornales ${retryPeriod.monthLabel}: ${retryPeriod.rows.length} (reintento).`);
-          continue;
-        } catch (retryError) {
-          throw new Error(`El portal no devolvio los jornales del mes actual tras dos intentos. ${retryError instanceof Error ? retryError.message : warning}`);
-        }
+      if (month === currentMonth && !historyByMonth.has(currentMonth)) {
+        throw new Error(`El portal no devolvio los jornales del mes actual tras ${attempts} intentos. ${lastError instanceof Error ? lastError.message : warning}`);
       }
     }
   }
