@@ -2911,6 +2911,51 @@ select {
 .portal-month-financials .is-net { border-color: #0fa688; background: #e9fbf6; }
 .portal-month-financials .is-net strong { color: #087761; }
 
+.portal-month-period-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  background: #eaf1f7;
+}
+
+.portal-month-period-selector button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.portal-month-period-selector button span {
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.portal-month-period-selector button strong {
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.portal-month-period-selector button.is-active {
+  background: #fff;
+  color: var(--navy);
+  box-shadow: 0 3px 10px rgba(7, 31, 63, 0.1);
+}
+
+.portal-month-period-selector button.is-active strong {
+  color: #087f67;
+}
+
 .portal-month-breakdown { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
 .portal-month-breakdown > div { display: grid; gap: 3px; padding: 10px; border-radius: 7px; background: #eaf1f7; }
 .portal-month-breakdown strong { color: var(--ink); font-size: 13px; }
@@ -2957,6 +3002,9 @@ select {
 :root[data-theme="dark"] .portal-month-breakdown > div,
 :root[data-theme="dark"] .portal-month-jornal-heading > span,
 :root[data-theme="dark"] .portal-month-jornal-values span { background: #152c43; }
+:root[data-theme="dark"] .portal-month-period-selector { border-color: #29445f; background: #152c43; }
+:root[data-theme="dark"] .portal-month-period-selector button.is-active { background: #21405c; }
+:root[data-theme="dark"] .portal-month-period-selector button strong { color: #eff7ff; }
 :root[data-theme="dark"] .portal-month-financials .is-gross { background: #0b2b51; }
 :root[data-theme="dark"] .portal-month-financials .is-net { background: #103c39; }
 

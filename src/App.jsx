@@ -50,6 +50,7 @@ import {
 import {
   compareJornalesDescending,
   enrichJornales,
+  filterJornalesByPeriod,
   formatEuro,
   summarizeAnnualPayroll,
   summarizePayroll
@@ -1194,10 +1195,19 @@ function ChangePasswordModal({ onClose, onSave }) {
 function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, savingRelayHourKey, relayHourError }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
-  const rows = useMemo(
+  const [selectedPeriod, setSelectedPeriod] = useState("month");
+  const allRows = useMemo(
     () => [...(month?.enriched || [])].sort(compareJornalesDescending),
     [month]
   );
+  const periodSummary = useMemo(() => summarizePayroll(allRows), [allRows]);
+  const rows = useMemo(
+    () => filterJornalesByPeriod(allRows, selectedPeriod),
+    [allRows, selectedPeriod]
+  );
+  const selectedPeriodLabel = selectedPeriod === "first"
+    ? "1.ª quincena"
+    : selectedPeriod === "second" ? "2.ª quincena" : "mes completo";
   const totals = useMemo(() => rows.reduce((summary, item) => ({
     base: summary.base + Number(item.payroll?.base || 0),
     complement: summary.complement + Number(item.payroll?.complement || 0),
@@ -1230,7 +1240,11 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
     setDownloadError("");
     try {
       const { downloadMonthlyPayrollPdf } = await loadMonthlyPayrollPdfModule();
-      downloadMonthlyPayrollPdf(month, irpfRate);
+      downloadMonthlyPayrollPdf({
+        ...month,
+        monthLabel: `${month.monthLabel} · ${selectedPeriodLabel}`,
+        enriched: rows
+      }, irpfRate);
     } catch (error) {
       console.error("No se pudo generar el PDF mensual:", error);
       setDownloadError("No se pudo descargar el PDF. Vuelve a intentarlo.");
@@ -1260,6 +1274,17 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
           <div><span>Retención · {irpfRate}%</span><strong>-{formatEuro(withholding)}</strong></div>
           <div className="is-net"><span>Neto estimado</span><strong>{formatEuro(net)}</strong></div>
         </div>
+        <div className="portal-month-period-selector" aria-label="Periodo del resumen mensual">
+          <button className={selectedPeriod === "first" ? "is-active" : ""} type="button" onClick={() => setSelectedPeriod("first")}>
+            <span>1.ª quincena</span><strong>{formatEuro(periodSummary.firstHalf)}</strong>
+          </button>
+          <button className={selectedPeriod === "second" ? "is-active" : ""} type="button" onClick={() => setSelectedPeriod("second")}>
+            <span>2.ª quincena</span><strong>{formatEuro(periodSummary.secondHalf)}</strong>
+          </button>
+          <button className={selectedPeriod === "month" ? "is-active" : ""} type="button" onClick={() => setSelectedPeriod("month")}>
+            <span>Mes completo</span><strong>{formatEuro(periodSummary.total)}</strong>
+          </button>
+        </div>
         <div className="portal-month-breakdown">
           <div><span>Jornales</span><strong>{rows.length}</strong></div>
           <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
@@ -1268,8 +1293,8 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
           <div><span>Horas relevo</span><strong>{formatEuro(totals.relay)}</strong></div>
         </div>
         <div className="portal-month-jornales">
-          <h2>Jornales del mes</h2>
-          {rows.length === 0 && <p>Este mes no tiene jornales cargados.</p>}
+          <h2>Jornales · {selectedPeriodLabel}</h2>
+          {rows.length === 0 && <p>No hay jornales cargados en este periodo.</p>}
           {rows.map((item, index) => (
             <article key={`${item.jornal || item.parte || item.dia}-${index}`}>
               <div className="portal-month-jornal-heading">
@@ -2066,12 +2091,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     Number(month.year) === new Date().getFullYear()
   )).length >= currentHistoryMonth;
   const selectedJornales = useMemo(
-    () => enrichedJornales.filter((item) => {
-      if (selectedPeriod === "month") return true;
-      const day = Number.parseInt(item.dia, 10);
-      if (!Number.isFinite(day)) return selectedPeriod === "first";
-      return selectedPeriod === "first" ? day <= 15 : day > 15;
-    }),
+    () => filterJornalesByPeriod(enrichedJornales, selectedPeriod),
     [enrichedJornales, selectedPeriod]
   );
   const selectedSummary = useMemo(() => summarizePayroll(selectedJornales), [selectedJornales]);

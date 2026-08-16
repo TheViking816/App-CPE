@@ -438,6 +438,15 @@ export function summarizePayroll(items = []) {
   }, { total: 0, firstHalf: 0, secondHalf: 0 });
 }
 
+export function filterJornalesByPeriod(items = [], period = "month") {
+  if (period === "month") return items;
+  return items.filter((item) => {
+    const day = Number.parseInt(item?.dia, 10);
+    if (!Number.isFinite(day)) return period === "first";
+    return period === "first" ? day <= 15 : day > 15;
+  });
+}
+
 export function summarizeAnnualPayroll(history = [], payrollConfig = null, relayHours = {}) {
   const months = history.map((month) => {
     const enriched = enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig, relayHours);
