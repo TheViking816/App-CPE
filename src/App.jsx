@@ -87,6 +87,7 @@ import GeneralBoard from "./GeneralBoard.jsx";
 import AdminMonitor from "./AdminMonitor.jsx";
 import { companyLogo, shipImage } from "./generalBoard.js";
 import { hashForTab, tabFromHash } from "./navigation.js";
+import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
 
 const STORAGE_KEY = "app-cpe-session";
@@ -1917,7 +1918,7 @@ function formatExceptionShift(value) {
 
 function PortalExceptionsPreview({ exceptions }) {
   if (!exceptions?.recognized) return null;
-  const rows = [...(exceptions.rows || [])].sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
+  const rows = [...(exceptions.rows || [])].sort(compareExceptionsDescending);
   const maxAnnual = Math.max(1, Number(exceptions.maxAnnual) || 15);
   const usedTotal = Math.max(0, Number(exceptions.usedTotal) || 0);
   const remaining = Math.max(0, Number.isFinite(Number(exceptions.remaining)) ? Number(exceptions.remaining) : maxAnnual - usedTotal);
@@ -2333,6 +2334,11 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
               <CalendarDays size={19} /><span>Descansos</span><ChevronDown size={17} />
             </button>
           )}
+          {exceptions?.recognized && (
+            <button className="is-excepciones" type="button" onClick={() => exceptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              <CalendarOff size={19} /><span>Excepciones</span><ChevronDown size={17} />
+            </button>
+          )}
           {vacaciones?.recognized && (
             <button className="is-vacaciones" type="button" onClick={() => vacacionesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
               <Sun size={19} /><span>Vacaciones</span><ChevronDown size={17} />
@@ -2447,11 +2453,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                 </div>
               )}
             </section>
-          )}
-          {exceptions?.recognized && (
-            <button className="is-excepciones" type="button" onClick={() => exceptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-              <CalendarOff size={19} /><span>Excepciones</span><ChevronDown size={17} />
-            </button>
           )}
           {!hasFullCurrentYear && (
             <button
