@@ -188,8 +188,8 @@ const SIDE_NAV_GROUPS = [
   {
     label: "Operativa",
     items: [
-      { id: "estado", label: "Estado operativo", Icon: BriefcaseBusiness },
-      { id: "puertas", label: "Detalle de puertas", Icon: CalendarRange },
+      { id: "estado", label: "Chapero", Icon: BriefcaseBusiness },
+      { id: "puertas", label: "Puertas", Icon: CalendarRange },
       { id: "excepciones", label: "Excepciones", Icon: CalendarOff },
       { id: "tablon", label: "Tablón general", Icon: ClipboardList },
       { id: "censo", label: "Censo", Icon: UsersRound }
@@ -2119,7 +2119,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const nominas = payload?.nominas || null;
   const hasNominas = Boolean(nominas?.recognized && !nominas?.locked && (nominas?.rows || []).length > 0);
   const needsSecurityKey = Boolean(payload?.primas?.locked || payload?.nominas?.locked);
-  const [selectedPeriod, setSelectedPeriod] = useState("first");
+  const [selectedPeriod, setSelectedPeriod] = useState(() => (
+    new Date().getDate() <= 15 ? "first" : "second"
+  ));
   const [irpfRate, setIrpfRate] = useState(0);
   const [savedIrpfRate, setSavedIrpfRate] = useState(0);
   const [savingIrpf, setSavingIrpf] = useState(false);
