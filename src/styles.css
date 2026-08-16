@@ -4463,6 +4463,23 @@ select {
   white-space: nowrap;
 }
 
+@media (max-width: 620px) {
+  .assignment-detail-workers > article > div {
+    grid-template-columns: 1fr;
+  }
+
+  .assignment-detail-workers p {
+    align-items: flex-start;
+  }
+
+  .assignment-detail-workers p span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 .assignment-detail-workers p.is-current-worker {
   margin: 2px -5px;
   padding: 6px 5px;
