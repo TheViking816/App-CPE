@@ -1631,15 +1631,35 @@ function DoorsTable({ title, doors, tone }) {
   );
 }
 
-function DoorsPanel({ doors, doorConfig, activeSpecialty }) {
+function DoorsPanel({
+  doors,
+  doorConfig,
+  activeSpecialty,
+  activeSpecialtyId,
+  availableSpecialties,
+  onSpecialtyChange
+}) {
   const laborableDoors = doors.filter((door) => door.dayType === "laborable");
   const festivoDoors = doors.filter((door) => door.dayType === "festivo");
 
   return (
     <section className="page-panel">
+      <div className="specialty-select doors-specialty-select">
+        <span>Especialidad</span>
+        <select
+          aria-label="Seleccionar puertas por especialidad"
+          value={activeSpecialtyId}
+          onChange={(event) => onSpecialtyChange(event.target.value)}
+        >
+          {availableSpecialties.map((item) => (
+            <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
+          ))}
+        </select>
+      </div>
       <div className="section-heading">
         <p>Puertas de turno</p>
         <h1>{getSpecialtyLabel(activeSpecialty)}</h1>
+        <span>Censo: {activeSpecialty.censo.length}</span>
       </div>
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
       <DoorsTable title="Festivas" doors={festivoDoors} tone="fes" />
@@ -3384,7 +3404,16 @@ export function App() {
             onSpecialtyChange={setActiveSpecialtyId}
           />
         )}
-        {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
+        {activeTab === "puertas" && (
+          <DoorsPanel
+            doors={doors}
+            doorConfig={doorConfig}
+            activeSpecialty={activeSpecialty}
+            activeSpecialtyId={activeSpecialtyId}
+            availableSpecialties={availableSpecialties}
+            onSpecialtyChange={setActiveSpecialtyId}
+          />
+        )}
         {activeTab === "censo" && (
           <CensoPanel
             user={user}
