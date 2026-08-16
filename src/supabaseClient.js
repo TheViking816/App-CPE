@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { registerWithNetworkRecovery } from "./authRecovery.js";
 
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 
@@ -42,14 +43,22 @@ const USAGE_TRACKING_EXCLUDED_CHAPAS = new Set(["72683"]);
 export async function registerUser({ chapa, password, specialties }) {
   if (!supabase) return null;
 
-  const { data, error } = await supabase.rpc("app_cpe_register", {
-    p_chapa: chapa,
-    p_password: password,
-    p_specialties: specialties
-  });
+  const register = async () => {
+    const { data, error } = await supabase.rpc("app_cpe_register", {
+      p_chapa: chapa,
+      p_password: password,
+      p_specialties: specialties
+    });
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
+  };
+
+  return registerWithNetworkRecovery({
+    register,
+    login: () => loginUser({ chapa, password }),
+    wait: () => new Promise((resolve) => window.setTimeout(resolve, 700))
+  });
 }
 
 export async function loginUser({ chapa, password }) {
