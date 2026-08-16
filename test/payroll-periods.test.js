@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { filterJornalesByPeriod, summarizePayroll } from "../src/payroll.js";
+import {
+  buildVacationPayrollEntries,
+  filterJornalesByPeriod,
+  summarizeAnnualPayroll,
+  summarizePayroll,
+  VACATION_DAY_RATE,
+  vacationPayrollEntriesForMonth
+} from "../src/payroll.js";
 
 const rows = [
   { dia: "01", payroll: { total: 100 } },
@@ -22,4 +29,57 @@ test("calcula lo ganado en cada quincena y en el mes completo", () => {
   assert.equal(summary.firstHalf, 250);
   assert.equal(summary.secondHalf, 470);
   assert.equal(summary.total, 720);
+});
+
+test("convierte los dias VA del calendario en conceptos salariales", () => {
+  const entries = buildVacationPayrollEntries({
+    months: [{
+      title: "8/2026",
+      year: 2026,
+      month: 8,
+      days: [
+        { day: 11, code: "VA" },
+        { day: 20, code: "VA" },
+        { day: 21, code: "DS" },
+        { day: 11, code: "VA" }
+      ]
+    }]
+  });
+
+  assert.equal(entries.length, 2);
+  assert.deepEqual(entries.map((item) => item.payroll.date), ["2026-08-11", "2026-08-20"]);
+  assert.ok(entries.every((item) => item.payroll.total === VACATION_DAY_RATE));
+  assert.equal(vacationPayrollEntriesForMonth(entries, "Agosto de 2026").length, 2);
+});
+
+test("suma vacaciones en su quincena sin contarlas como jornales", () => {
+  const vacationRows = buildVacationPayrollEntries({
+    months: [{
+      title: "8/2026",
+      days: [{ day: 11, code: "VA" }, { day: 20, code: "VA" }]
+    }]
+  });
+  const summary = summarizePayroll([...rows, ...vacationRows]);
+
+  assert.equal(summary.workCount, 4);
+  assert.equal(summary.vacationDays, 2);
+  assert.equal(summary.firstHalf, 464.11);
+  assert.equal(summary.secondHalf, 684.11);
+  assert.equal(summary.total, 1148.22);
+});
+
+test("incluye meses con solo vacaciones en el resumen anual", () => {
+  const vacationRows = buildVacationPayrollEntries({
+    months: [{
+      title: "8/2026",
+      days: [{ day: 11, code: "VA" }, { day: 20, code: "VA" }]
+    }]
+  });
+  const annual = summarizeAnnualPayroll([], null, {}, vacationRows);
+
+  assert.equal(annual.count, 0);
+  assert.equal(annual.vacationDays, 2);
+  assert.equal(annual.total, 428.22);
+  assert.equal(annual.activeMonths, 1);
+  assert.equal(annual.months[0].total, 428.22);
 });

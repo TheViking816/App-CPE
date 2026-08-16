@@ -44,3 +44,26 @@ test("agrega cinco nombres publicados en una fila de continuacion", () => {
   assert.equal(parsed.specialties[0].unnamed, 0);
   assert.equal(isAssignmentDetailComplete(parsed), true);
 });
+
+test("puntua por debajo una lectura temprana aunque sus primeros grupos ya esten completos", () => {
+  const early = parseAssignmentDetailFromTables([[
+    ["Parte:", "23259"],
+    ["CAPATAZ", "1", "T24068 - MIGUEL ANGEL FORTEA APARICIO"],
+    ["SOBORDISTA", "2", "T24135 - ANTONIO MORENO PECO T24136 - ANTONIO CUENCA ONCINA"]
+  ]]);
+  const settled = parseAssignmentDetailFromTables([[
+    ["Parte:", "23259"],
+    ["CAPATAZ", "1", "T24068 - MIGUEL ANGEL FORTEA APARICIO"],
+    ["SOBORDISTA", "2", "T24135 - ANTONIO MORENO PECO T24136 - ANTONIO CUENCA ONCINA"],
+    ["CLASIFICADOR", "2", "T63089 - JOSE AURELIO LUCIA NAVARRO T63090 - AGUSTIN MORES ANDRES"],
+    ["GRUAS", "2", "T71903 - VICENTE FCO. SOLIS OLMOS T71108 - ENCARNACION MUÑOZ COSTA"],
+    ["TRASTAINERS RTT", "2", "T70001 - PERSONA UNO T70002 - PERSONA DOS"],
+    ["ESPECIALISTA", "4", "T70003 - PERSONA TRES T70004 - PERSONA CUATRO T70005 - PERSONA CINCO T70006 - PERSONA SEIS"],
+    ["CONDUCTOR 1a", "10", Array.from({ length: 10 }, (_, index) => `${71000 + index} - CONDUCTOR ${index + 1}`).join(" ")]
+  ]]);
+
+  assert.equal(isAssignmentDetailComplete(early), true);
+  assert.equal(settled.specialties.length, 7);
+  assert.equal(settled.specialties.reduce((total, specialty) => total + specialty.requested, 0), 23);
+  assert.ok(assignmentDetailScore(settled) > assignmentDetailScore(early));
+});

@@ -48,12 +48,14 @@ import {
   specialty
 } from "./censo.js";
 import {
+  buildVacationPayrollEntries,
   compareJornalesDescending,
   enrichJornales,
   filterJornalesByPeriod,
   formatEuro,
   summarizeAnnualPayroll,
-  summarizePayroll
+  summarizePayroll,
+  vacationPayrollEntriesForMonth
 } from "./payroll.js";
 import {
   getLatestChaperoSnapshot,
@@ -1286,7 +1288,8 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
           </button>
         </div>
         <div className="portal-month-breakdown">
-          <div><span>Jornales</span><strong>{rows.length}</strong></div>
+          <div><span>Jornales</span><strong>{rows.filter((item) => !item.isVacation).length}</strong></div>
+          {rows.some((item) => item.isVacation) && <div><span>Días VA</span><strong>{rows.filter((item) => item.isVacation).length}</strong></div>}
           <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
           <div><span>Complementos</span><strong>{formatEuro(totals.complement)}</strong></div>
           <div><span>Primas</span><strong>{formatEuro(totals.prima)}</strong></div>
@@ -1296,16 +1299,16 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
           <h2>Jornales · {selectedPeriodLabel}</h2>
           {rows.length === 0 && <p>No hay jornales cargados en este periodo.</p>}
           {rows.map((item, index) => (
-            <article key={`${item.jornal || item.parte || item.dia}-${index}`}>
+            <article key={`${item.jornal || item.parte || item.dia}-${index}`} className={item.isVacation ? "is-vacation" : undefined}>
               <div className="portal-month-jornal-heading">
-                <span><b>{item.dia || "-"}</b><small>{item.payroll?.shift || "Jornal"}</small></span>
-                <div><strong>{item.especialidad || "Jornal"}</strong><small>{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</small></div>
+                <span><b>{item.dia || "-"}</b><small>{item.isVacation ? "VA" : (item.payroll?.shift || "Jornal")}</small></span>
+                <div><strong>{item.isVacation ? "Vacaciones" : (item.especialidad || "Jornal")}</strong><small>{item.isVacation ? "Día de vacaciones retribuido" : [item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</small></div>
                 <strong>{formatEuro(item.payroll?.total)}</strong>
               </div>
               <div className="portal-month-jornal-values">
-                <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
-                <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>
-                {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
+                <span>{item.isVacation ? "Importe" : "Base"} <b>{formatEuro(item.payroll?.base)}</b></span>
+                {!item.isVacation && <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>}
+                {!item.isVacation && item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
                   <span className={item.payroll?.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
                     Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
                   </span>
@@ -1360,6 +1363,7 @@ function HomePanel({
   doorConfig,
   currentTime,
   portalSnapshot,
+  portalConnected,
   notice,
   activeSpecialty,
   availableSpecialties,
@@ -1385,7 +1389,7 @@ function HomePanel({
         {!hasPortalData && <span className="home-demo-badge">Vista previa · faltan datos del portal</span>}
       </header>
 
-      {!hasPortalData && <PortalConnectCallout onConnect={onLoadPortal} />}
+      {portalConnected === false && <PortalConnectCallout onConnect={onLoadPortal} />}
 
       <section className="home-section-block">
         <div className="home-section-heading">
@@ -1465,12 +1469,11 @@ function OperationalStatusPanel({ user, doors, doorConfig, chaperoSnapshot, chap
   );
 }
 
-function ContractingPanel({ snapshot, currentTime, onLoadPortal }) {
-  const hasPortalData = Boolean(snapshot?.payload);
+function ContractingPanel({ snapshot, currentTime, portalConnected, onLoadPortal }) {
   return (
     <section className="page-panel personal-route-panel">
       <div className="section-heading"><p>Próximos días</p><h1>Mi contratación</h1></div>
-      {!hasPortalData && <PortalConnectCallout compact onConnect={onLoadPortal} />}
+      {portalConnected === false && <PortalConnectCallout compact onConnect={onLoadPortal} />}
       <CurrentAssignments snapshot={snapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
       <UpcomingDoubles snapshot={snapshot} currentTime={currentTime} />
     </section>
@@ -2068,20 +2071,24 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       setSavingIrpf(false);
     }
   };
-  const enrichedJornales = useMemo(
-    () => enrichJornales(
+  const currentPayrollMonthLabel = (!payload?.primas?.locked && primas.length > 0
+    ? payload?.primas?.monthLabel
+    : payload?.jornales?.monthLabel) || "";
+  const vacationPayrollEntries = useMemo(() => buildVacationPayrollEntries(descansos), [descansos]);
+  const enrichedJornales = useMemo(() => [
+    ...enrichJornales(
       jornales,
       primas,
-      (!payload?.primas?.locked && primas.length > 0 ? payload?.primas?.monthLabel : payload?.jornales?.monthLabel) || "",
+      currentPayrollMonthLabel,
       payrollConfig,
       relayHours
     ),
-    [jornales, primas, payload?.primas?.locked, payload?.primas?.monthLabel, payload?.jornales?.monthLabel, payrollConfig, relayHours]
-  );
+    ...vacationPayrollEntriesForMonth(vacationPayrollEntries, currentPayrollMonthLabel)
+  ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, vacationPayrollEntries]);
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const annualPayroll = useMemo(
-    () => summarizeAnnualPayroll(journalHistory, payrollConfig, relayHours),
-    [journalHistory, payrollConfig, relayHours]
+    () => summarizeAnnualPayroll(journalHistory, payrollConfig, relayHours, vacationPayrollEntries),
+    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries]
   );
   const selectedAnnualMonth = useMemo(() => annualPayroll.months.find((month) => (
     `${month.year}-${month.month}` === selectedAnnualMonthKey
@@ -2104,6 +2111,14 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const selectedPeriodLabel = selectedPeriod === "month"
     ? "mes completo"
     : selectedPeriod === "first" ? "1a quincena" : "2a quincena";
+  const selectedCountLabel = [
+    selectedSummary.workCount > 0 ? `${selectedSummary.workCount} ${selectedSummary.workCount === 1 ? "jornal" : "jornales"}` : "",
+    selectedSummary.vacationDays > 0 ? `${selectedSummary.vacationDays} ${selectedSummary.vacationDays === 1 ? "día VA" : "días VA"}` : ""
+  ].filter(Boolean).join(" + ");
+  const annualCountLabel = [
+    annualPayroll.count > 0 ? `${annualPayroll.count} jornales` : "",
+    annualPayroll.vacationDays > 0 ? `${annualPayroll.vacationDays} VA` : ""
+  ].filter(Boolean).join(" + ");
 
   const toggleRelayHour = async (item, enabled) => {
     const jornalKey = item.payroll?.relayHourKey;
@@ -2164,9 +2179,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </button>
       )}
 
-      {view === "all" && (jornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
+      {view === "all" && (enrichedJornales.length > 0 || hasDescansos || vacaciones?.recognized || hasNominas) && (
         <nav className="portal-section-shortcuts" aria-label="Accesos a los datos del portal">
-          {jornales.length > 0 && (
+          {enrichedJornales.length > 0 && (
             <button
               type="button"
               className="is-jornales"
@@ -2201,7 +2216,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </nav>
       )}
 
-      {(view === "all" || view === "salary") && jornales.length > 0 && (
+      {(view === "all" || view === "salary") && enrichedJornales.length > 0 && (
         <section className="portal-salary-section portal-salary-alternative">
           <div className="portal-salary-hero">
             <div className="portal-salary-hero-heading">
@@ -2218,7 +2233,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
               <div>
                 <span>Neto estimado</span>
                 <strong>{formatEuro(selectedNet)}</strong>
-                <small>{selectedJornales.length} {selectedJornales.length === 1 ? "jornal" : "jornales"} · IRPF {irpfRate}%</small>
+                <small>{selectedCountLabel || "Sin conceptos"} · IRPF {irpfRate}%</small>
               </div>
               <div className="portal-salary-ring" style={{ "--salary-progress": `${Math.min(Math.max(100 - irpfRate, 0), 100) * 3.6}deg` }}>
                 <span>{irpfRate}%</span>
@@ -2264,7 +2279,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                   <span><small>Resumen anual</small><strong>{payload.jornales?.year || new Date().getFullYear()}</strong></span>
                 </span>
                 <span className="portal-annual-total">
-                  <strong>{annualPayroll.count} jornales</strong>
+                  <strong>{annualCountLabel || "Sin conceptos"}</strong>
                   <small>{formatEuro(annualPayroll.total)} bruto</small>
                 </span>
                 <ChevronDown size={19} />
@@ -2273,6 +2288,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                 <div className="portal-annual-content">
                   <div className="portal-annual-kpis">
                     <div><span>Número de jornales</span><strong>{annualPayroll.count}</strong></div>
+                    {annualPayroll.vacationDays > 0 && <div><span>Días de vacaciones</span><strong>{annualPayroll.vacationDays}</strong></div>}
                     <div><span>Bruto anual</span><strong>{formatEuro(annualPayroll.total)}</strong></div>
                     <div><span>Media mensual</span><strong>{formatEuro(annualPayroll.activeMonths ? annualPayroll.total / annualPayroll.activeMonths : 0)}</strong></div>
                     <div><span>Neto anual</span><strong>{formatEuro(annualPayroll.total * (1 - irpfRate / 100))}</strong></div>
@@ -2351,7 +2367,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
             onClick={() => setJornalesExpanded((current) => !current)}
           >
             <span><ReceiptText size={18} /> Desglose de jornales</span>
-            <small>{visibleJornales.length} {visibleJornales.length === 1 ? "jornal" : "jornales"} <ChevronDown size={17} /></small>
+            <small>{selectedCountLabel || "Sin conceptos"} <ChevronDown size={17} /></small>
           </button>
           {jornalesExpanded && <div className="portal-jornales-list">
             {relayHourError && <p className="portal-relay-hour-error"><CircleAlert size={15} /> {relayHourError}</p>}
@@ -2363,6 +2379,26 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
             )}
             {visibleJornales.map((item, index) => {
               const logo = companyLogo(item.empresa);
+              if (item.isVacation) {
+                return (
+                  <article key={`${item.jornal}-${index}`} className="is-vacation">
+                    <div className="portal-jornal-date">
+                      <strong>{item.dia || "-"}</strong>
+                      <span>VA</span>
+                    </div>
+                    <div className="portal-jornal-content">
+                      <div className="portal-jornal-heading">
+                        <strong>Vacaciones</strong>
+                        <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
+                      </div>
+                      <em>Día de vacaciones retribuido</em>
+                      <div className="portal-jornal-breakdown">
+                        <span className="is-vacation-amount">Importe <b>{formatEuro(item.payroll?.total)}</b></span>
+                      </div>
+                    </div>
+                  </article>
+                );
+              }
               return (
                 <article
                   key={`${item.jornal}-${index}`}
@@ -2480,7 +2516,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />
         </PayrollDocumentErrorBoundary>
       )}
-      {view === "salary" && jornales.length === 0 && <PortalFeatureTemplate view="salary" />}
+      {view === "salary" && enrichedJornales.length === 0 && <PortalFeatureTemplate view="salary" />}
       {view === "rests" && !descansos && <PortalFeatureTemplate view="rests" />}
       {view === "holidays" && !vacaciones?.recognized && <PortalFeatureTemplate view="holidays" />}
       {view === "payrolls" && !nominas?.recognized && <PortalFeatureTemplate view="payrolls" />}
@@ -2493,6 +2529,7 @@ function PortalPanel({
   view = "all",
   onSnapshotChange,
   onSessionChange,
+  onConnectionChange,
   openCredentialsOnLoad = false,
   onCredentialsRequestChange
 }) {
@@ -2570,6 +2607,7 @@ function PortalPanel({
         if (cancelled) return;
         if (status?.enabled) {
           setAutoSyncEnabled(true);
+          onConnectionChange?.(true);
           return;
         }
 
@@ -2580,11 +2618,15 @@ function PortalPanel({
             portalPassword: initialCredentials.portalPassword,
             securityKey: initialCredentials.securityKey || ""
           });
-          if (!cancelled) setAutoSyncEnabled(true);
+          if (!cancelled) {
+            setAutoSyncEnabled(true);
+            onConnectionChange?.(true);
+          }
           return;
         }
 
         setAutoSyncEnabled(false);
+        onConnectionChange?.(false);
       })
       .catch((statusError) => {
         if (!cancelled) console.warn("No se pudo leer la sincronizacion automatica:", statusError.message);
@@ -2593,7 +2635,7 @@ function PortalPanel({
         if (!cancelled) setAutoSyncLoading(false);
       });
     return () => { cancelled = true; };
-  }, [initialCredentials, session.token]);
+  }, [initialCredentials, onConnectionChange, session.token]);
 
   useEffect(() => {
     if (!syncingPortal || !syncStartedAtRef.current) return undefined;
@@ -2696,6 +2738,7 @@ function PortalPanel({
           securityKey: securityKeyToUse
         });
         setAutoSyncEnabled(true);
+        onConnectionChange?.(true);
       }
       const job = await requestPortalSync({
         token: session.token,
@@ -2752,6 +2795,7 @@ function PortalPanel({
     try {
       await setPortalAutoSync({ token: session.token, enabled: false });
       setAutoSyncEnabled(false);
+      onConnectionChange?.(false);
     } catch (requestError) {
       setError(requestError.message || "No se pudo desactivar la sincronizacion automatica.");
     } finally {
@@ -3002,6 +3046,7 @@ export function App() {
   const [doorConfig, setDoorConfig] = useState(null);
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
+  const [portalConnected, setPortalConnected] = useState(null);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -3149,6 +3194,7 @@ export function App() {
   useEffect(() => {
     if (!session?.token) {
       setPortalSnapshot(null);
+      setPortalConnected(null);
       return undefined;
     }
     let cancelled = false;
@@ -3165,6 +3211,26 @@ export function App() {
       cancelled = true;
     };
   }, [session?.token]);
+
+  useEffect(() => {
+    if (!session?.token) return undefined;
+
+    let cancelled = false;
+    const localCredentials = readPortalCredentials(session.chapa);
+    setPortalConnected(localCredentials?.portalPassword ? true : null);
+
+    getPortalAutoSyncStatus({ token: session.token })
+      .then((status) => {
+        if (!cancelled) setPortalConnected(Boolean(status?.enabled || localCredentials?.portalPassword));
+      })
+      .catch(() => {
+        if (!cancelled && localCredentials?.portalPassword) setPortalConnected(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.chapa, session?.token]);
 
   useEffect(() => {
     if (!session?.token || !activeTab) return;
@@ -3266,6 +3332,7 @@ export function App() {
             doorConfig={doorConfig}
             currentTime={currentTime}
             portalSnapshot={portalSnapshot}
+            portalConnected={portalConnected}
             notice={notice}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}
@@ -3275,11 +3342,11 @@ export function App() {
             onNavigate={navigateToTab}
           />
         )}
-        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} onLoadPortal={connectPortal} />}
-        {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
-        {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
-        {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
-        {activeTab === "nominas" && <PortalPanel view="payrolls" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} />}
+        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
+        {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "nominas" && <PortalPanel view="payrolls" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "estado" && (
           <OperationalStatusPanel
             user={displayUser}
@@ -3309,6 +3376,7 @@ export function App() {
             session={session}
             onSnapshotChange={setPortalSnapshot}
             onSessionChange={setSession}
+            onConnectionChange={setPortalConnected}
             openCredentialsOnLoad={portalCredentialsRequested}
             onCredentialsRequestChange={setPortalCredentialsRequested}
           />

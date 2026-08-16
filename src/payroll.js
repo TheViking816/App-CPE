@@ -184,6 +184,8 @@ const SHIFT_ORDER = {
   "20-02": 3
 };
 
+export const VACATION_DAY_RATE = 214.11;
+
 export const RELAY_HOUR_RATES = Object.freeze({
   LABORABLE: 66.05,
   FESTIVO: 96.08
@@ -229,6 +231,8 @@ export function compareJornalesDescending(a, b) {
 }
 
 function parseMonthLabel(monthLabel = "") {
+  const numericMatch = String(monthLabel).match(/(\d{1,2})\s*\/\s*(\d{4})/);
+  if (numericMatch) return { month: Number(numericMatch[1]), year: Number(numericMatch[2]) };
   const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
   if (!match) return { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
   const normalized = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -282,6 +286,67 @@ function getSpecialtyKey(specialty = "") {
   if (/\bGRUAS?\b|GRUISTA/.test(normalized)) return "GRUAS";
   if (/ELEVADORAS?/.test(normalized)) return "ELEVADORAS";
   return normalized.replace(/\s+/g, "_");
+}
+
+function getMonthKey(monthLabel = "") {
+  const { month, year } = parseMonthLabel(monthLabel);
+  return `${year}-${pad(month)}`;
+}
+
+export function buildVacationPayrollEntries(descansos = null, amount = VACATION_DAY_RATE) {
+  const seenDates = new Set();
+  const entries = [];
+
+  for (const monthData of descansos?.months || []) {
+    const numericTitle = String(monthData?.title || "").match(/(\d{1,2})\s*\/\s*(\d{4})/);
+    const month = Number(monthData?.month || numericTitle?.[1]);
+    const year = Number(monthData?.year || numericTitle?.[2]);
+    if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) continue;
+
+    for (const dayData of monthData?.days || []) {
+      if (String(dayData?.code || "").trim().toUpperCase() !== "VA") continue;
+      const day = Number(dayData?.day);
+      if (!Number.isInteger(day) || day < 1 || day > 31) continue;
+      const date = `${year}-${pad(month)}-${pad(day)}`;
+      if (seenDates.has(date)) continue;
+      seenDates.add(date);
+
+      entries.push({
+        jornal: `VA-${date}`,
+        parte: "",
+        dia: pad(day),
+        tipo: "VA",
+        jornada: "VACACIONES",
+        especialidad: "VACACIONES",
+        empresa: "",
+        buque: "",
+        operacion: "Día de vacaciones",
+        isVacation: true,
+        payroll: {
+          conceptType: "VACATION",
+          date,
+          shift: "VA",
+          group: "",
+          operationType: "VACACIONES",
+          rateKey: "VACACIONES",
+          base: Number(amount),
+          complement: 0,
+          prima: null,
+          primaPending: false,
+          relayHourEligible: false,
+          relayHour: 0,
+          total: Number(amount)
+        }
+      });
+    }
+  }
+
+  return entries;
+}
+
+export function vacationPayrollEntriesForMonth(entries = [], monthLabel = "") {
+  const monthKey = getMonthKey(monthLabel);
+  return entries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
 }
 
 function getComplement(
@@ -432,10 +497,12 @@ export function summarizePayroll(items = []) {
     const day = Number(item.dia);
     const total = Number(item.payroll?.total || 0);
     acc.total += total;
+    if (item.isVacation) acc.vacationDays += 1;
+    else acc.workCount += 1;
     if (day <= 15) acc.firstHalf += total;
     else acc.secondHalf += total;
     return acc;
-  }, { total: 0, firstHalf: 0, secondHalf: 0 });
+  }, { total: 0, firstHalf: 0, secondHalf: 0, workCount: 0, vacationDays: 0 });
 }
 
 export function filterJornalesByPeriod(items = [], period = "month") {
@@ -447,15 +514,36 @@ export function filterJornalesByPeriod(items = [], period = "month") {
   });
 }
 
-export function summarizeAnnualPayroll(history = [], payrollConfig = null, relayHours = {}) {
-  const months = history.map((month) => {
-    const enriched = enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig, relayHours);
+export function summarizeAnnualPayroll(history = [], payrollConfig = null, relayHours = {}, vacationEntries = []) {
+  const historyKeys = new Set(history.map((month) => `${month.year}-${pad(month.month)}`));
+  const vacationOnlyMonths = vacationEntries.reduce((months, item) => {
+    const match = String(item?.payroll?.date || "").match(/^(\d{4})-(\d{2})-/);
+    if (!match || historyKeys.has(`${match[1]}-${match[2]}`)) return months;
+    if (!months.some((month) => Number(month.year) === Number(match[1]) && Number(month.month) === Number(match[2]))) {
+      months.push({
+        year: Number(match[1]),
+        month: Number(match[2]),
+        monthLabel: `${Object.keys(MONTHS_ES).find((name) => MONTHS_ES[name] === Number(match[2])) || match[2]} de ${match[1]}`,
+        rows: []
+      });
+    }
+    return months;
+  }, []);
+
+  const months = [...history, ...vacationOnlyMonths].map((month) => {
+    const monthKey = `${month.year}-${pad(month.month)}`;
+    const vacationRows = vacationEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
+    const enriched = [
+      ...enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig, relayHours),
+      ...vacationRows
+    ];
     const summary = summarizePayroll(enriched);
     const primaTotal = enriched.reduce((sum, item) => sum + Number(item.payroll?.prima || 0), 0);
     return {
       ...month,
       enriched,
-      count: enriched.length,
+      count: summary.workCount,
+      vacationDays: summary.vacationDays,
       total: Number(summary.total.toFixed(2)),
       primaTotal: Number(primaTotal.toFixed(2))
     };
@@ -464,9 +552,10 @@ export function summarizeAnnualPayroll(history = [], payrollConfig = null, relay
   return {
     months,
     count: months.reduce((sum, month) => sum + month.count, 0),
+    vacationDays: months.reduce((sum, month) => sum + month.vacationDays, 0),
     total: Number(months.reduce((sum, month) => sum + month.total, 0).toFixed(2)),
     primaTotal: Number(months.reduce((sum, month) => sum + month.primaTotal, 0).toFixed(2)),
-    activeMonths: months.filter((month) => month.count > 0).length
+    activeMonths: months.filter((month) => month.count > 0 || month.vacationDays > 0).length
   };
 }
 

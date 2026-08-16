@@ -482,10 +482,18 @@ async function waitForFrameAndLocator(page, getLocator, timeout = 12000) {
   return null;
 }
 
-async function waitForParsedContent(page, parser, score, timeout = 12000, isComplete = (_result, resultScore) => resultScore > 0) {
+async function waitForParsedContent(
+  page,
+  parser,
+  score,
+  timeout = 12000,
+  isComplete = (_result, resultScore) => resultScore > 0,
+  settleMs = 0
+) {
   const deadline = Date.now() + timeout;
   let bestResult = parser("");
   let bestScore = score(bestResult);
+  let lastImprovementAt = Date.now();
 
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
@@ -494,9 +502,10 @@ async function waitForParsedContent(page, parser, score, timeout = 12000, isComp
       if (resultScore > bestScore) {
         bestResult = result;
         bestScore = resultScore;
+        lastImprovementAt = Date.now();
       }
     }
-    if (isComplete(bestResult, bestScore)) return bestResult;
+    if (isComplete(bestResult, bestScore) && Date.now() - lastImprovementAt >= settleMs) return bestResult;
     await page.waitForTimeout(200);
   }
 
@@ -564,8 +573,9 @@ async function readAssignmentDetailViaPortal(sourcePage, assignment) {
     sourcePage,
     parseAssignmentDetail,
     assignmentDetailScore,
-    12000,
-    isAssignmentDetailComplete
+    20000,
+    isAssignmentDetailComplete,
+    2500
   );
 }
 
@@ -1553,9 +1563,11 @@ async function enrichAssignmentsWithDetails(context, result, previousResult) {
       let detail = previousByPart.get(String(item.parte)) || null;
       try {
         const freshDetail = await readAssignmentDetailViaPortal(sourcePage, item);
-        if (freshDetail.recognized) {
+        if (freshDetail.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
           detail = freshDetail;
           console.log(`Parte ${item.parte}: ${freshDetail.specialties.length} especialidades leidas.`);
+        } else if (freshDetail.recognized) {
+          console.warn(`Parte ${item.parte}: la lectura nueva estaba incompleta; se conserva el detalle anterior.`);
         } else {
           console.warn(`Parte ${item.parte}: la ventana se abrio, pero no contenia un equipo reconocible.`);
         }

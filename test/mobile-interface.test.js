@@ -35,3 +35,9 @@ test("registra la página activa de cada visita con la sesión del usuario", () 
   assert.match(supabaseClientSource, /app_cpe_track_page_visit/);
   assert.match(supabaseClientSource, /p_page: page/);
 });
+
+test("muestra el acceso para conectar el portal según las claves y no según los datos previos", () => {
+  assert.match(appSource, /portalConnected === false && <PortalConnectCallout/);
+  assert.doesNotMatch(appSource, /!hasPortalData && <PortalConnectCallout/);
+  assert.match(appSource, /getPortalAutoSyncStatus\(\{ token: session\.token \}\)/);
+});

@@ -77,7 +77,20 @@ async function closeSnapshotWithError(job, message) {
   });
 }
 
-function runSync(job) {
+async function hasSavedJornales(chapa) {
+  const rows = await supabaseRequest(
+    `/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(chapa)}&limit=1`
+  );
+  const jornales = rows?.[0]?.payload?.jornales;
+  return (Array.isArray(jornales?.rows) && jornales.rows.length > 0)
+    || (Array.isArray(jornales?.history) && jornales.history.length > 0);
+}
+
+async function runSync(job) {
+  const canUseFastMode = job.trigger_source !== "scheduled"
+    && job.request_kind !== "history"
+    && await hasSavedJornales(job.chapa);
+
   return new Promise((resolve, reject) => {
     let diagnostic = "";
     const child = spawn(process.execPath, ["scripts/sync-portal-oficial.js"], {
@@ -88,7 +101,7 @@ function runSync(job) {
         CPE_PORTAL_PASSWORD: job.portal_password,
         CPE_PORTAL_SECURITY_KEY: job.security_key || "",
         CPE_PORTAL_DOCUMENT_ID: job.document_id || "",
-        CPE_PORTAL_FAST_MODE: job.trigger_source === "scheduled" || job.request_kind === "history" ? "false" : "true",
+        CPE_PORTAL_FAST_MODE: canUseFastMode ? "true" : "false",
         CPE_PORTAL_REFRESH_HISTORY: job.request_kind === "history" ? "true" : (process.env.CPE_PORTAL_REFRESH_HISTORY || ""),
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL: process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled"

@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260816-past-month-periods-1";
+self.__APP_CPE_SW_VERSION__ = "20260816-paid-vacations-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
