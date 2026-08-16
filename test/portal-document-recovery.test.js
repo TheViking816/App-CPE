@@ -1,9 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import { loadPortalPayrollDocument, portalPayrollFileName } from "../src/portalDocument.js";
 
 const noWait = async () => {};
+const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+
+test("la nomina descargada usa un icono existente y queda aislada ante fallos de renderizado", () => {
+  assert.match(appSource, /<FileDown size=\{18\} \/> Descargar nómina/);
+  assert.doesNotMatch(appSource, /<Download size=\{18\} \/> Descargar nómina/);
+  assert.match(appSource, /class PayrollDocumentErrorBoundary extends Component/);
+  assert.match(appSource, /<PayrollDocumentErrorBoundary onClose=/);
+});
 
 test("genera un nombre de archivo válido para Android", () => {
   assert.equal(portalPayrollFileName("Anticipo 1-15 07/26"), "Anticipo 1-15 07-26.pdf");

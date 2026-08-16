@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import {
   BriefcaseBusiness,
@@ -655,6 +655,39 @@ function base64DocumentUrl(contentBase64, mimeType) {
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
   return URL.createObjectURL(new Blob([bytes], { type: mimeType || "application/pdf" }));
+}
+
+class PayrollDocumentErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error, details) {
+    console.error("No se pudo mostrar la nomina descargada", error, details);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+
+    return (
+      <div className="document-modal-backdrop" role="presentation">
+        <section className="document-modal" role="dialog" aria-modal="true" aria-labelledby="payroll-document-error-title">
+          <header>
+            <div><small>Nómina electrónica</small><h2 id="payroll-document-error-title">No se pudo mostrar</h2></div>
+            <button type="button" onClick={this.props.onClose} aria-label="Cerrar nómina"><X size={21} /></button>
+          </header>
+          <p className="document-modal-status is-error">
+            <CircleAlert size={20} /> La nómina está guardada, pero esta pantalla no pudo abrirla. Cierra y vuelve a intentarlo.
+          </p>
+        </section>
+      </div>
+    );
+  }
 }
 
 function PayrollDocumentModal({ payroll, session, onClose }) {
@@ -2393,7 +2426,11 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {selectedMonth && <PortalMonthDetailModal month={selectedMonth} irpfRate={irpfRate} onClose={() => setSelectedMonth(null)} />}
       {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
-      {selectedPayroll && <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />}
+      {selectedPayroll && (
+        <PayrollDocumentErrorBoundary onClose={() => setSelectedPayroll(null)}>
+          <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />
+        </PayrollDocumentErrorBoundary>
+      )}
       {view === "salary" && jornales.length === 0 && <PortalFeatureTemplate view="salary" />}
       {view === "rests" && !descansos && <PortalFeatureTemplate view="rests" />}
       {view === "holidays" && !vacaciones?.recognized && <PortalFeatureTemplate view="holidays" />}
