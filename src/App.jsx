@@ -1647,7 +1647,14 @@ function DoorsPanel({ doors, doorConfig, activeSpecialty }) {
   );
 }
 
-function CensoPanel({ user, doors, activeSpecialty }) {
+function CensoPanel({
+  user,
+  doors,
+  activeSpecialty,
+  activeSpecialtyId,
+  availableSpecialties,
+  onSpecialtyChange
+}) {
   const [query, setQuery] = useState("");
   const doorByChapa = useMemo(() => {
     const map = new Map();
@@ -1665,6 +1672,21 @@ function CensoPanel({ user, doors, activeSpecialty }) {
 
   return (
     <section className="page-panel censo-section">
+      <div className="specialty-select censo-specialty-select">
+        <span>Especialidad</span>
+        <select
+          aria-label="Seleccionar censo por especialidad"
+          value={activeSpecialtyId}
+          onChange={(event) => {
+            setQuery("");
+            onSpecialtyChange(event.target.value);
+          }}
+        >
+          {availableSpecialties.map((item) => (
+            <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
+          ))}
+        </select>
+      </div>
       <div className="section-title-row">
         <div>
           <p>Censo: {activeSpecialty.censo.length}</p>
@@ -3363,7 +3385,16 @@ export function App() {
           />
         )}
         {activeTab === "puertas" && <DoorsPanel doors={doors} doorConfig={doorConfig} activeSpecialty={activeSpecialty} />}
-        {activeTab === "censo" && <CensoPanel user={user} doors={doors} activeSpecialty={activeSpecialty} />}
+        {activeTab === "censo" && (
+          <CensoPanel
+            user={user}
+            doors={doors}
+            activeSpecialty={activeSpecialty}
+            activeSpecialtyId={activeSpecialtyId}
+            availableSpecialties={availableSpecialties}
+            onSpecialtyChange={setActiveSpecialtyId}
+          />
+        )}
         {activeTab === "tablon" && (
           <GeneralBoard
             chapa={session.chapa}
