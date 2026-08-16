@@ -3132,6 +3132,77 @@ select {
   background: #fff;
 }
 
+.portal-relay-hour {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid #d8e3ec;
+  border-radius: 10px;
+  background: #f8fbfd;
+  color: #23374a;
+  cursor: pointer;
+}
+
+.portal-relay-hour.is-enabled {
+  border-color: #1e9b70;
+  background: #edf9f4;
+}
+
+.portal-relay-hour input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #16845f;
+  cursor: pointer;
+}
+
+.portal-relay-hour input:disabled {
+  cursor: wait;
+}
+
+.portal-relay-hour > span {
+  display: grid;
+  gap: 1px;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.portal-relay-hour small {
+  color: #607285;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.portal-relay-hour-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: #b44242;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .portal-relay-hour {
+  border-color: #30475d;
+  background: #172431;
+  color: #e5edf5;
+}
+
+:root[data-theme="dark"] .portal-relay-hour.is-enabled {
+  border-color: #38b78a;
+  background: #17372e;
+}
+
+:root[data-theme="dark"] .portal-relay-hour small {
+  color: #9db0c1;
+}
+
 @media (max-width: 620px) {
   .portal-salary-alternative {
     padding: 11px;

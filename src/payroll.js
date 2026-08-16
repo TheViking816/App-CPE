@@ -184,6 +184,41 @@ const SHIFT_ORDER = {
   "20-02": 3
 };
 
+export const RELAY_HOUR_RATES = Object.freeze({
+  LABORABLE: 66.05,
+  FESTIVO: 96.08
+});
+
+function relayHourKeyPart(value, fallback) {
+  return String(value || fallback)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || fallback;
+}
+
+export function getRelayHourKey(jornal, date, shift) {
+  return [
+    date,
+    relayHourKeyPart(jornal?.parte, "SIN-PARTE"),
+    relayHourKeyPart(jornal?.jornal, "SIN-NUMERO"),
+    shift,
+    relayHourKeyPart(jornal?.especialidad, "SIN-ESPECIALIDAD")
+  ].join("|");
+}
+
+export function getRelayHourRate(dateString, shift, holidaySet = VALENCIA_HOLIDAYS_2026) {
+  if (shift !== "08-14" && shift !== "14-20") return null;
+  const day = parseLocalDate(dateString).getDay();
+  const festive = isHoliday(dateString, holidaySet) || (day === 6 && shift === "14-20");
+  return {
+    rateKey: festive ? "FESTIVO" : "LABORABLE",
+    amount: festive ? RELAY_HOUR_RATES.FESTIVO : RELAY_HOUR_RATES.LABORABLE
+  };
+}
+
 export function compareJornalesDescending(a, b) {
   const dateComparison = String(b.payroll?.date || "").localeCompare(String(a.payroll?.date || ""));
   if (dateComparison !== 0) return dateComparison;
@@ -313,7 +348,7 @@ function findMatchingPrima(jornal, primas = []) {
   };
 }
 
-export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null) {
+export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null, relayHours = {}) {
   const { month, year } = parseMonthLabel(monthLabel);
   const configuredHolidays = payrollConfig?.holidays
     ?.filter((item) => item.enabled !== false)
@@ -358,7 +393,11 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
       : findMatchingPrima(jornal, primas);
     const primaAmount = matchedPrima?.amount ?? embeddedPrima;
     const prima = primaAmount == null ? null : Number(primaAmount.toFixed(2));
-    const total = Number((base + complement + (prima || 0)).toFixed(2));
+    const relayHourRate = getRelayHourRate(date, shift, holidaySet);
+    const relayHourKey = getRelayHourKey(jornal, date, shift);
+    const relayHourEnabled = Boolean(relayHourRate && relayHours?.[relayHourKey]);
+    const relayHour = relayHourEnabled ? relayHourRate.amount : 0;
+    const total = Number((base + complement + (prima || 0) + relayHour).toFixed(2));
 
     return {
       ...jornal,
@@ -376,6 +415,12 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         primaVerification: matchedPrima?.verification
           || (jornal.produccionEstado === "pending" ? "pending"
             : jornal.produccionEstado === "verified" ? "verified" : "unknown"),
+        relayHourEligible: Boolean(relayHourRate),
+        relayHourKey,
+        relayHourRateKey: relayHourRate?.rateKey || null,
+        relayHourRate: relayHourRate?.amount || 0,
+        relayHourEnabled,
+        relayHour,
         total
       }
     };
@@ -393,9 +438,9 @@ export function summarizePayroll(items = []) {
   }, { total: 0, firstHalf: 0, secondHalf: 0 });
 }
 
-export function summarizeAnnualPayroll(history = [], payrollConfig = null) {
+export function summarizeAnnualPayroll(history = [], payrollConfig = null, relayHours = {}) {
   const months = history.map((month) => {
-    const enriched = enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig);
+    const enriched = enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig, relayHours);
     const summary = summarizePayroll(enriched);
     const primaTotal = enriched.reduce((sum, item) => sum + Number(item.payroll?.prima || 0), 0);
     return {

@@ -110,6 +110,26 @@ export async function updateUserIrpf({ token, irpfRate }) {
   return data;
 }
 
+export async function getUserRelayHours({ token }) {
+  if (!supabase || !token) return {};
+
+  const { data, error } = await supabase.rpc("app_cpe_get_relay_hours", { p_token: token });
+  if (error) throw error;
+  return data || {};
+}
+
+export async function setUserRelayHour({ token, jornalKey, enabled }) {
+  if (!supabase || !token || !jornalKey) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_set_relay_hour", {
+    p_token: token,
+    p_jornal_key: jornalKey,
+    p_enabled: enabled
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function loadPayrollConfig() {
   if (!supabase) return null;
 

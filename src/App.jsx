@@ -62,6 +62,7 @@ import {
   getOfficialPortalSnapshot,
   getPortalAutoSyncStatus,
   getPortalSyncJob,
+  getUserRelayHours,
   loginUser,
   registerUser,
   requestAllPortalSyncs,
@@ -69,6 +70,7 @@ import {
   requestPortalSync,
   setPortalAutoSync,
   setPortalSecurityKey,
+  setUserRelayHour,
   trackPageVisit,
   trackUsageEvent,
   updateUserIrpf,
@@ -699,7 +701,7 @@ function PayrollDocumentModal({ payroll, session, onClose }) {
             <FileLock2 size={42} />
             <strong>{payroll.title}</strong>
             <span>Documento PDF protegido</span>
-            <a href={documentUrl} download={portalPayrollFileName(payroll.title)}><Download size={18} /> Descargar nómina</a>
+            <a href={documentUrl} download={portalPayrollFileName(payroll.title)}><FileDown size={18} /> Descargar nómina</a>
           </div>
         )}
       </section>
@@ -1036,6 +1038,9 @@ function PortalJornalDetailModal({ jornal, onClose }) {
         <div className="portal-jornal-detail-breakdown">
           <div><span>Base</span><strong>{formatEuro(payroll.base)}</strong></div>
           <div><span>Complemento</span><strong>{formatEuro(payroll.complement || 0)}</strong></div>
+          {payroll.relayHourEnabled && (
+            <div><span>Hora de relevo</span><strong>{formatEuro(payroll.relayHour)}</strong></div>
+          )}
           {payroll.operationType !== "RECEPCION_ENTREGA" && (
             <div className={payroll.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
               <span>Prima</span><strong>{payroll.prima > 0 ? formatEuro(payroll.prima) : "Pendiente"}</strong>
@@ -1916,6 +1921,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
+  const [relayHours, setRelayHours] = useState({});
+  const [savingRelayHourKey, setSavingRelayHourKey] = useState("");
+  const [relayHourError, setRelayHourError] = useState("");
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const vacacionesRef = useRef(null);
@@ -1947,6 +1955,22 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     setIrpfError(false);
   }, [irpfStorageKey, session?.irpfRate]);
 
+  useEffect(() => {
+    let active = true;
+    setRelayHours({});
+    setRelayHourError("");
+    getUserRelayHours({ token: session.token })
+      .then((hours) => {
+        if (active) setRelayHours(hours || {});
+      })
+      .catch((error) => {
+        if (active) setRelayHourError(error.message || "No se pudieron cargar las horas de relevo.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [session.token]);
+
   const saveIrpfRate = async () => {
     setSavingIrpf(true);
     setIrpfMessage("");
@@ -1974,14 +1998,15 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       jornales,
       primas,
       (!payload?.primas?.locked && primas.length > 0 ? payload?.primas?.monthLabel : payload?.jornales?.monthLabel) || "",
-      payrollConfig
+      payrollConfig,
+      relayHours
     ),
-    [jornales, primas, payload?.primas?.locked, payload?.primas?.monthLabel, payload?.jornales?.monthLabel, payrollConfig]
+    [jornales, primas, payload?.primas?.locked, payload?.primas?.monthLabel, payload?.jornales?.monthLabel, payrollConfig, relayHours]
   );
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const annualPayroll = useMemo(
-    () => summarizeAnnualPayroll(journalHistory, payrollConfig),
-    [journalHistory, payrollConfig]
+    () => summarizeAnnualPayroll(journalHistory, payrollConfig, relayHours),
+    [journalHistory, payrollConfig, relayHours]
   );
   const currentHistoryMonth = new Date().getMonth() + 1;
   const hasFullCurrentYear = annualPayroll.months.filter((month) => (
@@ -2006,6 +2031,24 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const selectedPeriodLabel = selectedPeriod === "month"
     ? "mes completo"
     : selectedPeriod === "first" ? "1a quincena" : "2a quincena";
+
+  const toggleRelayHour = async (item, enabled) => {
+    const jornalKey = item.payroll?.relayHourKey;
+    if (!jornalKey || !item.payroll?.relayHourEligible || savingRelayHourKey) return;
+
+    const previous = Boolean(relayHours[jornalKey]);
+    setRelayHourError("");
+    setSavingRelayHourKey(jornalKey);
+    setRelayHours((current) => ({ ...current, [jornalKey]: enabled }));
+    try {
+      await setUserRelayHour({ token: session.token, jornalKey, enabled });
+    } catch (error) {
+      setRelayHours((current) => ({ ...current, [jornalKey]: previous }));
+      setRelayHourError(error.message || "No se pudo guardar la hora de relevo.");
+    } finally {
+      setSavingRelayHourKey("");
+    }
+  };
 
   if (!payload) {
     return <PortalFeatureTemplate view={view} />;
@@ -2238,6 +2281,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
             <small>{visibleJornales.length} {visibleJornales.length === 1 ? "jornal" : "jornales"} <ChevronDown size={17} /></small>
           </button>
           {jornalesExpanded && <div className="portal-jornales-list">
+            {relayHourError && <p className="portal-relay-hour-error"><CircleAlert size={15} /> {relayHourError}</p>}
             {visibleJornales.length === 0 && (
               <div className="portal-empty-state compact">
                 <BriefcaseBusiness size={22} />
@@ -2283,6 +2327,24 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                         </span>
                       )}
                     </div>
+                    {item.payroll?.relayHourEligible && (
+                      <label
+                        className={`portal-relay-hour${item.payroll.relayHourEnabled ? " is-enabled" : ""}`}
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.payroll.relayHourEnabled}
+                          disabled={Boolean(savingRelayHourKey)}
+                          onChange={(event) => toggleRelayHour(item, event.target.checked)}
+                        />
+                        <span>
+                          Hora de relevo
+                          <small>{item.payroll.relayHourRateKey === "FESTIVO" ? "Festiva" : "Laborable"} · +{formatEuro(item.payroll.relayHourRate)}</small>
+                        </span>
+                      </label>
+                    )}
                   </div>
                   <ChevronRight className="portal-jornal-chevron" size={19} />
                 </article>

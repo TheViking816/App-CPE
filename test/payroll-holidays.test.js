@@ -12,6 +12,72 @@ function calculate(day, jornada) {
   }], [], "Agosto de 2026")[0].payroll;
 }
 
+function calculateWithRelay(day, jornada) {
+  const jornal = {
+    dia: String(day),
+    parte: `RELEVO-${day}-${jornada}`,
+    jornada,
+    especialidad: "CONDUCTOR 1a",
+    operacion: "CONT. C/SPREADER AUT"
+  };
+  const preview = enrichJornales([jornal], [], "Agosto de 2026")[0].payroll;
+  return enrichJornales([jornal], [], "Agosto de 2026", null, {
+    [preview.relayHourKey]: true
+  })[0].payroll;
+}
+
+test("la hora de relevo laborable suma 66,05 al total", () => {
+  const base = calculate(10, "DE 08 A 14 H.");
+  const monday = calculateWithRelay(10, "DE 08 A 14 H.");
+  const saturdayMorning = calculateWithRelay(8, "DE 08 A 14 H.");
+  const fridayAfternoon = calculateWithRelay(7, "DE 14 A 20 H.");
+
+  for (const payroll of [monday, saturdayMorning, fridayAfternoon]) {
+    assert.equal(payroll.relayHourEligible, true);
+    assert.equal(payroll.relayHourRateKey, "LABORABLE");
+    assert.equal(payroll.relayHour, 66.05);
+  }
+  assert.equal(monday.total, Number((base.total + 66.05).toFixed(2)));
+});
+
+test("la hora de relevo desde el sabado 14-20 y durante el domingo suma 96,08", () => {
+  for (const [day, shift] of [[8, "DE 14 A 20 H."], [9, "DE 08 A 14 H."], [9, "DE 14 A 20 H."]]) {
+    const payroll = calculateWithRelay(day, shift);
+    assert.equal(payroll.relayHourRateKey, "FESTIVO");
+    assert.equal(payroll.relayHour, 96.08);
+  }
+});
+
+test("las jornadas 02-08 y 20-02 nunca admiten hora de relevo", () => {
+  for (const shift of ["DE 02 A 08 H.", "DE 20 A 02 H."]) {
+    const payroll = calculateWithRelay(9, shift);
+    assert.equal(payroll.relayHourEligible, false);
+    assert.equal(payroll.relayHour, 0);
+  }
+});
+
+test("una hora de relevo en festivo oficial usa tarifa festiva", () => {
+  const jornal = {
+    dia: "15",
+    parte: "RELEVO-FESTIVO",
+    jornada: "DE 08 A 14 H.",
+    especialidad: "CONDUCTOR 1a",
+    operacion: "CONT. C/SPREADER AUT"
+  };
+  const config = {
+    holidays: [{ holiday_date: "2026-08-15", enabled: true }],
+    rates: [],
+    complements: []
+  };
+  const preview = enrichJornales([jornal], [], "Agosto de 2026", config)[0].payroll;
+  const payroll = enrichJornales([jornal], [], "Agosto de 2026", config, {
+    [preview.relayHourKey]: true
+  })[0].payroll;
+
+  assert.equal(payroll.relayHourRateKey, "FESTIVO");
+  assert.equal(payroll.relayHour, 96.08);
+});
+
 test("el 15 de agosto se paga como festivo", () => {
   const payroll = calculate(15, "DE 08 A 14 H.");
 
