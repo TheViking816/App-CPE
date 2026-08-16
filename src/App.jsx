@@ -1191,7 +1191,7 @@ function ChangePasswordModal({ onClose, onSave }) {
   );
 }
 
-function PortalMonthDetailModal({ month, irpfRate, onClose }) {
+function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, savingRelayHourKey, relayHourError }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const rows = useMemo(
@@ -1202,8 +1202,9 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
     base: summary.base + Number(item.payroll?.base || 0),
     complement: summary.complement + Number(item.payroll?.complement || 0),
     prima: summary.prima + Number(item.payroll?.prima || 0),
+    relay: summary.relay + Number(item.payroll?.relayHour || 0),
     gross: summary.gross + Number(item.payroll?.total || 0)
-  }), { base: 0, complement: 0, prima: 0, gross: 0 }), [rows]);
+  }), { base: 0, complement: 0, prima: 0, relay: 0, gross: 0 }), [rows]);
   const withholding = totals.gross * (Number(irpfRate || 0) / 100);
   const net = totals.gross - withholding;
 
@@ -1253,6 +1254,7 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
           <button type="button" onClick={onClose} title="Cerrar"><X size={22} /></button>
         </header>
         {downloadError && <p className="portal-month-download-error">{downloadError}</p>}
+        {relayHourError && <p className="portal-relay-hour-error"><CircleAlert size={15} /> {relayHourError}</p>}
         <div className="portal-month-financials">
           <div className="is-gross"><span>Bruto</span><strong>{formatEuro(totals.gross)}</strong></div>
           <div><span>Retención · {irpfRate}%</span><strong>-{formatEuro(withholding)}</strong></div>
@@ -1263,6 +1265,7 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
           <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
           <div><span>Complementos</span><strong>{formatEuro(totals.complement)}</strong></div>
           <div><span>Primas</span><strong>{formatEuro(totals.prima)}</strong></div>
+          <div><span>Horas relevo</span><strong>{formatEuro(totals.relay)}</strong></div>
         </div>
         <div className="portal-month-jornales">
           <h2>Jornales del mes</h2>
@@ -1283,6 +1286,20 @@ function PortalMonthDetailModal({ month, irpfRate, onClose }) {
                   </span>
                 )}
               </div>
+              {item.payroll?.relayHourEligible && (
+                <label className={`portal-relay-hour${item.payroll.relayHourEnabled ? " is-enabled" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={item.payroll.relayHourEnabled}
+                    disabled={Boolean(savingRelayHourKey)}
+                    onChange={(event) => onToggleRelayHour(item, event.target.checked)}
+                  />
+                  <span>
+                    Hora de relevo
+                    <small>{item.payroll.relayHourRateKey === "FESTIVO" ? "Festiva" : "Laborable"} · +{formatEuro(item.payroll.relayHourRate)}</small>
+                  </span>
+                </label>
+              )}
             </article>
           ))}
         </div>
@@ -1951,7 +1968,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [annualExpanded, setAnnualExpanded] = useState(false);
   const [nominasExpanded, setNominasExpanded] = useState(false);
   const [selectedJornal, setSelectedJornal] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedAnnualMonthKey, setSelectedAnnualMonthKey] = useState("");
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const [relayHours, setRelayHours] = useState({});
@@ -2041,6 +2058,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     () => summarizeAnnualPayroll(journalHistory, payrollConfig, relayHours),
     [journalHistory, payrollConfig, relayHours]
   );
+  const selectedAnnualMonth = useMemo(() => annualPayroll.months.find((month) => (
+    `${month.year}-${month.month}` === selectedAnnualMonthKey
+  )) || null, [annualPayroll.months, selectedAnnualMonthKey]);
   const currentHistoryMonth = new Date().getMonth() + 1;
   const hasFullCurrentYear = annualPayroll.months.filter((month) => (
     Number(month.year) === new Date().getFullYear()
@@ -2246,7 +2266,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                           type="button"
                           title={`Abrir ${month.monthLabel}: ${month.count} jornales`}
                           aria-label={`Abrir detalle de ${month.monthLabel}, ${month.count} jornales`}
-                          onClick={() => setSelectedMonth(month)}
+                          onClick={() => setSelectedAnnualMonthKey(`${month.year}-${month.month}`)}
                         >
                           <span>{month.count || ""}</span>
                           <i style={{ height: `${Math.max(month.count ? 12 : 2, (month.count / maxCount) * 72)}px` }} />
@@ -2424,7 +2444,16 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </section>
       )}
 
-      {selectedMonth && <PortalMonthDetailModal month={selectedMonth} irpfRate={irpfRate} onClose={() => setSelectedMonth(null)} />}
+      {selectedAnnualMonth && (
+        <PortalMonthDetailModal
+          month={selectedAnnualMonth}
+          irpfRate={irpfRate}
+          onClose={() => setSelectedAnnualMonthKey("")}
+          onToggleRelayHour={toggleRelayHour}
+          savingRelayHourKey={savingRelayHourKey}
+          relayHourError={relayHourError}
+        />
+      )}
       {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
       {selectedPayroll && (
         <PayrollDocumentErrorBoundary onClose={() => setSelectedPayroll(null)}>

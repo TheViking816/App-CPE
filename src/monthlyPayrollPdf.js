@@ -24,8 +24,9 @@ function calculateMonth(month, irpfRate) {
     base: summary.base + amount(item.payroll?.base),
     complement: summary.complement + amount(item.payroll?.complement),
     prima: summary.prima + amount(item.payroll?.prima),
+    relay: summary.relay + amount(item.payroll?.relayHour),
     gross: summary.gross + amount(item.payroll?.total)
-  }), { base: 0, complement: 0, prima: 0, gross: 0 });
+  }), { base: 0, complement: 0, prima: 0, relay: 0, gross: 0 });
   const withholding = totals.gross * (amount(irpfRate) / 100);
   return { rows, totals, withholding, net: totals.gross - withholding };
 }
@@ -66,7 +67,7 @@ export function createMonthlyPayrollPdf(month, irpfRate = 0) {
   document.setTextColor(12, 43, 79);
   document.setFontSize(8);
   document.text(
-    `Jornales: ${rows.length}   Bases: ${formatPdfEuro(totals.base)}   Complementos: ${formatPdfEuro(totals.complement)}   Primas: ${formatPdfEuro(totals.prima)}`,
+    `Jornales: ${rows.length}   Bases: ${formatPdfEuro(totals.base)}   Complementos: ${formatPdfEuro(totals.complement)}   Primas: ${formatPdfEuro(totals.prima)}   Relevos: ${formatPdfEuro(totals.relay)}`,
     14,
     67
   );

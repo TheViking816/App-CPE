@@ -2911,7 +2911,7 @@ select {
 .portal-month-financials .is-net { border-color: #0fa688; background: #e9fbf6; }
 .portal-month-financials .is-net strong { color: #087761; }
 
-.portal-month-breakdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.portal-month-breakdown { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
 .portal-month-breakdown > div { display: grid; gap: 3px; padding: 10px; border-radius: 7px; background: #eaf1f7; }
 .portal-month-breakdown strong { color: var(--ink); font-size: 13px; }
 .portal-month-jornales { display: grid; gap: 7px; }
