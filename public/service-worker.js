@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260815-specialty-complements-2026-1";
+self.__APP_CPE_SW_VERSION__ = "20260816-payroll-download-recovery-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
