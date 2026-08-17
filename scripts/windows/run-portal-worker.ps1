@@ -1,6 +1,6 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
-  [ValidateRange(1, 32)][int]$Concurrency = 1,
+  [ValidateRange(1, 32)][int]$BatchSize = 10,
   [string]$ProfileRoot = ""
 )
 
@@ -24,7 +24,7 @@ try {
   $env:CPE_PORTAL_BROWSER_CHANNEL = "chrome"
   $env:CPE_PORTAL_HEADLESS = "false"
   $env:CPE_PORTAL_WORKER_POLL_MS = "2500"
-  $env:CPE_PORTAL_WORKER_CONCURRENCY = [string]$Concurrency
+  $env:CPE_PORTAL_WORKER_BATCH_SIZE = [string]$BatchSize
   $env:CPE_PORTAL_WORKER_PROFILE_ROOT = $ProfileRoot
 
   Set-Location -LiteralPath $RepositoryPath
@@ -38,7 +38,7 @@ try {
 }
 finally {
   $env:CPE_SUPABASE_SECRET_KEY = $null
-  $env:CPE_PORTAL_WORKER_CONCURRENCY = $null
+  $env:CPE_PORTAL_WORKER_BATCH_SIZE = $null
   $env:CPE_PORTAL_WORKER_PROFILE_ROOT = $null
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPointer)
 }

@@ -2975,7 +2975,7 @@ function PortalPanel({
         <div className="portal-update-row">
           <span>
             Datos guardados del portal oficial
-            {autoSyncEnabled && <small>Sincronizacion automatica a las 07:30, 12:15, 13:30 y 14:45</small>}
+            {autoSyncEnabled && <small>Sincronizacion automatica a las 02:00, 07:30, 08:00, 12:30, 14:00, 14:45, 15:00 y 20:00</small>}
           </span>
           <div>
             {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar claves</button>}

@@ -1,0 +1,4 @@
+ssh_public_key = "ssh-ed25519 AAAA... app-cpe-vps"
+
+# No guardes el token en este archivo. Usa temporalmente:
+# PowerShell: $env:TF_VAR_hcloud_token = "..."

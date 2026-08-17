@@ -1,5 +1,7 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
+  [ValidateRange(1, 32)][int]$BatchSize = 10,
+  [string]$ProfileRoot = "",
   [switch]$ReadSecretFromClipboard,
   [switch]$ReadSecretFromStdin,
   [switch]$DoNotStart
@@ -10,6 +12,9 @@ $taskName = "App CPE Portal Worker"
 $workerStateDir = Join-Path $env:LOCALAPPDATA "AppCPE\portal-worker"
 $secretPath = Join-Path $workerStateDir "supabase-secret.dpapi"
 $runnerPath = Join-Path $RepositoryPath "scripts\windows\run-portal-worker.ps1"
+if ([string]::IsNullOrWhiteSpace($ProfileRoot)) {
+  $ProfileRoot = Join-Path $RepositoryPath "data\portal-oficial-chrome-profile\workers"
+}
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   throw "Node.js no esta instalado o no aparece en PATH."
@@ -48,7 +53,8 @@ $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 $quotedRunner = '"' + $runnerPath.Replace('"', '""') + '"'
 $quotedRepo = '"' + $RepositoryPath.Replace('"', '""') + '"'
-$arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $quotedRunner -RepositoryPath $quotedRepo"
+$quotedProfileRoot = '"' + $ProfileRoot.Replace('"', '""') + '"'
+$arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $quotedRunner -RepositoryPath $quotedRepo -BatchSize $BatchSize -ProfileRoot $quotedProfileRoot"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments -WorkingDirectory $RepositoryPath
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
 $settings = New-ScheduledTaskSettingsSet `
@@ -67,5 +73,5 @@ if (-not $DoNotStart) {
   Start-ScheduledTask -TaskName $taskName
 }
 
-Write-Host "Worker instalado. Se iniciara al entrar en Windows."
+Write-Host "Worker instalado en tandas de hasta $BatchSize. Se iniciara al entrar en Windows."
 Write-Host "Estado y logs: $workerStateDir"

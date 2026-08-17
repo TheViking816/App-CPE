@@ -8,15 +8,19 @@ const schedulerSource = await readFile(new URL("../supabase/functions/schedule-p
 const refreshSource = await readFile(new URL("../supabase/functions/refresh-portal/index.ts", import.meta.url), "utf8");
 const batchWorkflow = await readFile(new URL("../.github/workflows/sync-portals-batch.yml", import.meta.url), "utf8");
 const batchScript = await readFile(new URL("../scripts/sync-portal-batch.js", import.meta.url), "utf8");
-const migration = await readFile(
+const serializedMigration = await readFile(
   new URL("../supabase/migrations/20260817104949_serialize_scheduled_portal_syncs.sql", import.meta.url),
+  "utf8"
+);
+const scheduleMigration = await readFile(
+  new URL("../supabase/migrations/20260817182201_set_requested_portal_sync_schedule.sql", import.meta.url),
   "utf8"
 );
 
 test("la actualización masiva desaparece de la app y de la base de datos", () => {
   assert.doesNotMatch(appSource, /Actualizar todos los usuarios|requestAllPortalSyncs/);
   assert.doesNotMatch(clientSource, /refresh-all-portals|requestAllPortalSyncs/);
-  assert.match(migration, /drop function if exists public\.app_cpe_create_admin_portal_sync_jobs\(text\)/);
+  assert.match(serializedMigration, /drop function if exists public\.app_cpe_create_admin_portal_sync_jobs\(text\)/);
 });
 
 test("los fallos temporales no vuelven a abrir el formulario de claves", () => {
@@ -36,14 +40,14 @@ test("las sincronizaciones programadas se despachan como un solo lote secuencial
   assert.doesNotMatch(batchScript, /Promise\.all/);
 });
 
-test("solo quedan los cuatro horarios solicitados", () => {
-  assert.match(appSource, /07:30, 12:15, 13:30 y 14:45/);
-  for (const slot of ["07:30", "12:15", "13:30", "14:45"]) {
-    assert.match(migration, new RegExp(`'${slot.replace(":", "\\:")}'`));
+test("solo quedan los ocho horarios solicitados", () => {
+  assert.match(appSource, /02:00, 07:30, 08:00, 12:30, 14:00, 14:45, 15:00 y 20:00/);
+  for (const slot of ["02:00", "07:30", "08:00", "12:30", "14:00", "14:45", "15:00", "20:00"]) {
+    assert.match(scheduleMigration, new RegExp(`'${slot.replace(":", "\\:")}'`));
   }
-  assert.doesNotMatch(migration, /'12:30'/);
-  assert.doesNotMatch(migration, /lpad\(v_hour/);
-  assert.match(migration, /interval '4 hours'/);
+  assert.doesNotMatch(scheduleMigration, /'12:15'|'13:30'/);
+  assert.doesNotMatch(scheduleMigration, /lpad\(v_hour/);
+  assert.match(scheduleMigration, /interval '4 hours'/);
 });
 
 test("el circuito de seguridad evita nuevos intentos durante dos horas tras un bloqueo", () => {

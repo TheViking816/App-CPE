@@ -6,7 +6,11 @@ const projectRef = "wvwdiywtlbffumshbboa";
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
 const serviceRole = resolveSupabaseAdminKey();
 const pollMs = Math.max(1000, Number(process.env.CPE_PORTAL_WORKER_POLL_MS || 2500));
-const concurrency = Math.max(1, Math.min(32, Number(process.env.CPE_PORTAL_WORKER_CONCURRENCY || 1)));
+const batchSize = Math.max(1, Math.min(32, Number(
+  process.env.CPE_PORTAL_WORKER_BATCH_SIZE
+  || process.env.CPE_PORTAL_WORKER_CONCURRENCY
+  || 10
+)));
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 let stopping = false;
 
@@ -29,30 +33,26 @@ async function request(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-async function queueStartupCatchup() {
-  const result = await request("/rest/v1/rpc/app_cpe_create_worker_catchup_jobs", {
-    method: "POST",
-    body: JSON.stringify({})
-  });
-  console.log(`[portal-worker] Recuperacion de arranque: ${Number(result?.queued || 0)} en cola, ${Number(result?.skipped || 0)} omitidas`);
-}
+async function claimNextBatch() {
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.queued&order=requested_at.asc&limit=${batchSize}`);
+  if (!jobs?.length) return [];
 
-async function claimNextJob() {
-  const now = encodeURIComponent(new Date().toISOString());
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.queued&expires_at=gt.${now}&order=requested_at.asc&limit=1`);
-  const jobId = jobs?.[0]?.id;
-  if (!jobId) return null;
-
-  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?id=eq.${encodeURIComponent(jobId)}&status=eq.queued`, {
+  const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
+  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&id=in.(${ids})&status=eq.queued`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ status: "running", started_at: new Date().toISOString(), message: "Lectura iniciada" })
+    body: JSON.stringify({
+      status: "running",
+      started_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+      message: "Lectura iniciada"
+    })
   });
-  return claimed?.[0]?.id ? { id: claimed[0].id, chapa: jobs[0].chapa } : null;
+  return claimed || [];
 }
 
 function profileForSlot(slot) {
-  if (concurrency === 1 && !parallelProfileRoot) return "";
+  if (batchSize === 1 && !parallelProfileRoot) return "";
   return path.resolve(parallelProfileRoot || path.join("data", "portal-oficial-chrome-profile", "workers"), `worker-${slot}`);
 }
 
@@ -79,14 +79,19 @@ function runJob(job, slot) {
   });
 }
 
-async function workerLoop(slot) {
+async function workerLoop() {
   while (!stopping) {
     try {
-      const job = await claimNextJob();
-      if (job) await runJob(job, slot);
-      else await new Promise((resolve) => setTimeout(resolve, pollMs));
+      const jobs = await claimNextBatch();
+      if (jobs.length) {
+        console.log(`[portal-worker] Iniciando tanda de ${jobs.length}`);
+        await Promise.all(jobs.map((job, index) => runJob(job, index + 1)));
+        console.log(`[portal-worker] Tanda de ${jobs.length} finalizada`);
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+      }
     } catch (error) {
-      console.error(`[portal-worker:${slot}]`, error);
+      console.error("[portal-worker]", error);
       await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
     }
   }
@@ -94,9 +99,8 @@ async function workerLoop(slot) {
 
 async function main() {
   if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
-  console.log(`[portal-worker] Escuchando ${supabaseUrl} cada ${pollMs} ms con concurrencia ${concurrency}`);
-  await queueStartupCatchup();
-  await Promise.all(Array.from({ length: concurrency }, (_, slot) => workerLoop(slot + 1)));
+  console.log(`[portal-worker] Escuchando ${supabaseUrl} cada ${pollMs} ms en tandas de hasta ${batchSize}`);
+  await workerLoop();
 }
 
 process.on("SIGTERM", () => { stopping = true; });
