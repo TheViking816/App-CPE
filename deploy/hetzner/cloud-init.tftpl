@@ -7,5 +7,7 @@ packages:
 runcmd:
   - [bash, -lc, "git clone --branch '${repository_branch}' --single-branch '${repository_url}' /opt/app-cpe"]
   - [bash, -lc, "CPE_REPOSITORY_PATH=/opt/app-cpe bash /opt/app-cpe/scripts/linux/install-vps-worker.sh > /var/log/appcpe-install.log 2>&1"]
+  - [bash, -lc, "git clone --branch '${portal_estiba_repository_branch}' --single-branch '${portal_estiba_repository_url}' /opt/portal-estiba-vlc"]
+  - [bash, -lc, "PORTAL_ESTIBA_REPOSITORY_PATH=/opt/portal-estiba-vlc bash /opt/portal-estiba-vlc/scripts/linux/install-contracting-worker.sh > /var/log/appcpe-contracting-install.log 2>&1"]
 
-final_message: "App CPE VPS base installed"
+final_message: "App CPE portal and shared contracting workers installed but not activated"

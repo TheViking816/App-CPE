@@ -30,3 +30,13 @@ variable "repository_branch" {
   type    = string
   default = "codex/vps-portal-worker"
 }
+
+variable "portal_estiba_repository_url" {
+  type    = string
+  default = "https://github.com/TheViking816/PortalEstibaVLC.git"
+}
+
+variable "portal_estiba_repository_branch" {
+  type    = string
+  default = "codex/vps-contracting-worker"
+}

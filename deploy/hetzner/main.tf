@@ -36,7 +36,9 @@ resource "hcloud_server" "worker" {
   }
 
   user_data = templatefile("${path.module}/cloud-init.tftpl", {
-    repository_url    = var.repository_url
-    repository_branch = var.repository_branch
+    repository_url                  = var.repository_url
+    repository_branch               = var.repository_branch
+    portal_estiba_repository_url    = var.portal_estiba_repository_url
+    portal_estiba_repository_branch = var.portal_estiba_repository_branch
   })
 }

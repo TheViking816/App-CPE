@@ -1,6 +1,9 @@
 # Prueba del worker del portal en un VPS
 
-Esta rama no modifica producción. Prepara un worker alternativo en un VPS x86 con IP pública estable, escritorio virtual persistente y tandas estrictas de hasta 10 usuarios.
+Esta rama no modifica producción. Prepara dos workers alternativos en un VPS x86 con IP pública estable y escritorio virtual persistente:
+
+- el worker personal de App CPE, con tandas estrictas de hasta 10 usuarios;
+- el worker del tablón general, con una sesión fija del portal y publicación en el Supabase compartido de PortalEstibaVLC.
 
 ## Servidor recomendado para la prueba
 
@@ -26,7 +29,7 @@ terraform apply
 $env:TF_VAR_hcloud_token = $null
 ```
 
-El proceso instala Chrome, Node.js, un escritorio virtual privado y los servicios base. No inicia el worker ni recibe acceso a Supabase.
+El proceso instala Chrome, Node.js, un escritorio virtual privado y ambos servicios. No inicia ninguno de los workers ni recibe acceso a Supabase.
 
 ## Configuración segura del secreto
 
@@ -88,3 +91,46 @@ La migración nueva limita la creación automática a hora de Madrid:
 `02:00, 07:30, 08:00, 12:30, 14:00, 14:45, 15:00 y 20:00`.
 
 Las actualizaciones manuales siguen entrando inmediatamente en la misma cola. El worker de esta rama no crea sincronizaciones adicionales al arrancar: únicamente consume las que ya estén en cola.
+
+## Prueba del tablón general compartido
+
+El tablón de App CPE y el de PortalEstibaVLC consumen el mismo registro
+`contratacion_turno_snapshot`. El segundo worker reutiliza las reglas de jornadas
+del workflow actual y comprueba cada cinco minutos si falta alguna publicación;
+si está todo al día, no abre Chrome.
+
+Crear su entorno con una chapa lectora fija y una clave secreta dedicada del
+Supabase de PortalEstibaVLC:
+
+```bash
+sudo cp /etc/appcpe/contracting.env.example /etc/appcpe/contracting.env
+sudo chmod 600 /etc/appcpe/contracting.env
+sudoedit /etc/appcpe/contracting.env
+```
+
+No copiar las credenciales en Git ni en el chat. En el escritorio noVNC, abrir
+el perfil separado y superar Cloudflare:
+
+```bash
+sudo -u appcpe -H env DISPLAY=:99 PORTAL_ESTIBA_REPOSITORY_PATH=/opt/portal-estiba-vlc \
+  /opt/portal-estiba-vlc/scripts/linux/open-contracting-cloudflare-setup.sh
+```
+
+Después de iniciar sesión y cerrar Chrome completamente, ejecutar una sola prueba:
+
+```bash
+sudo systemctl start appcpe-contracting-worker.service
+sudo journalctl -u appcpe-contracting-worker.service -n 200 --no-pager
+```
+
+La prueba se considera válida cuando cambia `contratacion_turno_snapshot.updated_at`
+y las dos aplicaciones muestran la misma contratación. Sólo entonces activar el
+horario automático:
+
+```bash
+sudo systemctl enable --now appcpe-contracting-worker.timer
+```
+
+El timer comprueba cada cinco minutos y recupera una comprobación pendiente al
+reiniciar el VPS. Durante la validación se mantiene GitHub Actions como respaldo;
+su horario se desactiva únicamente después de varios ciclos correctos del VPS.
