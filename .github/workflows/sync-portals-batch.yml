@@ -44,29 +44,5 @@ jobs:
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
           CPE_PORTAL_BROWSER_CHANNEL: chrome
           CPE_PORTAL_HEADLESS: "false"
-          PORTAL_JOB_IDS: ${{ github.event.inputs.job_ids }}
-        shell: bash
-        run: |
-          IFS=',' read -ra JOB_IDS <<< "$PORTAL_JOB_IDS"
-          TOTAL=${#JOB_IDS[@]}
-          INDEX=0
-          FAILED=0
-
-          for RAW_JOB_ID in "${JOB_IDS[@]}"; do
-            JOB_ID="${RAW_JOB_ID//[[:space:]]/}"
-            if [ -z "$JOB_ID" ]; then
-              continue
-            fi
-
-            INDEX=$((INDEX + 1))
-            echo "Procesando sincronizacion $INDEX de $TOTAL"
-            if ! CPE_PORTAL_SYNC_JOB_ID="$JOB_ID" xvfb-run -a npm run sync:portal:job; then
-              FAILED=$((FAILED + 1))
-            fi
-
-            if [ "$INDEX" -lt "$TOTAL" ]; then
-              sleep 10
-            fi
-          done
-
-          echo "Lote terminado: $((INDEX - FAILED)) correctas, $FAILED fallidas"
+          CPE_PORTAL_SYNC_JOB_IDS: ${{ github.event.inputs.job_ids }}
+        run: xvfb-run -a npm run sync:portal:batch

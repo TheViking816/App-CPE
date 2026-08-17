@@ -6,6 +6,7 @@ const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "ut
 const clientSource = await readFile(new URL("../src/supabaseClient.js", import.meta.url), "utf8");
 const schedulerSource = await readFile(new URL("../supabase/functions/schedule-portal-sync/index.ts", import.meta.url), "utf8");
 const batchWorkflow = await readFile(new URL("../.github/workflows/sync-portals-batch.yml", import.meta.url), "utf8");
+const batchScript = await readFile(new URL("../scripts/sync-portal-batch.js", import.meta.url), "utf8");
 const migration = await readFile(
   new URL("../supabase/migrations/20260817103356_serialize_scheduled_portal_syncs.sql", import.meta.url),
   "utf8"
@@ -27,8 +28,11 @@ test("las sincronizaciones programadas se despachan como un solo lote secuencial
   assert.match(schedulerSource, /sync-portals-batch\.yml/);
   assert.match(schedulerSource, /dispatchWorkflow\(jobIds\)/);
   assert.doesNotMatch(schedulerSource, /for \(const job of jobs\)[\s\S]*?dispatchWorkflow\(job\.jobId\)/);
-  assert.match(batchWorkflow, /for RAW_JOB_ID in/);
-  assert.match(batchWorkflow, /CPE_PORTAL_SYNC_JOB_ID="\$JOB_ID" xvfb-run -a npm run sync:portal:job/);
+  assert.match(batchWorkflow, /npm run sync:portal:batch/);
+  assert.match(batchScript, /for \(let index = 0; index < jobIds\.length; index \+= 1\)/);
+  assert.match(batchScript, /await stopRemainingJobs\(remaining\)/);
+  assert.match(batchScript, /setTimeout\(resolve, 30000\)/);
+  assert.doesNotMatch(batchScript, /Promise\.all/);
 });
 
 test("solo quedan los cuatro horarios solicitados", () => {
