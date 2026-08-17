@@ -774,8 +774,10 @@ async function readJornalesPeriod(selectorFrame, selectorUrl, month, year) {
   ]);
 
   const deadline = Date.now() + PORTAL_PERIOD_TIMEOUT_MS;
+  let lastHtml = "";
   while (Date.now() < deadline) {
-    const parsed = parseJornales(await selectorFrame.content().catch(() => ""));
+    lastHtml = await selectorFrame.content().catch(() => "");
+    const parsed = parseJornales(lastHtml);
     if (parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
       return {
         year,
@@ -787,7 +789,10 @@ async function readJornalesPeriod(selectorFrame, selectorUrl, month, year) {
     await selectorFrame.page().waitForTimeout(200);
   }
 
-  throw new Error(`El portal no devolvio el periodo ${expectedLabel}.`);
+  const responseSample = textFromHtml(lastHtml).slice(0, 240) || "respuesta vacia";
+  throw new Error(
+    `El portal no devolvio el periodo ${expectedLabel}. Destino: ${safePortalLocation(selectorFrame.url())}. Respuesta: ${responseSample}`
+  );
 }
 
 async function readPrimasPeriod(context, selectorUrl, month, year) {
