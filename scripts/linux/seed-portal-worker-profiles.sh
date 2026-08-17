@@ -2,11 +2,11 @@
 set -euo pipefail
 
 repository_path="${CPE_REPOSITORY_PATH:-/opt/app-cpe}"
-batch_size="${CPE_PORTAL_WORKER_BATCH_SIZE:-10}"
+batch_size="${CPE_PORTAL_WORKER_BATCH_SIZE:-3}"
 shared="$repository_path/data/portal-oficial-chrome-profile/shared"
 profile_root="$repository_path/data/portal-oficial-chrome-profile/workers"
 
-if pgrep -f "google-chrome.*portal-oficial-chrome-profile" >/dev/null; then
+if pgrep -f "portal-oficial-chrome-profile" >/dev/null; then
   echo "Cierra primero el Chrome del portal." >&2
   exit 1
 fi

@@ -29,29 +29,22 @@ if ! command -v node >/dev/null || [[ "$(node --version | tr -d 'v' | cut -d. -f
   DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 fi
 
-if ! command -v google-chrome >/dev/null; then
-  install -d -m 0755 /etc/apt/keyrings
-  curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
-    | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg
-  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
-    > /etc/apt/sources.list.d/google-chrome.list
-  apt-get update
-  DEBIAN_FRONTEND=noninteractive apt-get install -y google-chrome-stable
-fi
-
 if ! id "$worker_user" >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash "$worker_user"
 fi
 
 chown -R "$worker_user:$worker_user" "$repository_path"
 sudo -u "$worker_user" npm ci --prefix "$repository_path"
+bash -lc "cd '$repository_path' && npx playwright install-deps chromium"
+sudo -u "$worker_user" bash -lc "cd '$repository_path' && npx playwright install chromium"
 install -d -m 0750 -o root -g "$worker_user" /etc/appcpe
 
 cat >/etc/appcpe/worker.env.example <<EOF
 CPE_SUPABASE_SECRET_KEY=PEGA_AQUI_LA_CLAVE_DEDICADA
 CPE_REPOSITORY_PATH=$repository_path
-CPE_PORTAL_WORKER_BATCH_SIZE=10
+CPE_PORTAL_WORKER_BATCH_SIZE=3
 CPE_PORTAL_WORKER_PROFILE_ROOT=$repository_path/data/portal-oficial-chrome-profile/workers
+CPE_PORTAL_BROWSER_CHANNEL=bundled
 DISPLAY=:99
 EOF
 chmod 0600 /etc/appcpe/worker.env.example

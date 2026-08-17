@@ -1,0 +1,11 @@
+tenancy_ocid         = "ocid1.tenancy.oc1.."
+user_ocid            = "ocid1.user.oc1.."
+api_key_fingerprint  = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+api_private_key_path = "C:/Users/TU_USUARIO/.oci/oci_api_key.pem"
+compartment_ocid     = "ocid1.compartment.oc1.."
+region               = "eu-madrid-1"
+ssh_public_key       = "ssh-ed25519 AAAA... app-cpe-oracle"
+
+# Si Oracle responde Out of host capacity y la region tiene varios dominios,
+# prueba 1 o 2. No cambies la region principal de una cuenta Always Free.
+availability_domain_index = 0
