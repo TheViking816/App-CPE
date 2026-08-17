@@ -1,6 +1,6 @@
 # Worker persistente del portal
 
-Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume los trabajos `queued` de Supabase y ejecuta el sincronizador de forma secuencial.
+Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume los trabajos `queued` de Supabase en tandas estrictas de hasta 10: espera a que termine una tanda completa antes de reclamar la siguiente.
 
 ## Variables
 
@@ -10,6 +10,8 @@ Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume l
 - `CPE_PORTAL_HEADLESS=true`
 - `CPE_PORTAL_BROWSER_CHANNEL=bundled`
 - `CPE_PORTAL_WORKER_POLL_MS=2500` (opcional)
+- `CPE_PORTAL_WORKER_BATCH_SIZE=10`
+- `CPE_PORTAL_WORKER_PROFILE_ROOT` (un perfil de Chrome aislado por posición de la tanda)
 
 ## Despliegue
 
@@ -24,13 +26,16 @@ El primer refresco que construye el resumen anual recorre los meses transcurrido
 
 ## Instalacion en Windows
 
-El worker local usa Chrome desde la conexion del ordenador, procesa una sola chapa cada vez y mantiene un perfil de navegador independiente para cada chapa. Al arrancar recupera automaticamente los usuarios cuya ultima lectura tenga mas de dos horas.
+El worker local usa Chrome desde la conexion del ordenador y procesa hasta 10 chapas simultáneamente. Cada posición de la tanda mantiene un perfil de navegador independiente. Si hay 18 trabajos, ejecuta primero 10 y después los 8 restantes.
 
 1. Crear en Supabase una clave secreta dedicada para este worker.
-2. Ejecutar `scripts/windows/install-portal-worker.ps1`. La clave se cifra con DPAPI para el usuario actual de Windows; no se guarda en el repositorio ni en texto plano.
-3. Aplicar la migracion `portal_worker_startup_catchup` y desplegar las Edge Functions.
-4. Cambiar `CPE_PORTAL_EXECUTION_MODE` a `persistent` solamente cuando la tarea local este en ejecucion.
+2. Con Chrome cerrado, ejecutar `scripts/windows/seed-portal-worker-profiles.ps1 -BatchSize 10` una sola vez.
+3. Ejecutar `scripts/windows/install-portal-worker.ps1 -BatchSize 10`. La clave se cifra con DPAPI para el usuario actual de Windows; no se guarda en el repositorio ni en texto plano.
+4. Aplicar la migración `20260817182201_set_requested_portal_sync_schedule.sql` y desplegar las Edge Functions.
+5. Cambiar `CPE_PORTAL_EXECUTION_MODE` a `persistent` solamente cuando la tarea local esté en ejecución.
 
-La tarea `App CPE Portal Worker` se inicia al entrar en Windows y se reinicia si falla. Si el PC esta apagado o suspendido no hay lecturas; cuando vuelva a encenderse se pondra al dia en serie. Los logs quedan en `%LOCALAPPDATA%\AppCPE\portal-worker\logs`.
+La tarea `App CPE Portal Worker` se inicia al entrar en Windows y se reinicia si falla. Si el PC está apagado o suspendido no hay lecturas; cuando vuelva a encenderse consumirá automáticamente los trabajos que ya estén en cola, aunque hubiera vencido su plazo anterior. No hace falta abrir ningún enlace. Los logs quedan en `%LOCALAPPDATA%\AppCPE\portal-worker\logs`.
+
+Los únicos horarios automáticos, en hora de Madrid, son `02:00`, `07:30`, `08:00`, `12:30`, `14:00`, `14:45`, `15:00` y `20:00`. Las solicitudes manuales entran inmediatamente en la misma cola.
 
 Para volver al sistema de produccion anterior, establecer `CPE_PORTAL_EXECUTION_MODE=actions` y desplegar de nuevo las dos Edge Functions. La rama `main` no necesita incorporar estos cambios.
