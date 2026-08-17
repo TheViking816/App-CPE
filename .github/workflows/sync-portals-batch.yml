@@ -42,7 +42,7 @@ jobs:
         env:
           CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
           CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
-          CPE_PORTAL_BROWSER_CHANNEL: bundled
+          CPE_PORTAL_BROWSER_CHANNEL: chrome
           CPE_PORTAL_HEADLESS: "false"
           PORTAL_JOB_IDS: ${{ github.event.inputs.job_ids }}
         shell: bash

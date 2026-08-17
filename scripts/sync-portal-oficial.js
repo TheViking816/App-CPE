@@ -44,6 +44,7 @@ const messageLimit = 5;
 export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
 export const PORTAL_CURRENT_PERIOD_ATTEMPTS = 3;
 export const PORTAL_PERIOD_RETRY_DELAY_MS = 1500;
+export const PORTAL_ENTRY_TIMEOUT_MS = 90000;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 
@@ -622,7 +623,7 @@ async function readPortalAuthState(page) {
   return loginVisible ? "login" : "pending";
 }
 
-async function waitForPortalEntry(page, timeout = 20000) {
+async function waitForPortalEntry(page, timeout = PORTAL_ENTRY_TIMEOUT_MS) {
   const deadline = Date.now() + timeout;
   let state = "pending";
 
@@ -1908,7 +1909,6 @@ async function main() {
     viewport: { width: 1500, height: 1100 },
     locale: "es-ES",
     timezoneId: "Europe/Madrid",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     args: ["--disable-blink-features=AutomationControlled"]
   };
   if (browserChannel && browserChannel !== "bundled") {
@@ -1917,7 +1917,6 @@ async function main() {
 
   const context = await chromium.launchPersistentContext(profileDir, launchOptions);
   await context.addInitScript(() => {
-    Object.defineProperty(navigator, "platform", { get: () => "Win32" });
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
   const page = context.pages()[0] || await context.newPage();

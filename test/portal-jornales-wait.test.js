@@ -4,6 +4,7 @@ import fs from "node:fs";
 
 import {
   PORTAL_CURRENT_PERIOD_ATTEMPTS,
+  PORTAL_ENTRY_TIMEOUT_MS,
   PORTAL_PERIOD_RETRY_DELAY_MS,
   PORTAL_PERIOD_TIMEOUT_MS
 } from "../scripts/sync-portal-oficial.js";
@@ -50,4 +51,11 @@ test("la primera sincronizacion fuerza el historial completo para alimentar el S
   assert.match(jobSource, /async function hasSavedJornales\(chapa\)/);
   assert.match(jobSource, /await hasSavedJornales\(job\.chapa\)/);
   assert.match(jobSource, /CPE_PORTAL_FAST_MODE: canUseFastMode \? "true" : "false"/);
+});
+
+test("espera a que Cloudflare complete la verificacion sin falsear un navegador antiguo", () => {
+  assert.equal(PORTAL_ENTRY_TIMEOUT_MS, 90000);
+  assert.match(syncSource, /waitForPortalEntry\(page, timeout = PORTAL_ENTRY_TIMEOUT_MS\)/);
+  assert.doesNotMatch(syncSource, /Chrome\/140\.0\.0\.0/);
+  assert.doesNotMatch(syncSource, /navigator, "platform"/);
 });
