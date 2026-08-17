@@ -38,8 +38,7 @@ const supabaseServiceRole = resolveSupabaseAdminKey();
 const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
   || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== "main" ? process.env.GITHUB_REF_NAME : "")).trim();
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
-const safeProfileName = portalUser.replace(/[^a-z0-9_-]/gi, "_") || "anonymous";
-const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join("data", "portal-oficial-chrome-profile", safeProfileName));
+const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join("data", "portal-oficial-chrome-profile", "shared"));
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
@@ -49,6 +48,7 @@ export const PORTAL_PERIOD_RETRY_DELAY_MS = 1500;
 export const PORTAL_ENTRY_TIMEOUT_MS = 90000;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
+let authenticatedForPortalUser = false;
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -651,12 +651,38 @@ async function waitForPortalAuthState(page, timeout = 20000) {
   return state;
 }
 
+async function logoutExistingPortalSession(page) {
+  for (const root of [page, ...page.frames()]) {
+    const logoutButton = root.getByRole("button", { name: /Finalizar sesi/i }).first();
+    if (await logoutButton.isVisible().catch(() => false)) {
+      await logoutButton.click({ timeout: 10000 });
+      await page.waitForTimeout(800);
+      return true;
+    }
+
+    const logoutInput = root.locator('input[value*="Finalizar sesi" i]:visible').first();
+    if (await logoutInput.isVisible().catch(() => false)) {
+      await logoutInput.click({ timeout: 10000 });
+      await page.waitForTimeout(800);
+      return true;
+    }
+  }
+  return false;
+}
+
 async function login(page, attempt = 0) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
   const entryState = await waitForPortalEntry(page);
-  if (entryState === "authenticated") return;
+  if (entryState === "authenticated") {
+    if (authenticatedForPortalUser) return;
+    const loggedOut = await logoutExistingPortalSession(page);
+    if (!loggedOut) {
+      throw new Error("No se pudo cerrar la sesion anterior del portal de forma segura.");
+    }
+    await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
+  }
   if (entryState === "security_challenge") {
     if (attempt < 1) return login(page, attempt + 1);
     throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
@@ -686,7 +712,10 @@ async function login(page, attempt = 0) {
   await passwordInput.fill(portalPassword, { timeout: 15000 });
   await loginButton.click({ timeout: 15000 });
   const state = await waitForPortalAuthState(page);
-  if (state === "authenticated") return;
+  if (state === "authenticated") {
+    authenticatedForPortalUser = true;
+    return;
+  }
   if (state === "rejected") {
     throw new Error("Usuario o contrasena del portal oficial incorrectos.");
   }

@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
+import path from "node:path";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const projectRef = "wvwdiywtlbffumshbboa";
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
 const serviceRole = resolveSupabaseAdminKey();
 const pollMs = Math.max(1000, Number(process.env.CPE_PORTAL_WORKER_POLL_MS || 2500));
+const concurrency = Math.max(1, Math.min(32, Number(process.env.CPE_PORTAL_WORKER_CONCURRENCY || 1)));
+const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 let stopping = false;
 
 function resolveSupabaseUrl(value) {
@@ -36,7 +39,7 @@ async function queueStartupCatchup() {
 
 async function claimNextJob() {
   const now = encodeURIComponent(new Date().toISOString());
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id&status=eq.queued&expires_at=gt.${now}&order=requested_at.asc&limit=1`);
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.queued&expires_at=gt.${now}&order=requested_at.asc&limit=1`);
   const jobId = jobs?.[0]?.id;
   if (!jobId) return null;
 
@@ -45,41 +48,55 @@ async function claimNextJob() {
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({ status: "running", started_at: new Date().toISOString(), message: "Lectura iniciada" })
   });
-  return claimed?.[0]?.id || null;
+  return claimed?.[0]?.id ? { id: claimed[0].id, chapa: jobs[0].chapa } : null;
 }
 
-function runJob(jobId) {
+function profileForSlot(slot) {
+  if (concurrency === 1 && !parallelProfileRoot) return "";
+  return path.resolve(parallelProfileRoot || path.join("data", "portal-oficial-chrome-profile", "workers"), `worker-${slot}`);
+}
+
+function runJob(job, slot) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["scripts/sync-portal-oficial-job.js", jobId], {
+    const profileDir = profileForSlot(slot);
+    const child = spawn(process.execPath, ["scripts/sync-portal-oficial-job.js", job.id], {
       cwd: process.cwd(),
       stdio: "inherit",
-      env: { ...process.env, CPE_PORTAL_SYNC_JOB_ID: jobId }
+      env: {
+        ...process.env,
+        CPE_PORTAL_SYNC_JOB_ID: job.id,
+        ...(profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {})
+      }
     });
     child.on("error", (error) => {
-      console.error(`[portal-worker] No se pudo iniciar ${jobId}:`, error);
+      console.error(`[portal-worker:${slot}] No se pudo iniciar ${job.id}:`, error);
       resolve();
     });
     child.on("exit", (code) => {
-      console.log(`[portal-worker] ${jobId} finalizo con codigo ${code}`);
+      console.log(`[portal-worker:${slot}] ${job.id} finalizo con codigo ${code}`);
       resolve();
     });
   });
 }
 
-async function main() {
-  if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
-  console.log(`[portal-worker] Escuchando ${supabaseUrl} cada ${pollMs} ms`);
-  await queueStartupCatchup();
+async function workerLoop(slot) {
   while (!stopping) {
     try {
-      const jobId = await claimNextJob();
-      if (jobId) await runJob(jobId);
+      const job = await claimNextJob();
+      if (job) await runJob(job, slot);
       else await new Promise((resolve) => setTimeout(resolve, pollMs));
     } catch (error) {
-      console.error("[portal-worker]", error);
+      console.error(`[portal-worker:${slot}]`, error);
       await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
     }
   }
+}
+
+async function main() {
+  if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
+  console.log(`[portal-worker] Escuchando ${supabaseUrl} cada ${pollMs} ms con concurrencia ${concurrency}`);
+  await queueStartupCatchup();
+  await Promise.all(Array.from({ length: concurrency }, (_, slot) => workerLoop(slot + 1)));
 }
 
 process.on("SIGTERM", () => { stopping = true; });
