@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
+import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 const jobId = process.env.CPE_PORTAL_SYNC_JOB_ID || process.argv[2];
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
-const serviceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const serviceRole = resolveSupabaseAdminKey();
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -26,12 +27,10 @@ function resolveSupabaseUrl(value) {
 async function supabaseRequest(path, options = {}) {
   const response = await fetch(`${supabaseUrl}${path}`, {
     ...options,
-    headers: {
-      apikey: serviceRole,
-      Authorization: `Bearer ${serviceRole}`,
+    headers: supabaseAdminHeaders(serviceRole, {
       "Content-Type": "application/json",
       ...(options.headers || {})
-    }
+    })
   });
 
   if (!response.ok) {
@@ -141,7 +140,7 @@ function publicErrorMessage(error) {
 
 async function main() {
   if (!jobId) throw new Error("Missing CPE_PORTAL_SYNC_JOB_ID");
-  if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
+  if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
 
   const rows = await supabaseRequest(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,portal_password,security_key,status,expires_at,trigger_source,request_kind,document_id&id=eq.${encodeURIComponent(jobId)}&limit=1`);
   const job = rows?.[0];

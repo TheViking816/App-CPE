@@ -90,7 +90,7 @@ Deno.serve(async (request) => {
   });
 
   const cooldownStart = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-  const { data: recentBlock } = await supabase
+  const { data: recentBlock } = executionMode === "persistent" ? { data: null } : await supabase
     .from("app_cpe_portal_sync_jobs")
     .select("finished_at")
     .eq("status", "failed")

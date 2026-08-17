@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
+import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const projectRef = "wvwdiywtlbffumshbboa";
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
-const serviceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const serviceRole = resolveSupabaseAdminKey();
 const pollMs = Math.max(1000, Number(process.env.CPE_PORTAL_WORKER_POLL_MS || 2500));
 let stopping = false;
 
@@ -15,16 +16,22 @@ function resolveSupabaseUrl(value) {
 async function request(path, options = {}) {
   const response = await fetch(`${supabaseUrl}${path}`, {
     ...options,
-    headers: {
-      apikey: serviceRole,
-      Authorization: `Bearer ${serviceRole}`,
+    headers: supabaseAdminHeaders(serviceRole, {
       "Content-Type": "application/json",
       ...(options.headers || {})
-    }
+    })
   });
   if (!response.ok) throw new Error(`Supabase HTTP ${response.status}: ${await response.text()}`);
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+async function queueStartupCatchup() {
+  const result = await request("/rest/v1/rpc/app_cpe_create_worker_catchup_jobs", {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+  console.log(`[portal-worker] Recuperacion de arranque: ${Number(result?.queued || 0)} en cola, ${Number(result?.skipped || 0)} omitidas`);
 }
 
 async function claimNextJob() {
@@ -60,8 +67,9 @@ function runJob(jobId) {
 }
 
 async function main() {
-  if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SERVICE_ROLE");
+  if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
   console.log(`[portal-worker] Escuchando ${supabaseUrl} cada ${pollMs} ms`);
+  await queueStartupCatchup();
   while (!stopping) {
     try {
       const jobId = await claimNextJob();

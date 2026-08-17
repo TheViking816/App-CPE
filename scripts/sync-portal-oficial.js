@@ -10,6 +10,7 @@ import {
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 import { parseExceptions } from "./portal-exceptions.js";
+import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
@@ -33,11 +34,12 @@ const portalUser = normalizeChapa(process.env.CPE_PORTAL_USER || process.env.CPE
 const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || process.env.CPE_PASSWORD || "");
 const portalSecurityKey = String(process.env.CPE_PORTAL_SECURITY_KEY || "");
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
-const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const supabaseServiceRole = resolveSupabaseAdminKey();
 const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
   || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== "main" ? process.env.GITHUB_REF_NAME : "")).trim();
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
-const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || "data/portal-oficial-chrome-profile");
+const safeProfileName = portalUser.replace(/[^a-z0-9_-]/gi, "_") || "anonymous";
+const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join("data", "portal-oficial-chrome-profile", safeProfileName));
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
@@ -1404,10 +1406,7 @@ async function getStoredPayrollDocumentIds() {
     const response = await fetch(
       `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_documents?select=document_id&channel=eq.${encodeURIComponent(channel)}&chapa=eq.${encodeURIComponent(portalUser)}`,
       {
-        headers: {
-          apikey: supabaseServiceRole,
-          Authorization: `Bearer ${supabaseServiceRole}`
-        }
+        headers: supabaseAdminHeaders(supabaseServiceRole)
       }
     );
     if (!response.ok) return new Set();
@@ -1830,12 +1829,10 @@ async function upsertSupabase(snapshot) {
   const conflict = portalSnapshotChannel ? "channel,chapa" : "chapa";
   const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?on_conflict=${conflict}`, {
     method: "POST",
-    headers: {
-      "apikey": supabaseServiceRole,
-      "Authorization": `Bearer ${supabaseServiceRole}`,
+    headers: supabaseAdminHeaders(supabaseServiceRole, {
       "Content-Type": "application/json",
       "Prefer": "resolution=merge-duplicates,return=minimal"
-    },
+    }),
     body: JSON.stringify({
       ...(portalSnapshotChannel ? { channel: portalSnapshotChannel } : {}),
       chapa: snapshot.chapa,
@@ -1856,12 +1853,10 @@ async function upsertPayrollDocuments() {
   for (const document of collectedPayrollDocuments) {
     const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_portal_documents?on_conflict=channel,chapa,document_id`, {
       method: "POST",
-      headers: {
-        apikey: supabaseServiceRole,
-        Authorization: `Bearer ${supabaseServiceRole}`,
+      headers: supabaseAdminHeaders(supabaseServiceRole, {
         "Content-Type": "application/json",
         Prefer: "resolution=merge-duplicates,return=minimal"
-      },
+      }),
       body: JSON.stringify({
         channel,
         chapa: portalUser,
@@ -1886,10 +1881,7 @@ async function getExistingSupabaseSnapshot() {
     const response = await fetch(
       `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?select=payload&chapa=eq.${encodeURIComponent(portalUser)}${channelFilter}&limit=1`,
       {
-        headers: {
-          apikey: supabaseServiceRole,
-          Authorization: `Bearer ${supabaseServiceRole}`
-        }
+        headers: supabaseAdminHeaders(supabaseServiceRole)
       }
     );
     if (!response.ok) return null;
