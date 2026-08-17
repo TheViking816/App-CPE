@@ -9,7 +9,7 @@ const refreshSource = await readFile(new URL("../supabase/functions/refresh-port
 const batchWorkflow = await readFile(new URL("../.github/workflows/sync-portals-batch.yml", import.meta.url), "utf8");
 const batchScript = await readFile(new URL("../scripts/sync-portal-batch.js", import.meta.url), "utf8");
 const migration = await readFile(
-  new URL("../supabase/migrations/20260817103356_serialize_scheduled_portal_syncs.sql", import.meta.url),
+  new URL("../supabase/migrations/20260817104949_serialize_scheduled_portal_syncs.sql", import.meta.url),
   "utf8"
 );
 
