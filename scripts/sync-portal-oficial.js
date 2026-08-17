@@ -1291,9 +1291,10 @@ async function readPayrollDocument(page, button) {
 async function collectPayrollDocumentFiles(page, rows, documentId) {
   const documents = [];
   const storedDocumentIds = await getStoredPayrollDocumentIds();
-  const targetIndex = rows.findIndex((payroll) => payroll.id === documentId);
-  if (targetIndex < 0) throw new Error("La nomina solicitada ya no aparece en el portal.");
-  for (const index of [targetIndex]) {
+  const targetIndex = documentId ? rows.findIndex((payroll) => payroll.id === documentId) : -1;
+  if (documentId && targetIndex < 0) throw new Error("La nomina solicitada ya no aparece en el portal.");
+  const targetIndexes = documentId ? [targetIndex] : rows.map((_, index) => index);
+  for (const index of targetIndexes) {
     const payroll = rows[index];
     if (storedDocumentIds.has(payroll.id)) {
       console.log(`Nomina ${payroll.period}: documento ya guardado; se omite la descarga.`);
@@ -1397,8 +1398,15 @@ async function getStoredPayrollDocumentIds() {
 }
 
 async function completePayrollResult(page, result) {
-  if (portalDocumentId) {
-    await collectPayrollDocumentFiles(page, result.rows || [], portalDocumentId);
+  if (!result.locked && result.rows?.length) {
+    if (portalDocumentId) {
+      await collectPayrollDocumentFiles(page, result.rows, portalDocumentId);
+    } else {
+      await collectPayrollDocumentFiles(page, result.rows, "").catch((error) => {
+        console.warn(`No se pudieron precargar todas las nominas. ${error instanceof Error ? error.message : "Error desconocido"}`);
+      });
+    }
+    await upsertPayrollDocuments();
   }
   return result;
 }

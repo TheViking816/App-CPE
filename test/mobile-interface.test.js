@@ -41,3 +41,14 @@ test("muestra el acceso para conectar el portal según las claves y no según lo
   assert.doesNotMatch(appSource, /!hasPortalData && <PortalConnectCallout/);
   assert.match(appSource, /getPortalAutoSyncStatus\(\{ token: session\.token \}\)/);
 });
+
+test("reutiliza el portal cargado y abre cada pantalla desde arriba", () => {
+  assert.match(appSource, /initialSnapshot=\{portalSnapshot\}/);
+  assert.match(appSource, /const \[loading, setLoading\] = useState\(!initialSnapshot\)/);
+  assert.match(appSource, /useLayoutEffect\(\(\) => \{[\s\S]*?window\.scrollTo\(\{ top: 0/);
+});
+
+test("las excepciones son legibles y no tienen scroll interior en móvil", () => {
+  assert.match(styles, /@media \(max-width: 430px\)[\s\S]*?\.portal-exceptions-summary strong \{ font-size: 23px; \}/);
+  assert.match(styles, /\.portal-exceptions-list \{ max-height: none; padding: 0 12px; overflow: visible; \}/);
+});

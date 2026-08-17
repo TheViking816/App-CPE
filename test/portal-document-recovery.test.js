@@ -6,6 +6,7 @@ import { loadPortalPayrollDocument, portalPayrollFileName } from "../src/portalD
 
 const noWait = async () => {};
 const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+const syncSource = await readFile(new URL("../scripts/sync-portal-oficial.js", import.meta.url), "utf8");
 
 test("la nomina descargada usa un icono existente y queda aislada ante fallos de renderizado", () => {
   assert.match(appSource, /<FileDown size=\{18\} \/> Descargar nómina/);
@@ -71,4 +72,25 @@ test("conserva el error real después de agotar los reintentos", async () => {
     }),
     /No se pudo abrir el portal seguro/
   );
+});
+
+test("precarga las nóminas durante la sincronización ordinaria", () => {
+  assert.match(syncSource, /rows\.map\(\(_, index\) => index\)/);
+  assert.match(syncSource, /collectPayrollDocumentFiles\(page, result\.rows, ""\)/);
+  assert.match(syncSource, /await upsertPayrollDocuments\(\)/);
+});
+
+test("la espera de una nómina termina en un tiempo acotado", async () => {
+  let clock = 0;
+  await assert.rejects(
+    loadPortalPayrollDocument({
+      getDocument: async () => null,
+      requestDocument: async () => ({ jobId: "job" }),
+      getJob: async () => ({ status: "running" }),
+      wait: async () => { clock += 45_000; },
+      now: () => clock
+    }),
+    /ha tardado demasiado/
+  );
+  assert.equal(clock, 90_000);
 });

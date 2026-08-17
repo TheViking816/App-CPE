@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import {
   BriefcaseBusiness,
@@ -711,6 +711,7 @@ function PayrollDocumentModal({ payroll, session, onClose }) {
   const [documentUrl, setDocumentUrl] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Buscando documento seguro...");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -734,7 +735,13 @@ function PayrollDocumentModal({ payroll, session, onClose }) {
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [payroll.id, session.token]);
+  }, [payroll.id, retryKey, session.token]);
+
+  const retryDocument = () => {
+    setError("");
+    setStatus("Buscando documento guardado...");
+    setRetryKey((current) => current + 1);
+  };
 
   return (
     <div className="document-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -745,7 +752,12 @@ function PayrollDocumentModal({ payroll, session, onClose }) {
           <button type="button" onClick={onClose} aria-label="Cerrar nómina"><X size={21} /></button>
         </header>
         {!documentUrl && !error && <p className="document-modal-status"><RefreshCw className="is-spinning" size={20} /> {status}</p>}
-        {error && <p className="document-modal-status is-error"><CircleAlert size={20} /> {error}</p>}
+        {error && (
+          <div className="document-modal-error">
+            <p className="document-modal-status is-error"><CircleAlert size={20} /> {error}</p>
+            <button type="button" onClick={retryDocument}><RefreshCw size={17} /> Reintentar</button>
+          </div>
+        )}
         {documentUrl && (
           <div className="document-modal-download">
             <FileLock2 size={42} />
@@ -2675,6 +2687,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 function PortalPanel({
   session,
   view = "all",
+  initialSnapshot = null,
   onSnapshotChange,
   onSessionChange,
   onConnectionChange,
@@ -2683,9 +2696,9 @@ function PortalPanel({
 }) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialSnapshot);
   const [error, setError] = useState("");
-  const [snapshot, setSnapshot] = useState(null);
+  const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [portalPassword, setPortalPassword] = useState(initialCredentials?.portalPassword || "");
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
@@ -2734,7 +2747,7 @@ function PortalPanel({
   };
 
   useEffect(() => {
-    loadSnapshot();
+    loadSnapshot({ silent: Boolean(initialSnapshot) });
   }, [session.token]);
 
   useEffect(() => {
@@ -3242,6 +3255,11 @@ export function App() {
     if (window.location.hash !== hashForTab(nextTab)) window.location.hash = hashForTab(nextTab);
   };
 
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeTab]);
+
   const connectPortal = () => {
     setPortalCredentialsRequested(true);
     navigateToTab("portal");
@@ -3494,11 +3512,11 @@ export function App() {
           />
         )}
         {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
-        {activeTab === "sueldometro" && <PortalPanel view="salary" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
-        {activeTab === "descansos" && <PortalPanel view="rests" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
-        {activeTab === "excepciones" && <PortalPanel view="exceptions" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
-        {activeTab === "vacaciones" && <PortalPanel view="holidays" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
-        {activeTab === "nominas" && <PortalPanel view="payrolls" session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "sueldometro" && <PortalPanel view="salary" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "descansos" && <PortalPanel view="rests" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "excepciones" && <PortalPanel view="exceptions" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "vacaciones" && <PortalPanel view="holidays" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "nominas" && <PortalPanel view="payrolls" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "estado" && (
           <OperationalStatusPanel
             user={displayUser}
@@ -3543,6 +3561,7 @@ export function App() {
         {activeTab === "portal" && (
           <PortalPanel
             view="all"
+            initialSnapshot={portalSnapshot}
             session={session}
             onSnapshotChange={setPortalSnapshot}
             onSessionChange={setSession}

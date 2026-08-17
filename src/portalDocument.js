@@ -17,7 +17,7 @@ export async function loadPortalPayrollDocument({
   onStatus = () => {},
   wait = () => new Promise((resolve) => window.setTimeout(resolve, 1500)),
   now = () => Date.now(),
-  timeoutMs = 180000,
+  timeoutMs = 90000,
   maxAttempts = 2
 }) {
   let document = await getDocument();

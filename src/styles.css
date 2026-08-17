@@ -4045,6 +4045,8 @@ select {
 .document-modal iframe { width: 100%; height: 100%; border: 0; border-radius: 8px; background: #eef2f5; }
 .document-modal-status { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 0; color: var(--muted); font-size: 12px; font-weight: 850; }
 .document-modal-status.is-error { color: #a52727; }
+.document-modal-error { display: grid; place-content: center; justify-items: center; gap: 16px; padding: 20px; text-align: center; }
+.document-modal-error button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 7px; padding: 9px 16px; border: 0; border-radius: 9px; color: #fff; background: var(--navy); font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; }
 :root[data-theme="dark"] .portal-message-detail, :root[data-theme="dark"] .document-modal { background: #102238; }
 :root[data-theme="dark"] .portal-message-detail h3, :root[data-theme="dark"] .document-modal h2 { color: #f4f8fc; }
 :root[data-theme="dark"] .portal-message-body { background: #172d45; color: #f4f8fc; }
@@ -6158,9 +6160,29 @@ select {
 :root[data-theme="dark"] .portal-official-action:hover { border-color: #557da3; background: #1b334b; }
 
 @media (max-width: 430px) {
-  .portal-exceptions-hero { padding: 15px; }
-  .portal-exceptions-balance { width: 69px; height: 69px; }
-  .portal-exceptions-summary > div { padding: 9px; }
-  .portal-exceptions-list article { grid-template-columns: minmax(100px,1fr) auto; }
+  .portal-exceptions-card { gap: 17px; }
+  .portal-exceptions-hero { padding: 17px; }
+  .portal-exceptions-title small { font-size: 10px; }
+  .portal-exceptions-title h1 { font-size: 23px; }
+  .portal-exceptions-balance { width: 74px; height: 74px; }
+  .portal-exceptions-balance strong { font-size: 28px; }
+  .portal-exceptions-balance span { font-size: 9px; }
+  .portal-exceptions-summary { gap: 7px; padding: 0 12px; }
+  .portal-exceptions-summary > div { min-height: 67px; align-content: center; padding: 11px 9px; }
+  .portal-exceptions-summary span { font-size: 10px; }
+  .portal-exceptions-summary strong { font-size: 23px; }
+  .portal-exceptions-summary strong small { font-size: 12px; }
+  .portal-exceptions-heading { padding-inline: 12px; }
+  .portal-exceptions-heading small { font-size: 10px; }
+  .portal-exceptions-heading h2 { font-size: 18px; }
+  .portal-exceptions-list { max-height: none; padding: 0 12px; overflow: visible; }
+  .portal-exceptions-list article { grid-template-columns: minmax(116px,1fr) auto; gap: 9px; padding: 13px; }
+  .portal-exceptions-list time strong, .portal-exceptions-list article > div > strong { font-size: 13px; }
+  .portal-exceptions-list time small { font-size: 10px; }
+  .portal-exceptions-list article > div > span, .portal-exceptions-list article > em { font-size: 9px; }
   .portal-exceptions-list article > em { grid-column: 1 / -1; justify-self: start; }
+  .portal-exceptions-info { padding: 17px; }
+  .portal-exceptions-info > header small { font-size: 9px; }
+  .portal-exceptions-info > header strong { font-size: 14px; }
+  .portal-exceptions-info ul { font-size: 11px; line-height: 1.5; }
 }
