@@ -1,6 +1,7 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
   [switch]$ReadSecretFromClipboard,
+  [switch]$ReadSecretFromStdin,
   [switch]$DoNotStart
 )
 
@@ -22,7 +23,13 @@ if (-not (Test-Path -LiteralPath (Join-Path $RepositoryPath "node_modules\playwr
 
 New-Item -ItemType Directory -Force -Path $workerStateDir | Out-Null
 
-if ($ReadSecretFromClipboard) {
+if ($ReadSecretFromStdin) {
+  $plainSecret = [Console]::In.ReadToEnd()
+  if ([string]::IsNullOrWhiteSpace($plainSecret)) { throw "La entrada no contiene una clave." }
+  $secureSecret = ConvertTo-SecureString $plainSecret.Trim() -AsPlainText -Force
+  $plainSecret = $null
+}
+elseif ($ReadSecretFromClipboard) {
   $plainSecret = [string](Get-Clipboard -Raw)
   if ([string]::IsNullOrWhiteSpace($plainSecret)) { throw "El portapapeles no contiene una clave." }
   $secureSecret = ConvertTo-SecureString $plainSecret.Trim() -AsPlainText -Force
