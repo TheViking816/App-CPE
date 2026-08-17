@@ -12,7 +12,8 @@ if (-not (Test-Path -LiteralPath $secretPath)) {
 }
 
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-$secureSecret = ConvertTo-SecureString (Get-Content -LiteralPath $secretPath -Raw)
+$encryptedSecret = (Get-Content -LiteralPath $secretPath -Raw).Trim()
+$secureSecret = ConvertTo-SecureString $encryptedSecret
 $secretPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSecret)
 
 try {
