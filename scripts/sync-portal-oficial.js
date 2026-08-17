@@ -753,84 +753,41 @@ function jornalesPeriodMatches(monthLabel, month, year) {
     && normalizedLabel.includes(String(year));
 }
 
-async function decodePortalResponse(response) {
-  const contentType = String(response.headers()["content-type"] || "").toLowerCase();
-  const body = await response.body();
-  if (/charset=(?:iso-8859-1|windows-1252)/i.test(contentType)) {
-    return new TextDecoder("windows-1252").decode(body);
-  }
-  return body.toString("utf8");
-}
-
-async function requestJornalesPeriod(context, selectorUrl, month, year) {
-  const resultUrl = new URL("Jornales1.asp", selectorUrl).href;
-  const response = await context.request.post(resultUrl, {
-    form: { Mes: String(month), Any: String(year) },
-    headers: { Referer: selectorUrl },
-    timeout: PORTAL_PERIOD_TIMEOUT_MS,
-    failOnStatusCode: false
-  });
-  if (!response.ok()) {
-    throw new Error(`El portal respondio HTTP ${response.status()} al consultar los jornales.`);
-  }
-  return parseJornales(await decodePortalResponse(response));
-}
-
-async function readJornalesPeriod(context, selectorUrl, month, year) {
-  const periodPage = await context.newPage();
+async function readJornalesPeriod(selectorFrame, selectorUrl, month, year) {
   const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
-  const initialPages = new Set(context.pages());
 
-  try {
-    // El selector oficial envia un POST a Jornales1.asp. Leer la respuesta
-    // directamente evita perderla cuando Chromium no notifica la navegacion
-    // del formulario en el runner de sincronizacion.
-    const directResult = await requestJornalesPeriod(context, selectorUrl, month, year).catch(() => null);
-    if (directResult?.recognized && jornalesPeriodMatches(directResult.monthLabel, month, year)) {
+  if (await selectorFrame.locator("select").count() < 2) {
+    await selectorFrame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS });
+  }
+
+  const monthSelect = selectorFrame.locator('select[name="Mes"]');
+  const yearSelect = selectorFrame.locator('select[name="Any"]');
+  if (await monthSelect.count() === 0 || await yearSelect.count() === 0) {
+    throw new Error(`No se encontraron los selectores para ${expectedLabel}.`);
+  }
+
+  await monthSelect.selectOption(String(month));
+  await yearSelect.selectOption(String(year));
+  await Promise.all([
+    selectorFrame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS }).catch(() => null),
+    selectorFrame.locator('input[type="submit"]').click({ timeout: 10000 })
+  ]);
+
+  const deadline = Date.now() + PORTAL_PERIOD_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const parsed = parseJornales(await selectorFrame.content().catch(() => ""));
+    if (parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
       return {
         year,
         month,
-        monthLabel: directResult.monthLabel || expectedLabel,
-        rows: Array.isArray(directResult.rows) ? directResult.rows : []
+        monthLabel: parsed.monthLabel || expectedLabel,
+        rows: Array.isArray(parsed.rows) ? parsed.rows : []
       };
     }
-
-    // Respaldo para cualquier cambio futuro del formulario del portal.
-    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS });
-    const selects = periodPage.locator("select");
-    if (await selects.count() < 2) {
-      throw new Error(`No se encontraron los selectores para ${expectedLabel}.`);
-    }
-
-    await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
-    await selectPortalOption(selects.nth(1), String(year));
-    await periodPage.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
-
-    const deadline = Date.now() + PORTAL_PERIOD_TIMEOUT_MS;
-    while (Date.now() < deadline) {
-      for (const candidatePage of context.pages()) {
-        for (const root of [candidatePage, ...candidatePage.frames()]) {
-          const parsed = parseJornales(await root.content().catch(() => ""));
-          if (parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
-            return {
-              year,
-              month,
-              monthLabel: parsed.monthLabel || expectedLabel,
-              rows: Array.isArray(parsed.rows) ? parsed.rows : []
-            };
-          }
-        }
-      }
-      await periodPage.waitForTimeout(200);
-    }
-
-    throw new Error(`El portal no devolvio el periodo ${expectedLabel}.`);
-  } finally {
-    await Promise.all(context.pages()
-      .filter((candidatePage) => !initialPages.has(candidatePage) && candidatePage !== periodPage)
-      .map((candidatePage) => candidatePage.close().catch(() => {})));
-    await periodPage.close();
+    await selectorFrame.page().waitForTimeout(200);
   }
+
+  throw new Error(`El portal no devolvio el periodo ${expectedLabel}.`);
 }
 
 async function readPrimasPeriod(context, selectorUrl, month, year) {
@@ -901,6 +858,7 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
   const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
   const selectorUrl = selectorFrame.url();
   const periodWarnings = [];
+  let freshPeriodCount = 0;
 
   for (const month of monthsToRead) {
     const attempts = month === currentMonth ? PORTAL_CURRENT_PERIOD_ATTEMPTS : 1;
@@ -909,8 +867,9 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        const period = await readJornalesPeriod(page.context(), selectorUrl, month, year);
+        const period = await readJornalesPeriod(selectorFrame, selectorUrl, month, year);
         historyByMonth.set(month, period);
+        freshPeriodCount += 1;
         console.log(`Jornales ${period.monthLabel}: ${period.rows.length}${attempt > 1 ? ` (intento ${attempt})` : ""}.`);
         updated = true;
         break;
@@ -931,6 +890,10 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
         throw new Error(`El portal no devolvio los jornales del mes actual tras ${attempts} intentos. ${lastError instanceof Error ? lastError.message : warning}`);
       }
     }
+  }
+
+  if (monthsToRead.length > 0 && freshPeriodCount === 0) {
+    throw new Error("El portal no actualizo ningun periodo de jornales en este intento.");
   }
 
   const history = [...historyByMonth.values()].sort((left, right) => Number(left.month) - Number(right.month));
@@ -2049,17 +2012,22 @@ async function main() {
       await upsertSupabase(latestProgressSnapshot);
     };
     await publishProgress("jornales", progressPayload.jornales || { monthLabel: "", rows: [] }, "Sesion iniciada; cargando jornales");
+    let jornalesUpdatedThisRun = false;
     const jornales = await readSection(
       "jornales",
-      () => collectJornales(page, existingSnapshot?.payload?.jornales, {
-        currentOnly: fastMode
-      }),
+      async () => {
+        const value = await collectJornales(page, existingSnapshot?.payload?.jornales, {
+          currentOnly: fastMode
+        });
+        jornalesUpdatedThisRun = true;
+        return value;
+      },
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
       hasJournalData
     );
-    if (!hasJournalData(jornales)) {
-      throw new Error("El portal no devolvio ningun periodo de jornales; la sincronizacion no se marcara como completada.");
+    if (!jornalesUpdatedThisRun || !hasJournalData(jornales)) {
+      throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");
     }
     await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
     const mensajes = await readOptionalSection(

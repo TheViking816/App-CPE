@@ -13,19 +13,20 @@ const jobSource = fs.readFileSync(new URL("../scripts/sync-portal-oficial-job.js
 
 test("espera hasta 35 segundos a que el portal publique cada periodo de jornales", () => {
   assert.equal(PORTAL_PERIOD_TIMEOUT_MS, 35000);
-  assert.match(syncSource, /periodPage\.goto\(selectorUrl, \{ waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS \}\)/);
+  assert.match(syncSource, /selectorFrame\.goto\(selectorUrl, \{ waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS \}\)/);
   assert.doesNotMatch(syncSource, /fastMode\s*\?\s*4000\s*:\s*20000/);
 });
 
-test("consulta cada periodo mediante el POST real del formulario del portal", () => {
-  assert.match(syncSource, /new URL\("Jornales1\.asp", selectorUrl\)/);
-  assert.match(syncSource, /context\.request\.post\(resultUrl/);
-  assert.match(syncSource, /form: \{ Mes: String\(month\), Any: String\(year\) \}/);
-  assert.match(syncSource, /const directResult = await requestJornalesPeriod/);
+test("consulta cada periodo dentro del iframe real del portal", () => {
+  assert.match(syncSource, /readJornalesPeriod\(selectorFrame, selectorUrl, month, year\)/);
+  assert.match(syncSource, /select\[name="Mes"\]/);
+  assert.match(syncSource, /select\[name="Any"\]/);
+  assert.match(syncSource, /selectorFrame\.waitForNavigation/);
+  assert.doesNotMatch(syncSource, /readJornalesPeriod\(context,/);
 });
 
 test("no completa una sincronizacion inicial sin ningun periodo de jornales", () => {
-  assert.match(syncSource, /if \(!hasJournalData\(jornales\)\)/);
+  assert.match(syncSource, /if \(!jornalesUpdatedThisRun \|\| !hasJournalData\(jornales\)\)/);
   assert.match(syncSource, /la sincronizacion no se marcara como completada/);
 });
 
