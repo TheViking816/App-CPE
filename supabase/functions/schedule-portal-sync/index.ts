@@ -52,6 +52,28 @@ Deno.serve(async (request) => {
     auth: { persistSession: false }
   });
 
+  const cooldownStart = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const { data: recentBlock } = await supabase
+    .from("app_cpe_portal_sync_jobs")
+    .select("finished_at")
+    .eq("status", "failed")
+    .ilike("message", "%bloqueado temporalmente%")
+    .gte("finished_at", cooldownStart)
+    .order("finished_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentBlock) {
+    return jsonResponse({
+      ok: true,
+      skipped: true,
+      portalBlocked: true,
+      reason: "Cloudflare mantiene bloqueada la red de automatizacion; se evita lanzar otro lote durante dos horas.",
+      dispatched: 0,
+      results: []
+    });
+  }
+
   const { data, error } = await supabase.rpc("app_cpe_claim_scheduled_portal_sync_jobs", {
     p_scheduler_secret: schedulerSecret
   });

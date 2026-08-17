@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
 const clientSource = await readFile(new URL("../src/supabaseClient.js", import.meta.url), "utf8");
 const schedulerSource = await readFile(new URL("../supabase/functions/schedule-portal-sync/index.ts", import.meta.url), "utf8");
+const refreshSource = await readFile(new URL("../supabase/functions/refresh-portal/index.ts", import.meta.url), "utf8");
 const batchWorkflow = await readFile(new URL("../.github/workflows/sync-portals-batch.yml", import.meta.url), "utf8");
 const batchScript = await readFile(new URL("../scripts/sync-portal-batch.js", import.meta.url), "utf8");
 const migration = await readFile(
@@ -43,4 +44,13 @@ test("solo quedan los cuatro horarios solicitados", () => {
   assert.doesNotMatch(migration, /'12:30'/);
   assert.doesNotMatch(migration, /lpad\(v_hour/);
   assert.match(migration, /interval '4 hours'/);
+});
+
+test("el circuito de seguridad evita nuevos intentos durante dos horas tras un bloqueo", () => {
+  for (const source of [schedulerSource, refreshSource]) {
+    assert.match(source, /Date\.now\(\) - 2 \* 60 \* 60 \* 1000/);
+    assert.match(source, /\.ilike\("message", "%bloqueado temporalmente%"\)/);
+    assert.match(source, /portalBlocked: true/);
+  }
+  assert.match(schedulerSource, /dispatched: 0/);
 });

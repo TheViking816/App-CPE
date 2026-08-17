@@ -89,6 +89,25 @@ Deno.serve(async (request) => {
     auth: { persistSession: false }
   });
 
+  const cooldownStart = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const { data: recentBlock } = await supabase
+    .from("app_cpe_portal_sync_jobs")
+    .select("finished_at")
+    .eq("status", "failed")
+    .ilike("message", "%bloqueado temporalmente%")
+    .gte("finished_at", cooldownStart)
+    .order("finished_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentBlock) {
+    return jsonResponse({
+      ok: false,
+      portalBlocked: true,
+      error: "El portal oficial mantiene activa su verificacion de seguridad. La app volvera a intentarlo automaticamente cuando termine el periodo de proteccion."
+    });
+  }
+
   const { data, error } = requestKind === "document"
     ? await supabase.rpc("app_cpe_create_portal_document_job", {
         p_token: token,
