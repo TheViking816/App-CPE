@@ -30,6 +30,13 @@ test("no completa una sincronizacion inicial sin ningun periodo de jornales", ()
   assert.match(syncSource, /la sincronizacion no se marcara como completada/);
 });
 
+test("renueva una sola vez la sesion cuando el portal devuelve la tabla vacia", () => {
+  assert.match(syncSource, /async function collectJornalesWithFreshSession/);
+  assert.match(syncSource, /await page\.context\(\)\.clearCookies\(\)/);
+  assert.match(syncSource, /await login\(page\)/);
+  assert.match(syncSource, /collectJornalesWithFreshSession\(page,/);
+});
+
 test("reintenta hasta tres veces el mes actual aunque ya exista historial", () => {
   assert.equal(PORTAL_CURRENT_PERIOD_ATTEMPTS, 3);
   assert.equal(PORTAL_PERIOD_RETRY_DELAY_MS, 1500);

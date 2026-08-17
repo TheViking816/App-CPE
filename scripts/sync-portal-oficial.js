@@ -917,6 +917,19 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
   };
 }
 
+async function collectJornalesWithFreshSession(page, previous = null, options = {}) {
+  try {
+    return await collectJornales(page, previous, options);
+  } catch (firstError) {
+    console.warn(
+      `El portal devolvio los jornales vacios; renovando la sesion una sola vez. ${firstError instanceof Error ? firstError.message : ""}`
+    );
+    await page.context().clearCookies();
+    await login(page);
+    return collectJornales(page, previous, options);
+  }
+}
+
 async function collectDescansos(page) {
   await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
   const calendarFrame = await waitForFrame(page, /Prueba\.asp/i, 12000);
@@ -2023,7 +2036,7 @@ async function main() {
     const jornales = await readSection(
       "jornales",
       async () => {
-        const value = await collectJornales(page, existingSnapshot?.payload?.jornales, {
+        const value = await collectJornalesWithFreshSession(page, existingSnapshot?.payload?.jornales, {
           currentOnly: fastMode
         });
         jornalesUpdatedThisRun = true;
