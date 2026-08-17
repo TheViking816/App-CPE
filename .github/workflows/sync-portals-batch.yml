@@ -1,0 +1,72 @@
+name: Sync portales programados
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_ids:
+        description: "IDs temporales de los jobs, separados por comas"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync-portals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Sync portals sequentially
+        env:
+          CPE_SUPABASE_URL: ${{ secrets.CPE_SUPABASE_URL }}
+          CPE_SUPABASE_SERVICE_ROLE: ${{ secrets.CPE_SUPABASE_SERVICE_ROLE }}
+          CPE_PORTAL_BROWSER_CHANNEL: bundled
+          CPE_PORTAL_HEADLESS: "false"
+          PORTAL_JOB_IDS: ${{ github.event.inputs.job_ids }}
+        shell: bash
+        run: |
+          IFS=',' read -ra JOB_IDS <<< "$PORTAL_JOB_IDS"
+          TOTAL=${#JOB_IDS[@]}
+          INDEX=0
+          FAILED=0
+
+          for RAW_JOB_ID in "${JOB_IDS[@]}"; do
+            JOB_ID="${RAW_JOB_ID//[[:space:]]/}"
+            if [ -z "$JOB_ID" ]; then
+              continue
+            fi
+
+            INDEX=$((INDEX + 1))
+            echo "Procesando sincronizacion $INDEX de $TOTAL"
+            if ! CPE_PORTAL_SYNC_JOB_ID="$JOB_ID" xvfb-run -a npm run sync:portal:job; then
+              FAILED=$((FAILED + 1))
+            fi
+
+            if [ "$INDEX" -lt "$TOTAL" ]; then
+              sleep 10
+            fi
+          done
+
+          echo "Lote terminado: $((INDEX - FAILED)) correctas, $FAILED fallidas"

@@ -6,7 +6,7 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
   ?? "";
 const githubToken = Deno.env.get("GITHUB_SYNC_TOKEN") ?? "";
 const githubRepo = Deno.env.get("GITHUB_SYNC_REPO") ?? "TheViking816/App-CPE";
-const workflowId = Deno.env.get("GITHUB_PORTAL_SYNC_WORKFLOW") ?? "sync-portal.yml";
+const workflowId = Deno.env.get("GITHUB_PORTAL_BATCH_WORKFLOW") ?? "sync-portals-batch.yml";
 const workflowRef = Deno.env.get("GITHUB_SYNC_REF") ?? "main";
 const executionMode = (Deno.env.get("CPE_PORTAL_EXECUTION_MODE") ?? "actions").toLowerCase();
 
@@ -17,7 +17,7 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-async function dispatchWorkflow(jobId: string) {
+async function dispatchWorkflow(jobIds: string[]) {
   const response = await fetch(
     `https://api.github.com/repos/${githubRepo}/actions/workflows/${workflowId}/dispatches`,
     {
@@ -29,7 +29,7 @@ async function dispatchWorkflow(jobId: string) {
         "User-Agent": "app-cpe-scheduled-portal-sync",
         "X-GitHub-Api-Version": "2022-11-28"
       },
-      body: JSON.stringify({ ref: workflowRef, inputs: { job_id: jobId } })
+      body: JSON.stringify({ ref: workflowRef, inputs: { job_ids: jobIds.join(",") } })
     }
   );
 
@@ -61,16 +61,22 @@ Deno.serve(async (request) => {
   }
 
   const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
-  const results = [];
+  const jobIds = jobs.map((job) => String(job.jobId)).filter(Boolean);
+  const results: Array<{ jobId: string; ok: boolean; executionMode: string; error?: string }> = jobs.map((job) => ({
+    jobId: String(job.jobId),
+    ok: true,
+    executionMode
+  }));
 
-  for (const job of jobs) {
-    try {
-      if (executionMode !== "persistent") {
-        await dispatchWorkflow(job.jobId);
-      }
-      results.push({ jobId: job.jobId, ok: true, executionMode });
-    } catch (dispatchError) {
-      const message = dispatchError instanceof Error ? dispatchError.message : "No se pudo lanzar GitHub Actions";
+  try {
+    // Una sola Action procesa el lote en serie. Lanzar una Action por chapa hace
+    // que el portal oficial bloquee todas las sesiones concurrentes.
+    if (executionMode !== "persistent" && jobIds.length > 0) {
+      await dispatchWorkflow(jobIds);
+    }
+  } catch (dispatchError) {
+    const message = dispatchError instanceof Error ? dispatchError.message : "No se pudo lanzar GitHub Actions";
+    if (jobIds.length > 0) {
       await supabase
         .from("app_cpe_portal_sync_jobs")
         .update({
@@ -80,8 +86,11 @@ Deno.serve(async (request) => {
           security_key: null,
           finished_at: new Date().toISOString()
         })
-        .eq("id", job.jobId);
-      results.push({ jobId: job.jobId, ok: false, error: message });
+        .in("id", jobIds);
+    }
+    for (const result of results) {
+      result.ok = false;
+      result.error = message;
     }
   }
 

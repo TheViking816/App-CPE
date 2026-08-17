@@ -383,21 +383,6 @@ export async function requestPortalSync({ token, portalPassword, securityKey = "
   return data || null;
 }
 
-export async function requestAllPortalSyncs({ token }) {
-  if (!supabase || !token) return null;
-
-  const { data, error } = await supabase.functions.invoke("refresh-all-portals", {
-    body: { token, ref: syncWorkflowRef }
-  });
-
-  if (error) throw error;
-  if (data?.ok === false) {
-    throw new Error(data.error || "No se pudo lanzar la actualizacion general.");
-  }
-
-  return data || null;
-}
-
 export async function getPortalAutoSyncStatus({ token }) {
   if (!supabase || !token) return null;
 

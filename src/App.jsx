@@ -37,7 +37,6 @@ import {
   CalendarCheck2,
   Save,
   UserRound,
-  UsersRound,
   WalletCards,
   X
 } from "lucide-react";
@@ -71,7 +70,6 @@ import {
   getUserRelayHours,
   loginUser,
   registerUser,
-  requestAllPortalSyncs,
   requestOfficialPortalDocument,
   requestPortalSync,
   setPortalAutoSync,
@@ -2103,7 +2101,7 @@ function PortalFeatureTemplate({ view = "all" }) {
   );
 }
 
-function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onLoadHistory, onRequestSecurityKey, onRequestCredentials, loadingHistory = false, hideSyncFailure = false }) {
+function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onLoadHistory, onRequestSecurityKey, loadingHistory = false, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
@@ -2309,14 +2307,13 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       )}
 
       {payload?.sync?.failed && !hideSyncFailure && (
-        <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestCredentials}>
+        <section className="portal-sync-warning">
           <CircleAlert size={20} />
           <div>
             <strong>{payload.sync.stage || "No se pudo conectar con el portal"}</strong>
-            <span>{payload.sync.error || "Revisa la contraseña del portal y vuelve a intentarlo."}</span>
+            <span>{payload.sync.error || "La lectura no se ha completado. Puedes volver a intentarla desde Actualizar portal."}</span>
           </div>
-          <ChevronRight size={19} />
-        </button>
+        </section>
       )}
 
       {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && needsSecurityKey && (
@@ -2711,8 +2708,6 @@ function PortalPanel({
   const [securityKeyOnly, setSecurityKeyOnly] = useState(false);
   const [syncProgress, setSyncProgress] = useState(initialActiveSync ? 3 : 0);
   const [syncElapsed, setSyncElapsed] = useState(initialActiveSync ? Math.floor((Date.now() - initialActiveSync.startedAt) / 1000) : 0);
-  const [syncingAllUsers, setSyncingAllUsers] = useState(false);
-  const [allUsersMessage, setAllUsersMessage] = useState("");
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
   const syncEstimateRef = useRef(getPortalSyncEstimate(session.chapa));
   const lastProgressRefreshRef = useRef(0);
@@ -2728,18 +2723,12 @@ function PortalPanel({
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
-      const credentialsRejected = Boolean(data?.payload?.sync?.failed);
-      setShowCredentials(!data || credentialsRejected);
-      if (credentialsRejected) {
-        setError("");
-        setPortalMessage("");
-        setSecurityKeyOnly(false);
-        setPortalPassword("");
-      }
+      // Un fallo de lectura no implica que las claves guardadas hayan dejado de
+      // existir. El formulario solo se abre de forma explícita desde Cambiar claves.
+      setShowCredentials(!data);
     } catch (requestError) {
       if (!silent) {
         setError(requestError.message || "No se pudo leer el portal sincronizado.");
-        setShowCredentials(true);
       }
     } finally {
       if (!silent) setLoading(false);
@@ -2850,7 +2839,7 @@ function PortalPanel({
         if (job.status === "failed") {
           setPortalMessage(job.message || "No se pudo leer el portal.");
           setSyncingPortal(false);
-          setShowCredentials(true);
+          setShowCredentials(false);
           writePortalActiveSync(session.chapa, null);
           window.clearInterval(timer);
           await loadSnapshot();
@@ -2965,28 +2954,6 @@ function PortalPanel({
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
-  const isPortalAdmin = normalizeChapa(session.chapa) === "72683";
-
-  const handleAllUsersSync = async () => {
-    if (!window.confirm("Se actualizaran los datos de todos los usuarios con claves guardadas. ¿Continuar?")) return;
-
-    setSyncingAllUsers(true);
-    setAllUsersMessage("");
-    try {
-      const result = await requestAllPortalSyncs({ token: session.token });
-      const queued = Number(result?.queued || 0);
-      const skipped = Number(result?.skipped || 0);
-      setAllUsersMessage(queued > 0
-        ? `${queued} usuarios puestos en cola${skipped ? `; ${skipped} ya estaban actualizandose o no pudieron incluirse` : ""}.`
-        : skipped > 0
-          ? "No se han duplicado trabajos: todos los usuarios ya estaban actualizandose o no pudieron incluirse."
-          : "No hay usuarios con sincronizacion automatica activa.");
-    } catch (requestError) {
-      setAllUsersMessage(requestError.message || "No se pudo lanzar la actualizacion general.");
-    } finally {
-      setSyncingAllUsers(false);
-    }
-  };
   const panelCopy = {
     all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
@@ -3007,7 +2974,7 @@ function PortalPanel({
         <div className="portal-update-row">
           <span>
             Datos guardados del portal oficial
-            {autoSyncEnabled && <small>Sincronizacion automatica cada hora, tambien a las 07:30, 12:30 y 14:45</small>}
+            {autoSyncEnabled && <small>Sincronizacion automatica a las 07:30, 12:15, 13:30 y 14:45</small>}
           </span>
           <div>
             {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar claves</button>}
@@ -3022,22 +2989,6 @@ function PortalPanel({
             </button>
           </div>
         </div>
-      )}
-
-      {isPortalAdmin && (
-        <section className="portal-admin-sync-card">
-          <span className="portal-admin-sync-icon"><UsersRound size={22} /></span>
-          <div>
-            <small>Administracion</small>
-            <strong>Actualizar todos los usuarios</strong>
-            <p>Sincroniza las cuentas que tienen claves guardadas y la actualizacion automatica activa.</p>
-          </div>
-          <button type="button" disabled={syncingAllUsers} onClick={handleAllUsersSync}>
-            <RefreshCw size={17} className={syncingAllUsers ? "is-spinning" : ""} />
-            {syncingAllUsers ? "Lanzando..." : "Actualizar todos"}
-          </button>
-          {allUsersMessage && <p className="portal-admin-sync-message" role="status">{allUsersMessage}</p>}
-        </section>
       )}
 
       {error && <p ref={portalErrorRef} className="portal-warning">{error}</p>}
@@ -3138,7 +3089,6 @@ function PortalPanel({
           onSessionChange={onSessionChange}
           onLoadHistory={() => handlePortalSync({ fullHistory: true })}
           onRequestSecurityKey={requestSecurityKey}
-          onRequestCredentials={changeCredentials}
           loadingHistory={syncingPortal}
           hideSyncFailure={showCredentials}
         />
