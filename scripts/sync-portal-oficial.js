@@ -789,9 +789,11 @@ async function readJornalesPeriod(selectorFrame, selectorUrl, month, year) {
     await selectorFrame.page().waitForTimeout(200);
   }
 
-  const responseSample = textFromHtml(lastHtml).slice(0, 240) || "respuesta vacia";
+  const bodyText = cleanText(await selectorFrame.locator("body").innerText().catch(() => ""));
+  const responseSample = bodyText.slice(0, 240) || "respuesta vacia";
+  const responseRows = await selectorFrame.locator("tr").count().catch(() => 0);
   throw new Error(
-    `El portal no devolvio el periodo ${expectedLabel}. Destino: ${safePortalLocation(selectorFrame.url())}. Respuesta: ${responseSample}`
+    `El portal no devolvio el periodo ${expectedLabel}. Destino: ${safePortalLocation(selectorFrame.url())}. Filas HTML: ${responseRows}. Respuesta: ${responseSample}`
   );
 }
 
