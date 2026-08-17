@@ -17,6 +17,18 @@ test("espera hasta 35 segundos a que el portal publique cada periodo de jornales
   assert.doesNotMatch(syncSource, /fastMode\s*\?\s*4000\s*:\s*20000/);
 });
 
+test("consulta cada periodo mediante el POST real del formulario del portal", () => {
+  assert.match(syncSource, /new URL\("Jornales1\.asp", selectorUrl\)/);
+  assert.match(syncSource, /context\.request\.post\(resultUrl/);
+  assert.match(syncSource, /form: \{ Mes: String\(month\), Any: String\(year\) \}/);
+  assert.match(syncSource, /const directResult = await requestJornalesPeriod/);
+});
+
+test("no completa una sincronizacion inicial sin ningun periodo de jornales", () => {
+  assert.match(syncSource, /if \(!hasJournalData\(jornales\)\)/);
+  assert.match(syncSource, /la sincronizacion no se marcara como completada/);
+});
+
 test("reintenta hasta tres veces el mes actual aunque ya exista historial", () => {
   assert.equal(PORTAL_CURRENT_PERIOD_ATTEMPTS, 3);
   assert.equal(PORTAL_PERIOD_RETRY_DELAY_MS, 1500);

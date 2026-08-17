@@ -753,12 +753,49 @@ function jornalesPeriodMatches(monthLabel, month, year) {
     && normalizedLabel.includes(String(year));
 }
 
+async function decodePortalResponse(response) {
+  const contentType = String(response.headers()["content-type"] || "").toLowerCase();
+  const body = await response.body();
+  if (/charset=(?:iso-8859-1|windows-1252)/i.test(contentType)) {
+    return new TextDecoder("windows-1252").decode(body);
+  }
+  return body.toString("utf8");
+}
+
+async function requestJornalesPeriod(context, selectorUrl, month, year) {
+  const resultUrl = new URL("Jornales1.asp", selectorUrl).href;
+  const response = await context.request.post(resultUrl, {
+    form: { Mes: String(month), Any: String(year) },
+    headers: { Referer: selectorUrl },
+    timeout: PORTAL_PERIOD_TIMEOUT_MS,
+    failOnStatusCode: false
+  });
+  if (!response.ok()) {
+    throw new Error(`El portal respondio HTTP ${response.status()} al consultar los jornales.`);
+  }
+  return parseJornales(await decodePortalResponse(response));
+}
+
 async function readJornalesPeriod(context, selectorUrl, month, year) {
   const periodPage = await context.newPage();
   const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
   const initialPages = new Set(context.pages());
 
   try {
+    // El selector oficial envia un POST a Jornales1.asp. Leer la respuesta
+    // directamente evita perderla cuando Chromium no notifica la navegacion
+    // del formulario en el runner de sincronizacion.
+    const directResult = await requestJornalesPeriod(context, selectorUrl, month, year).catch(() => null);
+    if (directResult?.recognized && jornalesPeriodMatches(directResult.monthLabel, month, year)) {
+      return {
+        year,
+        month,
+        monthLabel: directResult.monthLabel || expectedLabel,
+        rows: Array.isArray(directResult.rows) ? directResult.rows : []
+      };
+    }
+
+    // Respaldo para cualquier cambio futuro del formulario del portal.
     await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS });
     const selects = periodPage.locator("select");
     if (await selects.count() < 2) {
@@ -1985,9 +2022,10 @@ async function main() {
 
     const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
     const hasJournalData = (value) => (
-      Array.isArray(value?.rows) && value.rows.length > 0
+      Boolean(value?.recognized && cleanText(value?.monthLabel))
     ) || (
-      Array.isArray(value?.history) && value.history.length > 0
+      Array.isArray(value?.history)
+      && value.history.some((period) => cleanText(period?.monthLabel) && Array.isArray(period?.rows))
     );
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
@@ -2020,6 +2058,9 @@ async function main() {
       { monthLabel: "", rows: [] },
       hasJournalData
     );
+    if (!hasJournalData(jornales)) {
+      throw new Error("El portal no devolvio ningun periodo de jornales; la sincronizacion no se marcara como completada.");
+    }
     await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
     const mensajes = await readOptionalSection(
       "mensajes",

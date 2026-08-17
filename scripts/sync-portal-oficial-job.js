@@ -82,8 +82,10 @@ async function hasSavedJornales(chapa) {
     `/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(chapa)}&limit=1`
   );
   const jornales = rows?.[0]?.payload?.jornales;
-  return (Array.isArray(jornales?.rows) && jornales.rows.length > 0)
-    || (Array.isArray(jornales?.history) && jornales.history.length > 0);
+  return Boolean(jornales?.recognized && String(jornales?.monthLabel || "").trim())
+    || (Array.isArray(jornales?.history) && jornales.history.some((period) => (
+      String(period?.monthLabel || "").trim() && Array.isArray(period?.rows)
+    )));
 }
 
 async function runSync(job) {
