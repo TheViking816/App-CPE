@@ -44,7 +44,7 @@ test("muestra el acceso para conectar el portal según las claves y no según lo
 
 test("reutiliza el portal cargado y abre cada pantalla desde arriba", () => {
   assert.match(appSource, /initialSnapshot=\{portalSnapshot\}/);
-  assert.match(appSource, /const \[loading, setLoading\] = useState\(!initialSnapshot\)/);
+  assert.match(appSource, /const \[loading, setLoading\] = useState\(!initialSnapshot && !pendingActivation\)/);
   assert.match(appSource, /useLayoutEffect\(\(\) => \{[\s\S]*?window\.scrollTo\(\{ top: 0/);
 });
 

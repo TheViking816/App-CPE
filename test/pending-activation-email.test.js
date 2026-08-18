@@ -13,6 +13,9 @@ test("el registro pide correo y la primera conexión queda pendiente sin lanzar 
   assert.match(client, /p_email: email/);
   assert.match(app, /portalActivationStatus === "pending" && !snapshot/);
   assert.match(app, /Cuenta pendiente de activación/);
+  assert.match(app, /Te enviaremos un correo a \{session\.email/);
+  assert.match(app, /useState\(Boolean\(openCredentialsOnLoad\)\)/);
+  assert.doesNotMatch(app, /No necesitas mantener esta pantalla abierta/);
   assert.match(app, /pendingActivation \? null : readPortalActiveSync/);
   assert.match(isolationMigration, /app_cpe_purge_stale_portal_state/);
   assert.match(isolationMigration, /delete from public\.app_cpe_portal_sync_jobs/);
