@@ -69,6 +69,10 @@ $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interact
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
 
+$scheduleInstaller = Join-Path $RepositoryPath "scripts\windows\install-portal-sync-schedule.ps1"
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scheduleInstaller -RepositoryPath $RepositoryPath
+if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar los horarios del portal." }
+
 if (-not $DoNotStart) {
   Start-ScheduledTask -TaskName $taskName
 }
