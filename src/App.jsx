@@ -55,6 +55,8 @@ import {
   compareJornalesDescending,
   enrichJornales,
   filterJornalesByPeriod,
+  selectPortalJornales,
+  selectPortalJornalesHistory,
   formatEuro,
   summarizeAnnualPayroll,
   summarizePayroll,
@@ -2125,13 +2127,9 @@ function PortalFeatureTemplate({ view = "all" }) {
 function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onRequestSecurityKey, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
-  const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
-  const jornales = (!payload?.primas?.locked && primas.length > 0)
-    ? primas
-    : (payload?.jornales?.rows || []);
+  const jornales = selectPortalJornales(payload?.jornales, payload?.primas);
   const journalHistory = useMemo(() => {
-    if (premiumHistory.length > 0) return premiumHistory;
-    const savedHistory = payload?.jornales?.history;
+    const savedHistory = selectPortalJornalesHistory(payload?.jornales, payload?.primas);
     if (Array.isArray(savedHistory) && savedHistory.length > 0) return savedHistory;
     if (!jornales.length) return [];
 
@@ -2141,7 +2139,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       monthLabel: payload?.jornales?.monthLabel || "Mes actual",
       rows: jornales
     }];
-  }, [jornales, payload?.jornales?.history, payload?.jornales?.monthLabel, premiumHistory]);
+  }, [jornales, payload?.jornales, payload?.primas]);
   const descansos = payload?.descansos || null;
   const hasDescansos = Array.isArray(descansos?.months) && descansos.months.length > 0;
   const slRows = payload?.sl?.rows || [];
