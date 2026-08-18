@@ -16,6 +16,10 @@ const scheduleMigration = await readFile(
   new URL("../supabase/migrations/20260817182201_set_requested_portal_sync_schedule.sql", import.meta.url),
   "utf8"
 );
+const disabledScheduleMigration = await readFile(
+  new URL("../supabase/migrations/20260818132200_disable_automatic_portal_sync.sql", import.meta.url),
+  "utf8"
+);
 
 test("la actualización masiva desaparece de la app y de la base de datos", () => {
   assert.doesNotMatch(appSource, /Actualizar todos los usuarios|requestAllPortalSyncs/);
@@ -40,7 +44,7 @@ test("las sincronizaciones programadas se despachan como un solo lote secuencial
   assert.doesNotMatch(batchScript, /Promise\.all/);
 });
 
-test("solo quedan los ocho horarios solicitados", () => {
+test("los horarios anteriores quedan documentados pero el productor automático está desactivado", () => {
   assert.doesNotMatch(appSource, /Sincronizacion automatica a las/);
   for (const slot of ["02:00", "07:30", "08:00", "12:30", "14:00", "14:45", "15:00", "20:00"]) {
     assert.match(scheduleMigration, new RegExp(`'${slot.replace(":", "\\:")}'`));
@@ -48,6 +52,9 @@ test("solo quedan los ocho horarios solicitados", () => {
   assert.doesNotMatch(scheduleMigration, /'12:15'|'13:30'/);
   assert.doesNotMatch(scheduleMigration, /lpad\(v_hour/);
   assert.match(scheduleMigration, /interval '4 hours'/);
+  assert.match(disabledScheduleMigration, /cron\.unschedule/);
+  assert.match(disabledScheduleMigration, /'disabled', true/);
+  assert.match(disabledScheduleMigration, /delete from public\.app_cpe_portal_sync_jobs[\s\S]*trigger_source = 'scheduled'/);
 });
 
 test("las actualizaciones normales omiten nóminas y la app no ofrece sincronización manual", () => {

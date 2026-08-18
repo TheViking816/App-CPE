@@ -396,6 +396,17 @@ export async function requestPortalSync({ token, portalPassword, securityKey = "
   return data || null;
 }
 
+export async function queuePendingPortalActivation({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_queue_pending_portal_activation", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function getPortalAutoSyncStatus({ token }) {
   if (!supabase || !token) return null;
 
