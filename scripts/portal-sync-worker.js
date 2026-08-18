@@ -138,32 +138,7 @@ async function gatewayAuthorizationIsValid() {
   }
 }
 
-async function createGatewaySlots(count) {
-  const browser = await ensureGatewayBrowser();
-  const cookies = await gatewayClearanceCookies();
-  if (!browser || !cookies.some((cookie) => cookie.name === "cf_clearance")) return null;
-
-  const contexts = [];
-  try {
-    for (let slot = 1; slot <= count; slot += 1) {
-      const context = await browser.newContext({
-        locale: "es-ES",
-        timezoneId: "Europe/Madrid",
-        viewport: { width: 1365, height: 900 }
-      });
-      await context.addCookies(cookies);
-      const markerPage = await context.newPage();
-      await markerPage.goto(`about:blank#app-cpe-slot-${slot}`);
-      contexts.push(context);
-    }
-    return contexts;
-  } catch (error) {
-    await Promise.all(contexts.map((context) => context.close().catch(() => {})));
-    throw error;
-  }
-}
-
-function runJob(job, slot) {
+function runJob(job, slot, clearanceCookies = []) {
   return new Promise((resolve) => {
     const profileDir = profileForSlot(slot);
     const child = spawn(process.execPath, ["scripts/sync-portal-oficial-job.js", job.id], {
@@ -173,7 +148,12 @@ function runJob(job, slot) {
         ...process.env,
         CPE_PORTAL_SYNC_JOB_ID: job.id,
         ...(portalCdpEndpoint
-          ? { CPE_PORTAL_CDP_CONTEXT_SLOT: String(slot) }
+          ? {
+              CPE_PORTAL_CDP_ENDPOINT: "",
+              CPE_PORTAL_CDP_CONTEXT_SLOT: "",
+              CPE_PORTAL_PROFILE_DIR: profileDir,
+              CPE_PORTAL_CLEARANCE_COOKIES: JSON.stringify(clearanceCookies)
+            }
           : (profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {}))
       }
     });
@@ -237,25 +217,22 @@ async function workerLoop() {
       const jobs = await claimNextBatch();
       if (jobs.length) {
         console.log(`[portal-worker] Iniciando tanda de ${jobs.length}`);
-        let gatewayContexts = [];
         try {
+          let clearanceCookies = [];
           if (portalCdpEndpoint) {
-            const preparedContexts = await createGatewaySlots(jobs.length);
-            if (!preparedContexts) {
+            clearanceCookies = await gatewayClearanceCookies();
+            if (!clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
               console.warn("[portal-worker] Tanda devuelta a la cola: falta autorizacion de Cloudflare.");
               if (workerOnce) return;
               continue;
             }
-            gatewayContexts = preparedContexts;
           }
-          await Promise.all(jobs.map((job, index) => runJob(job, index + 1)));
+          await Promise.all(jobs.map((job, index) => runJob(job, index + 1, clearanceCookies)));
           console.log(`[portal-worker] Tanda de ${jobs.length} finalizada`);
         } catch (error) {
           await requeueRunningJobs(jobs, "En cola; no se pudo preparar Chrome").catch(() => {});
           throw error;
-        } finally {
-          await Promise.all(gatewayContexts.map((context) => context.close().catch(() => {})));
         }
         if (workerOnce) return;
       } else {

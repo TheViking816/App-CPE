@@ -42,6 +42,14 @@ const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join(
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const portalCdpContextSlot = String(process.env.CPE_PORTAL_CDP_CONTEXT_SLOT || "").trim();
+const portalClearanceCookies = (() => {
+  try {
+    const parsed = JSON.parse(process.env.CPE_PORTAL_CLEARANCE_COOKIES || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+})();
 const portalRequestKind = String(process.env.CPE_PORTAL_REQUEST_KIND || "snapshot").trim().toLowerCase();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
@@ -884,7 +892,26 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
 }
 
 async function collectJornales(page, previous = null, { currentOnly = false } = {}) {
-  await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
+  const directSelectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJor1.asp";
+  let selectorFrame = null;
+  try {
+    await page.goto(directSelectorUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: PORTAL_PERIOD_TIMEOUT_MS
+    });
+    const monthSelect = page.locator('select[name="Mes"]');
+    const yearSelect = page.locator('select[name="Any"]');
+    if (await monthSelect.count() > 0 && await yearSelect.count() > 0) {
+      selectorFrame = page;
+    }
+  } catch (error) {
+    console.warn(`La ruta directa de jornales no respondio; se usara el menu. ${error instanceof Error ? error.message : ""}`);
+  }
+
+  if (!selectorFrame) {
+    await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
+    selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
+  }
   const now = new Date();
   const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
   const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
@@ -905,7 +932,6 @@ async function collectJornales(page, previous = null, { currentOnly = false } = 
       ? availableMonths
       : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month));
   const monthsToRead = prioritizePortalMonths(pendingMonths, currentMonth);
-  const selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
   const selectorUrl = selectorFrame.url();
   const periodWarnings = [];
   let freshPeriodCount = 0;
@@ -1953,6 +1979,9 @@ async function openPortalBrowserSession() {
   if (browserChannel && browserChannel !== "bundled") launchOptions.channel = browserChannel;
 
   const context = await chromium.launchPersistentContext(profileDir, launchOptions);
+  if (portalClearanceCookies.length > 0) {
+    await context.addCookies(portalClearanceCookies);
+  }
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
