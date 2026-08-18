@@ -51,6 +51,14 @@ const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim()
 let collectedPayrollDocuments = [];
 let authenticatedForPortalUser = false;
 
+function sanitizePortalError(value) {
+  let message = String(value || "Error desconocido");
+  for (const secret of [portalPassword, portalSecurityKey]) {
+    if (secret) message = message.split(secret).join("[REDACTED]");
+  }
+  return message;
+}
+
 async function openPortalBrowser() {
   if (brightDataBrowserEndpoint) {
     const browser = await chromium.connectOverCDP(brightDataBrowserEndpoint, { timeout: 120000 });
@@ -690,6 +698,17 @@ async function waitForPortalAuthState(page, timeout = 20000) {
   return state;
 }
 
+async function fillPortalPassword(locator) {
+  try {
+    await locator.fill(portalPassword, { timeout: 15000 });
+  } catch (error) {
+    if (!brightDataBrowserEndpoint) throw error;
+    throw new Error(
+      "Bright Data ha bloqueado la escritura de contrasenas. La zona necesita autorizacion KYC y permiso de Compliance para acceder a contenido privado."
+    );
+  }
+}
+
 async function logoutExistingPortalSession(page) {
   for (const root of [page, ...page.frames()]) {
     const logoutButton = root.getByRole("button", { name: /Finalizar sesi/i }).first();
@@ -749,7 +768,7 @@ async function login(page, attempt = 0) {
   const passwordInput = loginFrame.locator('input[title*="Contrase"]:visible, input[type="password"]:visible').first();
   const loginButton = loginFrame.getByRole("button", { name: /Iniciar sesi/i }).first();
   await userInput.fill(portalUser, { timeout: 45000 });
-  await passwordInput.fill(portalPassword, { timeout: 15000 });
+  await fillPortalPassword(passwordInput);
   await loginButton.click({ timeout: 15000 });
   const state = await waitForPortalAuthState(page);
   if (state === "authenticated") {
@@ -2235,7 +2254,7 @@ async function main() {
         partial: true,
         warnings: [
           ...(latestProgressSnapshot.payload.sync?.warnings || []),
-          error instanceof Error ? error.message : "Error desconocido"
+          sanitizePortalError(error instanceof Error ? error.message : "Error desconocido")
         ]
       };
       await upsertSupabase(latestProgressSnapshot).catch(() => {});
@@ -2244,7 +2263,7 @@ async function main() {
       ok: false,
       chapa: portalUser || null,
       updatedAt: new Date().toISOString(),
-      message: error instanceof Error ? error.message : "Error desconocido"
+      message: sanitizePortalError(error instanceof Error ? error.message : "Error desconocido")
     });
     throw error;
   } finally {
@@ -2254,7 +2273,7 @@ async function main() {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.message : "Error desconocido");
+    console.error(sanitizePortalError(error instanceof Error ? error.message : "Error desconocido"));
     process.exit(1);
   });
 }

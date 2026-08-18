@@ -109,21 +109,33 @@ async function runSync(job) {
       }
     });
 
-    const forward = (stream, target) => {
+    const redact = (value) => {
+      let text = String(value || "");
+      for (const secret of [job.portal_password, job.security_key]) {
+        if (secret) text = text.split(secret).join("[REDACTED]");
+      }
+      return text;
+    };
+
+    const forward = (stream, target, deferOutput = false) => {
       stream.on("data", (chunk) => {
         const text = chunk.toString();
         diagnostic = `${diagnostic}${text}`.slice(-4000);
-        target.write(text);
+        if (!deferOutput) target.write(redact(text));
       });
     };
 
     forward(child.stdout, process.stdout);
-    forward(child.stderr, process.stderr);
+    forward(child.stderr, process.stderr, true);
 
     child.on("error", reject);
     child.on("exit", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(diagnostic.trim() || `sync-portal-oficial.js exited with code ${code}`));
+      else {
+        const safeDiagnostic = redact(diagnostic.trim());
+        if (safeDiagnostic) process.stderr.write(`${safeDiagnostic}\n`);
+        reject(new Error(safeDiagnostic || `sync-portal-oficial.js exited with code ${code}`));
+      }
     });
   });
 }
