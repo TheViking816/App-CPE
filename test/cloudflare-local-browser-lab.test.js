@@ -12,6 +12,7 @@ const workerSource = fs.readFileSync(new URL("../scripts/portal-sync-worker.js",
 const batchRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-cloudflare-gateway-batch.ps1", import.meta.url), "utf8");
 const persistentRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-portal-worker.ps1", import.meta.url), "utf8");
 const workerInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-worker.ps1", import.meta.url), "utf8");
+const pendingShortcutSource = fs.readFileSync(new URL("../scripts/windows/install-pending-sync-shortcut.ps1", import.meta.url), "utf8");
 
 test("el lector puede adjuntarse a Chrome sin alterar el modo local existente", () => {
   assert.match(syncSource, /CPE_PORTAL_CDP_ENDPOINT/);
@@ -84,4 +85,15 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.match(gatewaySource, /Start-ScheduledTask -TaskName \$portalWorkerTaskName/);
   assert.match(workerInstallerSource, /RepetitionInterval \(New-TimeSpan -Minutes 5\)/);
   assert.match(workerInstallerSource, /RepetitionDuration \(New-TimeSpan -Days 3650\)/);
+});
+
+test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo pendientes", () => {
+  const claimPosition = workerSource.indexOf("const jobs = await claimNextBatch()");
+  const authorizationPosition = workerSource.indexOf("if (!await gatewayAuthorizationIsValid())", claimPosition);
+  assert.ok(claimPosition >= 0);
+  assert.ok(authorizationPosition > claimPosition);
+  assert.match(pendingShortcutSource, /Actualizar pendientes App CPE\.lnk/);
+  assert.match(pendingShortcutSource, /start-cloudflare-gateway\.ps1/);
+  assert.doesNotMatch(pendingShortcutSource, /queue-all-portal-syncs/);
+  assert.match(workerInstallerSource, /install-pending-sync-shortcut\.ps1/);
 });

@@ -248,20 +248,19 @@ async function requeueRunningJobs(jobs, message) {
 async function workerLoop() {
   while (!stopping) {
     try {
-      if (portalCdpEndpoint) {
-        if (!await gatewayAuthorizationIsValid()) {
-          console.warn("[portal-worker] Chrome necesita completar la verificacion de Cloudflare.");
-          if (workerOnce) return;
-          await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 30000)));
-          continue;
-        }
-      }
       const jobs = await claimNextBatch();
       if (jobs.length) {
         console.log(`[portal-worker] Iniciando tanda de ${jobs.length}`);
         try {
           let clearanceCookies = [];
           if (portalCdpEndpoint) {
+            if (!await gatewayAuthorizationIsValid()) {
+              await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
+              console.warn("[portal-worker] Tanda devuelta a la cola: Chrome necesita completar la verificacion de Cloudflare.");
+              if (workerOnce) return;
+              await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 30000)));
+              continue;
+            }
             clearanceCookies = await gatewayClearanceCookies();
             if (!clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
