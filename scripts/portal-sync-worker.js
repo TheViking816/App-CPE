@@ -20,6 +20,7 @@ const portalPattern = /Iniciar sesi[oó]n|loginFields|title=["']Usuario["']|Fina
 let stopping = false;
 let gatewayBrowser = null;
 let gatewayStartPromise = null;
+let lastGeneralBoardBatchKey = "";
 
 function resolveSupabaseUrl(value) {
   const normalized = String(value || projectRef).replace(/\r|\n/g, "").trim().split(/\s+/)[0];
@@ -42,11 +43,11 @@ async function request(path, options = {}) {
 
 async function claimNextBatch() {
   await failQueuedJobsWithoutCredentials();
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
 
   const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
-  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&id=in.(${ids})&status=eq.queued`, {
+  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,portal_password&id=in.(${ids})&status=eq.queued`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
@@ -57,6 +58,37 @@ async function claimNextBatch() {
     })
   });
   return claimed || [];
+}
+
+function generalBoardBatchKey(job) {
+  const requestedAt = new Date(job?.requested_at || 0);
+  if (!Number.isFinite(requestedAt.getTime())) return "";
+  requestedAt.setSeconds(0, 0);
+  return requestedAt.toISOString();
+}
+
+function runGeneralBoard(job, clearanceCookies = []) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, ["scripts/sync-general-board.js"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        CPE_PORTAL_USER: job.chapa,
+        CPE_PORTAL_PASSWORD: job.portal_password,
+        CPE_GENERAL_BOARD_PROFILE_DIR: profileForSlot("general-board"),
+        CPE_PORTAL_CLEARANCE_COOKIES: JSON.stringify(clearanceCookies)
+      }
+    });
+    child.once("error", (error) => {
+      console.error("[portal-worker:tablon] No se pudo iniciar:", error.message);
+      resolve(false);
+    });
+    child.once("exit", (code) => {
+      console.log(`[portal-worker:tablon] finalizo con codigo ${code}`);
+      resolve(code === 0);
+    });
+  });
 }
 
 async function failQueuedJobsWithoutCredentials() {
@@ -269,7 +301,17 @@ async function workerLoop() {
               continue;
             }
           }
-          await Promise.all(jobs.map((job, index) => runJob(job, index + 1, clearanceCookies)));
+          const boardJob = jobs.find((job) => job.trigger_source === "worker_manual_all");
+          const boardKey = generalBoardBatchKey(boardJob);
+          const boardPromise = boardJob && boardKey && boardKey !== lastGeneralBoardBatchKey
+            ? runGeneralBoard(boardJob, clearanceCookies).then((success) => {
+              if (success) lastGeneralBoardBatchKey = boardKey;
+            })
+            : Promise.resolve();
+          await Promise.all([
+            ...jobs.map((job, index) => runJob(job, index + 1, clearanceCookies)),
+            boardPromise
+          ]);
           console.log(`[portal-worker] Tanda de ${jobs.length} finalizada`);
         } catch (error) {
           await requeueRunningJobs(jobs, "En cola; no se pudo preparar Chrome").catch(() => {});

@@ -10,7 +10,7 @@ test("el worker procesa tandas acotadas de diez por defecto", () => {
   assert.match(source, /\|\| 10/);
   assert.match(source, /Math\.min\(32/);
   assert.match(source, /limit=\$\{batchSize\}/);
-  assert.match(source, /await Promise\.all\(jobs\.map/);
+  assert.match(source, /\.\.\.jobs\.map\(\(job, index\) => runJob/);
   assert.match(source, /Tanda de \$\{jobs\.length\} finalizada/);
 });
 
