@@ -359,7 +359,7 @@ export async function getUsageMonitor({ token }) {
   return data;
 }
 
-export async function requestPortalSync({ token, portalPassword, securityKey = "", fullHistory = false }) {
+export async function requestPortalSync({ token, portalPassword, securityKey = "", fullHistory = false, requestKind = "" }) {
   if (!supabase || !token) return null;
 
   const { data, error } = await supabase.functions.invoke("refresh-portal", {
@@ -367,7 +367,7 @@ export async function requestPortalSync({ token, portalPassword, securityKey = "
       token,
       portalPassword,
       securityKey,
-      requestKind: fullHistory ? "history" : "snapshot",
+      requestKind: requestKind || (fullHistory ? "history" : "snapshot"),
       ref: syncWorkflowRef
     }
   });

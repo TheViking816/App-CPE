@@ -51,7 +51,7 @@ async function updateJob(patch) {
 }
 
 async function closeSnapshotWithError(job, message) {
-  if (!job?.chapa || job.request_kind === "document") return;
+  if (!job?.chapa || ["document", "payrolls"].includes(job.request_kind)) return;
   const rows = await supabaseRequest(
     `/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(job.chapa)}&limit=1`
   );
@@ -102,6 +102,7 @@ async function runSync(job) {
         CPE_PORTAL_PASSWORD: job.portal_password,
         CPE_PORTAL_SECURITY_KEY: job.security_key || "",
         CPE_PORTAL_DOCUMENT_ID: job.document_id || "",
+        CPE_PORTAL_REQUEST_KIND: job.request_kind || "snapshot",
         CPE_PORTAL_FAST_MODE: canUseFastMode ? "true" : "false",
         CPE_PORTAL_REFRESH_HISTORY: job.request_kind === "history" ? "true" : (process.env.CPE_PORTAL_REFRESH_HISTORY || ""),
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",

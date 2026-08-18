@@ -50,6 +50,15 @@ test("solo quedan los ocho horarios solicitados", () => {
   assert.match(scheduleMigration, /interval '4 hours'/);
 });
 
+test("las actualizaciones normales omiten nóminas y existe un trabajo específico", () => {
+  assert.match(refreshSource, /body\.requestKind === "payrolls" \? "payrolls" : "snapshot"/);
+  assert.match(clientSource, /requestKind: requestKind \|\| \(fullHistory \? "history" : "snapshot"\)/);
+  assert.match(appSource, /handlePortalSync\(\{ requestKind: "payrolls" \}\)/);
+  assert.match(appSource, /requestSecurityKey\("payrolls"\)/);
+  assert.match(appSource, /status\.hasSecurityKey/);
+  assert.doesNotMatch(appSource, /Leyendo jornales, mensajes, dobles, nóminas y calendarios/);
+});
+
 test("el circuito de seguridad evita nuevos intentos durante dos horas tras un bloqueo", () => {
   for (const source of [schedulerSource, refreshSource]) {
     assert.match(source, /Date\.now\(\) - 2 \* 60 \* 60 \* 1000/);

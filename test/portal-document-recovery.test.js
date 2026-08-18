@@ -74,10 +74,12 @@ test("conserva el error real después de agotar los reintentos", async () => {
   );
 });
 
-test("precarga las nóminas durante la sincronización ordinaria", () => {
-  assert.match(syncSource, /rows\.map\(\(_, index\) => index\)/);
-  assert.match(syncSource, /collectPayrollDocumentFiles\(page, result\.rows, ""\)/);
-  assert.match(syncSource, /await upsertPayrollDocuments\(\)/);
+test("las nóminas se actualizan aparte y cada PDF se descarga bajo demanda", () => {
+  assert.match(syncSource, /portalRequestKind === "payrolls"/);
+  assert.match(syncSource, /const nominas = existingSnapshot\?\.payload\?\.nominas/);
+  assert.match(syncSource, /if \(portalDocumentId\) \{[\s\S]*collectPayrollDocumentFiles\(page, result\.rows, portalDocumentId\)/);
+  assert.doesNotMatch(syncSource, /collectPayrollDocumentFiles\(page, result\.rows, ""\)/);
+  assert.match(appSource, /Actualizar nóminas/);
 });
 
 test("la espera de una nómina termina en un tiempo acotado", async () => {

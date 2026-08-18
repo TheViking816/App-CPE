@@ -42,6 +42,7 @@ const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join(
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const portalCdpContextSlot = String(process.env.CPE_PORTAL_CDP_CONTEXT_SLOT || "").trim();
+const portalRequestKind = String(process.env.CPE_PORTAL_REQUEST_KIND || "snapshot").trim().toLowerCase();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
 export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
@@ -1460,12 +1461,8 @@ async function completePayrollResult(page, result) {
   if (!result.locked && result.rows?.length) {
     if (portalDocumentId) {
       await collectPayrollDocumentFiles(page, result.rows, portalDocumentId);
-    } else {
-      await collectPayrollDocumentFiles(page, result.rows, "").catch((error) => {
-        console.warn(`No se pudieron precargar todas las nominas. ${error instanceof Error ? error.message : "Error desconocido"}`);
-      });
+      await upsertPayrollDocuments();
     }
-    await upsertPayrollDocuments();
   }
   return result;
 }
@@ -2015,6 +2012,38 @@ async function main() {
     }
     await login(page);
     const existingSnapshot = await getExistingSupabaseSnapshot();
+    if (portalRequestKind === "payrolls") {
+      const nominas = await collectPayrolls(page);
+      const payload = {
+        ...(existingSnapshot?.payload || {}),
+        nominas,
+        sync: {
+          inProgress: false,
+          stage: "Nominas actualizadas",
+          partial: false,
+          freshSections: 1,
+          warnings: []
+        }
+      };
+      const snapshot = {
+        chapa: portalUser,
+        source: PORTAL_URL,
+        updatedAt,
+        payload
+      };
+      await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
+      await upsertSupabase(snapshot);
+      await writeStatus({
+        ok: true,
+        chapa: portalUser,
+        updatedAt,
+        supabaseConfigured: Boolean(supabaseServiceRole),
+        nominas: nominas.rows?.length || 0,
+        payrollsOnly: true
+      });
+      console.log(`OK: nominas actualizadas para ${portalUser}`);
+      return;
+    }
     const sectionWarnings = [];
     let freshSections = 0;
     const readSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
@@ -2162,14 +2191,8 @@ async function main() {
       hasVacationData
     );
     await publishProgress("vacaciones", vacaciones, "Vacaciones cargadas");
-    const nominas = await readOptionalSection(
-      "nomina electronica",
-      () => collectPayrolls(page),
-      existingSnapshot?.payload?.nominas,
-      { recognized: false, locked: !portalSecurityKey, rows: [] },
-      hasVacationData
-    );
-    await publishProgress("nominas", nominas, "Nominas cargadas");
+    const nominas = existingSnapshot?.payload?.nominas
+      || { recognized: false, locked: !portalSecurityKey, rows: [] };
     const dobles = await readOptionalSection(
       "dobles solicitados",
       () => collectRequestedDoubles(page),
@@ -2211,7 +2234,6 @@ async function main() {
 
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
-    await upsertPayrollDocuments();
     await writeStatus({
       ok: true,
       chapa: portalUser,

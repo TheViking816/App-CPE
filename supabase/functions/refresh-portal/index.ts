@@ -78,7 +78,9 @@ Deno.serve(async (request) => {
   const workflowRef = typeof body.ref === "string" && body.ref.trim() ? body.ref.trim() : defaultWorkflowRef;
   const requestKind = body.requestKind === "document"
     ? "document"
-    : body.requestKind === "history" ? "history" : "snapshot";
+    : body.requestKind === "history"
+      ? "history"
+      : body.requestKind === "payrolls" ? "payrolls" : "snapshot";
   const documentId = typeof body.documentId === "string" ? body.documentId.trim() : "";
 
   if (!token) {
@@ -158,13 +160,16 @@ Deno.serve(async (request) => {
     }
   }
 
-  if (requestKind === "history") {
-    const { error: historyError } = await supabase
+  if (["history", "payrolls"].includes(requestKind)) {
+    const { error: kindError } = await supabase
       .from("app_cpe_portal_sync_jobs")
-      .update({ request_kind: "history", message: "Preparando historial anual" })
+      .update({
+        request_kind: requestKind,
+        message: requestKind === "history" ? "Preparando historial anual" : "Preparando nominas"
+      })
       .eq("id", data.jobId);
-    if (historyError) {
-      return jsonResponse({ ok: false, error: historyError.message }, 400);
+    if (kindError) {
+      return jsonResponse({ ok: false, error: kindError.message }, 400);
     }
   }
 
