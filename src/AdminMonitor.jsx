@@ -190,50 +190,6 @@ export default function AdminMonitor({ session }) {
             <Stat icon={Activity} label="Aperturas" value={summary.appOpens} detail={`${summary.logins || 0} inicios de sesión`} tone="amber" />
           </div>
 
-          <article className="monitor-card monitor-sync-card">
-            <div className="monitor-card-heading monitor-sync-heading">
-              <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
-              <ListRestart size={22} />
-            </div>
-            <p className="monitor-sync-help">Selecciona una o varias chapas. Este botón solo las deja en cola; el navegador worker se inicia desde el acceso «Actualizar pendientes App CPE» del escritorio.</p>
-            <div className="monitor-sync-toolbar">
-              <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
-              <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
-                {[["attention", "Necesitan atención"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
-                  <button key={value} type="button" className={portalFilter === value ? "is-active" : ""} onClick={() => setPortalFilter(value)}>{label}</button>
-                ))}
-              </div>
-            </div>
-            {portalError && <p className="monitor-sync-message is-error">{portalError}</p>}
-            {queueMessage && <p className="monitor-sync-message is-success">{queueMessage}</p>}
-            <div className="monitor-table-wrap">
-              <table className="monitor-table monitor-sync-table">
-                <thead><tr><th><button type="button" className="monitor-check-all" onClick={toggleAllFiltered} disabled={!selectableFilteredChapas.length} aria-label="Seleccionar resultados"><CheckSquare2 size={17} />{allFilteredSelected ? "Quitar" : "Todos"}</button></th><th>Chapa</th><th>Cuenta</th><th>Trabajo</th><th>Último intento</th><th>Detalle</th></tr></thead>
-                <tbody>
-                  {filteredPortalUsers.map((user) => {
-                    const selectable = canSelectPortalUser(user);
-                    const state = user.jobStatus || (user.hasCredentials ? "sin trabajo" : "sin claves");
-                    return (
-                      <tr key={user.chapa} className={selectedChapas.has(user.chapa) ? "is-selected" : ""}>
-                        <td><input type="checkbox" checked={selectedChapas.has(user.chapa)} disabled={!selectable} onChange={() => togglePortalUser(user.chapa)} aria-label={`Seleccionar chapa ${user.chapa}`} /></td>
-                        <td><strong>{user.chapa}</strong>{user.email && <small className="monitor-sync-email">{user.email}</small>}</td>
-                        <td><span className={`monitor-job-state is-${user.activationStatus}`}>{user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span></td>
-                        <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
-                        <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
-                        <td className="monitor-sync-detail">{user.jobMessage || (!user.hasCredentials ? "Debe guardar sus claves" : user.hasSecurityKey ? "Claves completas" : "Sin clave de nóminas")}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {!filteredPortalUsers.length && <p className="monitor-empty">No hay usuarios que coincidan con este filtro.</p>}
-            </div>
-            <div className="monitor-sync-actions">
-              <span>{selectedChapas.size ? `${selectedChapas.size} ${selectedChapas.size === 1 ? "usuario seleccionado" : "usuarios seleccionados"}` : "Selecciona las chapas que quieras actualizar"}</span>
-              <button type="button" onClick={queueSelected} disabled={!selectedChapas.size || queueing}><Play size={17} />{queueing ? "Añadiendo…" : "Poner seleccionados en cola"}</button>
-            </div>
-          </article>
-
           <div className="monitor-grid monitor-grid-main">
             <article className="monitor-card monitor-activity-card">
               <div className="monitor-card-heading"><div><small>Ritmo de uso</small><h2>Actividad por hora</h2></div><BarChart3 size={21} /></div>
@@ -293,6 +249,50 @@ export default function AdminMonitor({ session }) {
               {(data?.recent || []).slice(0, 30).map((event) => (
                 <div key={event.id}><span className={event.type === "page_visit" ? "is-page" : ""} /><strong>{event.chapa || "Anónimo"}</strong><p>{event.type === "page_visit" ? `Visita ${PAGE_LABELS[event.page] || event.page}` : (EVENT_LABELS[event.type] || event.type)}</p><time>{formatDateTime(event.at)}</time></div>
               ))}
+            </div>
+          </article>
+
+          <article className="monitor-card monitor-sync-card">
+            <div className="monitor-card-heading monitor-sync-heading">
+              <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
+              <ListRestart size={22} />
+            </div>
+            <p className="monitor-sync-help">Selecciona una o varias chapas. Este botón solo las deja en cola; el navegador worker se inicia desde el acceso «Actualizar pendientes App CPE» del escritorio.</p>
+            <div className="monitor-sync-toolbar">
+              <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
+              <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
+                {[["attention", "Necesitan atención"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
+                  <button key={value} type="button" className={portalFilter === value ? "is-active" : ""} onClick={() => setPortalFilter(value)}>{label}</button>
+                ))}
+              </div>
+            </div>
+            {portalError && <p className="monitor-sync-message is-error">{portalError}</p>}
+            {queueMessage && <p className="monitor-sync-message is-success">{queueMessage}</p>}
+            <div className="monitor-table-wrap">
+              <table className="monitor-table monitor-sync-table">
+                <thead><tr><th><button type="button" className="monitor-check-all" onClick={toggleAllFiltered} disabled={!selectableFilteredChapas.length} aria-label="Seleccionar resultados"><CheckSquare2 size={17} />{allFilteredSelected ? "Quitar" : "Todos"}</button></th><th>Chapa</th><th>Cuenta</th><th>Trabajo</th><th>Último intento</th><th>Detalle</th></tr></thead>
+                <tbody>
+                  {filteredPortalUsers.map((user) => {
+                    const selectable = canSelectPortalUser(user);
+                    const state = user.jobStatus || (user.hasCredentials ? "sin trabajo" : "sin claves");
+                    return (
+                      <tr key={user.chapa} className={selectedChapas.has(user.chapa) ? "is-selected" : ""}>
+                        <td><input type="checkbox" checked={selectedChapas.has(user.chapa)} disabled={!selectable} onChange={() => togglePortalUser(user.chapa)} aria-label={`Seleccionar chapa ${user.chapa}`} /></td>
+                        <td><strong>{user.chapa}</strong>{user.email && <small className="monitor-sync-email">{user.email}</small>}</td>
+                        <td><span className={`monitor-job-state is-${user.activationStatus}`}>{user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span></td>
+                        <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
+                        <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
+                        <td className="monitor-sync-detail">{user.jobMessage || (!user.hasCredentials ? "Debe guardar sus claves" : user.hasSecurityKey ? "Claves completas" : "Sin clave de nóminas")}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {!filteredPortalUsers.length && <p className="monitor-empty">No hay usuarios que coincidan con este filtro.</p>}
+            </div>
+            <div className="monitor-sync-actions">
+              <span>{selectedChapas.size ? `${selectedChapas.size} ${selectedChapas.size === 1 ? "usuario seleccionado" : "usuarios seleccionados"}` : "Selecciona las chapas que quieras actualizar"}</span>
+              <button type="button" onClick={queueSelected} disabled={!selectedChapas.size || queueing}><Play size={17} />{queueing ? "Añadiendo…" : "Poner seleccionados en cola"}</button>
             </div>
           </article>
         </>
