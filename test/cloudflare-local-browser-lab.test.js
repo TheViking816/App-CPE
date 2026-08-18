@@ -55,13 +55,15 @@ test("la regeneración de 72683 restaura y valida las demás filas", () => {
   assert.doesNotMatch(requeueSource, /console\.log\([^\n]*portal_password/);
 });
 
-test("la tanda real crea contextos aislados y termina tras un solo lote", () => {
-  assert.match(workerSource, /createGatewaySlots/);
-  assert.match(workerSource, /CPE_PORTAL_CDP_CONTEXT_SLOT/);
+test("la tanda real usa perfiles aislados y termina tras un solo lote", () => {
+  assert.match(workerSource, /CPE_PORTAL_PROFILE_DIR: profileDir/);
+  assert.match(workerSource, /CPE_PORTAL_CLEARANCE_COOKIES: JSON\.stringify/);
+  assert.match(workerSource, /CPE_PORTAL_CDP_ENDPOINT: ""/);
+  assert.match(syncSource, /context\.addCookies\(portalClearanceCookies\)/);
   assert.match(workerSource, /CPE_PORTAL_WORKER_ONCE/);
   assert.match(workerSource, /failQueuedJobsWithoutCredentials/);
   assert.match(workerSource, /portal_password=not\.is\.null/);
-  assert.match(workerSource, /await Promise\.all\(gatewayContexts\.map/);
+  assert.match(workerSource, /Promise\.all\(jobs\.map/);
   assert.match(batchRunnerSource, /ValidateRange\(1, 10\)/);
   assert.match(batchRunnerSource, /CPE_PORTAL_WORKER_ONCE = "true"/);
 });
