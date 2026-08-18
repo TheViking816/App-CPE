@@ -88,6 +88,11 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.doesNotMatch(workerInstallerSource, /Start-ScheduledTask -TaskName \$taskName/);
 });
 
+test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () => {
+  assert.match(batchRunnerSource, /CPE_PORTAL_BROWSER_CHANNEL = "chrome"/);
+  assert.match(persistentRunnerSource, /CPE_PORTAL_BROWSER_CHANNEL = "chrome"/);
+});
+
 test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo pendientes", () => {
   const claimPosition = workerSource.indexOf("const jobs = await claimNextBatch()");
   const authorizationPosition = workerSource.indexOf("if (!await gatewayAuthorizationIsValid())", claimPosition);

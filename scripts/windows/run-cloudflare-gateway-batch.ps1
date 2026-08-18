@@ -28,6 +28,9 @@ try {
   $env:CPE_SUPABASE_SECRET_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPointer)
   $env:CPE_PORTAL_CDP_ENDPOINT = $endpoint
   $env:CPE_PORTAL_HEADLESS = "false"
+  # Reuse the same installed Chrome fingerprint as the visible gateway.
+  # A cf_clearance cookie copied from Chrome can be rejected by bundled Chromium.
+  $env:CPE_PORTAL_BROWSER_CHANNEL = "chrome"
   $env:CPE_PORTAL_WORKER_BATCH_SIZE = [string]$BatchSize
   if ($Drain) { $env:CPE_PORTAL_WORKER_DRAIN = "true" }
   else { $env:CPE_PORTAL_WORKER_ONCE = "true" }
@@ -38,6 +41,7 @@ try {
   $env:CPE_SUPABASE_SECRET_KEY = $null
   $env:CPE_PORTAL_CDP_ENDPOINT = $null
   $env:CPE_PORTAL_HEADLESS = $null
+  $env:CPE_PORTAL_BROWSER_CHANNEL = $null
   $env:CPE_PORTAL_WORKER_BATCH_SIZE = $null
   $env:CPE_PORTAL_WORKER_ONCE = $null
   $env:CPE_PORTAL_WORKER_DRAIN = $null
