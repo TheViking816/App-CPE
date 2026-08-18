@@ -2711,7 +2711,11 @@ function PortalPanel({
   onCredentialsRequestChange
 }) {
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
-  const initialActiveSync = useMemo(() => readPortalActiveSync(session.chapa), [session.chapa]);
+  const pendingActivation = session.portalActivationStatus === "pending";
+  const initialActiveSync = useMemo(
+    () => pendingActivation ? null : readPortalActiveSync(session.chapa),
+    [pendingActivation, session.chapa]
+  );
   const [loading, setLoading] = useState(!initialSnapshot);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(initialSnapshot);
@@ -2740,6 +2744,13 @@ function PortalPanel({
       setError("");
       setLoading(true);
     }
+    if (pendingActivation) {
+      setSnapshot(null);
+      onSnapshotChange?.(null);
+      if (!autoSyncEnabled) setShowCredentials(true);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
@@ -2758,7 +2769,7 @@ function PortalPanel({
 
   useEffect(() => {
     loadSnapshot({ silent: Boolean(initialSnapshot) });
-  }, [session.token]);
+  }, [pendingActivation, session.token]);
 
   useEffect(() => {
     if (!openCredentialsOnLoad || loading || syncingPortal) return;
@@ -3388,6 +3399,11 @@ export function App() {
       setPortalConnected(null);
       return undefined;
     }
+    if (session.portalActivationStatus === "pending") {
+      setPortalSnapshot(null);
+      setPortalConnected(null);
+      return undefined;
+    }
     let cancelled = false;
     const loadPortalSnapshot = async () => {
       try {
@@ -3401,7 +3417,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [session?.token]);
+  }, [session?.portalActivationStatus, session?.token]);
 
   useEffect(() => {
     if (!session?.token) return undefined;
