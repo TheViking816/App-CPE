@@ -71,6 +71,7 @@ import {
   getUserRelayHours,
   loginUser,
   queuePendingPortalActivation,
+  refreshCurrentUser,
   registerUser,
   sendPendingActivationEmails,
   requestOfficialPortalDocument,
@@ -3216,6 +3217,29 @@ export function App() {
     const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!session?.token || session.portalActivationStatus !== "pending") return undefined;
+    let cancelled = false;
+
+    const refreshActivation = async () => {
+      try {
+        const nextSession = await refreshCurrentUser({ token: session.token });
+        if (cancelled || !nextSession || nextSession.portalActivationStatus !== "active") return;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+        setSession(nextSession);
+      } catch {
+        // La cuenta seguirá pendiente y se volverá a comprobar más adelante.
+      }
+    };
+
+    refreshActivation();
+    const timer = window.setInterval(refreshActivation, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [session?.portalActivationStatus, session?.token]);
 
   useEffect(() => {
     let cancelled = false;

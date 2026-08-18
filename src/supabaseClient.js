@@ -372,6 +372,17 @@ export async function getUsageMonitor({ token }) {
   return data;
 }
 
+export async function refreshCurrentUser({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_get_current_user", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function requestPortalSync({ token, portalPassword, securityKey = "", fullHistory = false, requestKind = "" }) {
   if (!supabase || !token) return null;
 

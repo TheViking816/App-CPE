@@ -8,6 +8,7 @@ const worker = fs.readFileSync(new URL("../scripts/sync-portal-oficial-job.js", 
 const migration = fs.readFileSync(new URL("../supabase/migrations/20260818121038_add_pending_portal_activation_emails.sql", import.meta.url), "utf8");
 const isolationMigration = fs.readFileSync(new URL("../supabase/migrations/20260818130429_isolate_new_registration_portal_state.sql", import.meta.url), "utf8");
 const pendingQueueMigration = fs.readFileSync(new URL("../supabase/migrations/20260818132500_queue_pending_portal_activations.sql", import.meta.url), "utf8");
+const currentUserMigration = fs.readFileSync(new URL("../supabase/migrations/20260818133000_refresh_current_app_cpe_user.sql", import.meta.url), "utf8");
 
 test("el registro pide correo y la primera conexión queda pendiente sin lanzar una lectura", () => {
   assert.match(app, /type="email"/);
@@ -20,6 +21,9 @@ test("el registro pide correo y la primera conexión queda pendiente sin lanzar 
   assert.match(app, /queuePendingPortalActivation\(\{ token: session\.token \}\)/);
   assert.match(pendingQueueMigration, /'activation_pending'/);
   assert.match(pendingQueueMigration, /portal_activation_status = 'pending'/);
+  assert.match(app, /refreshCurrentUser\(\{ token: session\.token \}\)/);
+  assert.match(app, /window\.setInterval\(refreshActivation, 15_000\)/);
+  assert.match(currentUserMigration, /app_cpe_get_current_user/);
   assert.match(app, /pendingActivation \? null : readPortalActiveSync/);
   assert.match(isolationMigration, /app_cpe_purge_stale_portal_state/);
   assert.match(isolationMigration, /delete from public\.app_cpe_portal_sync_jobs/);
