@@ -45,7 +45,7 @@ do {
   try {
     $version = Invoke-RestMethod -Uri $versionUrl -TimeoutSec 2
     if ($version.webSocketDebuggerUrl) {
-      Write-Host "Gateway Chrome preparado. Deja esta ventana abierta."
+      Write-Host "Gateway Chrome preparado. Deja abierta la ventana de Chrome; esta consola ya puede cerrarse."
       exit 0
     }
   } catch {}
