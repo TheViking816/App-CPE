@@ -3,7 +3,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$taskName = "App CPE Portal Worker"
 $secretPath = Join-Path $env:LOCALAPPDATA "AppCPE\portal-worker\supabase-secret.dpapi"
 
 if (-not (Test-Path -LiteralPath $secretPath)) {
@@ -21,12 +20,10 @@ try {
   & node "scripts/queue-all-portal-syncs.js"
   if ($LASTEXITCODE -ne 0) { throw "No se pudieron crear los trabajos." }
 
-  $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
-  if ($task.State -ne "Running") {
-    Start-ScheduledTask -TaskName $taskName
-    Write-Host "Worker iniciado."
-  }
-  Write-Host "La cola se procesara en tandas de hasta 10."
+  $batchScript = Join-Path $RepositoryPath "scripts\windows\run-cloudflare-gateway-batch.ps1"
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $batchScript -RepositoryPath $RepositoryPath -BatchSize 10 -Drain
+  if ($LASTEXITCODE -ne 0) { throw "No se pudo procesar la cola." }
+  Write-Host "Actualizacion finalizada en tandas de hasta 10."
 }
 finally {
   $env:CPE_SUPABASE_SECRET_KEY = $null

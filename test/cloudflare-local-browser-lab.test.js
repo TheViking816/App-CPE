@@ -83,10 +83,9 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.match(workerSource, /startGatewayBrowser/);
   assert.match(workerSource, /El Chrome gateway se cerro; se abrira de nuevo automaticamente/);
   assert.match(workerSource, /start-cloudflare-gateway\.ps1/);
-  assert.match(gatewaySource, /Start-PortalWorkerIfAvailable/);
-  assert.match(gatewaySource, /Start-ScheduledTask -TaskName \$portalWorkerTaskName/);
-  assert.match(workerInstallerSource, /RepetitionInterval \(New-TimeSpan -Minutes 5\)/);
-  assert.match(workerInstallerSource, /RepetitionDuration \(New-TimeSpan -Days 3650\)/);
+  assert.doesNotMatch(gatewaySource, /Start-PortalWorkerIfAvailable|Start-ScheduledTask/);
+  assert.match(workerInstallerSource, /Disable-ScheduledTask -TaskName \$taskName/);
+  assert.doesNotMatch(workerInstallerSource, /Start-ScheduledTask -TaskName \$taskName/);
 });
 
 test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo pendientes", () => {
@@ -95,7 +94,8 @@ test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo
   assert.ok(claimPosition >= 0);
   assert.ok(authorizationPosition > claimPosition);
   assert.match(pendingShortcutSource, /Actualizar pendientes App CPE\.lnk/);
-  assert.match(pendingShortcutSource, /start-cloudflare-gateway\.ps1/);
+  assert.match(pendingShortcutSource, /run-cloudflare-gateway-batch\.ps1/);
+  assert.match(pendingShortcutSource, /-Drain/);
   assert.doesNotMatch(pendingShortcutSource, /queue-all-portal-syncs/);
   assert.match(workerInstallerSource, /install-pending-sync-shortcut\.ps1/);
 });
