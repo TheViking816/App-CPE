@@ -80,6 +80,9 @@ if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar los horarios del porta
 $operationalScheduleInstaller = Join-Path $RepositoryPath "scripts\windows\install-operational-sync-schedule.ps1"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $operationalScheduleInstaller -RepositoryPath $RepositoryPath
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar los horarios de Chapero y Puertas." }
+$pendingShortcutInstaller = Join-Path $RepositoryPath "scripts\windows\install-pending-sync-shortcut.ps1"
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $pendingShortcutInstaller -RepositoryPath $RepositoryPath
+if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el acceso para actualizar pendientes." }
 
 if (-not $DoNotStart) {
   Start-ScheduledTask -TaskName $taskName
