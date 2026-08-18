@@ -13,7 +13,7 @@ $workerStateDir = Join-Path $env:LOCALAPPDATA "AppCPE\portal-worker"
 $secretPath = Join-Path $workerStateDir "supabase-secret.dpapi"
 $runnerPath = Join-Path $RepositoryPath "scripts\windows\run-portal-worker.ps1"
 if ([string]::IsNullOrWhiteSpace($ProfileRoot)) {
-  $ProfileRoot = Join-Path $RepositoryPath "data\portal-oficial-chrome-profile\workers"
+  $ProfileRoot = Join-Path $RepositoryPath "data\portal-oficial-chrome-profile"
 }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {

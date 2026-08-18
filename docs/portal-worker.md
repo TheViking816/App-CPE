@@ -11,7 +11,7 @@ Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume l
 - `CPE_PORTAL_BROWSER_CHANNEL=bundled`
 - `CPE_PORTAL_WORKER_POLL_MS=2500` (opcional)
 - `CPE_PORTAL_WORKER_BATCH_SIZE=10`
-- `CPE_PORTAL_WORKER_PROFILE_ROOT` (un perfil de Chrome aislado por posición de la tanda)
+- `CPE_PORTAL_WORKER_PROFILE_ROOT` (directorio raíz; se mantiene un perfil de Chrome persistente por chapa)
 
 ## Despliegue
 
@@ -26,13 +26,12 @@ El primer refresco que construye el resumen anual recorre los meses transcurrido
 
 ## Instalacion en Windows
 
-El worker local usa Chrome desde la conexion del ordenador y procesa hasta 10 chapas simultáneamente. Cada posición de la tanda mantiene un perfil de navegador independiente. Si hay 18 trabajos, ejecuta primero 10 y después los 8 restantes.
+El worker local usa Chrome desde la conexion del ordenador y procesa hasta 10 chapas simultáneamente. Cada chapa mantiene su propio perfil persistente de navegador, incluida su sesión de Cloudflare. Si hay 18 trabajos, ejecuta primero 10 y después los 8 restantes.
 
 1. Crear en Supabase una clave secreta dedicada para este worker.
-2. Con Chrome cerrado, ejecutar `scripts/windows/seed-portal-worker-profiles.ps1 -BatchSize 10` una sola vez.
-3. Ejecutar `scripts/windows/install-portal-worker.ps1 -BatchSize 10`. La clave se cifra con DPAPI para el usuario actual de Windows; no se guarda en el repositorio ni en texto plano.
-4. Aplicar la migración `20260817182201_set_requested_portal_sync_schedule.sql` y desplegar las Edge Functions.
-5. Cambiar `CPE_PORTAL_EXECUTION_MODE` a `persistent` solamente cuando la tarea local esté en ejecución.
+2. Ejecutar `scripts/windows/install-portal-worker.ps1 -BatchSize 10`. La clave se cifra con DPAPI para el usuario actual de Windows; no se guarda en el repositorio ni en texto plano. Los perfiles se crean automáticamente por chapa cuando se necesitan.
+3. Aplicar la migración `20260817182201_set_requested_portal_sync_schedule.sql` y desplegar las Edge Functions.
+4. Cambiar `CPE_PORTAL_EXECUTION_MODE` a `persistent` solamente cuando la tarea local esté en ejecución.
 
 La tarea `App CPE Portal Worker` se inicia al entrar en Windows y se reinicia si falla. Si el PC está apagado o suspendido no hay lecturas; cuando vuelva a encenderse consumirá automáticamente los trabajos que ya estén en cola, aunque hubiera vencido su plazo anterior. No hace falta abrir ningún enlace. Los logs quedan en `%LOCALAPPDATA%\AppCPE\portal-worker\logs`.
 
