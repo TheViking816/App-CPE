@@ -15,6 +15,8 @@ const batchSize = Math.max(1, Math.min(32, Number(
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
+const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser humano|challenge-platform|cf-chl-|Just a moment/i;
+const portalPattern = /Iniciar sesi[oó]n|loginFields|title=["']Usuario["']|Finalizar sesi[oó]n/i;
 let stopping = false;
 let gatewayBrowser = null;
 
@@ -101,6 +103,39 @@ async function gatewayClearanceCookies() {
       secure: cookie.secure,
       sameSite: cookie.sameSite
     }));
+}
+
+async function gatewayAuthorizationIsValid() {
+  const browser = await ensureGatewayBrowser();
+  const cookies = await gatewayClearanceCookies();
+  if (!browser || !cookies.some((cookie) => cookie.name === "cf_clearance")) return false;
+
+  const context = await browser.newContext({
+    locale: "es-ES",
+    timezoneId: "Europe/Madrid",
+    viewport: { width: 1365, height: 900 }
+  });
+  try {
+    await context.addCookies(cookies);
+    const page = await context.newPage();
+    const response = await page.goto("https://portal.cpevalencia.com/#User", {
+      waitUntil: "domcontentloaded",
+      timeout: 45000
+    });
+    const deadline = Date.now() + 15000;
+    do {
+      const contents = await Promise.all(page.frames().map((frame) => frame.content().catch(() => "")));
+      const content = contents.join("\n");
+      if (challengePattern.test(content) || (response?.status() || 0) === 403) return false;
+      if (portalPattern.test(content)) return true;
+      await page.waitForTimeout(500);
+    } while (Date.now() < deadline);
+    return false;
+  } catch {
+    return false;
+  } finally {
+    await context.close().catch(() => {});
+  }
 }
 
 async function createGatewaySlots(count) {
@@ -192,11 +227,10 @@ async function workerLoop() {
   while (!stopping) {
     try {
       if (portalCdpEndpoint) {
-        const cookies = await gatewayClearanceCookies();
-        if (!cookies.some((cookie) => cookie.name === "cf_clearance")) {
+        if (!await gatewayAuthorizationIsValid()) {
           console.warn("[portal-worker] Chrome necesita completar la verificacion de Cloudflare.");
           if (workerOnce) return;
-          await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
+          await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 30000)));
           continue;
         }
       }

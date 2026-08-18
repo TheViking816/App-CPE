@@ -60,13 +60,15 @@ if (!clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
         location: page.url().split("?")[0]
       };
     }));
+    const ok = results.every((result) => result.portal && !result.challenge);
     console.log(JSON.stringify({
-      ok: results.every((result) => result.portal && !result.challenge),
+      ok,
       contexts: contextCount,
       passed: results.filter((result) => result.portal && !result.challenge).length,
       challenged: results.filter((result) => result.challenge).length,
       results
     }));
+    if (!ok) process.exitCode = 3;
   } finally {
     await Promise.all(contexts.map((context) => context.close().catch(() => {})));
   }

@@ -70,4 +70,8 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.match(persistentRunnerSource, /start-cloudflare-gateway\.ps1/);
   assert.match(persistentRunnerSource, /CPE_PORTAL_CDP_ENDPOINT = "http:\/\/127\.0\.0\.1:\$GatewayPort"/);
   assert.match(persistentRunnerSource, /ValidateRange\(1024, 65535\)/);
+  assert.match(workerSource, /gatewayAuthorizationIsValid/);
+  assert.match(workerSource, /\(response\?\.status\(\) \|\| 0\) === 403/);
+  assert.match(workerSource, /Math\.max\(pollMs, 30000\)/);
+  assert.match(poolSource, /if \(!ok\) process\.exitCode = 3/);
 });
