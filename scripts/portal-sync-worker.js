@@ -19,6 +19,7 @@ const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser 
 const portalPattern = /Iniciar sesi[oó]n|loginFields|title=["']Usuario["']|Finalizar sesi[oó]n/i;
 let stopping = false;
 let gatewayBrowser = null;
+let gatewayStartPromise = null;
 
 function resolveSupabaseUrl(value) {
   const normalized = String(value || projectRef).replace(/\r|\n/g, "").trim().split(/\s+/)[0];
@@ -77,9 +78,50 @@ function profileForSlot(slot) {
   );
 }
 
+function gatewayPort() {
+  try {
+    return Number(new URL(portalCdpEndpoint).port || 9223);
+  } catch {
+    return 9223;
+  }
+}
+
+function startGatewayBrowser() {
+  if (gatewayStartPromise) return gatewayStartPromise;
+  gatewayStartPromise = new Promise((resolve, reject) => {
+    const script = path.resolve("scripts", "windows", "start-cloudflare-gateway.ps1");
+    const child = spawn("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy", "Bypass",
+      "-WindowStyle", "Hidden",
+      "-File", script,
+      "-Port", String(gatewayPort())
+    ], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      windowsHide: true
+    });
+    child.once("error", reject);
+    child.once("exit", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`No se pudo reabrir Chrome gateway (codigo ${code}).`));
+    });
+  }).finally(() => {
+    gatewayStartPromise = null;
+  });
+  return gatewayStartPromise;
+}
+
 async function ensureGatewayBrowser() {
   if (!portalCdpEndpoint) return null;
-  if (!gatewayBrowser?.isConnected()) {
+  if (gatewayBrowser?.isConnected()) return gatewayBrowser;
+
+  gatewayBrowser = null;
+  try {
+    gatewayBrowser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 5000 });
+  } catch (firstError) {
+    console.warn("[portal-worker] El Chrome gateway se cerro; se abrira de nuevo automaticamente.");
+    await startGatewayBrowser();
     gatewayBrowser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
   }
   return gatewayBrowser;

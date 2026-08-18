@@ -76,4 +76,7 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.match(workerSource, /\(response\?\.status\(\) \|\| 0\) === 403/);
   assert.match(workerSource, /Math\.max\(pollMs, 30000\)/);
   assert.match(poolSource, /if \(!ok\) process\.exitCode = 3/);
+  assert.match(workerSource, /startGatewayBrowser/);
+  assert.match(workerSource, /El Chrome gateway se cerro; se abrira de nuevo automaticamente/);
+  assert.match(workerSource, /start-cloudflare-gateway\.ps1/);
 });
