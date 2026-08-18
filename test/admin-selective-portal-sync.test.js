@@ -21,14 +21,24 @@ test("admin selective sync queues only the selected chapas and preserves active 
 });
 
 test("legacy users without portal data re-enter onboarding and null payload opens credentials", async () => {
-  const [sql, app] = await Promise.all([
+  const [sql, repairSql, app] = await Promise.all([
     read("../supabase/migrations/20260818133401_admin_selective_portal_sync.sql"),
+    read("../supabase/migrations/20260818134813_repair_vault_links_and_legacy_activation.sql"),
     read("../src/App.jsx")
   ]);
   assert.match(sql, /created_at < timestamptz '2026-08-18 12:10:38\+00'/);
   assert.match(sql, /app_cpe_update_activation_email/);
+  assert.match(repairSql, /portal_activation_status = 'active'/);
+  assert.match(repairSql, /portal_activation_status = 'pending'/);
   assert.match(app, /setShowCredentials\(!data\?\.payload\)/);
   assert.match(app, /updateActivationEmail/);
+});
+
+test("orphaned Vault credentials are reconnected and unrelated legacy accounts stay out of Monitor", async () => {
+  const sql = await read("../supabase/migrations/20260818134813_repair_vault_links_and_legacy_activation.sql");
+  assert.match(sql, /app_cpe_portal_password_\[0-9\]\{5\}/);
+  assert.match(sql, /insert into public\.app_cpe_portal_auto_sync/);
+  assert.match(sql, /config\.chapa is not null or users\.portal_activation_status = 'pending'/);
 });
 
 test("Monitor exposes individual and multi-user queue controls", async () => {
@@ -37,4 +47,5 @@ test("Monitor exposes individual and multi-user queue controls", async () => {
   assert.match(monitor, /Poner seleccionados en cola/);
   assert.match(monitor, /Actualizar pendientes App CPE/);
   assert.match(monitor, /Seleccionar chapa/);
+  assert.ok(monitor.indexOf("monitor-recent-card") < monitor.indexOf("monitor-sync-card"));
 });

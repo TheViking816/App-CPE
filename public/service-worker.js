@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260818-admin-selective-sync-1";
+self.__APP_CPE_SW_VERSION__ = "20260818-admin-selective-sync-2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
