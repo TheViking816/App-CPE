@@ -10,6 +10,7 @@ const diagnosticSource = fs.readFileSync(new URL("../scripts/cloudflare-tls-diag
 const requeueSource = fs.readFileSync(new URL("../scripts/requeue-cloudflare-lab-job.js", import.meta.url), "utf8");
 const workerSource = fs.readFileSync(new URL("../scripts/portal-sync-worker.js", import.meta.url), "utf8");
 const batchRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-cloudflare-gateway-batch.ps1", import.meta.url), "utf8");
+const persistentRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-portal-worker.ps1", import.meta.url), "utf8");
 
 test("el lector puede adjuntarse a Chrome sin alterar el modo local existente", () => {
   assert.match(syncSource, /CPE_PORTAL_CDP_ENDPOINT/);
@@ -63,4 +64,10 @@ test("la tanda real crea contextos aislados y termina tras un solo lote", () => 
   assert.match(workerSource, /await Promise\.all\(gatewayContexts\.map/);
   assert.match(batchRunnerSource, /ValidateRange\(1, 10\)/);
   assert.match(batchRunnerSource, /CPE_PORTAL_WORKER_ONCE = "true"/);
+});
+
+test("el worker permanente arranca y utiliza el Chrome gateway", () => {
+  assert.match(persistentRunnerSource, /start-cloudflare-gateway\.ps1/);
+  assert.match(persistentRunnerSource, /CPE_PORTAL_CDP_ENDPOINT = "http:\/\/127\.0\.0\.1:\$GatewayPort"/);
+  assert.match(persistentRunnerSource, /ValidateRange\(1024, 65535\)/);
 });
