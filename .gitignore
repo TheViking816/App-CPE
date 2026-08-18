@@ -7,3 +7,4 @@ video-review/
 
 .vercel
 .env*.local
+.venv-cloudflare-lab/

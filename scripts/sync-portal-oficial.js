@@ -40,6 +40,8 @@ const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join("data", "portal-oficial-chrome-profile", "shared"));
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
+const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
+const portalCdpContextSlot = String(process.env.CPE_PORTAL_CDP_CONTEXT_SLOT || "").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
 export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
@@ -49,6 +51,14 @@ export const PORTAL_ENTRY_TIMEOUT_MS = 90000;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 let authenticatedForPortalUser = false;
+
+function sanitizePortalError(value) {
+  let message = String(value || "Error desconocido");
+  for (const secret of [portalPassword, portalSecurityKey]) {
+    if (secret) message = message.split(secret).join("[REDACTED]");
+  }
+  return message;
+}
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -1921,9 +1931,20 @@ async function getExistingSupabaseSnapshot() {
   }
 }
 
-async function main() {
-  await fs.mkdir(privateDataDir, { recursive: true });
-  await fs.mkdir(profileDir, { recursive: true });
+async function openPortalBrowserSession() {
+  if (portalCdpEndpoint) {
+    const browser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
+    const markerUrl = portalCdpContextSlot ? `about:blank#app-cpe-slot-${portalCdpContextSlot}` : "";
+    const context = markerUrl
+      ? browser.contexts().find((candidate) => candidate.pages().some((page) => page.url() === markerUrl))
+      : browser.contexts()[0];
+    if (!context) throw new Error("Chrome no expone un contexto reutilizable.");
+    return {
+      context,
+      attached: true,
+      close: async () => {}
+    };
+  }
 
   const launchOptions = {
     headless,
@@ -1932,15 +1953,27 @@ async function main() {
     timezoneId: "Europe/Madrid",
     args: ["--disable-blink-features=AutomationControlled"]
   };
-  if (browserChannel && browserChannel !== "bundled") {
-    launchOptions.channel = browserChannel;
-  }
+  if (browserChannel && browserChannel !== "bundled") launchOptions.channel = browserChannel;
 
   const context = await chromium.launchPersistentContext(profileDir, launchOptions);
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
-  const page = context.pages()[0] || await context.newPage();
+  return {
+    context,
+    attached: false,
+    close: () => context.close()
+  };
+}
+
+async function main() {
+  await fs.mkdir(privateDataDir, { recursive: true });
+  await fs.mkdir(profileDir, { recursive: true });
+  const browserSession = await openPortalBrowserSession();
+  const { context } = browserSession;
+  const page = context.pages().find((candidate) => candidate.url().startsWith("https://portal.cpevalencia.com"))
+    || context.pages()[0]
+    || await context.newPage();
   let latestProgressSnapshot = null;
 
   try {
@@ -2207,7 +2240,7 @@ async function main() {
         partial: true,
         warnings: [
           ...(latestProgressSnapshot.payload.sync?.warnings || []),
-          error instanceof Error ? error.message : "Error desconocido"
+          sanitizePortalError(error instanceof Error ? error.message : "Error desconocido")
         ]
       };
       await upsertSupabase(latestProgressSnapshot).catch(() => {});
@@ -2216,17 +2249,19 @@ async function main() {
       ok: false,
       chapa: portalUser || null,
       updatedAt: new Date().toISOString(),
-      message: error instanceof Error ? error.message : "Error desconocido"
+      message: sanitizePortalError(error instanceof Error ? error.message : "Error desconocido")
     });
     throw error;
   } finally {
-    await context.close();
+    await browserSession.close();
   }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : "Error desconocido");
-    process.exit(1);
-  });
+  main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(sanitizePortalError(error instanceof Error ? error.message : "Error desconocido"));
+      process.exit(1);
+    });
 }

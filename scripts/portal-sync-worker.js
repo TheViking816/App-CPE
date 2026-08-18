@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const projectRef = "wvwdiywtlbffumshbboa";
@@ -12,7 +13,10 @@ const batchSize = Math.max(1, Math.min(32, Number(
   || 10
 )));
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
+const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
+const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
 let stopping = false;
+let gatewayBrowser = null;
 
 function resolveSupabaseUrl(value) {
   const normalized = String(value || projectRef).replace(/\r|\n/g, "").trim().split(/\s+/)[0];
@@ -34,7 +38,8 @@ async function request(path, options = {}) {
 }
 
 async function claimNextBatch() {
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.queued&order=requested_at.asc&limit=${batchSize}`);
+  await failQueuedJobsWithoutCredentials();
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
 
   const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
@@ -51,11 +56,76 @@ async function claimNextBatch() {
   return claimed || [];
 }
 
+async function failQueuedJobsWithoutCredentials() {
+  await request("/rest/v1/app_cpe_portal_sync_jobs?status=eq.queued&portal_password=is.null", {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: "failed",
+      message: "No hay claves disponibles para ejecutar esta lectura",
+      security_key: null,
+      finished_at: new Date().toISOString()
+    })
+  });
+}
+
 function profileForSlot(slot) {
   return path.resolve(
     parallelProfileRoot || path.join("data", "portal-oficial-chrome-profile", "workers"),
     `worker-${slot}`
   );
+}
+
+async function ensureGatewayBrowser() {
+  if (!portalCdpEndpoint) return null;
+  if (!gatewayBrowser?.isConnected()) {
+    gatewayBrowser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
+  }
+  return gatewayBrowser;
+}
+
+async function gatewayClearanceCookies() {
+  const browser = await ensureGatewayBrowser();
+  if (!browser) return [];
+  const context = browser.contexts()[0];
+  if (!context) return [];
+  const cookies = await context.cookies("https://portal.cpevalencia.com");
+  return cookies
+    .filter((cookie) => cookie.name === "cf_clearance" || cookie.name.startsWith("cf_chl_"))
+    .map((cookie) => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path,
+      expires: cookie.expires,
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+      sameSite: cookie.sameSite
+    }));
+}
+
+async function createGatewaySlots(count) {
+  const browser = await ensureGatewayBrowser();
+  const cookies = await gatewayClearanceCookies();
+  if (!browser || !cookies.some((cookie) => cookie.name === "cf_clearance")) return null;
+
+  const contexts = [];
+  try {
+    for (let slot = 1; slot <= count; slot += 1) {
+      const context = await browser.newContext({
+        locale: "es-ES",
+        timezoneId: "Europe/Madrid",
+        viewport: { width: 1365, height: 900 }
+      });
+      await context.addCookies(cookies);
+      const markerPage = await context.newPage();
+      await markerPage.goto(`about:blank#app-cpe-slot-${slot}`);
+      contexts.push(context);
+    }
+    return contexts;
+  } catch (error) {
+    await Promise.all(contexts.map((context) => context.close().catch(() => {})));
+    throw error;
+  }
 }
 
 function runJob(job, slot) {
@@ -67,7 +137,9 @@ function runJob(job, slot) {
       env: {
         ...process.env,
         CPE_PORTAL_SYNC_JOB_ID: job.id,
-        ...(profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {})
+        ...(portalCdpEndpoint
+          ? { CPE_PORTAL_CDP_CONTEXT_SLOT: String(slot) }
+          : (profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {}))
       }
     });
     child.on("error", async (error) => {
@@ -102,15 +174,58 @@ async function failRunningJob(jobId, message) {
   });
 }
 
+async function requeueRunningJobs(jobs, message) {
+  if (!jobs.length) return;
+  const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
+  await request(`/rest/v1/app_cpe_portal_sync_jobs?id=in.(${ids})&status=eq.running`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: "queued",
+      message,
+      started_at: null,
+      finished_at: null
+    })
+  });
+}
+
 async function workerLoop() {
   while (!stopping) {
     try {
+      if (portalCdpEndpoint) {
+        const cookies = await gatewayClearanceCookies();
+        if (!cookies.some((cookie) => cookie.name === "cf_clearance")) {
+          console.warn("[portal-worker] Chrome necesita completar la verificacion de Cloudflare.");
+          if (workerOnce) return;
+          await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
+          continue;
+        }
+      }
       const jobs = await claimNextBatch();
       if (jobs.length) {
         console.log(`[portal-worker] Iniciando tanda de ${jobs.length}`);
-        await Promise.all(jobs.map((job, index) => runJob(job, index + 1)));
-        console.log(`[portal-worker] Tanda de ${jobs.length} finalizada`);
+        let gatewayContexts = [];
+        try {
+          if (portalCdpEndpoint) {
+            const preparedContexts = await createGatewaySlots(jobs.length);
+            if (!preparedContexts) {
+              await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
+              console.warn("[portal-worker] Tanda devuelta a la cola: falta autorizacion de Cloudflare.");
+              if (workerOnce) return;
+              continue;
+            }
+            gatewayContexts = preparedContexts;
+          }
+          await Promise.all(jobs.map((job, index) => runJob(job, index + 1)));
+          console.log(`[portal-worker] Tanda de ${jobs.length} finalizada`);
+        } catch (error) {
+          await requeueRunningJobs(jobs, "En cola; no se pudo preparar Chrome").catch(() => {});
+          throw error;
+        } finally {
+          await Promise.all(gatewayContexts.map((context) => context.close().catch(() => {})));
+        }
+        if (workerOnce) return;
       } else {
+        if (workerOnce) return;
         await new Promise((resolve) => setTimeout(resolve, pollMs));
       }
     } catch (error) {
@@ -128,7 +243,9 @@ async function main() {
 
 process.on("SIGTERM", () => { stopping = true; });
 process.on("SIGINT", () => { stopping = true; });
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
