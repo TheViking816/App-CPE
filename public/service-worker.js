@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260818-pending-activation-1";
+self.__APP_CPE_SW_VERSION__ = "20260818-activation-ui-2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

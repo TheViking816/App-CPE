@@ -73,7 +73,6 @@ import {
   registerUser,
   sendPendingActivationEmails,
   requestOfficialPortalDocument,
-  requestPortalSync,
   setPortalAutoSync,
   setPortalSecurityKey,
   setUserRelayHour,
@@ -2120,7 +2119,7 @@ function PortalFeatureTemplate({ view = "all" }) {
   );
 }
 
-function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onLoadHistory, onRequestSecurityKey, loadingHistory = false, hideSyncFailure = false }) {
+function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onRequestSecurityKey, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
@@ -2258,10 +2257,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const selectedAnnualMonth = useMemo(() => annualPayroll.months.find((month) => (
     `${month.year}-${month.month}` === selectedAnnualMonthKey
   )) || null, [annualPayroll.months, selectedAnnualMonthKey]);
-  const currentHistoryMonth = new Date().getMonth() + 1;
-  const hasFullCurrentYear = annualPayroll.months.filter((month) => (
-    Number(month.year) === new Date().getFullYear()
-  )).length >= currentHistoryMonth;
   const selectedJornales = useMemo(
     () => filterJornalesByPeriod(enrichedJornales, selectedPeriod),
     [enrichedJornales, selectedPeriod]
@@ -2330,7 +2325,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           <CircleAlert size={20} />
           <div>
             <strong>{payload.sync.stage || "No se pudo conectar con el portal"}</strong>
-            <span>{payload.sync.error || "La lectura no se ha completado. Puedes volver a intentarla desde Actualizar portal."}</span>
+            <span>{payload.sync.error || "La lectura no se ha completado. Los datos se actualizarán en la próxima sincronización."}</span>
           </div>
         </section>
       )}
@@ -2483,17 +2478,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                 </div>
               )}
             </section>
-          )}
-          {!hasFullCurrentYear && (
-            <button
-              className="portal-history-action"
-              type="button"
-              disabled={loadingHistory}
-              onClick={onLoadHistory}
-            >
-              <CalendarRange size={17} />
-              {loadingHistory ? "Cargando historial..." : "Cargar todo el año"}
-            </button>
           )}
           <section className="portal-irpf-card" aria-label="Calculo estimado de IRPF">
             <strong>Ajuste de IRPF</strong>
@@ -2716,21 +2700,19 @@ function PortalPanel({
     () => pendingActivation ? null : readPortalActiveSync(session.chapa),
     [pendingActivation, session.chapa]
   );
-  const [loading, setLoading] = useState(!initialSnapshot);
+  const [loading, setLoading] = useState(!initialSnapshot && !pendingActivation);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [portalPassword, setPortalPassword] = useState(initialCredentials?.portalPassword || "");
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
-  const [hasSavedSecurityKey, setHasSavedSecurityKey] = useState(Boolean(initialCredentials?.securityKey));
-  const [autoSyncLoading, setAutoSyncLoading] = useState(true);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
   const [portalMessage, setPortalMessage] = useState(initialActiveSync ? "Recuperando la sincronizacion en curso..." : "");
-  const [showCredentials, setShowCredentials] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(Boolean(openCredentialsOnLoad));
+  const [savingCredentials, setSavingCredentials] = useState(false);
   const [securityKeyOnly, setSecurityKeyOnly] = useState(false);
-  const [pendingRequestKind, setPendingRequestKind] = useState("");
   const [syncProgress, setSyncProgress] = useState(initialActiveSync ? 3 : 0);
   const [syncElapsed, setSyncElapsed] = useState(initialActiveSync ? Math.floor((Date.now() - initialActiveSync.startedAt) / 1000) : 0);
   const syncStartedAtRef = useRef(initialActiveSync?.startedAt || 0);
@@ -2789,7 +2771,6 @@ function PortalPanel({
         if (cancelled) return;
         if (status?.enabled) {
           setAutoSyncEnabled(true);
-          setHasSavedSecurityKey(Boolean(status.hasSecurityKey));
           if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(false);
           onConnectionChange?.(true);
           return;
@@ -2804,21 +2785,16 @@ function PortalPanel({
           });
           if (!cancelled) {
             setAutoSyncEnabled(true);
-            setHasSavedSecurityKey(Boolean(initialCredentials.securityKey));
             onConnectionChange?.(true);
           }
           return;
         }
 
         setAutoSyncEnabled(false);
-        setHasSavedSecurityKey(false);
         onConnectionChange?.(false);
       })
       .catch((statusError) => {
         if (!cancelled) console.warn("No se pudo leer la sincronizacion automatica:", statusError.message);
-      })
-      .finally(() => {
-        if (!cancelled) setAutoSyncLoading(false);
       });
     return () => { cancelled = true; };
   }, [initialCredentials, onConnectionChange, session.token]);
@@ -2893,8 +2869,7 @@ function PortalPanel({
     };
   }, [portalJob?.jobId, portalJob?.status, session.token]);
 
-  const handlePortalSync = async ({ fullHistory = false, requestKind = "" } = {}) => {
-    const resolvedRequestKind = requestKind || pendingRequestKind || (fullHistory ? "history" : "snapshot");
+  const saveCredentials = async () => {
     const passwordToUse = portalPassword.trim() || savedCredentials?.portalPassword || "";
     const securityKeyToUse = securityKey.trim() || savedCredentials?.securityKey || "";
     if (!passwordToUse && !autoSyncEnabled) {
@@ -2907,19 +2882,12 @@ function PortalPanel({
     }
 
     setError("");
-    setPortalMessage(resolvedRequestKind === "payrolls"
-      ? "Lanzando la actualización de nóminas..."
-      : fullHistory ? "Lanzando la carga del historial anual..." : "Lanzando lectura del portal...");
-    setSyncingPortal(true);
-    setSyncProgress(3);
-    setSyncElapsed(0);
-    syncEstimateRef.current = getPortalSyncEstimate(session.chapa);
-    syncStartedAtRef.current = Date.now();
+    setPortalMessage("Guardando claves...");
+    setSavingCredentials(true);
 
     try {
       if (securityKeyOnly && securityKeyToUse) {
         await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
-        setHasSavedSecurityKey(true);
       } else if (passwordToUse) {
         await setPortalAutoSync({
           token: session.token,
@@ -2928,51 +2896,25 @@ function PortalPanel({
           securityKey: securityKeyToUse
         });
         setAutoSyncEnabled(true);
-        setHasSavedSecurityKey(Boolean(securityKeyToUse) || hasSavedSecurityKey);
         onConnectionChange?.(true);
       }
-      if (session.portalActivationStatus === "pending" && !snapshot && resolvedRequestKind !== "payrolls") {
-        writePortalCredentials(session.chapa, null);
-        setSavedCredentials(null);
-        setPortalPassword("");
-        setSecurityKey("");
-        setSecurityKeyOnly(false);
-        setPendingRequestKind("");
-        setShowCredentials(false);
-        setSyncingPortal(false);
-        setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
-        await sendPendingActivationEmails();
-        return;
-      }
-      const job = await requestPortalSync({
-        token: session.token,
-        portalPassword: passwordToUse,
-        securityKey: securityKeyToUse,
-        fullHistory,
-        requestKind: resolvedRequestKind
-      });
       writePortalCredentials(session.chapa, null);
       setSavedCredentials(null);
       setPortalPassword("");
       setSecurityKey("");
       setSecurityKeyOnly(false);
-      setPendingRequestKind("");
-      setPortalJob(job);
-      writePortalActiveSync(session.chapa, {
-        jobId: job.jobId,
-        status: job.status || "queued",
-        startedAt: syncStartedAtRef.current
-      });
       setShowCredentials(false);
-      setPortalMessage(resolvedRequestKind === "payrolls"
-        ? "Actualizando únicamente la lista de nóminas."
-        : fullHistory
-          ? "Cargando el historial anual. El resumen se añadirá al terminar."
-          : "Lectura en curso. La app se actualizara automaticamente al terminar.");
+      if (session.portalActivationStatus === "pending" && !snapshot) {
+        setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
+        await sendPendingActivationEmails();
+      } else {
+        setPortalMessage("Claves guardadas correctamente.");
+      }
     } catch (requestError) {
       setPortalMessage("");
-      setSyncingPortal(false);
-      setError(requestError.message || "No se pudo lanzar la lectura del portal.");
+      setError(requestError.message || "No se pudieron guardar las claves del portal.");
+    } finally {
+      setSavingCredentials(false);
     }
   };
 
@@ -2986,31 +2928,15 @@ function PortalPanel({
     setShowCredentials(true);
   };
 
-  const requestSecurityKey = (requestKind = "snapshot") => {
+  const requestSecurityKey = () => {
     setError("");
     setPortalPassword("");
     setSecurityKey("");
     setSecurityKeyOnly(autoSyncEnabled);
-    setPendingRequestKind(requestKind);
     setShowCredentials(true);
     window.requestAnimationFrame(() => {
       credentialsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
-  };
-
-  const disableAutoSync = async () => {
-    setError("");
-    setAutoSyncLoading(true);
-    try {
-      await setPortalAutoSync({ token: session.token, enabled: false });
-      setAutoSyncEnabled(false);
-      setHasSavedSecurityKey(false);
-      onConnectionChange?.(false);
-    } catch (requestError) {
-      setError(requestError.message || "No se pudo desactivar la sincronizacion automatica.");
-    } finally {
-      setAutoSyncLoading(false);
-    }
   };
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
@@ -3034,44 +2960,17 @@ function PortalPanel({
         <section className="portal-empty-state portal-activation-pending" aria-live="polite">
           <Clock3 size={28} />
           <strong>Cuenta pendiente de activación</strong>
-          <span>Hemos guardado tus claves de forma segura. Te enviaremos un correo a {session.email || "tu dirección de registro"} cuando tus datos del portal estén sincronizados y la cuenta quede activada.</span>
-          <small>No necesitas mantener esta pantalla abierta ni volver a pulsar actualizar.</small>
+          <span>Te enviaremos un correo a {session.email || "tu dirección de registro"} cuando tu cuenta esté activada.</span>
         </section>
       )}
 
       {snapshot && !showCredentials && (
         <div className="portal-update-row">
-          <span>
-            Datos guardados del portal oficial
-            {autoSyncEnabled && <small>Sincronizacion automatica a las 02:00, 07:30, 08:00, 12:30, 14:00, 14:45, 15:00 y 20:00</small>}
-          </span>
+          <span>Datos guardados del portal oficial</span>
           <div>
             {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar claves</button>}
-            {autoSyncEnabled && (
-              <button className="portal-forget-button" type="button" disabled={autoSyncLoading} onClick={disableAutoSync}>
-                Desactivar auto
-              </button>
-            )}
-            <button type="button" disabled={syncingPortal} onClick={(savedCredentials || autoSyncEnabled) ? () => handlePortalSync() : () => setShowCredentials(true)}>
-              <RefreshCw size={16} className={syncingPortal ? "is-spinning" : ""} />
-              {syncingPortal ? "Actualizando" : "Actualizar portal"}
-            </button>
           </div>
         </div>
-      )}
-
-      {snapshot && view === "payrolls" && !showCredentials && (
-        <button
-          className="portal-history-action portal-payroll-refresh"
-          type="button"
-          disabled={syncingPortal}
-          onClick={hasSavedSecurityKey
-            ? () => handlePortalSync({ requestKind: "payrolls" })
-            : () => requestSecurityKey("payrolls")}
-        >
-          <RefreshCw size={17} className={syncingPortal ? "is-spinning" : ""} />
-          {syncingPortal ? "Actualizando nóminas..." : "Actualizar nóminas"}
-        </button>
       )}
 
       {error && <p ref={portalErrorRef} className="portal-warning">{error}</p>}
@@ -3079,12 +2978,12 @@ function PortalPanel({
       {showCredentials && !syncingPortal && (
         <>
           <p className="portal-first-sync-note">
-            La espera solo es necesaria la primera vez. Después la app actualizará tus datos automáticamente en segundo plano.
+            Guarda tus claves para conectar tu cuenta con el Portal CPE.
           </p>
 
           <section ref={credentialsRef} className="portal-security-card">
             <div>
-              <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot ? "Actualizar portal" : "Conectar con el portal"}</p>
+              <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot ? "Cambiar claves del portal" : "Conectar con el portal"}</p>
               <span>{securityKeyOnly
                 ? "Introduce la clave de seguridad de primas y nóminas."
                 : "Introduce tu contraseña del portal de SEVASA. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
@@ -3125,10 +3024,10 @@ function PortalPanel({
               <button
                 className="primary-button"
                 type="button"
-                disabled={syncingPortal || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
-                onClick={() => handlePortalSync()}
+                disabled={savingCredentials || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
+                onClick={saveCredentials}
               >
-                {syncingPortal ? "Leyendo portal..." : securityKeyOnly ? "Guardar y actualizar" : "Leer portal"}
+                {savingCredentials ? "Guardando..." : securityKeyOnly ? "Guardar clave" : "Guardar claves"}
               </button>
             </div>
             {portalMessage && <small>{portalMessage}</small>}
@@ -3170,9 +3069,7 @@ function PortalPanel({
           session={session}
           view={view}
           onSessionChange={onSessionChange}
-          onLoadHistory={() => handlePortalSync({ fullHistory: true })}
           onRequestSecurityKey={() => requestSecurityKey()}
-          loadingHistory={syncingPortal}
           hideSyncFailure={showCredentials}
         />
       )}

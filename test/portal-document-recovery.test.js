@@ -74,12 +74,12 @@ test("conserva el error real después de agotar los reintentos", async () => {
   );
 });
 
-test("las nóminas se actualizan aparte y cada PDF se descarga bajo demanda", () => {
+test("las nóminas se procesan aparte sin ofrecer una actualización manual", () => {
   assert.match(syncSource, /portalRequestKind === "payrolls"/);
   assert.match(syncSource, /const nominas = existingSnapshot\?\.payload\?\.nominas/);
   assert.match(syncSource, /if \(portalDocumentId\) \{[\s\S]*collectPayrollDocumentFiles\(page, result\.rows, portalDocumentId\)/);
   assert.doesNotMatch(syncSource, /collectPayrollDocumentFiles\(page, result\.rows, ""\)/);
-  assert.match(appSource, /Actualizar nóminas/);
+  assert.doesNotMatch(appSource, /Actualizar nóminas/);
 });
 
 test("la espera de una nómina termina en un tiempo acotado", async () => {

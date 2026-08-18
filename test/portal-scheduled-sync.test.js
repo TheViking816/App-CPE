@@ -41,7 +41,7 @@ test("las sincronizaciones programadas se despachan como un solo lote secuencial
 });
 
 test("solo quedan los ocho horarios solicitados", () => {
-  assert.match(appSource, /02:00, 07:30, 08:00, 12:30, 14:00, 14:45, 15:00 y 20:00/);
+  assert.doesNotMatch(appSource, /Sincronizacion automatica a las/);
   for (const slot of ["02:00", "07:30", "08:00", "12:30", "14:00", "14:45", "15:00", "20:00"]) {
     assert.match(scheduleMigration, new RegExp(`'${slot.replace(":", "\\:")}'`));
   }
@@ -50,12 +50,12 @@ test("solo quedan los ocho horarios solicitados", () => {
   assert.match(scheduleMigration, /interval '4 hours'/);
 });
 
-test("las actualizaciones normales omiten nóminas y existe un trabajo específico", () => {
+test("las actualizaciones normales omiten nóminas y la app no ofrece sincronización manual", () => {
   assert.match(refreshSource, /body\.requestKind === "payrolls" \? "payrolls" : "snapshot"/);
   assert.match(clientSource, /requestKind: requestKind \|\| \(fullHistory \? "history" : "snapshot"\)/);
-  assert.match(appSource, /handlePortalSync\(\{ requestKind: "payrolls" \}\)/);
-  assert.match(appSource, /requestSecurityKey\("payrolls"\)/);
-  assert.match(appSource, /status\.hasSecurityKey/);
+  assert.doesNotMatch(appSource, /Actualizar portal|Actualizar nóminas|Cargar todo el año/);
+  assert.doesNotMatch(appSource, /requestPortalSync/);
+  assert.match(appSource, /const saveCredentials = async/);
   assert.doesNotMatch(appSource, /Leyendo jornales, mensajes, dobles, nóminas y calendarios/);
 });
 
