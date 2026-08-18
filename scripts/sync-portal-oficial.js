@@ -40,6 +40,7 @@ const portalSnapshotChannel = String(process.env.CPE_PORTAL_SNAPSHOT_CHANNEL
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join("data", "portal-oficial-chrome-profile", "shared"));
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
+const brightDataBrowserEndpoint = String(process.env.BRIGHTDATA_BROWSER_WS_ENDPOINT || "").trim();
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
 export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
@@ -49,6 +50,44 @@ export const PORTAL_ENTRY_TIMEOUT_MS = 90000;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 let authenticatedForPortalUser = false;
+
+async function openPortalBrowser() {
+  if (brightDataBrowserEndpoint) {
+    const browser = await chromium.connectOverCDP(brightDataBrowserEndpoint, { timeout: 120000 });
+    const context = browser.contexts()[0] || await browser.newContext({
+      viewport: { width: 1500, height: 1100 },
+      locale: "es-ES",
+      timezoneId: "Europe/Madrid"
+    });
+    return {
+      context,
+      close: () => browser.close()
+    };
+  }
+
+  await fs.mkdir(profileDir, { recursive: true });
+  const launchOptions = {
+    headless,
+    viewport: { width: 1500, height: 1100 },
+    locale: "es-ES",
+    timezoneId: "Europe/Madrid",
+    args: ["--disable-blink-features=AutomationControlled"]
+  };
+  if (browserChannel && browserChannel !== "bundled") launchOptions.channel = browserChannel;
+  const context = await chromium.launchPersistentContext(profileDir, launchOptions);
+  return {
+    context,
+    close: () => context.close()
+  };
+}
+
+async function waitForBrightDataCaptcha(page) {
+  if (!brightDataBrowserEndpoint) return;
+  const client = await page.context().newCDPSession(page);
+  const result = await client.send("Captcha.waitForSolve", { detectTimeout: 30000 });
+  if (result?.status === "failed") throw new Error("Bright Data no pudo resolver Cloudflare");
+  console.log(`Bright Data CAPTCHA: ${result?.status || "sin estado"}`);
+}
 
 function resolveSupabaseUrl(value) {
   const firstLine = String(value || "")
@@ -672,6 +711,7 @@ async function logoutExistingPortalSession(page) {
 
 async function login(page, attempt = 0) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await waitForBrightDataCaptcha(page);
   await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
   const entryState = await waitForPortalEntry(page);
@@ -1923,20 +1963,8 @@ async function getExistingSupabaseSnapshot() {
 
 async function main() {
   await fs.mkdir(privateDataDir, { recursive: true });
-  await fs.mkdir(profileDir, { recursive: true });
-
-  const launchOptions = {
-    headless,
-    viewport: { width: 1500, height: 1100 },
-    locale: "es-ES",
-    timezoneId: "Europe/Madrid",
-    args: ["--disable-blink-features=AutomationControlled"]
-  };
-  if (browserChannel && browserChannel !== "bundled") {
-    launchOptions.channel = browserChannel;
-  }
-
-  const context = await chromium.launchPersistentContext(profileDir, launchOptions);
+  const browserSession = await openPortalBrowser();
+  const context = browserSession.context;
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
@@ -2220,7 +2248,7 @@ async function main() {
     });
     throw error;
   } finally {
-    await context.close();
+    await browserSession.close();
   }
 }
 
