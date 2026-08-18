@@ -514,6 +514,18 @@ export function filterJornalesByPeriod(items = [], period = "month") {
   });
 }
 
+export function selectPortalJornales(jornales = null, primas = null) {
+  const portalRows = Array.isArray(jornales?.rows) ? jornales.rows : [];
+  if (portalRows.length > 0 || jornales?.recognized) return portalRows;
+  return Array.isArray(primas?.rows) ? primas.rows : [];
+}
+
+export function selectPortalJornalesHistory(jornales = null, primas = null) {
+  const portalHistory = Array.isArray(jornales?.history) ? jornales.history : [];
+  if (portalHistory.length > 0) return portalHistory;
+  return Array.isArray(primas?.history) ? primas.history : [];
+}
+
 export function summarizeAnnualPayroll(history = [], payrollConfig = null, relayHours = {}, vacationEntries = []) {
   const historyKeys = new Set(history.map((month) => `${month.year}-${pad(month.month)}`));
   const vacationOnlyMonths = vacationEntries.reduce((months, item) => {

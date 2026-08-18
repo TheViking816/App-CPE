@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   buildVacationPayrollEntries,
   filterJornalesByPeriod,
+  selectPortalJornales,
+  selectPortalJornalesHistory,
   summarizeAnnualPayroll,
   summarizePayroll,
   VACATION_DAY_RATE,
@@ -21,6 +23,25 @@ test("separa los jornales mensuales por quincenas", () => {
   assert.deepEqual(filterJornalesByPeriod(rows, "first").map((item) => item.dia), ["01", "15"]);
   assert.deepEqual(filterJornalesByPeriod(rows, "second").map((item) => item.dia), ["16", "31"]);
   assert.equal(filterJornalesByPeriod(rows, "month").length, 4);
+});
+
+test("prioriza los jornales completos frente a primas incompletas", () => {
+  const portalRows = [
+    { dia: "14", parte: "23070" },
+    { dia: "17", parte: "23400" },
+    { dia: "18", parte: "23485" }
+  ];
+  const premiumRows = [{ dia: "14", parte: "23070", produccion: "12,50" }];
+  const selected = selectPortalJornales(
+    { recognized: true, rows: portalRows, history: [{ month: 8, rows: portalRows }] },
+    { recognized: true, rows: premiumRows, history: [{ month: 8, rows: premiumRows }] }
+  );
+
+  assert.deepEqual(filterJornalesByPeriod(selected, "second").map((item) => item.dia), ["17", "18"]);
+  assert.equal(selectPortalJornalesHistory(
+    { history: [{ month: 8, rows: portalRows }] },
+    { history: [{ month: 8, rows: premiumRows }] }
+  )[0].rows.length, 3);
 });
 
 test("calcula lo ganado en cada quincena y en el mes completo", () => {
