@@ -151,6 +151,15 @@ function publicErrorMessage(error) {
     .slice(0, 300) || "No se pudo leer el portal oficial.";
 }
 
+async function sendActivationEmails() {
+  const response = await fetch("https://portalestiba-push-backend-one.vercel.app/api/push/notify-new-hire", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ app_cpe_activation_emails: true })
+  });
+  if (!response.ok) console.warn(`No se pudo enviar el correo de activación (HTTP ${response.status}).`);
+}
+
 async function main() {
   if (!jobId) throw new Error("Missing CPE_PORTAL_SYNC_JOB_ID");
   if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
@@ -191,6 +200,7 @@ async function main() {
       security_key: null,
       finished_at: new Date().toISOString()
     });
+    await sendActivationEmails().catch(() => {});
   } catch (error) {
     const message = publicErrorMessage(error);
     await updateJob({
