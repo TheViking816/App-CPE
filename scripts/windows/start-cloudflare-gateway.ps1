@@ -6,6 +6,20 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$portalWorkerTaskName = "App CPE Portal Worker"
+
+function Start-PortalWorkerIfAvailable {
+  try {
+    $workerTask = Get-ScheduledTask -TaskName $portalWorkerTaskName -ErrorAction SilentlyContinue
+    if ($workerTask -and $workerTask.State -ne "Running") {
+      Start-ScheduledTask -TaskName $portalWorkerTaskName
+      Write-Host "Worker de usuarios iniciado para procesar la cola."
+    }
+  } catch {
+    Write-Warning "Chrome esta disponible, pero no se pudo iniciar el worker de usuarios: $($_.Exception.Message)"
+  }
+}
+
 if (-not $ProfilePath) {
   $ProfilePath = Join-Path $env:LOCALAPPDATA "AppCPE\cloudflare-gateway\chrome-profile"
 }
@@ -20,6 +34,7 @@ if (-not $chromePath) { throw "Google Chrome no está instalado." }
 $versionUrl = "http://127.0.0.1:$Port/json/version"
 try {
   $null = Invoke-RestMethod -Uri $versionUrl -TimeoutSec 2
+  Start-PortalWorkerIfAvailable
   Write-Host "Gateway Chrome ya disponible en el puerto $Port."
   exit 0
 } catch {}
@@ -45,6 +60,7 @@ do {
   try {
     $version = Invoke-RestMethod -Uri $versionUrl -TimeoutSec 2
     if ($version.webSocketDebuggerUrl) {
+      Start-PortalWorkerIfAvailable
       Write-Host "Gateway Chrome preparado. Deja abierta la ventana de Chrome; esta consola ya puede cerrarse."
       exit 0
     }
