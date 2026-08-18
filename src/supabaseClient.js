@@ -41,13 +41,14 @@ export const supabase = supabaseUrl && supabaseKey
 
 const USAGE_TRACKING_EXCLUDED_CHAPAS = new Set(["72683"]);
 
-export async function registerUser({ chapa, password, specialties }) {
+export async function registerUser({ chapa, password, email, specialties }) {
   if (!supabase) return null;
 
   const register = async () => {
     const { data, error } = await supabase.rpc("app_cpe_register", {
       p_chapa: chapa,
       p_password: password,
+      p_email: email,
       p_specialties: specialties
     });
 
@@ -60,6 +61,17 @@ export async function registerUser({ chapa, password, specialties }) {
     login: () => loginUser({ chapa, password }),
     wait: () => new Promise((resolve) => window.setTimeout(resolve, 700))
   });
+}
+
+export async function sendPendingActivationEmails() {
+  try {
+    const response = await fetch("https://portalestiba-push-backend-one.vercel.app/api/push/notify-new-hire", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ app_cpe_activation_emails: true }) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn("No se pudo enviar el aviso de activación:", error.message);
+    return null;
+  }
 }
 
 export async function loginUser({ chapa, password }) {

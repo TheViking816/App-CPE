@@ -71,6 +71,7 @@ import {
   getUserRelayHours,
   loginUser,
   registerUser,
+  sendPendingActivationEmails,
   requestOfficialPortalDocument,
   requestPortalSync,
   setPortalAutoSync,
@@ -415,6 +416,7 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -434,6 +436,11 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
       return;
     }
 
+    if (mode === "register" && !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError("Introduce un correo electrónico válido.");
+      return;
+    }
+
     try {
       setLoading(true);
       const detectedSpecialties = getDetectedSpecialtyIdsForChapa(normalized);
@@ -447,6 +454,7 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
         ? await registerUser({
           chapa: normalized,
           password,
+          email: email.trim(),
           specialties: detectedSpecialties
         })
         : await loginUser({ chapa: normalized, password });
@@ -525,6 +533,16 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
           </button>
         </div>
       </label>
+
+      {mode === "register" && (
+        <label>
+          <span>Correo electrónico</span>
+          <div className="field">
+            <Mail size={18} />
+            <input type="email" autoComplete="email" placeholder="tu@correo.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+          </div>
+        </label>
+      )}
 
       {mode === "register" && <p className="login-hint">La app detectara tus especialidades por la chapa.</p>}
       {error && <p className="form-error">{error}</p>}
@@ -2761,6 +2779,7 @@ function PortalPanel({
         if (status?.enabled) {
           setAutoSyncEnabled(true);
           setHasSavedSecurityKey(Boolean(status.hasSecurityKey));
+          if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(false);
           onConnectionChange?.(true);
           return;
         }
@@ -2901,6 +2920,19 @@ function PortalPanel({
         setHasSavedSecurityKey(Boolean(securityKeyToUse) || hasSavedSecurityKey);
         onConnectionChange?.(true);
       }
+      if (session.portalActivationStatus === "pending" && !snapshot && resolvedRequestKind !== "payrolls") {
+        writePortalCredentials(session.chapa, null);
+        setSavedCredentials(null);
+        setPortalPassword("");
+        setSecurityKey("");
+        setSecurityKeyOnly(false);
+        setPendingRequestKind("");
+        setShowCredentials(false);
+        setSyncingPortal(false);
+        setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
+        await sendPendingActivationEmails();
+        return;
+      }
       const job = await requestPortalSync({
         token: session.token,
         portalPassword: passwordToUse,
@@ -2986,6 +3018,15 @@ function PortalPanel({
         <p>{panelCopy.eyebrow}</p>
         <h1>{panelCopy.title}</h1>
       </div>
+
+      {session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot && !showCredentials && (
+        <section className="portal-empty-state portal-activation-pending" aria-live="polite">
+          <Clock3 size={28} />
+          <strong>Cuenta pendiente de activación</strong>
+          <span>Hemos guardado tus claves de forma segura. Te enviaremos un correo a {session.email || "tu dirección de registro"} cuando tus datos del portal estén sincronizados y la cuenta quede activada.</span>
+          <small>No necesitas mantener esta pantalla abierta ni volver a pulsar actualizar.</small>
+        </section>
+      )}
 
       {snapshot && !showCredentials && (
         <div className="portal-update-row">
