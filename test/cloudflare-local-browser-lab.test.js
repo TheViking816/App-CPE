@@ -11,6 +11,7 @@ const requeueSource = fs.readFileSync(new URL("../scripts/requeue-cloudflare-lab
 const workerSource = fs.readFileSync(new URL("../scripts/portal-sync-worker.js", import.meta.url), "utf8");
 const batchRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-cloudflare-gateway-batch.ps1", import.meta.url), "utf8");
 const persistentRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-portal-worker.ps1", import.meta.url), "utf8");
+const workerInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-worker.ps1", import.meta.url), "utf8");
 
 test("el lector puede adjuntarse a Chrome sin alterar el modo local existente", () => {
   assert.match(syncSource, /CPE_PORTAL_CDP_ENDPOINT/);
@@ -79,4 +80,8 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.match(workerSource, /startGatewayBrowser/);
   assert.match(workerSource, /El Chrome gateway se cerro; se abrira de nuevo automaticamente/);
   assert.match(workerSource, /start-cloudflare-gateway\.ps1/);
+  assert.match(gatewaySource, /Start-PortalWorkerIfAvailable/);
+  assert.match(gatewaySource, /Start-ScheduledTask -TaskName \$portalWorkerTaskName/);
+  assert.match(workerInstallerSource, /RepetitionInterval \(New-TimeSpan -Minutes 5\)/);
+  assert.match(workerInstallerSource, /RepetitionDuration \(New-TimeSpan -Days 3650\)/);
 });

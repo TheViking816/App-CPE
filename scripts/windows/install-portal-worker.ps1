@@ -56,7 +56,12 @@ $quotedRepo = '"' + $RepositoryPath.Replace('"', '""') + '"'
 $quotedProfileRoot = '"' + $ProfileRoot.Replace('"', '""') + '"'
 $arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $quotedRunner -RepositoryPath $quotedRepo -BatchSize $BatchSize -ProfileRoot $quotedProfileRoot"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments -WorkingDirectory $RepositoryPath
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
+$logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
+$watchdogTrigger = New-ScheduledTaskTrigger `
+  -Once `
+  -At (Get-Date).AddMinutes(1) `
+  -RepetitionInterval (New-TimeSpan -Minutes 5) `
+  -RepetitionDuration (New-TimeSpan -Days 3650)
 $settings = New-ScheduledTaskSettingsSet `
   -AllowStartIfOnBatteries `
   -DontStopIfGoingOnBatteries `
@@ -67,7 +72,7 @@ $settings = New-ScheduledTaskSettingsSet `
   -MultipleInstances IgnoreNew
 $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($logonTrigger, $watchdogTrigger) -Settings $settings -Principal $principal -Force | Out-Null
 
 $scheduleInstaller = Join-Path $RepositoryPath "scripts\windows\install-portal-sync-schedule.ps1"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scheduleInstaller -RepositoryPath $RepositoryPath
