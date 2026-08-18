@@ -24,15 +24,16 @@ function resolveSupabaseUrl(value) {
   return `https://${defaultProjectRef}.supabase.co`;
 }
 
-const supabaseUrl = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
-const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "")
+const viteEnv = import.meta.env || {};
+const supabaseUrl = resolveSupabaseUrl(viteEnv.VITE_SUPABASE_URL);
+const supabaseKey = String(viteEnv.VITE_SUPABASE_PUBLISHABLE_KEY || "")
   .replace(/\\r|\\n/g, "")
   .trim();
 // Vercel can preserve a trailing line break/space when an environment value is
 // entered from the CLI.  These identifiers are used as exact RPC parameters,
 // so normalize them before asking Supabase for the preview snapshot.
-const syncWorkflowRef = String(import.meta.env.VITE_GITHUB_SYNC_REF || "main").trim() || "main";
-const portalSnapshotChannel = String(import.meta.env.VITE_PORTAL_SNAPSHOT_CHANNEL || "").trim();
+const syncWorkflowRef = String(viteEnv.VITE_GITHUB_SYNC_REF || "main").trim() || "main";
+const portalSnapshotChannel = String(viteEnv.VITE_PORTAL_SNAPSHOT_CHANNEL || "").trim();
 
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)

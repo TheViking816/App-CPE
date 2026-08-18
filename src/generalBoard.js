@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./supabaseClient.js";
 
 const PORTAL_SUPABASE_URL = "https://icszzxkdxatfytpmoviq.supabase.co";
 const PORTAL_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imljc3p6eGtkeGF0Znl0cG1vdmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2Mzk2NjUsImV4cCI6MjA3ODIxNTY2NX0.hmQWNB3sCyBh39gdNgQLjjlIvliwJje-OYf0kkPObVA";
@@ -275,7 +276,7 @@ export async function fetchGeneralBoard() {
   const todayIso = madridTodayIso();
   const syncResult = await syncBoardFromCsv().catch(() => ({ success: false, journeys: [], rows: [] }));
   const trustedKeys = new Set(syncResult.success ? syncResult.journeys : []);
-  const { data: snapshotRow, error: snapshotError } = await portalSupabase.from("contratacion_turno_snapshot").select("payload, updated_at").eq("id", "latest").maybeSingle();
+  const { data: snapshotRow, error: snapshotError } = await supabase.from("app_cpe_general_board_snapshot").select("payload, updated_at").eq("id", "latest").maybeSingle();
   if (snapshotError || !snapshotRow?.payload) throw snapshotError || new Error("No hay contratación de Turno");
   const { data: currentRows, error: currentError } = await portalSupabase.from("tablon_actual").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").order("id");
   if (currentError) throw currentError;

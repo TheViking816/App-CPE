@@ -13,6 +13,8 @@ const batchRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-cloudf
 const persistentRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-portal-worker.ps1", import.meta.url), "utf8");
 const workerInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-worker.ps1", import.meta.url), "utf8");
 const pendingShortcutSource = fs.readFileSync(new URL("../scripts/windows/install-pending-sync-shortcut.ps1", import.meta.url), "utf8");
+const generalBoardWorkerSource = fs.readFileSync(new URL("../scripts/sync-general-board.js", import.meta.url), "utf8");
+const generalBoardClientSource = fs.readFileSync(new URL("../src/generalBoard.js", import.meta.url), "utf8");
 
 test("el lector puede adjuntarse a Chrome sin alterar el modo local existente", () => {
   assert.match(syncSource, /CPE_PORTAL_CDP_ENDPOINT/);
@@ -65,7 +67,7 @@ test("la tanda real usa perfiles aislados y termina tras un solo lote", () => {
   assert.match(workerSource, /CPE_PORTAL_WORKER_ONCE/);
   assert.match(workerSource, /failQueuedJobsWithoutCredentials/);
   assert.match(workerSource, /portal_password=not\.is\.null/);
-  assert.match(workerSource, /Promise\.all\(jobs\.map/);
+  assert.match(workerSource, /\.\.\.jobs\.map\(\(job, index\) => runJob/);
   assert.match(batchRunnerSource, /ValidateRange\(1, 10\)/);
   assert.match(batchRunnerSource, /CPE_PORTAL_WORKER_ONCE = "true"/);
 });
@@ -96,4 +98,13 @@ test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo
   assert.match(pendingShortcutSource, /start-cloudflare-gateway\.ps1/);
   assert.doesNotMatch(pendingShortcutSource, /queue-all-portal-syncs/);
   assert.match(workerInstallerSource, /install-pending-sync-shortcut\.ps1/);
+});
+
+test("la actualizacion global publica tambien el tablon general", () => {
+  assert.match(workerSource, /trigger_source === "worker_manual_all"/);
+  assert.match(workerSource, /scripts\/sync-general-board\.js/);
+  assert.match(workerSource, /runGeneralBoard\(boardJob, clearanceCookies\)/);
+  assert.match(generalBoardWorkerSource, /app_cpe_general_board_snapshot/);
+  assert.match(generalBoardWorkerSource, /Contratacion Jornada/);
+  assert.match(generalBoardClientSource, /supabase\.from\("app_cpe_general_board_snapshot"\)/);
 });
