@@ -72,6 +72,9 @@ Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Se
 $scheduleInstaller = Join-Path $RepositoryPath "scripts\windows\install-portal-sync-schedule.ps1"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scheduleInstaller -RepositoryPath $RepositoryPath
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar los horarios del portal." }
+$operationalScheduleInstaller = Join-Path $RepositoryPath "scripts\windows\install-operational-sync-schedule.ps1"
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $operationalScheduleInstaller -RepositoryPath $RepositoryPath
+if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar los horarios de Chapero y Puertas." }
 
 if (-not $DoNotStart) {
   Start-ScheduledTask -TaskName $taskName
