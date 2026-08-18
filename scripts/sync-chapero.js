@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -12,7 +13,8 @@ const chaperoUrl = process.env.CPE_CHAPERO_URL
   || "https://portal.cpevalencia.com/Noray/Chapero.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=744375419261120260702080606";
 const headless = String(process.env.CPE_HEADLESS || "true").toLowerCase() !== "false";
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
-const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const supabaseServiceRole = resolveSupabaseAdminKey();
+const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 
 const STATUS_LABELS = {
@@ -59,12 +61,10 @@ async function upsertSupabaseSnapshot(snapshot) {
 
   const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_chapero_snapshots?on_conflict=snapshot_key`, {
     method: "POST",
-    headers: {
-      "apikey": supabaseServiceRole,
-      "Authorization": `Bearer ${supabaseServiceRole}`,
+    headers: supabaseAdminHeaders(supabaseServiceRole, {
       "Content-Type": "application/json",
       "Prefer": "resolution=merge-duplicates,return=minimal"
-    },
+    }),
     body: JSON.stringify({
       snapshot_key: "latest",
       source: snapshot.source,
@@ -85,16 +85,36 @@ async function upsertSupabaseSnapshot(snapshot) {
   }
 }
 
+async function disconnectFromGateway(browser, isolatedContext) {
+  await isolatedContext.close();
+  browser._connection.close();
+  await new Promise((resolve) => setTimeout(resolve, 750));
+}
+
 async function main() {
   await fs.mkdir(publicDataDir, { recursive: true });
   await fs.mkdir(privateDataDir, { recursive: true });
 
-  const browser = await chromium.launch({ channel: "msedge", headless })
-    .catch(() => chromium.launch({ headless }));
-  const page = await browser.newPage({
-    viewport: { width: 1500, height: 900 },
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-  });
+  let browser;
+  let isolatedContext = null;
+  let page;
+  if (portalCdpEndpoint) {
+    browser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
+    const gatewayContext = browser.contexts()[0];
+    const clearanceCookies = await gatewayContext.cookies("https://portal.cpevalencia.com");
+    isolatedContext = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+    await isolatedContext.addCookies(clearanceCookies.filter((cookie) => (
+      cookie.name === "cf_clearance" || cookie.name.startsWith("cf_chl_")
+    )));
+    page = await isolatedContext.newPage();
+  } else {
+    browser = await chromium.launch({ channel: "msedge", headless })
+      .catch(() => chromium.launch({ headless }));
+    page = await browser.newPage({
+      viewport: { width: 1500, height: 900 },
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+    });
+  }
 
   try {
     const response = await page.goto(chaperoUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
@@ -167,11 +187,14 @@ async function main() {
     if (supabaseServiceRole) await upsertSupabaseSnapshot(snapshot);
     console.log(`OK: Chapero ${snapshot.pageDate} - ${snapshot.workers.length} chapas`);
   } finally {
-    await browser.close();
+    if (isolatedContext) await disconnectFromGateway(browser, isolatedContext);
+    else await browser.close();
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "Error desconocido");
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error instanceof Error ? error.message : "Error desconocido");
+    process.exit(1);
+  });

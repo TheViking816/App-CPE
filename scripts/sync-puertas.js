@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -13,7 +14,8 @@ const puertasUrl = process.env.CPE_PUERTAS_URL
   || "https://portal.cpevalencia.com/Noray/Puertas.asp?mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows&rd=316781698261120260630144003";
 const headless = String(process.env.CPE_HEADLESS || "true").toLowerCase() !== "false";
 const supabaseUrl = process.env.CPE_SUPABASE_URL;
-const supabaseServiceRole = process.env.CPE_SUPABASE_SERVICE_ROLE;
+const supabaseServiceRole = resolveSupabaseAdminKey();
+const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 
 function resolveSupabaseUrl(value) {
@@ -33,12 +35,10 @@ function resolveSupabaseUrl(value) {
 async function upsertSupabaseSnapshot(parsed) {
   const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_door_snapshots?on_conflict=specialty`, {
     method: "POST",
-    headers: {
-      "apikey": supabaseServiceRole,
-      "Authorization": `Bearer ${supabaseServiceRole}`,
+    headers: supabaseAdminHeaders(supabaseServiceRole, {
       "Content-Type": "application/json",
       "Prefer": "resolution=merge-duplicates,return=minimal"
-    },
+    }),
     body: JSON.stringify({
       specialty: parsed.specialty,
       source: parsed.source,
@@ -134,16 +134,36 @@ function parseSpecialtiesFromText(text) {
   return specialtyRows.map((row) => parseSpecialtyFromText(text, row)).filter(Boolean);
 }
 
+async function disconnectFromGateway(browser, isolatedContext) {
+  await isolatedContext.close();
+  browser._connection.close();
+  await new Promise((resolve) => setTimeout(resolve, 750));
+}
+
 async function main() {
   await fs.mkdir(publicDataDir, { recursive: true });
   await fs.mkdir(privateDataDir, { recursive: true });
 
-  const browser = await chromium.launch({ channel: "msedge", headless })
-    .catch(() => chromium.launch({ headless }));
-  const page = await browser.newPage({
-    viewport: { width: 1600, height: 900 },
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-  });
+  let browser;
+  let isolatedContext = null;
+  let page;
+  if (portalCdpEndpoint) {
+    browser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
+    const gatewayContext = browser.contexts()[0];
+    const clearanceCookies = await gatewayContext.cookies("https://portal.cpevalencia.com");
+    isolatedContext = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+    await isolatedContext.addCookies(clearanceCookies.filter((cookie) => (
+      cookie.name === "cf_clearance" || cookie.name.startsWith("cf_chl_")
+    )));
+    page = await isolatedContext.newPage();
+  } else {
+    browser = await chromium.launch({ channel: "msedge", headless })
+      .catch(() => chromium.launch({ headless }));
+    page = await browser.newPage({
+      viewport: { width: 1600, height: 900 },
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+    });
+  }
 
   try {
     const response = await page.goto(puertasUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
@@ -218,20 +238,23 @@ async function main() {
 
     console.log(`OK: ${parsedSnapshots.map((snapshot) => snapshot.specialty).join(", ")}`);
   } finally {
-    await browser.close();
+    if (isolatedContext) await disconnectFromGateway(browser, isolatedContext);
+    else await browser.close();
   }
 }
 
-main().catch(async (error) => {
-  const message = error instanceof Error ? error.message : "Error desconocido";
-  await fs.mkdir(publicDataDir, { recursive: true });
-  await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
-    ok: false,
-    stage: "load",
-    updatedAt: new Date().toISOString(),
-    source: puertasUrl,
-    message
-  }, null, 2), "utf8").catch(() => {});
-  console.error(message);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch(async (error) => {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    await fs.mkdir(publicDataDir, { recursive: true });
+    await fs.writeFile(path.join(publicDataDir, diagnosticFileName), JSON.stringify({
+      ok: false,
+      stage: "load",
+      updatedAt: new Date().toISOString(),
+      source: puertasUrl,
+      message
+    }, null, 2), "utf8").catch(() => {});
+    console.error(message);
+    process.exit(1);
+  });

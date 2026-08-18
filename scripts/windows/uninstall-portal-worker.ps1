@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-foreach ($taskName in @("App CPE Portal Worker", "App CPE Actualizacion Programada")) {
+foreach ($taskName in @("App CPE Portal Worker", "App CPE Actualizacion Programada", "App CPE Chapero y Puertas")) {
   $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
   if ($task) {
     Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
