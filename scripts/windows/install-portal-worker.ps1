@@ -73,6 +73,7 @@ $settings = New-ScheduledTaskSettingsSet `
 $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($logonTrigger, $watchdogTrigger) -Settings $settings -Principal $principal -Force | Out-Null
+Disable-ScheduledTask -TaskName $taskName | Out-Null
 
 $scheduleInstaller = Join-Path $RepositoryPath "scripts\windows\install-portal-sync-schedule.ps1"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scheduleInstaller -RepositoryPath $RepositoryPath
@@ -84,9 +85,5 @@ $pendingShortcutInstaller = Join-Path $RepositoryPath "scripts\windows\install-p
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $pendingShortcutInstaller -RepositoryPath $RepositoryPath
 if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el acceso para actualizar pendientes." }
 
-if (-not $DoNotStart) {
-  Start-ScheduledTask -TaskName $taskName
-}
-
-Write-Host "Worker instalado en tandas de hasta $BatchSize. Se iniciara al entrar en Windows."
+Write-Host "Worker instalado en modo manual en tandas de hasta $BatchSize."
 Write-Host "Estado y logs: $workerStateDir"

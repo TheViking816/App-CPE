@@ -15,6 +15,7 @@ const batchSize = Math.max(1, Math.min(32, Number(
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
+const workerDrain = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_DRAIN || "");
 const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser humano|challenge-platform|cf-chl-|Just a moment/i;
 const portalPattern = /Iniciar sesi[oó]n|loginFields|title=["']Usuario["']|Finalizar sesi[oó]n/i;
 let stopping = false;
@@ -289,7 +290,7 @@ async function workerLoop() {
             if (!await gatewayAuthorizationIsValid()) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
               console.warn("[portal-worker] Tanda devuelta a la cola: Chrome necesita completar la verificacion de Cloudflare.");
-              if (workerOnce) return;
+              if (workerOnce || workerDrain) return;
               await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 30000)));
               continue;
             }
@@ -297,7 +298,7 @@ async function workerLoop() {
             if (!clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
               console.warn("[portal-worker] Tanda devuelta a la cola: falta autorizacion de Cloudflare.");
-              if (workerOnce) return;
+              if (workerOnce || workerDrain) return;
               continue;
             }
           }
@@ -319,11 +320,12 @@ async function workerLoop() {
         }
         if (workerOnce) return;
       } else {
-        if (workerOnce) return;
+        if (workerOnce || workerDrain) return;
         await new Promise((resolve) => setTimeout(resolve, pollMs));
       }
     } catch (error) {
       console.error("[portal-worker]", error);
+      if (workerDrain) return;
       await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
     }
   }

@@ -24,12 +24,10 @@ test("el arranque solo consume trabajos ya en cola", () => {
   assert.doesNotMatch(source, /app_cpe_create_worker_catchup_jobs/);
 });
 
-test("Windows encola las actualizaciones solo en los ocho horarios solicitados", () => {
-  for (const time of ["02:00", "07:30", "08:00", "12:30", "14:00", "14:45", "15:00", "20:00"]) {
-    assert.match(scheduleInstallerSource, new RegExp(`"${time}"`));
-  }
-  assert.match(scheduleInstallerSource, /StartWhenAvailable/);
-  assert.match(scheduleInstallerSource, /queue-all-portal-syncs\.ps1/);
+test("Windows elimina la programación horaria y deja la ejecución manual", () => {
+  assert.match(scheduleInstallerSource, /Unregister-ScheduledTask/);
+  assert.match(scheduleInstallerSource, /Actualizaciones horarias desactivadas/);
+  assert.doesNotMatch(scheduleInstallerSource, /New-ScheduledTaskTrigger|-Daily/);
 });
 
 test("recupera trabajos en cola aunque vencieran con el equipo apagado", () => {
