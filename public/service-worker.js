@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260818-activation-ui-4";
+self.__APP_CPE_SW_VERSION__ = "20260818-admin-selective-sync-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

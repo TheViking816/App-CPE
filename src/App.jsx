@@ -81,6 +81,7 @@ import {
   trackPageVisit,
   trackUsageEvent,
   updateUserIrpf,
+  updateActivationEmail,
   updateUserPassword,
   updateUserSpecialties
 } from "./supabaseClient.js";
@@ -2707,6 +2708,7 @@ function PortalPanel({
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [portalPassword, setPortalPassword] = useState(initialCredentials?.portalPassword || "");
   const [securityKey, setSecurityKey] = useState(initialCredentials?.securityKey || "");
+  const [activationEmail, setActivationEmail] = useState(session.email || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
@@ -2741,7 +2743,7 @@ function PortalPanel({
       onSnapshotChange?.(data || null);
       // Un fallo de lectura no implica que las claves guardadas hayan dejado de
       // existir. El formulario solo se abre de forma explícita desde Cambiar claves.
-      setShowCredentials(!data);
+      setShowCredentials(!data?.payload);
     } catch (requestError) {
       if (!silent) {
         setError(requestError.message || "No se pudo leer el portal sincronizado.");
@@ -2888,6 +2890,15 @@ function PortalPanel({
     setSavingCredentials(true);
 
     try {
+      let currentSession = session;
+      if (!session.email) {
+        const normalizedEmail = activationEmail.trim();
+        if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+          throw new Error("Introduce un correo electrónico válido.");
+        }
+        currentSession = await updateActivationEmail({ token: session.token, email: normalizedEmail });
+        if (currentSession) onSessionChange?.(currentSession);
+      }
       if (securityKeyOnly && securityKeyToUse) {
         await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
       } else if (passwordToUse) {
@@ -2906,7 +2917,7 @@ function PortalPanel({
       setSecurityKey("");
       setSecurityKeyOnly(false);
       setShowCredentials(false);
-      if (session.portalActivationStatus === "pending" && !snapshot) {
+      if (currentSession.portalActivationStatus === "pending" && !snapshot?.payload) {
         await queuePendingPortalActivation({ token: session.token });
         setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
         await sendPendingActivationEmails();
@@ -2959,7 +2970,7 @@ function PortalPanel({
         <h1>{panelCopy.title}</h1>
       </div>
 
-      {session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot && !showCredentials && (
+      {session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot?.payload && !showCredentials && (
         <section className="portal-empty-state portal-activation-pending" aria-live="polite">
           <Clock3 size={28} />
           <strong>Cuenta pendiente de activación</strong>
@@ -2967,7 +2978,7 @@ function PortalPanel({
         </section>
       )}
 
-      {snapshot && !showCredentials && (
+      {snapshot?.payload && !showCredentials && (
         <div className="portal-update-row">
           <span>Datos guardados del portal oficial</span>
           <div>
@@ -2986,11 +2997,23 @@ function PortalPanel({
 
           <section ref={credentialsRef} className="portal-security-card">
             <div>
-              <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot ? "Cambiar claves del portal" : "Conectar con el portal"}</p>
+              <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot?.payload ? "Cambiar claves del portal" : "Conectar con el portal"}</p>
               <span>{securityKeyOnly
                 ? "Introduce la clave de seguridad de primas y nóminas."
                 : "Introduce tu contraseña del portal de SEVASA. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
             </div>
+            {!session.email && (
+              <label>
+                <Mail size={17} />
+                <input
+                  autoComplete="email"
+                  placeholder="Correo electrónico"
+                  type="email"
+                  value={activationEmail}
+                  onChange={(event) => setActivationEmail(event.target.value)}
+                />
+              </label>
+            )}
             {!securityKeyOnly && (
               <label>
                 <Lock size={17} />
@@ -3019,7 +3042,7 @@ function PortalPanel({
               />
             </label>
             <div className="portal-security-actions">
-              {snapshot && !syncingPortal && (
+              {snapshot?.payload && !syncingPortal && (
                 <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
                   Cancelar
                 </button>
@@ -3027,7 +3050,7 @@ function PortalPanel({
               <button
                 className="primary-button"
                 type="button"
-                disabled={savingCredentials || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
+                disabled={savingCredentials || (!session.email && !activationEmail.trim()) || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
                 onClick={saveCredentials}
               >
                 {savingCredentials ? "Guardando..." : securityKeyOnly ? "Guardar clave" : "Guardar claves"}
@@ -3060,7 +3083,7 @@ function PortalPanel({
           <strong>Conectado con el portal</strong>
           <span>Los primeros datos aparecerán aquí en unos segundos mientras continúa la lectura.</span>
         </div>
-      ) : loading && !snapshot ? (
+      ) : loading && !snapshot?.payload ? (
         <div className="portal-empty-state">
           <Clock3 size={26} />
           <strong>Cargando portal</strong>
@@ -3219,13 +3242,14 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!session?.token || session.portalActivationStatus !== "pending") return undefined;
+    if (!session?.token) return undefined;
     let cancelled = false;
 
     const refreshActivation = async () => {
       try {
         const nextSession = await refreshCurrentUser({ token: session.token });
-        if (cancelled || !nextSession || nextSession.portalActivationStatus !== "active") return;
+        if (cancelled || !nextSession) return;
+        if (nextSession.portalActivationStatus === session.portalActivationStatus && nextSession.email === session.email) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
         setSession(nextSession);
       } catch {
@@ -3234,10 +3258,12 @@ export function App() {
     };
 
     refreshActivation();
-    const timer = window.setInterval(refreshActivation, 15_000);
+    const timer = session.portalActivationStatus === "pending"
+      ? window.setInterval(refreshActivation, 15_000)
+      : null;
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      if (timer) window.clearInterval(timer);
     };
   }, [session?.portalActivationStatus, session?.token]);
 

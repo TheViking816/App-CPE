@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, Clock3, Eye, RefreshCw, Search, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
-import { getUsageMonitor } from "./supabaseClient.js";
+import { Activity, BarChart3, CheckSquare2, Clock3, Eye, ListRestart, Play, RefreshCw, Search, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
+import { getAdminPortalSyncUsers, getUsageMonitor, queueAdminPortalSyncUsers } from "./supabaseClient.js";
 
 const PAGE_LABELS = {
   inicio: "Inicio", contratacion: "Contratación", sueldometro: "Sueldómetro",
@@ -49,13 +49,32 @@ export default function AdminMonitor({ session }) {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [pageFilter, setPageFilter] = useState("");
+  const [portalUsers, setPortalUsers] = useState([]);
+  const [portalQuery, setPortalQuery] = useState("");
+  const [portalFilter, setPortalFilter] = useState("attention");
+  const [selectedChapas, setSelectedChapas] = useState(() => new Set());
+  const [queueing, setQueueing] = useState(false);
+  const [queueMessage, setQueueMessage] = useState("");
+  const [portalError, setPortalError] = useState("");
 
   const load = async ({ quiet = false } = {}) => {
     if (quiet) setRefreshing(true);
     else setLoading(true);
     setError("");
+    setPortalError("");
     try {
-      setData(await getUsageMonitor({ token: session.token }));
+      const [usageResult, portalResult] = await Promise.allSettled([
+        getUsageMonitor({ token: session.token }),
+        getAdminPortalSyncUsers({ token: session.token })
+      ]);
+      if (usageResult.status === "rejected") throw usageResult.reason;
+      setData(usageResult.value);
+      if (portalResult.status === "fulfilled") {
+        setPortalUsers(portalResult.value?.users || []);
+        setSelectedChapas((current) => new Set([...current].filter((chapa) => (portalResult.value?.users || []).some((user) => user.chapa === chapa))));
+      } else {
+        setPortalError(portalResult.reason?.message || "No se pudieron cargar las sincronizaciones.");
+      }
     } catch (requestError) {
       setError(requestError?.message || "No se pudo cargar el monitor.");
     } finally {
@@ -82,6 +101,61 @@ export default function AdminMonitor({ session }) {
   const maxViews = Math.max(1, ...(data?.hourly || []).map((item) => Number(item.views) || 0));
   const maxPageViews = Math.max(1, ...(data?.pages || []).map((item) => Number(item.views) || 0));
   const summary = data?.summary || {};
+  const filteredPortalUsers = useMemo(() => {
+    const normalized = portalQuery.replace(/\D/g, "");
+    return portalUsers.filter((user) => {
+      if (normalized && !String(user.chapa || "").includes(normalized)) return false;
+      if (portalFilter === "pending") return user.activationStatus === "pending";
+      if (portalFilter === "failed") return user.jobStatus === "failed";
+      if (portalFilter === "queued") return ["queued", "running"].includes(user.jobStatus);
+      if (portalFilter === "attention") return user.activationStatus === "pending" || user.jobStatus === "failed";
+      return true;
+    });
+  }, [portalFilter, portalQuery, portalUsers]);
+  const canSelectPortalUser = (user) => user.hasCredentials && !["queued", "running"].includes(user.jobStatus);
+  const selectableFilteredChapas = filteredPortalUsers.filter(canSelectPortalUser).map((user) => user.chapa);
+  const allFilteredSelected = selectableFilteredChapas.length > 0 && selectableFilteredChapas.every((chapa) => selectedChapas.has(chapa));
+
+  const togglePortalUser = (chapa) => {
+    setQueueMessage("");
+    setSelectedChapas((current) => {
+      const next = new Set(current);
+      if (next.has(chapa)) next.delete(chapa);
+      else next.add(chapa);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = () => {
+    setQueueMessage("");
+    setSelectedChapas((current) => {
+      const next = new Set(current);
+      if (allFilteredSelected) selectableFilteredChapas.forEach((chapa) => next.delete(chapa));
+      else selectableFilteredChapas.forEach((chapa) => next.add(chapa));
+      return next;
+    });
+  };
+
+  const queueSelected = async () => {
+    const chapas = [...selectedChapas];
+    if (!chapas.length) return;
+    setQueueing(true);
+    setQueueMessage("");
+    setPortalError("");
+    try {
+      const result = await queueAdminPortalSyncUsers({ token: session.token, chapas });
+      const queued = Number(result?.queued || 0);
+      const skipped = Number(result?.skipped || 0);
+      setQueueMessage(`${queued} ${queued === 1 ? "chapa añadida" : "chapas añadidas"} a la cola${skipped ? ` · ${skipped} omitidas` : ""}. Ejecuta “Actualizar pendientes App CPE” en el escritorio.`);
+      setSelectedChapas(new Set());
+      const refreshed = await getAdminPortalSyncUsers({ token: session.token });
+      setPortalUsers(refreshed?.users || []);
+    } catch (requestError) {
+      setPortalError(requestError?.message || "No se pudieron encolar las chapas seleccionadas.");
+    } finally {
+      setQueueing(false);
+    }
+  };
 
   return (
     <section className="page-panel admin-monitor">
@@ -115,6 +189,50 @@ export default function AdminMonitor({ session }) {
             <Stat icon={Eye} label="Páginas vistas" value={summary.pageViews} detail={`Pico ${summary.peakHourlyViews || 0} en una hora`} tone="violet" />
             <Stat icon={Activity} label="Aperturas" value={summary.appOpens} detail={`${summary.logins || 0} inicios de sesión`} tone="amber" />
           </div>
+
+          <article className="monitor-card monitor-sync-card">
+            <div className="monitor-card-heading monitor-sync-heading">
+              <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
+              <ListRestart size={22} />
+            </div>
+            <p className="monitor-sync-help">Selecciona una o varias chapas. Este botón solo las deja en cola; el navegador worker se inicia desde el acceso «Actualizar pendientes App CPE» del escritorio.</p>
+            <div className="monitor-sync-toolbar">
+              <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
+              <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
+                {[["attention", "Necesitan atención"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
+                  <button key={value} type="button" className={portalFilter === value ? "is-active" : ""} onClick={() => setPortalFilter(value)}>{label}</button>
+                ))}
+              </div>
+            </div>
+            {portalError && <p className="monitor-sync-message is-error">{portalError}</p>}
+            {queueMessage && <p className="monitor-sync-message is-success">{queueMessage}</p>}
+            <div className="monitor-table-wrap">
+              <table className="monitor-table monitor-sync-table">
+                <thead><tr><th><button type="button" className="monitor-check-all" onClick={toggleAllFiltered} disabled={!selectableFilteredChapas.length} aria-label="Seleccionar resultados"><CheckSquare2 size={17} />{allFilteredSelected ? "Quitar" : "Todos"}</button></th><th>Chapa</th><th>Cuenta</th><th>Trabajo</th><th>Último intento</th><th>Detalle</th></tr></thead>
+                <tbody>
+                  {filteredPortalUsers.map((user) => {
+                    const selectable = canSelectPortalUser(user);
+                    const state = user.jobStatus || (user.hasCredentials ? "sin trabajo" : "sin claves");
+                    return (
+                      <tr key={user.chapa} className={selectedChapas.has(user.chapa) ? "is-selected" : ""}>
+                        <td><input type="checkbox" checked={selectedChapas.has(user.chapa)} disabled={!selectable} onChange={() => togglePortalUser(user.chapa)} aria-label={`Seleccionar chapa ${user.chapa}`} /></td>
+                        <td><strong>{user.chapa}</strong>{user.email && <small className="monitor-sync-email">{user.email}</small>}</td>
+                        <td><span className={`monitor-job-state is-${user.activationStatus}`}>{user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span></td>
+                        <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
+                        <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
+                        <td className="monitor-sync-detail">{user.jobMessage || (!user.hasCredentials ? "Debe guardar sus claves" : user.hasSecurityKey ? "Claves completas" : "Sin clave de nóminas")}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {!filteredPortalUsers.length && <p className="monitor-empty">No hay usuarios que coincidan con este filtro.</p>}
+            </div>
+            <div className="monitor-sync-actions">
+              <span>{selectedChapas.size ? `${selectedChapas.size} ${selectedChapas.size === 1 ? "usuario seleccionado" : "usuarios seleccionados"}` : "Selecciona las chapas que quieras actualizar"}</span>
+              <button type="button" onClick={queueSelected} disabled={!selectedChapas.size || queueing}><Play size={17} />{queueing ? "Añadiendo…" : "Poner seleccionados en cola"}</button>
+            </div>
+          </article>
 
           <div className="monitor-grid monitor-grid-main">
             <article className="monitor-card monitor-activity-card">
