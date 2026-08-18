@@ -70,14 +70,35 @@ function runJob(job, slot) {
         ...(profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {})
       }
     });
-    child.on("error", (error) => {
+    child.on("error", async (error) => {
       console.error(`[portal-worker:${slot}] No se pudo iniciar ${job.id}:`, error);
+      await failRunningJob(job.id, "No se pudo iniciar el proceso de lectura").catch((failure) => {
+        console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
+      });
       resolve();
     });
-    child.on("exit", (code) => {
+    child.on("exit", async (code) => {
       console.log(`[portal-worker:${slot}] ${job.id} finalizo con codigo ${code}`);
+      if (code !== 0) {
+        await failRunningJob(job.id, `El proceso de lectura termino con codigo ${code}`).catch((failure) => {
+          console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
+        });
+      }
       resolve();
     });
+  });
+}
+
+async function failRunningJob(jobId, message) {
+  await request(`/rest/v1/app_cpe_portal_sync_jobs?id=eq.${encodeURIComponent(jobId)}&status=eq.running`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: "failed",
+      message,
+      portal_password: null,
+      security_key: null,
+      finished_at: new Date().toISOString()
+    })
   });
 }
 
