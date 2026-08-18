@@ -11,6 +11,6 @@ $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "powershell.exe"
 $shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $scriptPath + '" -RepositoryPath "' + $RepositoryPath + '"'
 $shortcut.WorkingDirectory = $RepositoryPath
-$shortcut.Description = "Encola todas las chapas con claves del portal guardadas"
+$shortcut.Description = "Encola y procesa manualmente todas las chapas con claves guardadas"
 $shortcut.Save()
 Write-Host "Acceso creado: $shortcutPath"
