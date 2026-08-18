@@ -70,6 +70,7 @@ import {
   getPortalSyncJob,
   getUserRelayHours,
   loginUser,
+  queuePendingPortalActivation,
   registerUser,
   sendPendingActivationEmails,
   requestOfficialPortalDocument,
@@ -2905,6 +2906,7 @@ function PortalPanel({
       setSecurityKeyOnly(false);
       setShowCredentials(false);
       if (session.portalActivationStatus === "pending" && !snapshot) {
+        await queuePendingPortalActivation({ token: session.token });
         setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
         await sendPendingActivationEmails();
       } else {
