@@ -372,11 +372,46 @@ export async function getUsageMonitor({ token }) {
   return data;
 }
 
+export async function getAdminPortalSyncUsers({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_admin_portal_sync_users", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function queueAdminPortalSyncUsers({ token, chapas }) {
+  if (!supabase || !token || !chapas?.length) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_admin_queue_portal_sync_users", {
+    p_token: token,
+    p_chapas: chapas
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function refreshCurrentUser({ token }) {
   if (!supabase || !token) return null;
 
   const { data, error } = await supabase.rpc("app_cpe_get_current_user", {
     p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function updateActivationEmail({ token, email }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_update_activation_email", {
+    p_token: token,
+    p_email: email
   });
 
   if (error) throw error;
