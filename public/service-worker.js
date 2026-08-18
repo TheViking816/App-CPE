@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260817-payroll-cache-ui-1";
+self.__APP_CPE_SW_VERSION__ = "20260818-pending-activation-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
