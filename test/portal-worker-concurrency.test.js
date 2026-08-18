@@ -13,10 +13,9 @@ test("el worker procesa tandas acotadas de diez por defecto", () => {
   assert.match(source, /Tanda de \$\{jobs\.length\} finalizada/);
 });
 
-test("cada chapa usa un perfil persistente de Chrome independiente", () => {
-  assert.match(source, /function profileForJob\(job\)/);
-  assert.match(source, /String\(job\?\.chapa/);
-  assert.match(source, /portal-oficial-chrome-profile/);
+test("cada worker paralelo usa un perfil de Chrome independiente", () => {
+  assert.match(source, /function profileForSlot\(slot\)/);
+  assert.match(source, /`worker-\$\{slot\}`/);
   assert.match(source, /CPE_PORTAL_PROFILE_DIR: profileDir/);
 });
 

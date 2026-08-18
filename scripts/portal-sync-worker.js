@@ -51,20 +51,16 @@ async function claimNextBatch() {
   return claimed || [];
 }
 
-function profileForJob(job) {
-  const chapa = String(job?.chapa || "").trim();
-  if (!/^\d{3,12}$/.test(chapa)) {
-    throw new Error(`Chapa no valida para el perfil de Chrome: ${chapa || "vacia"}`);
-  }
+function profileForSlot(slot) {
   return path.resolve(
-    parallelProfileRoot || path.join("data", "portal-oficial-chrome-profile"),
-    chapa
+    parallelProfileRoot || path.join("data", "portal-oficial-chrome-profile", "workers"),
+    `worker-${slot}`
   );
 }
 
 function runJob(job, slot) {
   return new Promise((resolve) => {
-    const profileDir = profileForJob(job);
+    const profileDir = profileForSlot(slot);
     const child = spawn(process.execPath, ["scripts/sync-portal-oficial-job.js", job.id], {
       cwd: process.cwd(),
       stdio: "inherit",
