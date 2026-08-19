@@ -74,11 +74,11 @@ test("conserva el error real después de agotar los reintentos", async () => {
   );
 });
 
-test("las nóminas se procesan aparte sin ofrecer una actualización manual", () => {
+test("las nóminas diarias se procesan aparte y la carga anual las deja guardadas", () => {
   assert.match(syncSource, /portalRequestKind === "payrolls"/);
-  assert.match(syncSource, /const nominas = existingSnapshot\?\.payload\?\.nominas/);
-  assert.match(syncSource, /if \(portalDocumentId\) \{[\s\S]*collectPayrollDocumentFiles\(page, result\.rows, portalDocumentId\)/);
-  assert.doesNotMatch(syncSource, /collectPayrollDocumentFiles\(page, result\.rows, ""\)/);
+  assert.match(syncSource, /portalRequestKind === "history"[\s\S]*"nominas y documentos"/);
+  assert.match(syncSource, /portalDocumentId \|\| portalRequestKind === "history"/);
+  assert.match(syncSource, /collectPayrollDocumentFiles\(page, result\.rows, portalDocumentId \|\| ""\)/);
   assert.doesNotMatch(appSource, /Actualizar nóminas/);
 });
 

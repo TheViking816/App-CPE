@@ -138,22 +138,32 @@ Deno.serve(async (request) => {
     if (jobRow?.chapa) {
       const { data: existingSnapshot } = await supabase
         .from("app_cpe_portal_snapshots")
-        .select("chapa")
+        .select("chapa,payload")
         .eq("chapa", jobRow.chapa)
         .maybeSingle();
-      if (!existingSnapshot) {
+      const pendingPayload = {
+        ...(existingSnapshot?.payload || {}),
+        sync: {
+          ...(existingSnapshot?.payload?.sync || {}),
+          inProgress: true,
+          failed: false,
+          error: null,
+          stage: "Conectando con el portal",
+          partial: false,
+          freshSections: 0,
+          warnings: []
+        }
+      };
+      if (existingSnapshot) {
+        await supabase
+          .from("app_cpe_portal_snapshots")
+          .update({ payload: pendingPayload, updated_at: new Date().toISOString() })
+          .eq("chapa", jobRow.chapa);
+      } else {
         await supabase.from("app_cpe_portal_snapshots").insert({
           chapa: jobRow.chapa,
           source: "https://portal.cpevalencia.com/#User",
-          payload: {
-            sync: {
-              inProgress: true,
-              stage: "Conectando con el portal",
-              partial: false,
-              freshSections: 0,
-              warnings: []
-            }
-          },
+          payload: pendingPayload,
           updated_at: new Date().toISOString()
         });
       }

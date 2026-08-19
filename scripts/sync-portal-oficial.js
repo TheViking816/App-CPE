@@ -1485,8 +1485,8 @@ async function getStoredPayrollDocumentIds() {
 
 async function completePayrollResult(page, result) {
   if (!result.locked && result.rows?.length) {
-    if (portalDocumentId) {
-      await collectPayrollDocumentFiles(page, result.rows, portalDocumentId);
+    if (portalDocumentId || portalRequestKind === "history") {
+      await collectPayrollDocumentFiles(page, result.rows, portalDocumentId || "");
       await upsertPayrollDocuments();
     }
   }
@@ -2121,6 +2121,16 @@ async function main() {
       Array.isArray(value?.history)
       && value.history.some((period) => cleanText(period?.monthLabel) && Array.isArray(period?.rows))
     );
+    const hasPremiumData = (value) => Boolean(
+      value?.recognized
+      && !value?.locked
+      && (
+        cleanText(value?.monthLabel)
+        || (Array.isArray(value?.history) && value.history.some((period) => (
+          cleanText(period?.monthLabel) && Array.isArray(period?.rows)
+        )))
+      )
+    );
     const hasMonths = (value) => Array.isArray(value?.months) && value.months.length > 0;
     const hasVacationData = (value) => Boolean(value?.recognized);
     const hasExceptionData = (value) => Boolean(value?.recognized);
@@ -2185,7 +2195,7 @@ async function main() {
       () => collectPrimas(page, existingSnapshot?.payload?.primas),
       existingSnapshot?.payload?.primas,
       { locked: true, rows: [] },
-      hasRows
+      hasPremiumData
     );
     await publishProgress("primas", primas, "Primas cargadas");
     const sl = await readSection(
@@ -2220,8 +2230,19 @@ async function main() {
       hasVacationData
     );
     await publishProgress("vacaciones", vacaciones, "Vacaciones cargadas");
-    const nominas = existingSnapshot?.payload?.nominas
-      || { recognized: false, locked: !portalSecurityKey, rows: [] };
+    const nominas = portalRequestKind === "history"
+      ? await readOptionalSection(
+          "nominas y documentos",
+          () => collectPayrolls(page),
+          existingSnapshot?.payload?.nominas,
+          { recognized: false, locked: !portalSecurityKey, rows: [] },
+          (value) => Boolean(value?.recognized && !value?.locked)
+        )
+      : existingSnapshot?.payload?.nominas
+        || { recognized: false, locked: !portalSecurityKey, rows: [] };
+    if (portalRequestKind === "history") {
+      await publishProgress("nominas", nominas, "Nominas historicas guardadas");
+    }
     const dobles = await readOptionalSection(
       "dobles solicitados",
       () => collectRequestedDoubles(page),
@@ -2250,7 +2271,16 @@ async function main() {
         stage: "Completado",
         partial: sectionWarnings.length > 0,
         freshSections,
-        warnings: sectionWarnings
+        warnings: sectionWarnings,
+        ...(portalRequestKind === "history"
+          && hasJournalData(jornales)
+          && hasPremiumData(primas)
+          && nominas?.recognized
+          && !nominas?.locked
+          ? { fullHistoryCompletedAt: updatedAt }
+          : existingSnapshot?.payload?.sync?.fullHistoryCompletedAt
+            ? { fullHistoryCompletedAt: existingSnapshot.payload.sync.fullHistoryCompletedAt }
+            : {})
       }
     };
 

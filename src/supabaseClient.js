@@ -383,12 +383,13 @@ export async function getAdminPortalSyncUsers({ token }) {
   return data;
 }
 
-export async function queueAdminPortalSyncUsers({ token, chapas }) {
+export async function queueAdminPortalSyncUsers({ token, chapas, fullHistory = false }) {
   if (!supabase || !token || !chapas?.length) return null;
 
   const { data, error } = await supabase.rpc("app_cpe_admin_queue_portal_sync_users", {
     p_token: token,
-    p_chapas: chapas
+    p_chapas: chapas,
+    p_full_history: fullHistory
   });
 
   if (error) throw error;

@@ -44,8 +44,44 @@ test("orphaned Vault credentials are reconnected and unrelated legacy accounts s
 test("Monitor exposes individual and multi-user queue controls", async () => {
   const monitor = await read("../src/AdminMonitor.jsx");
   assert.match(monitor, /Sincronizar usuarios concretos/);
-  assert.match(monitor, /Poner seleccionados en cola/);
+  assert.match(monitor, /Actualizar mes actual/);
+  assert.match(monitor, /Carga inicial completa/);
   assert.match(monitor, /Actualizar pendientes App CPE/);
   assert.match(monitor, /Seleccionar chapa/);
   assert.ok(monitor.indexOf("monitor-recent-card") < monitor.indexOf("monitor-sync-card"));
+});
+
+test("full initial sync is explicit and queues annual history", async () => {
+  const [monitor, client, migration, workerJob, sync] = await Promise.all([
+    read("../src/AdminMonitor.jsx"),
+    read("../src/supabaseClient.js"),
+    read("../supabase/migrations/20260819025819_preserve_portal_history_and_bootstrap_sync.sql"),
+    read("../scripts/sync-portal-oficial-job.js"),
+    read("../scripts/sync-portal-oficial.js")
+  ]);
+  assert.match(monitor, /queueSelected\(\{ fullHistory: true \}\)/);
+  assert.match(client, /p_full_history: fullHistory/);
+  assert.match(migration, /when p_full_history.*then 'history'/s);
+  assert.match(workerJob, /CPE_PORTAL_REQUEST_KIND: job\.request_kind \|\| "snapshot"/);
+  assert.match(sync, /portalRequestKind === "history"[\s\S]{0,160}collectPayrollDocumentFiles/);
+  assert.match(sync, /"nominas y documentos"/);
+});
+
+test("database snapshot updates merge histories instead of replacing them", async () => {
+  const migration = await read("../supabase/migrations/20260819025819_preserve_portal_history_and_bootstrap_sync.sql");
+  assert.match(migration, /app_cpe_merge_portal_period_section/);
+  assert.match(migration, /distinct on \(period_year, period_month\)/);
+  assert.match(migration, /before update of payload on public\.app_cpe_portal_snapshots/);
+  assert.match(migration, /coalesce\(p_existing, '\{\}'::jsonb\) \|\| coalesce\(p_incoming, '\{\}'::jsonb\)/);
+});
+
+test("Monitor identifies users that need historical recovery", async () => {
+  const [monitor, migration] = await Promise.all([
+    read("../src/AdminMonitor.jsx"),
+    read("../supabase/migrations/20260819031058_expose_portal_history_recovery_status.sql")
+  ]);
+  assert.match(migration, /'hasPremiumHistory'/);
+  assert.match(migration, /'premiumHistoryMonths'/);
+  assert.match(monitor, /\["history", "Sin histórico"\]/);
+  assert.match(monitor, /Sin histórico de primas · usa Carga inicial completa/);
 });

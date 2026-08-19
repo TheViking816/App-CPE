@@ -108,7 +108,8 @@ export default function AdminMonitor({ session }) {
       if (portalFilter === "pending") return user.activationStatus === "pending";
       if (portalFilter === "failed") return user.jobStatus === "failed";
       if (portalFilter === "queued") return ["queued", "running"].includes(user.jobStatus);
-      if (portalFilter === "attention") return user.activationStatus === "pending" || user.jobStatus === "failed";
+      if (portalFilter === "history") return !user.hasPremiumHistory;
+      if (portalFilter === "attention") return user.activationStatus === "pending" || user.jobStatus === "failed" || !user.hasPremiumHistory;
       return true;
     });
   }, [portalFilter, portalQuery, portalUsers]);
@@ -136,17 +137,17 @@ export default function AdminMonitor({ session }) {
     });
   };
 
-  const queueSelected = async () => {
+  const queueSelected = async ({ fullHistory = false } = {}) => {
     const chapas = [...selectedChapas];
     if (!chapas.length) return;
     setQueueing(true);
     setQueueMessage("");
     setPortalError("");
     try {
-      const result = await queueAdminPortalSyncUsers({ token: session.token, chapas });
+      const result = await queueAdminPortalSyncUsers({ token: session.token, chapas, fullHistory });
       const queued = Number(result?.queued || 0);
       const skipped = Number(result?.skipped || 0);
-      setQueueMessage(`${queued} ${queued === 1 ? "chapa añadida" : "chapas añadidas"} a la cola${skipped ? ` · ${skipped} omitidas` : ""}. Ejecuta “Actualizar pendientes App CPE” en el escritorio.`);
+      setQueueMessage(`${queued} ${queued === 1 ? "chapa añadida" : "chapas añadidas"} a la cola para ${fullHistory ? "la carga inicial completa" : "la actualización normal"}${skipped ? ` · ${skipped} omitidas` : ""}. Ejecuta “Actualizar pendientes App CPE” en el escritorio.`);
       setSelectedChapas(new Set());
       const refreshed = await getAdminPortalSyncUsers({ token: session.token });
       setPortalUsers(refreshed?.users || []);
@@ -257,11 +258,11 @@ export default function AdminMonitor({ session }) {
               <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
               <ListRestart size={22} />
             </div>
-            <p className="monitor-sync-help">Selecciona una o varias chapas. Este botón solo las deja en cola; el navegador worker se inicia desde el acceso «Actualizar pendientes App CPE» del escritorio.</p>
+            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda todas las nóminas disponibles. Ambos botones dejan las chapas en cola para «Actualizar pendientes App CPE».</p>
             <div className="monitor-sync-toolbar">
               <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
               <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
-                {[["attention", "Necesitan atención"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
+                {[["attention", "Necesitan atención"], ["history", "Sin histórico"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
                   <button key={value} type="button" className={portalFilter === value ? "is-active" : ""} onClick={() => setPortalFilter(value)}>{label}</button>
                 ))}
               </div>
@@ -282,7 +283,7 @@ export default function AdminMonitor({ session }) {
                         <td><span className={`monitor-job-state is-${user.activationStatus}`}>{user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span></td>
                         <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
                         <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
-                        <td className="monitor-sync-detail">{user.jobMessage || (!user.hasCredentials ? "Debe configurar el acceso" : user.hasSecurityKey ? "Acceso completo" : "Sin clave de nóminas")}</td>
+                        <td className="monitor-sync-detail">{!user.hasPremiumHistory ? "Sin histórico de primas · usa Carga inicial completa" : user.jobMessage || (!user.hasCredentials ? "Debe configurar el acceso" : user.hasSecurityKey ? `${user.premiumHistoryMonths || 0} meses de primas guardados` : "Sin clave de nóminas")}</td>
                       </tr>
                     );
                   })}
@@ -292,7 +293,8 @@ export default function AdminMonitor({ session }) {
             </div>
             <div className="monitor-sync-actions">
               <span>{selectedChapas.size ? `${selectedChapas.size} ${selectedChapas.size === 1 ? "usuario seleccionado" : "usuarios seleccionados"}` : "Selecciona las chapas que quieras actualizar"}</span>
-              <button type="button" onClick={queueSelected} disabled={!selectedChapas.size || queueing}><Play size={17} />{queueing ? "Añadiendo…" : "Poner seleccionados en cola"}</button>
+              <button type="button" onClick={() => queueSelected({ fullHistory: false })} disabled={!selectedChapas.size || queueing}><Play size={17} />{queueing ? "Añadiendo…" : "Actualizar mes actual"}</button>
+              <button type="button" onClick={() => queueSelected({ fullHistory: true })} disabled={!selectedChapas.size || queueing}><ListRestart size={17} />{queueing ? "Añadiendo…" : "Carga inicial completa"}</button>
             </div>
           </article>
         </>
