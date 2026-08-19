@@ -144,7 +144,7 @@ async function tryPortalProbe() {
   if (isCloudflareChallenge(html)) {
     return createError(
       "portal_cloudflare",
-      "El portal oficial ha bloqueado el acceso automatico desde servidor. La app no ha enviado ni guardado tus claves.",
+      "El portal oficial ha bloqueado el acceso automatico desde servidor. La app no ha enviado tus datos de acceso.",
       "Cloudflare challenge"
     );
   }

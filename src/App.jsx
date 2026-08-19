@@ -2644,7 +2644,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
             <ChevronDown size={19} />
           </button>
           {nominasExpanded && (nominas.locked ? (
-            <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Guárdala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
+            <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Configúrala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
           ) : (nominas.rows || []).length ? (
             <div className="portal-payroll-document-list">
               {nominas.rows.map((payroll) => (
@@ -2739,8 +2739,8 @@ function PortalPanel({
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
-      // Un fallo de lectura no implica que las claves guardadas hayan dejado de
-      // existir. El formulario solo se abre de forma explícita desde Cambiar claves.
+      // Un fallo de lectura no implica que el acceso configurado haya dejado de
+      // existir. El formulario solo se abre de forma explícita desde Cambiar acceso.
       setShowCredentials(!data?.payload);
     } catch (requestError) {
       if (!silent) {
@@ -2884,7 +2884,7 @@ function PortalPanel({
     }
 
     setError("");
-    setPortalMessage("Guardando claves...");
+    setPortalMessage("Cargando datos...");
     setSavingCredentials(true);
 
     try {
@@ -2920,11 +2920,11 @@ function PortalPanel({
         setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
         await sendPendingActivationEmails();
       } else {
-        setPortalMessage("Claves guardadas correctamente.");
+        setPortalMessage("Datos de acceso configurados correctamente.");
       }
     } catch (requestError) {
       setPortalMessage("");
-      setError(requestError.message || "No se pudieron guardar las claves del portal.");
+      setError(requestError.message || "No se pudieron configurar los datos de acceso al portal.");
     } finally {
       setSavingCredentials(false);
     }
@@ -2980,7 +2980,7 @@ function PortalPanel({
         <div className="portal-update-row">
           <span>Datos guardados del portal oficial</span>
           <div>
-            {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar claves</button>}
+            {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar acceso</button>}
           </div>
         </div>
       )}
@@ -2990,12 +2990,12 @@ function PortalPanel({
       {showCredentials && !syncingPortal && (
         <>
           <p className="portal-first-sync-note">
-            Guarda tus claves para conectar tu cuenta con el Portal CPE.
+            Introduce tus datos de acceso para conectar tu cuenta con el Portal CPE.
           </p>
 
           <section ref={credentialsRef} className="portal-security-card">
             <div>
-              <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot?.payload ? "Cambiar claves del portal" : "Conectar con el portal"}</p>
+              <p>{securityKeyOnly ? "Añadir clave de seguridad" : snapshot?.payload ? "Cambiar acceso al portal" : "Conectar con el portal"}</p>
               <span>{securityKeyOnly
                 ? "Introduce la clave de seguridad de primas y nóminas."
                 : "Introduce tu contraseña del portal de SEVASA. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
@@ -3051,7 +3051,7 @@ function PortalPanel({
                 disabled={savingCredentials || (!session.email && !activationEmail.trim()) || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
                 onClick={saveCredentials}
               >
-                {savingCredentials ? "Guardando..." : securityKeyOnly ? "Guardar clave" : "Guardar claves"}
+                {savingCredentials ? "Cargando datos..." : securityKeyOnly ? "Actualizar datos" : "Cargar datos"}
               </button>
             </div>
             {portalMessage && <small>{portalMessage}</small>}

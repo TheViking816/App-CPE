@@ -1803,7 +1803,7 @@ async function collectPrimas(page, previous = null) {
     3000
   );
   if (invalidKey) {
-    throw new Error("La clave de seguridad de primas es incorrecta. Cambia las claves guardadas e intentalo de nuevo.");
+    throw new Error("La clave de seguridad de primas es incorrecta. Revisa los datos de acceso e intentalo de nuevo.");
   }
 
   const accept = await waitForFrameLocator(
@@ -2021,7 +2021,7 @@ async function main() {
         await login(page);
         payrolls = await collectPayrolls(page);
       }
-      if (payrolls.locked) throw new Error("Hace falta la clave de seguridad guardada para abrir esta nomina.");
+      if (payrolls.locked) throw new Error("Hace falta configurar la clave de seguridad para abrir esta nomina.");
       if (!(payrolls.rows || []).some((payroll) => payroll.id === portalDocumentId)) {
         throw new Error("La nomina solicitada ya no esta disponible en el portal.");
       }

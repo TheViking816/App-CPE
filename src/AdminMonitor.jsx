@@ -282,7 +282,7 @@ export default function AdminMonitor({ session }) {
                         <td><span className={`monitor-job-state is-${user.activationStatus}`}>{user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span></td>
                         <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
                         <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
-                        <td className="monitor-sync-detail">{user.jobMessage || (!user.hasCredentials ? "Debe guardar sus claves" : user.hasSecurityKey ? "Claves completas" : "Sin clave de nóminas")}</td>
+                        <td className="monitor-sync-detail">{user.jobMessage || (!user.hasCredentials ? "Debe configurar el acceso" : user.hasSecurityKey ? "Acceso completo" : "Sin clave de nóminas")}</td>
                       </tr>
                     );
                   })}
