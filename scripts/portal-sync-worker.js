@@ -14,6 +14,8 @@ const batchSize = Math.max(1, Math.min(32, Number(
 )));
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
+const portalBrowserProvider = String(process.env.CPE_PORTAL_BROWSER_PROVIDER || "gateway").trim().toLowerCase();
+const scrapflyMode = portalBrowserProvider === "scrapfly";
 const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
 const workerDrain = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_DRAIN || "");
 const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser humano|challenge-platform|cf-chl-|Just a moment/i;
@@ -44,11 +46,11 @@ async function request(path, options = {}) {
 
 async function claimNextBatch() {
   await failQueuedJobsWithoutCredentials();
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
 
   const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
-  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,portal_password&id=in.(${ids})&status=eq.queued`, {
+  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind,portal_password&id=in.(${ids})&status=eq.queued`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
@@ -153,6 +155,7 @@ async function ensureGatewayBrowser() {
   try {
     gatewayBrowser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 5000 });
   } catch (firstError) {
+    if (scrapflyMode) throw new Error(`No se pudo conectar con Scrapfly: ${firstError.message}`);
     console.warn("[portal-worker] El Chrome gateway se cerro; se abrira de nuevo automaticamente.");
     await startGatewayBrowser();
     gatewayBrowser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
@@ -213,6 +216,31 @@ async function gatewayAuthorizationIsValid() {
   }
 }
 
+async function scrapflyAuthorizationIsValid() {
+  const browser = await ensureGatewayBrowser();
+  const context = browser?.contexts()[0];
+  if (!context) return false;
+  const existingPage = context.pages().find((page) => page.url().startsWith("https://portal.cpevalencia.com"));
+  const page = existingPage || await context.newPage();
+  try {
+    const response = await page.goto("https://portal.cpevalencia.com/#User", {
+      waitUntil: "domcontentloaded",
+      timeout: 60000
+    });
+    const deadline = Date.now() + 20000;
+    do {
+      const contents = await Promise.all(page.frames().map((frame) => frame.content().catch(() => "")));
+      const content = contents.join("\n");
+      if (challengePattern.test(content) || (response?.status() || 0) === 403) return false;
+      if (portalPattern.test(content)) return true;
+      await page.waitForTimeout(500);
+    } while (Date.now() < deadline);
+    return false;
+  } finally {
+    if (!existingPage) await page.close().catch(() => {});
+  }
+}
+
 function runJob(job, slot, clearanceCookies = []) {
   return new Promise((resolve) => {
     const profileDir = profileForSlot(slot);
@@ -222,7 +250,13 @@ function runJob(job, slot, clearanceCookies = []) {
       env: {
         ...process.env,
         CPE_PORTAL_SYNC_JOB_ID: job.id,
-        ...(portalCdpEndpoint
+        ...(portalCdpEndpoint && scrapflyMode
+          ? {
+              CPE_PORTAL_CDP_ENDPOINT: portalCdpEndpoint,
+              CPE_PORTAL_CDP_CONTEXT_SLOT: "",
+              CPE_PORTAL_CLEARANCE_COOKIES: ""
+            }
+          : portalCdpEndpoint
           ? {
               CPE_PORTAL_CDP_ENDPOINT: "",
               CPE_PORTAL_CDP_CONTEXT_SLOT: "",
@@ -287,22 +321,27 @@ async function workerLoop() {
         try {
           let clearanceCookies = [];
           if (portalCdpEndpoint) {
-            if (!await gatewayAuthorizationIsValid()) {
+            const authorizationValid = scrapflyMode
+              ? await scrapflyAuthorizationIsValid()
+              : await gatewayAuthorizationIsValid();
+            if (!authorizationValid) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
-              console.warn("[portal-worker] Tanda devuelta a la cola: Chrome necesita completar la verificacion de Cloudflare.");
+              console.warn(`[portal-worker] Tanda devuelta a la cola: ${scrapflyMode ? "Scrapfly no supero Cloudflare" : "Chrome necesita completar la verificacion de Cloudflare"}.`);
               if (workerOnce || workerDrain) return;
               await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 30000)));
               continue;
             }
-            clearanceCookies = await gatewayClearanceCookies();
-            if (!clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
+            clearanceCookies = scrapflyMode ? [] : await gatewayClearanceCookies();
+            if (!scrapflyMode && !clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
               console.warn("[portal-worker] Tanda devuelta a la cola: falta autorizacion de Cloudflare.");
               if (workerOnce || workerDrain) return;
               continue;
             }
           }
-          const boardJob = jobs.find((job) => job.trigger_source === "worker_manual_all");
+          const boardJob = scrapflyMode
+            ? null
+            : jobs.find((job) => job.trigger_source === "worker_manual_all");
           const boardKey = generalBoardBatchKey(boardJob);
           const boardPromise = boardJob && boardKey && boardKey !== lastGeneralBoardBatchKey
             ? runGeneralBoard(boardJob, clearanceCookies).then((success) => {
