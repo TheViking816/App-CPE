@@ -1,6 +1,7 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
-  [ValidateRange(1024, 65535)][int]$GatewayPort = 9223
+  [ValidateRange(1024, 65535)][int]$GatewayPort = 9223,
+  [switch]$SkipGeneralBoard
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,6 +21,9 @@ try {
   $env:CPE_SUPABASE_URL = "https://wvwdiywtlbffumshbboa.supabase.co"
   $env:CPE_SUPABASE_SECRET_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPointer)
   $env:CPE_PORTAL_CDP_ENDPOINT = "http://127.0.0.1:$GatewayPort"
+  if (-not $SkipGeneralBoard) {
+    $env:CPE_GENERAL_BOARD_CDP_ENDPOINT = "http://127.0.0.1:$GatewayPort"
+  }
   Set-Location -LiteralPath $RepositoryPath
   $logPath = Join-Path $logDir ("operativo-{0}.log" -f (Get-Date -Format "yyyy-MM-dd-HHmmss"))
 
@@ -29,13 +33,19 @@ try {
   $puertasExitCode = $LASTEXITCODE
   & node "scripts/sync-chapero.js" 2>&1 | Out-File -LiteralPath $logPath -Append -Encoding utf8
   $chaperoExitCode = $LASTEXITCODE
+  $generalBoardExitCode = 0
+  if (-not $SkipGeneralBoard) {
+    & node "scripts/sync-general-board.js" 2>&1 | Out-File -LiteralPath $logPath -Append -Encoding utf8
+    $generalBoardExitCode = $LASTEXITCODE
+  }
   $ErrorActionPreference = $previousErrorAction
-  if ($puertasExitCode -ne 0 -or $chaperoExitCode -ne 0) {
-    throw "La actualizacion operativa fallo: puertas=$puertasExitCode, chapero=$chaperoExitCode."
+  if ($puertasExitCode -ne 0 -or $chaperoExitCode -ne 0 -or $generalBoardExitCode -ne 0) {
+    throw "La actualizacion operativa fallo: puertas=$puertasExitCode, chapero=$chaperoExitCode, tablon=$generalBoardExitCode."
   }
 }
 finally {
   $env:CPE_SUPABASE_SECRET_KEY = $null
   $env:CPE_PORTAL_CDP_ENDPOINT = $null
+  $env:CPE_GENERAL_BOARD_CDP_ENDPOINT = $null
   if ($secretPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPointer) }
 }
