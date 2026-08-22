@@ -1,5 +1,6 @@
 import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
+import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -2093,6 +2094,9 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
           );
         })}
       </div>
+      <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
+        Abrir Calendario Anual <ExternalLink size={15} />
+      </a>
       <a className="portal-official-action" href="https://portal.cpevalencia.com/Noray/Prueba.asp" target="_blank" rel="noreferrer">
         Gestionar descansos en el Portal <ExternalLink size={15} />
       </a>
