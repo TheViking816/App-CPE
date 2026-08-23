@@ -21,6 +21,10 @@ const disabledScheduleMigration = await readFile(
   new URL("../supabase/migrations/20260818132200_disable_automatic_portal_sync.sql", import.meta.url),
   "utf8"
 );
+const removeMessagesMigration = await readFile(
+  new URL("../supabase/migrations/20260823201254_remove_portal_messages_and_stale_sync_errors.sql", import.meta.url),
+  "utf8"
+);
 
 test("la actualización masiva desaparece de la app y de la base de datos", () => {
   assert.doesNotMatch(appSource, /Actualizar todos los usuarios|requestAllPortalSyncs/);
@@ -75,6 +79,8 @@ test("los workers omiten mensajes y la app no muestra bandeja ni fallos de sincr
   assert.doesNotMatch(appSource, /payload\?\.sync\?\.failed && !hideSyncFailure/);
   assert.doesNotMatch(appSource, /payload\.sync\.error \|\|/);
   assert.doesNotMatch(appSource, /setPortalMessage\(requestError\.message/);
+  assert.match(removeMessagesMigration, /v_result := private\.app_cpe_preserve_nonempty_portal_sections\(p_existing, p_incoming\) - 'mensajes'/);
+  assert.match(removeMessagesMigration, /update public\.app_cpe_portal_snapshots/);
 });
 
 test("el circuito de seguridad evita nuevos intentos durante dos horas tras un bloqueo", () => {
