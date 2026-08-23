@@ -129,6 +129,10 @@ async function runSync(job) {
           job.request_kind === "history"
             ? "true"
             : process.env.CPE_PORTAL_REFRESH_HISTORY || "",
+        CPE_PORTAL_REFRESH_LATEST_PAYROLL:
+          job.trigger_source === "worker_manual_all" && job.request_kind === "snapshot"
+            ? "true"
+            : process.env.CPE_PORTAL_REFRESH_LATEST_PAYROLL || "",
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL:
           process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled",
@@ -172,13 +176,11 @@ async function runSync(job) {
 
 function publicErrorMessage(error) {
   const message = error instanceof Error ? error.message : "Error desconocido";
+  if (/usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(message)) {
+    return "Usuario o contraseña del portal oficial incorrectos.";
+  }
   return (
-    message
-      .split(/\bMuestra:/i)[0]
-      .replace(/https?:\/\/\S+/gi, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 300) || "No se pudo leer el portal oficial."
+    "La actualización no se ha completado. Se volverá a intentar en la próxima sincronización."
   );
 }
 

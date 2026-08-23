@@ -8,6 +8,7 @@ const schedulerSource = await readFile(new URL("../supabase/functions/schedule-p
 const refreshSource = await readFile(new URL("../supabase/functions/refresh-portal/index.ts", import.meta.url), "utf8");
 const batchWorkflow = await readFile(new URL("../.github/workflows/sync-portals-batch.yml", import.meta.url), "utf8");
 const batchScript = await readFile(new URL("../scripts/sync-portal-batch.js", import.meta.url), "utf8");
+const portalWorkerSource = await readFile(new URL("../scripts/sync-portal-oficial.js", import.meta.url), "utf8");
 const serializedMigration = await readFile(
   new URL("../supabase/migrations/20260817104949_serialize_scheduled_portal_syncs.sql", import.meta.url),
   "utf8"
@@ -20,6 +21,10 @@ const disabledScheduleMigration = await readFile(
   new URL("../supabase/migrations/20260818132200_disable_automatic_portal_sync.sql", import.meta.url),
   "utf8"
 );
+const removeMessagesMigration = await readFile(
+  new URL("../supabase/migrations/20260823201254_remove_portal_messages_and_stale_sync_errors.sql", import.meta.url),
+  "utf8"
+);
 
 test("la actualización masiva desaparece de la app y de la base de datos", () => {
   assert.doesNotMatch(appSource, /Actualizar todos los usuarios|requestAllPortalSyncs/);
@@ -27,9 +32,9 @@ test("la actualización masiva desaparece de la app y de la base de datos", () =
   assert.match(serializedMigration, /drop function if exists public\.app_cpe_create_admin_portal_sync_jobs\(text\)/);
 });
 
-test("los fallos temporales no vuelven a abrir el formulario de claves", () => {
-  assert.doesNotMatch(appSource, /credentialsRejected/);
-  assert.match(appSource, /if \(job\.status === "failed"\)[\s\S]{0,300}?setShowCredentials\(false\)/);
+test("solo el rechazo de credenciales vuelve a abrir el formulario de claves", () => {
+  assert.match(appSource, /if \(job\.status === "failed"\)[\s\S]{0,500}?setShowCredentials\(rejectedCredentials\)/);
+  assert.match(appSource, /hasRejectedPortalCredentials\(job\.message\)/);
   assert.doesNotMatch(appSource, /Revisa la contraseña del portal y vuelve a intentarlo/);
 });
 
@@ -64,6 +69,18 @@ test("las actualizaciones normales omiten nóminas y la app no ofrece sincroniza
   assert.doesNotMatch(appSource, /requestPortalSync/);
   assert.match(appSource, /const saveCredentials = async/);
   assert.doesNotMatch(appSource, /Leyendo jornales, mensajes, dobles, nóminas y calendarios/);
+});
+
+test("los workers omiten mensajes y la app no muestra bandeja ni fallos de sincronización", () => {
+  assert.doesNotMatch(portalWorkerSource, /\(\) => collectMessages\(page\)/);
+  assert.doesNotMatch(portalWorkerSource, /publishProgress\("mensajes"/);
+  assert.match(portalWorkerSource, /delete progressPayload\.mensajes/);
+  assert.doesNotMatch(appSource, /className="header-inbox-button"/);
+  assert.doesNotMatch(appSource, /payload\?\.sync\?\.failed && !hideSyncFailure/);
+  assert.doesNotMatch(appSource, /payload\.sync\.error \|\|/);
+  assert.doesNotMatch(appSource, /setPortalMessage\(requestError\.message/);
+  assert.match(removeMessagesMigration, /v_result := private\.app_cpe_preserve_nonempty_portal_sections\(p_existing, p_incoming\) - 'mensajes'/);
+  assert.match(removeMessagesMigration, /update public\.app_cpe_portal_snapshots/);
 });
 
 test("el circuito de seguridad evita nuevos intentos durante dos horas tras un bloqueo", () => {

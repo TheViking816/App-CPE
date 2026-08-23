@@ -11,6 +11,7 @@ import {
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 import { parseExceptions } from "./portal-exceptions.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
+import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
@@ -51,6 +52,7 @@ const portalClearanceCookies = (() => {
   }
 })();
 const portalRequestKind = String(process.env.CPE_PORTAL_REQUEST_KIND || "snapshot").trim().toLowerCase();
+const refreshLatestPayroll = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_LATEST_PAYROLL || "");
 const fastMode = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_FAST_MODE || "");
 const messageLimit = 5;
 export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
@@ -147,6 +149,9 @@ function parseProductionVerification(cellHtml = "") {
   }
   if (/\bgreen\b|#008000\b|#00ff00\b|#0f0\b|rgb\(\s*0\s*,\s*(?:128|255)\s*,\s*0\s*\)/i.test(source)) {
     return "verified";
+  }
+  if (/\bblack\b|#000000\b|#000\b|rgb\(\s*0\s*,\s*0\s*,\s*0\s*\)/i.test(source)) {
+    return "paid";
   }
   return "unknown";
 }
@@ -1488,9 +1493,25 @@ async function completePayrollResult(page, result) {
     if (portalDocumentId || portalRequestKind === "history") {
       await collectPayrollDocumentFiles(page, result.rows, portalDocumentId || "");
       await upsertPayrollDocuments();
+    } else if (refreshLatestPayroll) {
+      await collectPayrollDocumentFiles(page, result.rows.slice(0, 1), "");
+      await upsertPayrollDocuments();
     }
   }
   return result;
+}
+
+function mergePayrollHistory(previous, incoming) {
+  if (!incoming?.recognized || incoming?.locked) return previous || incoming;
+  const rows = [];
+  const seen = new Set();
+  for (const payroll of [...(incoming.rows || []), ...(previous?.rows || [])]) {
+    const key = String(payroll?.id || payroll?.period || payroll?.title || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    rows.push(payroll);
+  }
+  return { ...(previous || {}), ...incoming, rows };
 }
 
 async function restoreSecurePayrollList(page) {
@@ -2075,11 +2096,17 @@ async function main() {
     }
     const sectionWarnings = [];
     let freshSections = 0;
+    const protectedCollectionKeys = ["rows", "months", "history", "rules"];
+    const wouldEraseStoredCollection = (value, fallback) => protectedCollectionKeys.some((key) => (
+      Array.isArray(fallback?.[key])
+      && fallback[key].length > 0
+      && (!Array.isArray(value?.[key]) || value[key].length < fallback[key].length)
+    ));
     const readSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
-        if (!isMeaningful || isMeaningful(value)) {
+        if ((!isMeaningful || isMeaningful(value)) && !wouldEraseStoredCollection(value, fallback)) {
           freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
@@ -2098,7 +2125,7 @@ async function main() {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
-        if (isMeaningful(value)) {
+        if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback)) {
           freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
@@ -2135,6 +2162,9 @@ async function main() {
     const hasVacationData = (value) => Boolean(value?.recognized);
     const hasExceptionData = (value) => Boolean(value?.recognized);
     const progressPayload = { ...(existingSnapshot?.payload || {}) };
+    // La bandeja no forma parte de App CPE. Eliminar también cualquier copia
+    // antigua mientras se publica el progreso de una nueva sincronización.
+    delete progressPayload.mensajes;
     const publishProgress = async (section, value, stage) => {
       progressPayload[section] = value;
       progressPayload.sync = {
@@ -2154,7 +2184,7 @@ async function main() {
     };
     await publishProgress("jornales", progressPayload.jornales || { monthLabel: "", rows: [] }, "Sesion iniciada; cargando jornales");
     let jornalesUpdatedThisRun = false;
-    const jornales = await readSection(
+    let jornales = await readSection(
       "jornales",
       async () => {
         const value = await collectJornalesWithFreshSession(page, existingSnapshot?.payload?.jornales, {
@@ -2171,17 +2201,6 @@ async function main() {
       throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");
     }
     await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
-    const mensajes = await readOptionalSection(
-      "mensajes",
-      () => collectMessages(page),
-      existingSnapshot?.payload?.mensajes
-        ? { ...existingSnapshot.payload.mensajes, rows: limitRecentPortalRows(existingSnapshot.payload.mensajes.rows, messageLimit) }
-        : null,
-      { recognized: false, rows: [] },
-      hasVacationData
-    );
-    mensajes.rows = limitRecentPortalRows(mensajes.rows, messageLimit);
-    await publishProgress("mensajes", mensajes, "Ultimos mensajes cargados");
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
@@ -2190,6 +2209,8 @@ async function main() {
       hasVacationData
     );
     await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");
+    jornales = mergeAssignmentsIntoPortalJornales(jornales, asignaciones);
+    await publishProgress("jornales", jornales, "Jornales y contratacion consolidados");
     const primas = await readOptionalSection(
       "primas",
       () => collectPrimas(page, existingSnapshot?.payload?.primas),
@@ -2238,10 +2259,25 @@ async function main() {
           { recognized: false, locked: !portalSecurityKey, rows: [] },
           (value) => Boolean(value?.recognized && !value?.locked)
         )
+      : refreshLatestPayroll
+        ? mergePayrollHistory(
+            existingSnapshot?.payload?.nominas,
+            await readOptionalSection(
+              "ultima nomina",
+              () => collectPayrolls(page),
+              existingSnapshot?.payload?.nominas,
+              { recognized: false, locked: !portalSecurityKey, rows: [] },
+              (value) => Boolean(value?.recognized && !value?.locked)
+            )
+          )
       : existingSnapshot?.payload?.nominas
         || { recognized: false, locked: !portalSecurityKey, rows: [] };
-    if (portalRequestKind === "history") {
-      await publishProgress("nominas", nominas, "Nominas historicas guardadas");
+    if (portalRequestKind === "history" || refreshLatestPayroll) {
+      await publishProgress(
+        "nominas",
+        nominas,
+        portalRequestKind === "history" ? "Nominas historicas guardadas" : "Ultima nomina actualizada"
+      );
     }
     const dobles = await readOptionalSection(
       "dobles solicitados",
@@ -2263,7 +2299,6 @@ async function main() {
       sl,
       primas,
       vacaciones,
-      mensajes,
       dobles,
       nominas,
       sync: {
@@ -2305,7 +2340,6 @@ async function main() {
       descansos: payload.descansos.worker,
       excepciones: payload.excepciones.rows.length,
       vacaciones: payload.vacaciones.rows.length,
-      mensajes: payload.mensajes.rows.length,
       dobles: payload.dobles.rows.length,
       nominas: payload.nominas.rows.length,
       partial: payload.sync.partial,

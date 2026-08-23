@@ -30,7 +30,7 @@ test("legacy users without portal data re-enter onboarding and null payload open
   assert.match(sql, /app_cpe_update_activation_email/);
   assert.match(repairSql, /portal_activation_status = 'active'/);
   assert.match(repairSql, /portal_activation_status = 'pending'/);
-  assert.match(app, /setShowCredentials\(!data\?\.payload\)/);
+  assert.match(app, /setShowCredentials\(!data\?\.payload \|\| rejectedCredentials\)/);
   assert.match(app, /updateActivationEmail/);
 });
 
@@ -84,4 +84,14 @@ test("Monitor identifies users that need historical recovery", async () => {
   assert.match(migration, /'premiumHistoryMonths'/);
   assert.match(monitor, /\["history", "Sin histórico"\]/);
   assert.match(monitor, /Sin histórico de primas · usa Carga inicial completa/);
+});
+
+test("private history protection works through the service worker and rejects bad passwords", async () => {
+  const migration = await read("../supabase/migrations/20260819061655_fix_private_history_trigger_and_reject_bad_credentials.sql");
+  assert.match(migration, /app_cpe_preserve_portal_snapshot_trigger\(\)[\s\S]*security definer/);
+  assert.match(migration, /app_cpe_retire_rejected_portal_credentials/);
+  assert.match(migration, /set enabled = false/);
+  assert.match(migration, /delete from public\.app_cpe_portal_sync_jobs where id = new\.id/);
+  assert.match(migration, /usuario\[\[:space:\]\]\+o/);
+  assert.doesNotMatch(migration, /grant usage on schema private/);
 });

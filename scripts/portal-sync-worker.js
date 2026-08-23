@@ -16,7 +16,10 @@ const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT ||
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
 const workerDrain = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_DRAIN || "");
-const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser humano|challenge-platform|cf-chl-|Just a moment/i;
+// Cloudflare injects challenge-platform/cf-chl script references into normal
+// authorized pages too. Only visible challenge-page signals should invalidate
+// an otherwise valid portal session.
+const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser humano|Just a moment|Ray ID/i;
 const portalPattern = /Iniciar sesi[oó]n|loginFields|title=["']Usuario["']|Finalizar sesi[oó]n/i;
 let stopping = false;
 let gatewayBrowser = null;
@@ -44,11 +47,11 @@ async function request(path, options = {}) {
 
 async function claimNextBatch() {
   await failQueuedJobsWithoutCredentials();
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
 
   const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
-  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,portal_password&id=in.(${ids})&status=eq.queued`, {
+  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind,portal_password&id=in.(${ids})&status=eq.queued`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
