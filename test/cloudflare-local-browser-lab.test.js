@@ -13,6 +13,7 @@ const batchRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-cloudf
 const persistentRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-portal-worker.ps1", import.meta.url), "utf8");
 const workerInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-worker.ps1", import.meta.url), "utf8");
 const pendingShortcutSource = fs.readFileSync(new URL("../scripts/windows/install-pending-sync-shortcut.ps1", import.meta.url), "utf8");
+const operationalRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-operational-sync.ps1", import.meta.url), "utf8");
 const generalBoardWorkerSource = fs.readFileSync(new URL("../scripts/sync-general-board.js", import.meta.url), "utf8");
 const generalBoardClientSource = fs.readFileSync(new URL("../src/generalBoard.js", import.meta.url), "utf8");
 
@@ -27,8 +28,15 @@ test("el lector puede adjuntarse a Chrome sin alterar el modo local existente", 
 test("el gateway abre Chrome visible sin indicadores inseguros", () => {
   assert.match(gatewaySource, /--remote-debugging-port=\$Port/);
   assert.match(gatewaySource, /--user-data-dir=\$ProfilePath/);
+  assert.match(gatewaySource, /json\/new\?\$encodedPortalUrl/);
   assert.doesNotMatch(gatewaySource, /--no-sandbox/);
   assert.doesNotMatch(gatewaySource, /AutomationControlled/);
+});
+
+test("el worker no confunde los scripts normales de Cloudflare con un desafio", () => {
+  const challengePatternLine = workerSource.match(/const challengePattern = ([^;]+);/)?.[1] || "";
+  assert.doesNotMatch(challengePatternLine, /challenge-platform|cf-chl-/);
+  assert.match(challengePatternLine, /Ray ID/);
 });
 
 test("la prueba de autorización crea como máximo diez contextos aislados", () => {
@@ -68,7 +76,7 @@ test("la tanda real usa perfiles aislados y termina tras un solo lote", () => {
   assert.match(workerSource, /failQueuedJobsWithoutCredentials/);
   assert.match(workerSource, /portal_password=not\.is\.null/);
   assert.match(workerSource, /\.\.\.jobs\.map\(\(job, index\) => runJob/);
-  assert.match(batchRunnerSource, /ValidateRange\(1, 10\)/);
+  assert.match(batchRunnerSource, /ValidateRange\(1, 32\)/);
   assert.match(batchRunnerSource, /CPE_PORTAL_WORKER_ONCE = "true"/);
 });
 
@@ -112,4 +120,13 @@ test("la actualizacion global publica tambien el tablon general", () => {
   assert.match(generalBoardWorkerSource, /app_cpe_general_board_snapshot/);
   assert.match(generalBoardWorkerSource, /Contratacion Jornada/);
   assert.match(generalBoardClientSource, /supabase\.from\("app_cpe_general_board_snapshot"\)/);
+});
+
+test("la actualizacion operativa publica Chapero, Puertas y Tablon", () => {
+  assert.match(operationalRunnerSource, /scripts\/sync-puertas\.js/);
+  assert.match(operationalRunnerSource, /scripts\/sync-chapero\.js/);
+  assert.match(operationalRunnerSource, /scripts\/sync-general-board\.js/);
+  assert.match(generalBoardWorkerSource, /app_cpe_get_general_board_worker_credential/);
+  assert.match(generalBoardWorkerSource, /CPE_GENERAL_BOARD_CDP_ENDPOINT/);
+  assert.match(generalBoardWorkerSource, /\.then\(\(\) => process\.exit\(0\)\)/);
 });

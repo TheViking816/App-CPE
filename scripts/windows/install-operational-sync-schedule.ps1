@@ -32,6 +32,6 @@ $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "powershell.exe"
 $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -NoExit -File $quotedRunner -RepositoryPath $quotedRepo"
 $shortcut.WorkingDirectory = $RepositoryPath
-$shortcut.Description = "Actualiza Chapero y Puertas mediante el Chrome worker"
+$shortcut.Description = "Actualiza Chapero, Puertas y Tablon mediante el Chrome worker"
 $shortcut.Save()
-Write-Host "Chapero y Puertas configurados cada hora, mas 07:30, 12:30 y 14:45."
+Write-Host "Chapero, Puertas y Tablon configurados cada hora, mas 07:30, 12:30 y 14:45."
