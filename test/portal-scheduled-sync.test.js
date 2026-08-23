@@ -27,9 +27,9 @@ test("la actualización masiva desaparece de la app y de la base de datos", () =
   assert.match(serializedMigration, /drop function if exists public\.app_cpe_create_admin_portal_sync_jobs\(text\)/);
 });
 
-test("los fallos temporales no vuelven a abrir el formulario de claves", () => {
-  assert.doesNotMatch(appSource, /credentialsRejected/);
-  assert.match(appSource, /if \(job\.status === "failed"\)[\s\S]{0,300}?setShowCredentials\(false\)/);
+test("solo el rechazo de credenciales vuelve a abrir el formulario de claves", () => {
+  assert.match(appSource, /if \(job\.status === "failed"\)[\s\S]{0,500}?setShowCredentials\(rejectedCredentials\)/);
+  assert.match(appSource, /hasRejectedPortalCredentials\(job\.message\)/);
   assert.doesNotMatch(appSource, /Revisa la contraseña del portal y vuelve a intentarlo/);
 });
 

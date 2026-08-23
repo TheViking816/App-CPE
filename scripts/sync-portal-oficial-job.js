@@ -129,6 +129,10 @@ async function runSync(job) {
           job.request_kind === "history"
             ? "true"
             : process.env.CPE_PORTAL_REFRESH_HISTORY || "",
+        CPE_PORTAL_REFRESH_LATEST_PAYROLL:
+          job.trigger_source === "worker_manual_all" && job.request_kind === "snapshot"
+            ? "true"
+            : process.env.CPE_PORTAL_REFRESH_LATEST_PAYROLL || "",
         CPE_PORTAL_HEADLESS: process.env.CPE_PORTAL_HEADLESS || "false",
         CPE_PORTAL_BROWSER_CHANNEL:
           process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled",

@@ -2,13 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
+import { mergeGeneralBoardJourney } from "./general-board-merge.js";
 
 const PORTAL_URL = "https://portal.cpevalencia.com/#User";
-const portalUser = String(process.env.CPE_PORTAL_USER || "").trim();
-const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || "");
+let portalUser = String(process.env.CPE_PORTAL_USER || "").trim();
+let portalPassword = String(process.env.CPE_PORTAL_PASSWORD || "");
 const supabaseUrl = String(process.env.CPE_SUPABASE_URL || "https://wvwdiywtlbffumshbboa.supabase.co").replace(/\/$/, "");
 const supabaseSecret = resolveSupabaseAdminKey();
 const profileDir = path.resolve(process.env.CPE_GENERAL_BOARD_PROFILE_DIR || path.join("data", "general-board-chrome-profile"));
+const generalBoardCdpEndpoint = String(process.env.CPE_GENERAL_BOARD_CDP_ENDPOINT || "").trim();
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "chrome").trim();
 const headless = String(process.env.CPE_PORTAL_HEADLESS || "false").toLowerCase() !== "false";
 const clearanceCookies = (() => {
@@ -80,6 +82,20 @@ function mergeBlocks(previous, current) {
     existing.especialidades = [...specialties.values()];
   }
   return [...blocks.values()];
+}
+
+async function loadSavedPortalCredential() {
+  if (portalUser && portalPassword) return;
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/app_cpe_get_general_board_worker_credential`, {
+    method: "POST",
+    headers: supabaseAdminHeaders(supabaseSecret, { "Content-Type": "application/json" }),
+    body: "{}"
+  });
+  if (!response.ok) throw new Error(`No se pudo recuperar la credencial lectora del tablón: HTTP ${response.status}`);
+  const credential = await response.json();
+  portalUser = String(credential?.chapa || "").trim();
+  portalPassword = String(credential?.portalPassword || "");
+  if (!portalUser || !portalPassword) throw new Error("La credencial lectora del tablón está incompleta.");
 }
 
 function parseResultTables(tables) {
@@ -255,6 +271,7 @@ async function publishSnapshot(payload) {
 
 async function main() {
   if (!supabaseSecret) throw new Error("Falta la clave de Supabase del worker.");
+  await loadSavedPortalCredential();
   await fs.mkdir(profileDir, { recursive: true });
   const launchOptions = {
     headless,
@@ -264,11 +281,17 @@ async function main() {
     args: ["--disable-blink-features=AutomationControlled"]
   };
   if (browserChannel && browserChannel !== "bundled") launchOptions.channel = browserChannel;
-  const context = await chromium.launchPersistentContext(profileDir, launchOptions);
+  const browser = generalBoardCdpEndpoint
+    ? await chromium.connectOverCDP(generalBoardCdpEndpoint, { timeout: 15000 })
+    : null;
+  const context = browser
+    ? browser.contexts()[0]
+    : await chromium.launchPersistentContext(profileDir, launchOptions);
+  if (!context) throw new Error("Chrome no ofreció un contexto para leer el tablón general.");
+  const page = browser ? await context.newPage() : (context.pages()[0] || await context.newPage());
   try {
     if (clearanceCookies.length) await context.addCookies(clearanceCookies);
     await context.addInitScript(() => Object.defineProperty(navigator, "webdriver", { get: () => undefined }));
-    const page = context.pages()[0] || await context.newPage();
     await login(page);
     const frame = await openContracting(page);
     const dates = madridDates();
@@ -285,12 +308,7 @@ async function main() {
     for (const journey of journeys) {
       const key = `${journey.fecha}|${journey.jornada}`;
       const existing = merged.get(key);
-      merged.set(key, existing ? {
-        ...existing,
-        ...journey,
-        fuentes: [...new Set([...(existing.fuentes || []), ...(journey.fuentes || [])])],
-        bloques: mergeBlocks(existing.bloques, journey.bloques)
-      } : journey);
+      merged.set(key, mergeGeneralBoardJourney(existing, journey, mergeBlocks));
     }
     const snapshot = {
       source: "Portal CPE Valencia - Contratacion Jornada",
@@ -305,11 +323,14 @@ async function main() {
       blockSum + block.especialidades.reduce((specialtySum, specialty) => specialtySum + specialty.solicitudes, 0), 0), 0);
     console.log(`OK: tablon general publicado (${journeys.length} jornadas, ${total} puestos).`);
   } finally {
-    await context.close();
+    if (browser) await page.close().catch(() => {});
+    else await context.close();
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "No se pudo actualizar el tablon general.");
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error instanceof Error ? error.message : "No se pudo actualizar el tablon general.");
+    process.exit(1);
+  });
