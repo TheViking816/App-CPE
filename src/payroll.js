@@ -409,7 +409,8 @@ function findMatchingPrima(jornal, primas = []) {
     amount,
     verification: row.produccionEstado === "pending"
       ? "pending"
-      : row.produccionEstado === "verified" ? "verified" : "unknown"
+      : row.produccionEstado === "verified" ? "verified"
+        : row.produccionEstado === "paid" ? "paid" : "unknown"
   };
 }
 
@@ -479,7 +480,8 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         primaPending: allowsPrima && prima == null,
         primaVerification: matchedPrima?.verification
           || (jornal.produccionEstado === "pending" ? "pending"
-            : jornal.produccionEstado === "verified" ? "verified" : "unknown"),
+            : jornal.produccionEstado === "verified" ? "verified"
+              : jornal.produccionEstado === "paid" ? "paid" : "unknown"),
         relayHourEligible: Boolean(relayHourRate),
         relayHourKey,
         relayHourRateKey: relayHourRate?.rateKey || null,
@@ -520,13 +522,94 @@ export function selectPortalJornales(jornales = null, primas = null) {
   return Array.isArray(primas?.rows) ? primas.rows : [];
 }
 
+function normalizePortalPart(value) {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  if (normalized === "CA" || normalized.includes("CONTRATACIONANTICIPADA")) return "CA";
+  return normalized;
+}
+
+function portalJornalKey(row, day = row?.dia) {
+  const part = normalizePortalPart(row?.parte);
+  const shift = parseShift(row?.jornada);
+  if (part) return `${Number(day)}|${part}|${shift}`;
+  return [
+    Number(day),
+    shift,
+    String(row?.empresa || "").trim().toUpperCase(),
+    String(row?.buque || "").trim().toUpperCase(),
+    String(row?.especialidad || "").trim().toUpperCase()
+  ].join("|");
+}
+
+export function mergeUpcomingAssignmentsIntoJornales(
+  jornales = [],
+  assignments = [],
+  monthLabel = "",
+  today = new Date()
+) {
+  const rows = Array.isArray(jornales) ? jornales : [];
+  const upcoming = Array.isArray(assignments) ? assignments : [];
+  const { month, year } = parseMonthLabel(monthLabel);
+  if (!month || !year || !Number.isFinite(today?.getTime?.())) return rows;
+
+  const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const existingKeys = new Set(rows.map((row) => portalJornalKey(row)));
+  const merged = [...rows];
+
+  upcoming.forEach((assignment) => {
+    const match = String(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return;
+    const day = Number(match[1]);
+    const assignmentMonth = Number(match[2]);
+    const assignmentYear = Number(match[3]);
+    const assignmentDateKey = `${assignmentYear}-${pad(assignmentMonth)}-${pad(day)}`;
+    if (assignmentMonth !== month || assignmentYear !== year || assignmentDateKey < todayKey) return;
+
+    const key = portalJornalKey(assignment, day);
+    if (existingKeys.has(key)) return;
+    existingKeys.add(key);
+    merged.push({
+      ...assignment,
+      dia: pad(day),
+      jornal: assignment.jornal || "",
+      produccion: assignment.produccion || "",
+      produccionEstado: assignment.produccionEstado || "unknown",
+      upcomingAssignment: true
+    });
+  });
+
+  return merged;
+}
+
 export function selectPortalJornalesHistory(jornales = null, primas = null) {
   const portalHistory = Array.isArray(jornales?.history) ? jornales.history : [];
   if (portalHistory.length > 0) return portalHistory;
   return Array.isArray(primas?.history) ? primas.history : [];
 }
 
-export function summarizeAnnualPayroll(history = [], payrollConfig = null, relayHours = {}, vacationEntries = []) {
+function premiumRowsForMonth(premiumHistory, month) {
+  if (!Array.isArray(premiumHistory)) return [];
+  const matchingPeriod = premiumHistory.find((period) => (
+    Number(period?.year) === Number(month?.year)
+    && Number(period?.month) === Number(month?.month)
+  )) || premiumHistory.find((period) => (
+    String(period?.monthLabel || "").trim().toLocaleLowerCase("es")
+    === String(month?.monthLabel || "").trim().toLocaleLowerCase("es")
+  ));
+  return Array.isArray(matchingPeriod?.rows) ? matchingPeriod.rows : [];
+}
+
+export function summarizeAnnualPayroll(
+  history = [],
+  payrollConfig = null,
+  relayHours = {},
+  vacationEntries = [],
+  premiumHistory = []
+) {
   const historyKeys = new Set(history.map((month) => `${month.year}-${pad(month.month)}`));
   const vacationOnlyMonths = vacationEntries.reduce((months, item) => {
     const match = String(item?.payroll?.date || "").match(/^(\d{4})-(\d{2})-/);
@@ -545,8 +628,9 @@ export function summarizeAnnualPayroll(history = [], payrollConfig = null, relay
   const months = [...history, ...vacationOnlyMonths].map((month) => {
     const monthKey = `${month.year}-${pad(month.month)}`;
     const vacationRows = vacationEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
+    const premiumRows = premiumRowsForMonth(premiumHistory, month);
     const enriched = [
-      ...enrichJornales(month.rows || [], [], month.monthLabel || "", payrollConfig, relayHours),
+      ...enrichJornales(month.rows || [], premiumRows, month.monthLabel || "", payrollConfig, relayHours),
       ...vacationRows
     ];
     const summary = summarizePayroll(enriched);

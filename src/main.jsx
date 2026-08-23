@@ -28,7 +28,7 @@ if ("serviceWorker" in navigator) {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260818-payroll-source-fix-3`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260822-paid-premium-history-1`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });

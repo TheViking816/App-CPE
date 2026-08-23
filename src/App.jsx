@@ -1,4 +1,4 @@
-import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
@@ -56,6 +56,7 @@ import {
   compareJornalesDescending,
   enrichJornales,
   filterJornalesByPeriod,
+  mergeUpcomingAssignmentsIntoJornales,
   selectPortalJornales,
   selectPortalJornalesHistory,
   formatEuro,
@@ -559,8 +560,7 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   );
 }
 
-function AppHeader({ user, messages, onInboxOpen, onMenuOpen }) {
-  const unreadCount = (messages?.rows || []).filter((message) => !message.read).length;
+function AppHeader({ onMenuOpen }) {
   return (
     <header className="app-header">
       <button className="header-menu-button" type="button" onClick={onMenuOpen} aria-label="Abrir menú">
@@ -572,12 +572,6 @@ function AppHeader({ user, messages, onInboxOpen, onMenuOpen }) {
       <div className="header-title">
         <strong>App CPE</strong>
       </div>
-      {user && (
-        <button className="header-inbox-button" type="button" onClick={onInboxOpen} aria-label="Abrir bandeja de entrada">
-          <Mail size={20} />
-          {unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}
-        </button>
-      )}
     </header>
   );
 }
@@ -1391,6 +1385,13 @@ function portalFirstName(snapshot) {
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLocaleLowerCase("es");
 }
 
+function hasRejectedPortalCredentials(snapshotOrMessage) {
+  const message = typeof snapshotOrMessage === "string"
+    ? snapshotOrMessage
+    : snapshotOrMessage?.payload?.sync?.error;
+  return /usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(String(message || ""));
+}
+
 function PortalConnectCallout({ compact = false, onConnect }) {
   return (
     <button className={`home-connect-callout${compact ? " compact" : ""}`} type="button" onClick={onConnect}>
@@ -2131,10 +2132,26 @@ function PortalFeatureTemplate({ view = "all" }) {
 function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onRequestSecurityKey, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
-  const jornales = selectPortalJornales(payload?.jornales, payload?.primas);
+  const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
+  const currentPayrollMonthLabel = (!payload?.primas?.locked && primas.length > 0
+    ? payload?.primas?.monthLabel
+    : payload?.jornales?.monthLabel) || "";
+  const portalJornales = selectPortalJornales(payload?.jornales, payload?.primas);
+  const jornales = useMemo(() => mergeUpcomingAssignmentsIntoJornales(
+    portalJornales,
+    payload?.asignaciones?.rows,
+    currentPayrollMonthLabel
+  ), [currentPayrollMonthLabel, payload?.asignaciones?.rows, portalJornales]);
   const journalHistory = useMemo(() => {
     const savedHistory = selectPortalJornalesHistory(payload?.jornales, payload?.primas);
-    if (Array.isArray(savedHistory) && savedHistory.length > 0) return savedHistory;
+    if (Array.isArray(savedHistory) && savedHistory.length > 0) {
+      const currentLabel = String(payload?.jornales?.monthLabel || currentPayrollMonthLabel).trim().toLocaleLowerCase("es");
+      return savedHistory.map((period) => (
+        String(period?.monthLabel || "").trim().toLocaleLowerCase("es") === currentLabel
+          ? { ...period, rows: jornales }
+          : period
+      ));
+    }
     if (!jornales.length) return [];
 
     return [{
@@ -2143,7 +2160,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       monthLabel: payload?.jornales?.monthLabel || "Mes actual",
       rows: jornales
     }];
-  }, [jornales, payload?.jornales, payload?.primas]);
+  }, [currentPayrollMonthLabel, jornales, payload?.jornales, payload?.primas]);
   const descansos = payload?.descansos || null;
   const hasDescansos = Array.isArray(descansos?.months) && descansos.months.length > 0;
   const slRows = payload?.sl?.rows || [];
@@ -2240,9 +2257,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       setSavingIrpf(false);
     }
   };
-  const currentPayrollMonthLabel = (!payload?.primas?.locked && primas.length > 0
-    ? payload?.primas?.monthLabel
-    : payload?.jornales?.monthLabel) || "";
   const vacationPayrollEntries = useMemo(() => buildVacationPayrollEntries(descansos), [descansos]);
   const enrichedJornales = useMemo(() => [
     ...enrichJornales(
@@ -2256,8 +2270,14 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, vacationPayrollEntries]);
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const annualPayroll = useMemo(
-    () => summarizeAnnualPayroll(journalHistory, payrollConfig, relayHours, vacationPayrollEntries),
-    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries]
+    () => summarizeAnnualPayroll(
+      journalHistory,
+      payrollConfig,
+      relayHours,
+      vacationPayrollEntries,
+      premiumHistory
+    ),
+    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries, premiumHistory]
   );
   const selectedAnnualMonth = useMemo(() => annualPayroll.months.find((month) => (
     `${month.year}-${month.month}` === selectedAnnualMonthKey
@@ -2321,16 +2341,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           <div>
             <strong>{payload.sync.stage || "Actualizando el portal"}</strong>
             <span>Puedes consultar lo que ya esta disponible mientras seguimos cargando el resto.</span>
-          </div>
-        </section>
-      )}
-
-      {payload?.sync?.failed && !hideSyncFailure && (
-        <section className="portal-sync-warning">
-          <CircleAlert size={20} />
-          <div>
-            <strong>{payload.sync.stage || "No se pudo conectar con el portal"}</strong>
-            <span>{payload.sync.error || "La lectura no se ha completado. Los datos se actualizarán en la próxima sincronización."}</span>
           </div>
         </section>
       )}
@@ -2727,7 +2737,7 @@ function PortalPanel({
   const portalErrorRef = useRef(null);
   const credentialsRef = useRef(null);
 
-  const loadSnapshot = async ({ silent = false } = {}) => {
+  const loadSnapshot = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
       setError("");
       setLoading(true);
@@ -2743,21 +2753,52 @@ function PortalPanel({
       const data = await getOfficialPortalSnapshot({ token: session.token });
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
-      // Un fallo de lectura no implica que el acceso configurado haya dejado de
-      // existir. El formulario solo se abre de forma explícita desde Cambiar acceso.
-      setShowCredentials(!data?.payload);
-    } catch (requestError) {
-      if (!silent) {
-        setError(requestError.message || "No se pudo leer el portal sincronizado.");
+      const rejectedCredentials = hasRejectedPortalCredentials(data);
+      setShowCredentials(!data?.payload || rejectedCredentials);
+      if (rejectedCredentials) {
+        setError("");
+        setAutoSyncEnabled(false);
+        onConnectionChange?.(false);
+        const refreshedSession = await refreshCurrentUser({ token: session.token }).catch(() => null);
+        if (refreshedSession) onSessionChange?.(refreshedSession);
       }
+    } catch (requestError) {
+      // Los fallos de lectura se supervisan en Supabase; no se muestran al usuario.
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [autoSyncEnabled, onConnectionChange, onSessionChange, onSnapshotChange, pendingActivation, session.token]);
 
   useEffect(() => {
     loadSnapshot({ silent: Boolean(initialSnapshot) });
   }, [pendingActivation, session.token]);
+
+  useEffect(() => {
+    if (pendingActivation || syncingPortal) return undefined;
+
+    let refreshing = false;
+    const refreshSnapshot = async () => {
+      if (document.visibilityState !== "visible" || refreshing) return;
+      refreshing = true;
+      try {
+        await loadSnapshot({ silent: true });
+      } finally {
+        refreshing = false;
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshSnapshot();
+    };
+    const timer = window.setInterval(refreshSnapshot, SNAPSHOT_POLL_MS);
+    window.addEventListener("focus", refreshSnapshot);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshSnapshot);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [loadSnapshot, pendingActivation, syncingPortal]);
 
   useEffect(() => {
     if (!openCredentialsOnLoad || loading || syncingPortal) return;
@@ -2829,7 +2870,19 @@ function PortalPanel({
     const timer = window.setInterval(async () => {
       try {
         const job = await getPortalSyncJob({ token: session.token, jobId: portalJob.jobId });
-        if (stopped || !job) return;
+        if (stopped) return;
+        if (!job) {
+          const status = await getPortalAutoSyncStatus({ token: session.token });
+          if (status?.enabled === false) {
+            setSyncingPortal(false);
+            setAutoSyncEnabled(false);
+            onConnectionChange?.(false);
+            writePortalActiveSync(session.chapa, null);
+            window.clearInterval(timer);
+            await loadSnapshot();
+          }
+          return;
+        }
         setPortalJob(job);
         writePortalActiveSync(session.chapa, {
           jobId: portalJob.jobId,
@@ -2855,17 +2908,21 @@ function PortalPanel({
           writePortalActiveSync(session.chapa, null);
         }
         if (job.status === "failed") {
-          setPortalMessage(job.message || "No se pudo leer el portal.");
+          const rejectedCredentials = hasRejectedPortalCredentials(job.message);
+          setPortalMessage("");
           setSyncingPortal(false);
-          setShowCredentials(false);
+          setShowCredentials(rejectedCredentials);
+          if (rejectedCredentials) {
+            setError("");
+            setAutoSyncEnabled(false);
+            onConnectionChange?.(false);
+          }
           writePortalActiveSync(session.chapa, null);
           window.clearInterval(timer);
           await loadSnapshot();
         }
       } catch (requestError) {
-        if (!stopped) {
-          setPortalMessage(requestError.message || "No se pudo comprobar la sincronizacion.");
-        }
+        if (!stopped) setPortalMessage("");
       }
     }, 1500);
 
@@ -2893,13 +2950,22 @@ function PortalPanel({
 
     try {
       let currentSession = session;
-      if (!session.email) {
+      const requiresActivationRequest = !securityKeyOnly && !autoSyncEnabled;
+      if (requiresActivationRequest || !session.email) {
         const normalizedEmail = activationEmail.trim();
         if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
           throw new Error("Introduce un correo electrónico válido.");
         }
-        currentSession = await updateActivationEmail({ token: session.token, email: normalizedEmail });
-        if (currentSession) onSessionChange?.(currentSession);
+        const updatedSession = await updateActivationEmail({ token: session.token, email: normalizedEmail });
+        if (updatedSession) {
+          currentSession = updatedSession;
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
+          } catch {
+            // La sesión sigue activa aunque el navegador impida persistirla.
+          }
+          onSessionChange?.(updatedSession);
+        }
       }
       if (securityKeyOnly && securityKeyToUse) {
         await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
@@ -2919,9 +2985,9 @@ function PortalPanel({
       setSecurityKey("");
       setSecurityKeyOnly(false);
       setShowCredentials(false);
-      if (currentSession.portalActivationStatus === "pending" && !snapshot?.payload) {
+      if (requiresActivationRequest || (currentSession.portalActivationStatus === "pending" && !snapshot?.payload)) {
         await queuePendingPortalActivation({ token: session.token });
-        setPortalMessage("Cuenta pendiente de activación. Te avisaremos por correo cuando esté lista.");
+        setPortalMessage("Solicitud enviada. Te avisaremos por correo cuando tu acceso esté activado.");
         await sendPendingActivationEmails();
       } else {
         setPortalMessage("Datos de acceso configurados correctamente.");
@@ -3004,12 +3070,13 @@ function PortalPanel({
                 ? "Introduce la clave de seguridad de primas y nóminas."
                 : "Introduce tu contraseña del portal de SEVASA. La clave de seguridad es opcional y solo se usa para consultar primas y nóminas."}</span>
             </div>
-            {!session.email && (
+            {!securityKeyOnly && (!autoSyncEnabled || !session.email) && (
               <label>
                 <Mail size={17} />
                 <input
+                  aria-label="Correo electrónico para la activación"
                   autoComplete="email"
-                  placeholder="Correo electrónico"
+                  placeholder="Correo electrónico para avisarte del alta"
                   type="email"
                   value={activationEmail}
                   onChange={(event) => setActivationEmail(event.target.value)}
@@ -3052,7 +3119,7 @@ function PortalPanel({
               <button
                 className="primary-button"
                 type="button"
-                disabled={savingCredentials || (!session.email && !activationEmail.trim()) || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
+                disabled={savingCredentials || ((!autoSyncEnabled || !session.email) && !securityKeyOnly && !activationEmail.trim()) || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
                 onClick={saveCredentials}
               >
                 {savingCredentials ? "Cargando datos..." : securityKeyOnly ? "Actualizar datos" : "Cargar datos"}
@@ -3167,7 +3234,6 @@ export function App() {
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [portalConnected, setPortalConnected] = useState(null);
-  const [inboxOpen, setInboxOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [portalCredentialsRequested, setPortalCredentialsRequested] = useState(false);
@@ -3477,9 +3543,6 @@ export function App() {
   return (
     <div className="mobile-app">
       <AppHeader
-        user={session}
-        messages={portalSnapshot?.payload?.mensajes}
-        onInboxOpen={() => setInboxOpen(true)}
         onMenuOpen={() => setMenuOpen(true)}
       />
       <main className="content">
@@ -3563,7 +3626,6 @@ export function App() {
         {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
         <ContactFooter />
       </main>
-      {inboxOpen && <InboxModal messages={portalSnapshot?.payload?.mensajes} onClose={() => setInboxOpen(false)} />}
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} onSave={savePassword} />}
       <SideMenu
         open={menuOpen}

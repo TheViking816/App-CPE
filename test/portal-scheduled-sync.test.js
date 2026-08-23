@@ -8,6 +8,7 @@ const schedulerSource = await readFile(new URL("../supabase/functions/schedule-p
 const refreshSource = await readFile(new URL("../supabase/functions/refresh-portal/index.ts", import.meta.url), "utf8");
 const batchWorkflow = await readFile(new URL("../.github/workflows/sync-portals-batch.yml", import.meta.url), "utf8");
 const batchScript = await readFile(new URL("../scripts/sync-portal-batch.js", import.meta.url), "utf8");
+const portalWorkerSource = await readFile(new URL("../scripts/sync-portal-oficial.js", import.meta.url), "utf8");
 const serializedMigration = await readFile(
   new URL("../supabase/migrations/20260817104949_serialize_scheduled_portal_syncs.sql", import.meta.url),
   "utf8"
@@ -64,6 +65,16 @@ test("las actualizaciones normales omiten nóminas y la app no ofrece sincroniza
   assert.doesNotMatch(appSource, /requestPortalSync/);
   assert.match(appSource, /const saveCredentials = async/);
   assert.doesNotMatch(appSource, /Leyendo jornales, mensajes, dobles, nóminas y calendarios/);
+});
+
+test("los workers omiten mensajes y la app no muestra bandeja ni fallos de sincronización", () => {
+  assert.doesNotMatch(portalWorkerSource, /\(\) => collectMessages\(page\)/);
+  assert.doesNotMatch(portalWorkerSource, /publishProgress\("mensajes"/);
+  assert.match(portalWorkerSource, /delete progressPayload\.mensajes/);
+  assert.doesNotMatch(appSource, /className="header-inbox-button"/);
+  assert.doesNotMatch(appSource, /payload\?\.sync\?\.failed && !hideSyncFailure/);
+  assert.doesNotMatch(appSource, /payload\.sync\.error \|\|/);
+  assert.doesNotMatch(appSource, /setPortalMessage\(requestError\.message/);
 });
 
 test("el circuito de seguridad evita nuevos intentos durante dos horas tras un bloqueo", () => {

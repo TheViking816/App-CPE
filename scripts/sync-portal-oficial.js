@@ -2162,6 +2162,9 @@ async function main() {
     const hasVacationData = (value) => Boolean(value?.recognized);
     const hasExceptionData = (value) => Boolean(value?.recognized);
     const progressPayload = { ...(existingSnapshot?.payload || {}) };
+    // La bandeja no forma parte de App CPE. Eliminar también cualquier copia
+    // antigua mientras se publica el progreso de una nueva sincronización.
+    delete progressPayload.mensajes;
     const publishProgress = async (section, value, stage) => {
       progressPayload[section] = value;
       progressPayload.sync = {
@@ -2198,17 +2201,6 @@ async function main() {
       throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");
     }
     await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
-    const mensajes = await readOptionalSection(
-      "mensajes",
-      () => collectMessages(page),
-      existingSnapshot?.payload?.mensajes
-        ? { ...existingSnapshot.payload.mensajes, rows: limitRecentPortalRows(existingSnapshot.payload.mensajes.rows, messageLimit) }
-        : null,
-      { recognized: false, rows: [] },
-      hasVacationData
-    );
-    mensajes.rows = limitRecentPortalRows(mensajes.rows, messageLimit);
-    await publishProgress("mensajes", mensajes, "Ultimos mensajes cargados");
     const asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
@@ -2307,7 +2299,6 @@ async function main() {
       sl,
       primas,
       vacaciones,
-      mensajes,
       dobles,
       nominas,
       sync: {
@@ -2349,7 +2340,6 @@ async function main() {
       descansos: payload.descansos.worker,
       excepciones: payload.excepciones.rows.length,
       vacaciones: payload.vacaciones.rows.length,
-      mensajes: payload.mensajes.rows.length,
       dobles: payload.dobles.rows.length,
       nominas: payload.nominas.rows.length,
       partial: payload.sync.partial,

@@ -16,10 +16,18 @@ if (-not (Test-Path -LiteralPath $portalScript)) { throw "No existe el worker de
 Write-Host "App CPE - ACTUALIZACION COMPLETA DEL MES ACTUAL" -ForegroundColor Cyan
 Write-Host "1/2 Actualizando Puertas y Chapero (el Tablon se omite en este paso)..." -ForegroundColor Yellow
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $operationalScript -RepositoryPath $RepositoryPath -SkipGeneralBoard
-if ($LASTEXITCODE -ne 0) { throw "Fallo la actualizacion de Puertas o Chapero." }
+$operationalExitCode = $LASTEXITCODE
+if ($operationalExitCode -ne 0) {
+  Write-Warning "Fallo Puertas o Chapero. Se continua con los perfiles para no bloquear la actualizacion del mes."
+}
 
 Write-Host "2/2 Actualizando el mes actual de todos y el Tablon General una sola vez..." -ForegroundColor Yellow
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $portalScript -RepositoryPath $RepositoryPath -Mode CurrentMonth
-if ($LASTEXITCODE -ne 0) { throw "Fallo la actualizacion del mes actual." }
+$portalExitCode = $LASTEXITCODE
+if ($portalExitCode -ne 0) { throw "Fallo la actualizacion del mes actual." }
+
+if ($operationalExitCode -ne 0) {
+  throw "Los perfiles y el Tablon se actualizaron, pero fallo Puertas o Chapero. Revisa el log operativo."
+}
 
 Write-Host "Actualizacion completa finalizada: Puertas, Chapero, mes actual y Tablon General." -ForegroundColor Green

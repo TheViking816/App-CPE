@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildVacationPayrollEntries,
   filterJornalesByPeriod,
+  mergeUpcomingAssignmentsIntoJornales,
   selectPortalJornales,
   selectPortalJornalesHistory,
   summarizeAnnualPayroll,
@@ -103,4 +104,64 @@ test("incluye meses con solo vacaciones en el resumen anual", () => {
   assert.equal(annual.total, 428.22);
   assert.equal(annual.activeMonths, 1);
   assert.equal(annual.months[0].total, 428.22);
+});
+
+test("incluye en el Sueldometro un jornal futuro ya confirmado en asignaciones", () => {
+  const merged = mergeUpcomingAssignmentsIntoJornales(
+    [{ dia: "19", parte: "23568", jornada: "DE 02 A 08 H." }],
+    [{
+      fecha: "20/08/2026",
+      parte: "23683",
+      jornada: "DE 02 A 08 H.",
+      especialidad: "CONDUCTOR 1a",
+      empresa: "MEDITERRANEAN SHIPPING C. TV",
+      buque: "MSC MELINE",
+      operacion: "CONT. C/SPREADER AUT"
+    }],
+    "Agosto de 2026",
+    new Date(2026, 7, 19)
+  );
+
+  assert.deepEqual(merged.map((item) => item.dia), ["19", "20"]);
+  assert.equal(merged[1].upcomingAssignment, true);
+  assert.equal(filterJornalesByPeriod(merged, "second").length, 2);
+});
+
+test("no duplica el jornal cuando el portal ya lo ha publicado", () => {
+  const merged = mergeUpcomingAssignmentsIntoJornales(
+    [{ dia: "20", parte: "C/A", jornada: "DE 14 A 20 H." }],
+    [{ fecha: "20/08/2026", parte: "CONTRATACIÓN ANTICIPADA", jornada: "DE 14 A 20 H." }],
+    "Agosto de 2026",
+    new Date(2026, 7, 19)
+  );
+
+  assert.equal(merged.length, 1);
+});
+
+test("el resumen anual cruza cada mes de jornales con su historico de primas", () => {
+  const journalHistory = [{
+    year: 2026,
+    month: 7,
+    monthLabel: "Julio de 2026",
+    rows: [{
+      dia: "10",
+      parte: "18450",
+      jornada: "DE 02 A 08 H.",
+      especialidad: "CONDUCTOR 1a",
+      operacion: "CONT. C/SPREADER AUT"
+    }]
+  }];
+  const premiumHistory = [{
+    year: 2026,
+    month: 7,
+    monthLabel: "Julio de 2026",
+    rows: [{ parte: "18450", produccion: "193.24 €", produccionEstado: "paid" }]
+  }];
+
+  const annual = summarizeAnnualPayroll(journalHistory, null, {}, [], premiumHistory);
+
+  assert.equal(annual.months[0].enriched[0].payroll.prima, 193.24);
+  assert.equal(annual.months[0].enriched[0].payroll.primaVerification, "paid");
+  assert.equal(annual.months[0].primaTotal, 193.24);
+  assert.equal(annual.primaTotal, 193.24);
 });

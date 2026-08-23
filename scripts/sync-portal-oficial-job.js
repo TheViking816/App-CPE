@@ -176,13 +176,11 @@ async function runSync(job) {
 
 function publicErrorMessage(error) {
   const message = error instanceof Error ? error.message : "Error desconocido";
+  if (/usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(message)) {
+    return "Usuario o contraseña del portal oficial incorrectos.";
+  }
   return (
-    message
-      .split(/\bMuestra:/i)[0]
-      .replace(/https?:\/\/\S+/gi, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 300) || "No se pudo leer el portal oficial."
+    "La actualización no se ha completado. Se volverá a intentar en la próxima sincronización."
   );
 }
 
