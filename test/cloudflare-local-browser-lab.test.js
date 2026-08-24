@@ -30,6 +30,7 @@ test("el gateway abre Chrome visible sin indicadores inseguros", () => {
   assert.match(gatewaySource, /--remote-debugging-port=\$Port/);
   assert.match(gatewaySource, /--user-data-dir=\$ProfilePath/);
   assert.match(gatewaySource, /json\/new\?\$encodedPortalUrl/);
+  assert.match(gatewaySource, /ValidateRange\(5, 180\)\]\[int\]\$WaitSeconds = 90/);
   assert.doesNotMatch(gatewaySource, /--no-sandbox/);
   assert.doesNotMatch(gatewaySource, /AutomationControlled/);
 });
