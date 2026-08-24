@@ -75,6 +75,7 @@ import {
   getUserRelayHours,
   loginUser,
   queuePendingPortalActivation,
+  reactivatePortalSync,
   refreshCurrentUser,
   registerUser,
   sendPendingActivationEmails,
@@ -83,6 +84,7 @@ import {
   setPortalSecurityKey,
   setUserRelayHour,
   trackPageVisit,
+  touchPortalActivity,
   trackUsageEvent,
   updateUserIrpf,
   updateActivationEmail,
@@ -2723,6 +2725,8 @@ function PortalPanel({
   const [activationEmail, setActivationEmail] = useState(session.email || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
+  const [portalSyncStatus, setPortalSyncStatus] = useState("active");
+  const [reactivatingPortal, setReactivatingPortal] = useState(false);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
   const [portalMessage, setPortalMessage] = useState(initialActiveSync ? "Recuperando la sincronizacion en curso..." : "");
@@ -2813,9 +2817,12 @@ function PortalPanel({
 
   useEffect(() => {
     let cancelled = false;
-    getPortalAutoSyncStatus({ token: session.token })
+    touchPortalActivity({ token: session.token })
+      .catch(() => null)
+      .then(() => getPortalAutoSyncStatus({ token: session.token }))
       .then(async (status) => {
         if (cancelled) return;
+        setPortalSyncStatus(status?.syncStatus || "active");
         if (status?.enabled) {
           setAutoSyncEnabled(true);
           if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(false);
@@ -2949,6 +2956,7 @@ function PortalPanel({
     setSavingCredentials(true);
 
     try {
+      let queuedAnnualHistory = false;
       let currentSession = session;
       const requiresActivationRequest = !securityKeyOnly && !autoSyncEnabled;
       if (requiresActivationRequest || !session.email) {
@@ -2968,7 +2976,9 @@ function PortalPanel({
         }
       }
       if (securityKeyOnly && securityKeyToUse) {
-        await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
+        const securityResult = await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
+        queuedAnnualHistory = securityResult?.requestKind === "history";
+        setPortalSyncStatus("active");
       } else if (passwordToUse) {
         await setPortalAutoSync({
           token: session.token,
@@ -2990,7 +3000,9 @@ function PortalPanel({
         setPortalMessage("Solicitud enviada. Te avisaremos por correo cuando tu acceso esté activado.");
         await sendPendingActivationEmails();
       } else {
-        setPortalMessage("Datos de acceso configurados correctamente.");
+        setPortalMessage(queuedAnnualHistory
+          ? "Clave guardada. La carga completa anual está en cola para la próxima ejecución."
+          : "Datos de acceso configurados correctamente.");
       }
     } catch (requestError) {
       setPortalMessage("");
@@ -3021,6 +3033,22 @@ function PortalPanel({
     });
   };
 
+  const reactivatePausedPortal = async () => {
+    setReactivatingPortal(true);
+    setError("");
+    try {
+      const result = await reactivatePortalSync({ token: session.token });
+      setPortalSyncStatus("active");
+      setPortalMessage(result?.requestKind === "history"
+        ? "Cuenta reactivada. La recuperación completa está en cola para la próxima ejecución."
+        : "Cuenta reactivada. La actualización del mes actual está en cola para la próxima ejecución.");
+    } catch (reactivationError) {
+      setError(reactivationError?.message || "No se pudo reactivar la actualización del portal.");
+    } finally {
+      setReactivatingPortal(false);
+    }
+  };
+
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
   const panelCopy = {
     all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
@@ -3046,9 +3074,22 @@ function PortalPanel({
         </section>
       )}
 
+      {portalSyncStatus === "paused_inactive" && !showCredentials && (
+        <section className="portal-inactivity-pause" aria-live="polite">
+          <Clock3 size={25} />
+          <div>
+            <strong>Actualizaciones en pausa por inactividad</strong>
+            <span>Tus datos siguen guardados. Reactiva la cuenta para volver a incluirla en las próximas sincronizaciones.</span>
+          </div>
+          <button type="button" onClick={reactivatePausedPortal} disabled={reactivatingPortal}>
+            {reactivatingPortal ? "Reactivando…" : "Reactivar actualizaciones"}
+          </button>
+        </section>
+      )}
+
       {snapshot?.payload && !showCredentials && (
         <div className="portal-update-row">
-          <span>Datos guardados del portal oficial</span>
+          <span>Datos guardados del portal oficial{portalMessage && <small>{portalMessage}</small>}</span>
           <div>
             {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar acceso</button>}
           </div>
@@ -3408,7 +3449,8 @@ export function App() {
       chapa: session.chapa,
       metadata: { specialties: getEffectiveSpecialtyIds(session) }
     });
-  }, [session?.chapa]);
+    if (session.token) touchPortalActivity({ token: session.token }).catch(() => {});
+  }, [session?.chapa, session?.token]);
 
   useEffect(() => {
     if (!session?.token) {

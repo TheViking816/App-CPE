@@ -465,6 +465,28 @@ export async function getPortalAutoSyncStatus({ token }) {
   return data || null;
 }
 
+export async function touchPortalActivity({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_touch_portal_activity", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function reactivatePortalSync({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_reactivate_portal_sync", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function setPortalAutoSync({ token, enabled, portalPassword = "", securityKey = "" }) {
   if (!supabase || !token) return null;
 

@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260822-paid-premium-history-1";
+self.__APP_CPE_SW_VERSION__ = "20260824-portal-inactivity-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

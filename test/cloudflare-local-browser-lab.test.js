@@ -5,6 +5,7 @@ import fs from "node:fs";
 const syncSource = fs.readFileSync(new URL("../scripts/sync-portal-oficial.js", import.meta.url), "utf8");
 const jobSource = fs.readFileSync(new URL("../scripts/sync-portal-oficial-job.js", import.meta.url), "utf8");
 const gatewaySource = fs.readFileSync(new URL("../scripts/windows/start-cloudflare-gateway.ps1", import.meta.url), "utf8");
+const gatewayReloadSource = fs.readFileSync(new URL("../scripts/reload-cloudflare-gateway.js", import.meta.url), "utf8");
 const poolSource = fs.readFileSync(new URL("../scripts/cloudflare-clearance-pool-check.js", import.meta.url), "utf8");
 const diagnosticSource = fs.readFileSync(new URL("../scripts/cloudflare-tls-diagnostic.py", import.meta.url), "utf8");
 const requeueSource = fs.readFileSync(new URL("../scripts/requeue-cloudflare-lab-job.js", import.meta.url), "utf8");
@@ -31,6 +32,15 @@ test("el gateway abre Chrome visible sin indicadores inseguros", () => {
   assert.match(gatewaySource, /json\/new\?\$encodedPortalUrl/);
   assert.doesNotMatch(gatewaySource, /--no-sandbox/);
   assert.doesNotMatch(gatewaySource, /AutomationControlled/);
+});
+
+test("el gateway realiza una recarga real y espera a que aparezca portal o Cloudflare", () => {
+  assert.match(gatewaySource, /reload-cloudflare-gateway\.js/);
+  assert.match(gatewaySource, /Invoke-VerifiedPortalReload/);
+  assert.match(gatewayReloadSource, /page\.reload\(\{ waitUntil: "domcontentloaded"/);
+  assert.match(gatewayReloadSource, /attempt <= 3/);
+  assert.match(gatewayReloadSource, /state = "portal"/);
+  assert.match(gatewayReloadSource, /state = "challenge"/);
 });
 
 test("el worker no confunde los scripts normales de Cloudflare con un desafio", () => {
@@ -99,6 +109,22 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
 test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () => {
   assert.match(batchRunnerSource, /CPE_PORTAL_BROWSER_CHANNEL = "chrome"/);
   assert.match(persistentRunnerSource, /CPE_PORTAL_BROWSER_CHANNEL = "chrome"/);
+});
+
+test("cada tanda recarga y valida Cloudflare antes de abrir perfiles de usuarios", () => {
+  assert.match(batchRunnerSource, /WarmupSeconds = 45/);
+  assert.match(batchRunnerSource, /start-cloudflare-gateway\.ps1/);
+  assert.match(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
+  assert.match(batchRunnerSource, /CPE_CLOUDFLARE_POOL_SIZE = "1"/);
+  assert.match(batchRunnerSource, /if \(\$clearanceExitCode -ne 0\)/);
+
+  const gatewayPosition = batchRunnerSource.indexOf("& powershell.exe", batchRunnerSource.indexOf("$gatewayScript"));
+  const clearancePosition = batchRunnerSource.indexOf("& node $clearanceCheckScript");
+  const workerPosition = batchRunnerSource.indexOf('& node "scripts/portal-sync-worker.js"');
+  assert.ok(gatewayPosition >= 0);
+  assert.ok(clearancePosition > gatewayPosition);
+  assert.ok(workerPosition > clearancePosition);
 });
 
 test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo pendientes", () => {

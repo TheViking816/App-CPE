@@ -14,6 +14,6 @@ test("revalida el snapshot del portal mientras el usuario mantiene abierta la ap
 });
 
 test("fuerza a las instalaciones existentes a recibir la version corregida", () => {
-  assert.match(mainSource, /service-worker\.js\?v=20260822-paid-premium-history-1/);
-  assert.match(serviceWorkerSource, /20260822-paid-premium-history-1/);
+  assert.match(mainSource, /service-worker\.js\?v=20260824-portal-inactivity-1/);
+  assert.match(serviceWorkerSource, /20260824-portal-inactivity-1/);
 });
