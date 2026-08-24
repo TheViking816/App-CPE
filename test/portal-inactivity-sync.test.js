@@ -10,7 +10,7 @@ const monitorSource = fs.readFileSync(new URL("../src/AdminMonitor.jsx", import.
 test("añadir la clave de seguridad encola una recuperación anual individual", () => {
   assert.match(migration, /app_cpe_set_portal_security_key[\s\S]*security_key_added[\s\S]*'history'/);
   assert.match(migration, /now\(\) \+ interval '30 days'/);
-  assert.match(appSource, /Clave guardada\. La carga completa anual está en cola/);
+  assert.match(appSource, /En la próxima sincronización se cargarán tus primas y nóminas de todo el año\./);
 });
 
 test("las cuentas se pausan tras siete días sin borrar datos ni credenciales", () => {

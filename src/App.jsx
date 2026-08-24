@@ -3001,7 +3001,7 @@ function PortalPanel({
         await sendPendingActivationEmails();
       } else {
         setPortalMessage(queuedAnnualHistory
-          ? "Clave guardada. La carga completa anual está en cola para la próxima ejecución."
+          ? "En la próxima sincronización se cargarán tus primas y nóminas de todo el año."
           : "Datos de acceso configurados correctamente.");
       }
     } catch (requestError) {
