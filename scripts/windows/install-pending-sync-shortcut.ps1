@@ -6,14 +6,14 @@ param(
 $ErrorActionPreference = "Stop"
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = Join-Path $desktop "Actualizar pendientes App CPE.lnk"
-$batchScript = Join-Path $RepositoryPath "scripts\windows\run-cloudflare-gateway-batch.ps1"
-if (-not (Test-Path -LiteralPath $batchScript)) { throw "No existe el procesador del Chrome worker." }
+$runnerScript = Join-Path $RepositoryPath "scripts\windows\run-pending-sync.ps1"
+if (-not (Test-Path -LiteralPath $runnerScript)) { throw "No existe el flujo de trabajos pendientes." }
 
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "powershell.exe"
-$shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $batchScript + '" -RepositoryPath "' + $RepositoryPath + '" -Port ' + $GatewayPort + ' -BatchSize 10 -Drain'
+$shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $runnerScript + '" -RepositoryPath "' + $RepositoryPath + '" -GatewayPort ' + $GatewayPort + ' -BatchSize 10 -WarmupSeconds 45'
 $shortcut.WorkingDirectory = $RepositoryPath
-$shortcut.Description = "Procesa solamente las sincronizaciones que ya estan en cola"
+$shortcut.Description = "Prepara Chrome y procesa solamente las sincronizaciones que ya estan en cola"
 $shortcut.Save()
 Write-Host "Acceso creado: $shortcutPath"

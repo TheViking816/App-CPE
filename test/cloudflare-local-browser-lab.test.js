@@ -13,6 +13,7 @@ const batchRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-cloudf
 const persistentRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-portal-worker.ps1", import.meta.url), "utf8");
 const workerInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-worker.ps1", import.meta.url), "utf8");
 const pendingShortcutSource = fs.readFileSync(new URL("../scripts/windows/install-pending-sync-shortcut.ps1", import.meta.url), "utf8");
+const pendingRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-pending-sync.ps1", import.meta.url), "utf8");
 const operationalRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-operational-sync.ps1", import.meta.url), "utf8");
 const generalBoardWorkerSource = fs.readFileSync(new URL("../scripts/sync-general-board.js", import.meta.url), "utf8");
 const generalBoardClientSource = fs.readFileSync(new URL("../src/generalBoard.js", import.meta.url), "utf8");
@@ -101,15 +102,19 @@ test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () 
   assert.match(persistentRunnerSource, /CPE_PORTAL_BROWSER_CHANNEL = "chrome"/);
 });
 
-test("el worker no abre el portal si la cola esta vacia y el acceso procesa solo pendientes", () => {
+test("el worker reclama la cola antes de validar y el acceso prepara Chrome para procesar solo pendientes", () => {
   const claimPosition = workerSource.indexOf("const jobs = await claimNextBatch()");
   const authorizationPosition = workerSource.indexOf("if (!await gatewayAuthorizationIsValid())", claimPosition);
   assert.ok(claimPosition >= 0);
   assert.ok(authorizationPosition > claimPosition);
   assert.match(pendingShortcutSource, /Actualizar pendientes App CPE\.lnk/);
-  assert.match(pendingShortcutSource, /run-cloudflare-gateway-batch\.ps1/);
-  assert.match(pendingShortcutSource, /-Drain/);
+  assert.match(pendingShortcutSource, /run-pending-sync\.ps1/);
+  assert.match(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
+  assert.match(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.match(pendingRunnerSource, /run-cloudflare-gateway-batch\.ps1/);
+  assert.match(pendingRunnerSource, /-Drain/);
   assert.doesNotMatch(pendingShortcutSource, /queue-all-portal-syncs/);
+  assert.doesNotMatch(pendingRunnerSource, /queue-all-portal-syncs/);
   assert.match(workerInstallerSource, /install-pending-sync-shortcut\.ps1/);
 });
 
