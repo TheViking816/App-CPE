@@ -86,6 +86,18 @@ test("Monitor identifies users that need historical recovery", async () => {
   assert.match(monitor, /Sin histórico de primas · usa Carga inicial completa/);
 });
 
+test("Monitor includes every chapa with a sync job, including the administrator", async () => {
+  const [monitor, migration] = await Promise.all([
+    read("../src/AdminMonitor.jsx"),
+    read("../supabase/migrations/20260824063027_include_all_sync_jobs_in_admin_monitor.sql")
+  ]);
+  assert.match(monitor, /useState\("all"\)/);
+  assert.match(migration, /from public\.app_cpe_portal_sync_jobs jobs/);
+  assert.match(migration, /full join public\.app_cpe_users users/);
+  assert.match(migration, /where jobs\.chapa is not null/);
+  assert.match(migration, /coalesce\(users\.chapa, jobs\.chapa\)/);
+});
+
 test("private history protection works through the service worker and rejects bad passwords", async () => {
   const migration = await read("../supabase/migrations/20260819061655_fix_private_history_trigger_and_reject_bad_credentials.sql");
   assert.match(migration, /app_cpe_preserve_portal_snapshot_trigger\(\)[\s\S]*security definer/);
