@@ -2073,7 +2073,26 @@ select {
 /* Foro de la comunidad */
 .forum-page {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
   gap: 14px;
+  overflow: hidden;
+}
+
+.mobile-app-forum {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content.content-forum {
+  height: calc(100vh - 142px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  height: calc(100dvh - 142px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 0;
+  padding-bottom: 10px;
+  overflow: hidden;
 }
 
 .forum-hero {
@@ -2133,6 +2152,9 @@ select {
 }
 
 .forum-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid #dbe4ed;
   border-radius: 8px;
@@ -2186,8 +2208,8 @@ select {
 
 .forum-messages {
   display: flex;
-  min-height: 390px;
-  max-height: min(600px, calc(100dvh - 355px));
+  min-height: 0;
+  max-height: none;
   flex-direction: column;
   gap: 10px;
   padding: 16px;
@@ -2488,7 +2510,7 @@ select {
   .forum-hero h1 { font-size: 21px; }
   .forum-hero small { font-size: 10px; }
   .forum-card-heading { min-height: 62px; padding-inline: 12px; }
-  .forum-messages { min-height: 360px; max-height: calc(100dvh - 320px); padding: 12px 10px; }
+  .forum-messages { min-height: 0; max-height: none; padding: 12px 10px; }
   .forum-message { width: 92%; }
   .forum-avatar { width: 29px; height: 29px; }
   .forum-message-content { padding: 9px 10px; }

@@ -3549,7 +3549,7 @@ function ForumPanel({ session, onLatestMessage }) {
       <header className="forum-hero">
         <span><MessageCircle size={26} /></span>
         <div>
-          <p>Comunidad App CPE</p>
+          <p>Comunidad Estibadores - Puerto de Valencia</p>
           <h1>Foro</h1>
           <small>Comparte avisos, dudas y comentarios con tus compañeros.</small>
         </div>
@@ -4053,11 +4053,11 @@ export function App() {
   }
 
   return (
-    <div className="mobile-app">
+    <div className={`mobile-app${activeTab === "foro" ? " mobile-app-forum" : ""}`}>
       <AppHeader
         onMenuOpen={() => setMenuOpen(true)}
       />
-      <main className="content">
+      <main className={`content${activeTab === "foro" ? " content-forum" : ""}`}>
         {activeTab === "inicio" && (
           <HomePanel
             user={displayUser}
@@ -4138,7 +4138,7 @@ export function App() {
         {activeTab === "enlaces" && <LinksPanel />}
         {activeTab === "foro" && <ForumPanel session={session} onLatestMessage={handleLatestForumMessage} />}
         {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
-        <ContactFooter />
+        {activeTab !== "foro" && <ContactFooter />}
       </main>
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} onSave={savePassword} />}
       {deleteAccountOpen && <DeleteAccountModal chapa={session.chapa} onClose={() => setDeleteAccountOpen(false)} onDelete={deleteAccount} />}

@@ -15,6 +15,8 @@ test("el foro forma parte de la navegacion y usa RPC autenticadas", () => {
   assert.match(appSource, /<ForumPanel session=\{session\}/);
   assert.match(clientSource, /app_cpe_forum_list/);
   assert.match(clientSource, /app_cpe_forum_post/);
+  assert.match(appSource, /Comunidad Estibadores - Puerto de Valencia/);
+  assert.match(appSource, /content-forum/);
 });
 
 test("el foro protege la tabla y muestra al administrador sin exponer la chapa", () => {

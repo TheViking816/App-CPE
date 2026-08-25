@@ -7,7 +7,7 @@ const PAGE_LABELS = {
   descansos: "Descansos", vacaciones: "Vacaciones", nominas: "Nóminas",
   excepciones: "Excepciones",
   estado: "Estado operativo", puertas: "Puertas", censo: "Censo", portal: "Portal",
-  tablon: "Tablón general", enlaces: "Enlaces"
+  tablon: "Tablón general", enlaces: "Enlaces", foro: "Foro"
 };
 
 const EVENT_LABELS = {
