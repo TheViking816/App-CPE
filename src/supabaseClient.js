@@ -478,6 +478,31 @@ export async function getPortalAutoSyncStatus({ token }) {
   return data || null;
 }
 
+export async function getForumMessages({ token, limit = 50, beforeId = null }) {
+  if (!supabase || !token) return [];
+
+  const { data, error } = await supabase.rpc("app_cpe_forum_list", {
+    p_token: token,
+    p_limit: limit,
+    p_before_id: beforeId
+  });
+
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function postForumMessage({ token, message }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_forum_post", {
+    p_token: token,
+    p_message: message
+  });
+
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] || null : data || null;
+}
+
 export async function touchPortalActivity({ token }) {
   if (!supabase || !token) return null;
 

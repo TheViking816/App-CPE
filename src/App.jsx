@@ -28,10 +28,13 @@ import {
   Menu,
   Moon,
   Mail,
+  LoaderCircle,
+  MessageCircle,
   Percent,
   RefreshCw,
   ReceiptText,
   Search,
+  Send,
   Settings,
   Ship,
   Sun,
@@ -69,6 +72,7 @@ import {
   deleteUserAccount,
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
+  getForumMessages,
   loadPayrollConfig,
   getOfficialPortalDocument,
   getOfficialPortalSnapshot,
@@ -77,6 +81,7 @@ import {
   getUserRelayHours,
   loginUser,
   queuePendingPortalActivation,
+  postForumMessage,
   reactivatePortalSync,
   refreshCurrentUser,
   registerUser,
@@ -203,6 +208,12 @@ const SIDE_NAV_GROUPS = [
       { id: "excepciones", label: "Excepciones", Icon: CalendarOff },
       { id: "tablon", label: "Tablón general", Icon: ClipboardList },
       { id: "censo", label: "Censo", Icon: UsersRound }
+    ]
+  },
+  {
+    label: "Comunidad",
+    items: [
+      { id: "foro", label: "Foro", Icon: MessageCircle }
     ]
   },
   {
@@ -3342,6 +3353,225 @@ function LinksPanel() {
   );
 }
 
+const FORUM_PAGE_SIZE = 50;
+
+function normalizeForumMessage(row) {
+  return {
+    id: Number(row?.id),
+    authorChapa: normalizeChapa(row?.author_chapa || row?.authorChapa),
+    authorName: String(row?.author_name || row?.authorName || "Usuario"),
+    message: String(row?.message || ""),
+    createdAt: row?.created_at || row?.createdAt || new Date().toISOString()
+  };
+}
+
+function formatForumDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function ForumPanel({ session }) {
+  const [messages, setMessages] = useState([]);
+  const [draft, setDraft] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [error, setError] = useState("");
+  const messagesRef = useRef([]);
+  const messageListRef = useRef(null);
+  const initialScrollRef = useRef(false);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const mergeMessages = useCallback((rows) => {
+    const normalizedRows = rows
+      .map(normalizeForumMessage)
+      .filter((message) => Number.isFinite(message.id) && message.message)
+      .sort((a, b) => a.id - b.id);
+
+    setMessages((current) => {
+      const byId = new Map(current.map((message) => [message.id, message]));
+      normalizedRows.forEach((message) => byId.set(message.id, message));
+      return [...byId.values()].sort((a, b) => a.id - b.id);
+    });
+
+    return normalizedRows;
+  }, []);
+
+  const loadLatest = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const rows = await getForumMessages({ token: session.token, limit: FORUM_PAGE_SIZE });
+      mergeMessages(rows);
+      setHasOlder(rows.length === FORUM_PAGE_SIZE);
+      setError("");
+    } catch (loadError) {
+      if (!silent) setError(loadError.message || "No se pudo cargar el foro.");
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [mergeMessages, session.token]);
+
+  useEffect(() => {
+    loadLatest();
+    const refresh = () => loadLatest({ silent: true });
+    const timer = window.setInterval(refresh, 20_000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [loadLatest]);
+
+  useEffect(() => {
+    if (loading || initialScrollRef.current || !messages.length) return;
+    initialScrollRef.current = true;
+    const list = messageListRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [loading, messages.length]);
+
+  const loadOlder = async () => {
+    const firstId = messagesRef.current[0]?.id;
+    if (!firstId || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const rows = await getForumMessages({
+        token: session.token,
+        limit: FORUM_PAGE_SIZE,
+        beforeId: firstId
+      });
+      mergeMessages(rows);
+      setHasOlder(rows.length === FORUM_PAGE_SIZE);
+      setError("");
+    } catch (loadError) {
+      setError(loadError.message || "No se pudieron cargar mensajes anteriores.");
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
+  const sendMessage = async (event) => {
+    event.preventDefault();
+    const message = draft.trim();
+    if (!message || sending) return;
+
+    setSending(true);
+    setError("");
+    try {
+      const saved = await postForumMessage({ token: session.token, message });
+      if (saved) mergeMessages([saved]);
+      setDraft("");
+      window.setTimeout(() => {
+        const list = messageListRef.current;
+        list?.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+      }, 0);
+    } catch (sendError) {
+      setError(sendError.message || "No se pudo enviar el mensaje.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <section className="forum-page">
+      <header className="forum-hero">
+        <span><MessageCircle size={26} /></span>
+        <div>
+          <p>Comunidad App CPE</p>
+          <h1>Foro de compañeros</h1>
+          <small>Comparte avisos, dudas y comentarios con otros trabajadores.</small>
+        </div>
+      </header>
+
+      <section className="forum-card">
+        <header className="forum-card-heading">
+          <div>
+            <strong>Conversación general</strong>
+            <span>{messages.length ? `${messages.length} mensajes cargados` : "Empieza la conversación"}</span>
+          </div>
+          <span className="forum-live"><i /> En línea</span>
+        </header>
+
+        <div ref={messageListRef} className="forum-messages" aria-live="polite" aria-busy={loading}>
+          {hasOlder && (
+            <button className="forum-load-older" type="button" disabled={loadingOlder} onClick={loadOlder}>
+              {loadingOlder ? <LoaderCircle className="is-spinning" size={15} /> : <Clock3 size={15} />}
+              {loadingOlder ? "Cargando..." : "Ver mensajes anteriores"}
+            </button>
+          )}
+
+          {loading && !messages.length ? (
+            <div className="forum-empty">
+              <LoaderCircle className="is-spinning" size={26} />
+              <strong>Cargando conversación</strong>
+            </div>
+          ) : !messages.length ? (
+            <div className="forum-empty">
+              <MessageCircle size={28} />
+              <strong>Todavía no hay mensajes</strong>
+              <span>Sé el primero en escribir.</span>
+            </div>
+          ) : messages.map((message) => {
+            const isOwn = message.authorChapa === normalizeChapa(session.chapa);
+            const isAdminMessage = message.authorChapa === "72683";
+            return (
+              <article key={message.id} className={`forum-message${isOwn ? " is-own" : ""}${isAdminMessage ? " is-admin" : ""}`}>
+                <div className="forum-avatar" aria-hidden="true">
+                  {isAdminMessage ? "A" : message.authorName.charAt(0).toUpperCase()}
+                </div>
+                <div className="forum-message-content">
+                  <header>
+                    <strong>{isAdminMessage ? "Administrador" : message.authorName}</strong>
+                    {isAdminMessage && <span>ADMIN</span>}
+                    <time dateTime={message.createdAt}>{formatForumDate(message.createdAt)}</time>
+                  </header>
+                  <p>{message.message}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <form className="forum-composer" onSubmit={sendMessage}>
+          <label htmlFor="forum-message">Escribe un mensaje</label>
+          <div>
+            <textarea
+              id="forum-message"
+              maxLength={500}
+              rows={3}
+              placeholder="Comparte algo con tus compañeros..."
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            <button type="submit" disabled={sending || !draft.trim()} aria-label="Enviar mensaje">
+              {sending ? <LoaderCircle className="is-spinning" size={20} /> : <Send size={20} />}
+              <span>{sending ? "Enviando" : "Enviar"}</span>
+            </button>
+          </div>
+          <footer>
+            <span>{error || "Respeta a los demás participantes."}</span>
+            <strong>{draft.length}/500</strong>
+          </footer>
+        </form>
+      </section>
+    </section>
+  );
+}
+
 function BottomNav({ activeTab, onChange }) {
   return (
     <nav className="bottom-nav" aria-label="Navegacion inferior">
@@ -3785,6 +4015,7 @@ export function App() {
           />
         )}
         {activeTab === "enlaces" && <LinksPanel />}
+        {activeTab === "foro" && <ForumPanel session={session} />}
         {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
         <ContactFooter />
       </main>
