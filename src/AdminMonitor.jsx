@@ -51,7 +51,7 @@ export default function AdminMonitor({ session }) {
   const [pageFilter, setPageFilter] = useState("");
   const [portalUsers, setPortalUsers] = useState([]);
   const [portalQuery, setPortalQuery] = useState("");
-  const [portalFilter, setPortalFilter] = useState("attention");
+  const [portalFilter, setPortalFilter] = useState("all");
   const [selectedChapas, setSelectedChapas] = useState(() => new Set());
   const [queueing, setQueueing] = useState(false);
   const [queueMessage, setQueueMessage] = useState("");

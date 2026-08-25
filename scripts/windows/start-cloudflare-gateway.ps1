@@ -2,7 +2,7 @@ param(
   [ValidateRange(1024, 65535)][int]$Port = 9223,
   [string]$ProfilePath = "",
   [string]$PortalUrl = "https://portal.cpevalencia.com/#User",
-  [ValidateRange(5, 60)][int]$WaitSeconds = 20,
+  [ValidateRange(5, 180)][int]$WaitSeconds = 90,
   [ValidateRange(1, 30)][int]$ReloadDelaySeconds = 5
 )
 
