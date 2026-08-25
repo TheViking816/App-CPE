@@ -179,6 +179,9 @@ function publicErrorMessage(error) {
   if (/usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(message)) {
     return "Usuario o contraseña del portal oficial incorrectos.";
   }
+  if (/no (?:actualizo|devolvio).*jornales|jornales.*(?:vacios|fallida)/i.test(message)) {
+    return "El portal no devolvió los jornales del mes actual tras varios intentos.";
+  }
   return (
     "La actualización no se ha completado. Se volverá a intentar en la próxima sincronización."
   );

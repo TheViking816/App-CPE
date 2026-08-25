@@ -5,13 +5,19 @@ import fs from "node:fs";
 const source = fs.readFileSync(new URL("../scripts/portal-sync-worker.js", import.meta.url), "utf8");
 const scheduleInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-sync-schedule.ps1", import.meta.url), "utf8");
 
-test("el worker procesa tandas acotadas de diez por defecto", () => {
+test("el worker procesa tandas acotadas de cinco por defecto", () => {
   assert.match(source, /CPE_PORTAL_WORKER_BATCH_SIZE/);
-  assert.match(source, /\|\| 10/);
+  assert.match(source, /\|\| 5/);
   assert.match(source, /Math\.min\(32/);
   assert.match(source, /limit=\$\{batchSize\}/);
   assert.match(source, /\.\.\.jobs\.map\(\(job, index\) => runJob/);
   assert.match(source, /Tanda de \$\{jobs\.length\} finalizada/);
+});
+
+test("el worker espera los reintentos diferidos antes de cerrar una tanda", () => {
+  assert.match(source, /nextDelayedJobWaitMs/);
+  assert.match(source, /6 \* 60 \* 1000/);
+  assert.match(source, /Esperando .*reintento automatico/);
 });
 
 test("cada worker paralelo usa un perfil de Chrome independiente", () => {

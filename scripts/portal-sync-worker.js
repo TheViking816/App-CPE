@@ -10,7 +10,7 @@ const pollMs = Math.max(1000, Number(process.env.CPE_PORTAL_WORKER_POLL_MS || 25
 const batchSize = Math.max(1, Math.min(32, Number(
   process.env.CPE_PORTAL_WORKER_BATCH_SIZE
   || process.env.CPE_PORTAL_WORKER_CONCURRENCY
-  || 10
+  || 5
 )));
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
@@ -62,6 +62,14 @@ async function claimNextBatch() {
     })
   });
   return claimed || [];
+}
+
+async function nextDelayedJobWaitMs() {
+  const jobs = await request("/rest/v1/app_cpe_portal_sync_jobs?select=requested_at&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=1");
+  if (!jobs?.length) return null;
+  const requestedAt = new Date(jobs[0].requested_at).getTime();
+  if (!Number.isFinite(requestedAt)) return null;
+  return Math.max(0, requestedAt - Date.now());
 }
 
 function generalBoardBatchKey(job) {
@@ -338,7 +346,16 @@ async function workerLoop() {
         }
         if (workerOnce) return;
       } else {
-        if (workerOnce || workerDrain) return;
+        if (workerOnce || workerDrain) {
+          const delayedWaitMs = await nextDelayedJobWaitMs();
+          if (delayedWaitMs !== null && delayedWaitMs <= 6 * 60 * 1000) {
+            const waitMs = Math.max(250, delayedWaitMs + 250);
+            console.log(`[portal-worker] Esperando ${Math.ceil(waitMs / 1000)} segundos al reintento automatico.`);
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+            continue;
+          }
+          return;
+        }
         await new Promise((resolve) => setTimeout(resolve, pollMs));
       }
     } catch (error) {

@@ -1,5 +1,5 @@
 param(
-  [ValidateRange(1, 32)][int]$BatchSize = 10,
+  [ValidateRange(1, 32)][int]$BatchSize = 5,
   [ValidateRange(1024, 65535)][int]$Port = 9223,
   [ValidateRange(5, 120)][int]$WarmupSeconds = 45,
   [string]$RepositoryPath = "",
