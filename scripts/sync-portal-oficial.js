@@ -1387,7 +1387,24 @@ async function collectPayrollDocumentFiles(page, rows, documentId) {
   const storedDocumentIds = await getStoredPayrollDocumentIds();
   const targetIndex = documentId ? rows.findIndex((payroll) => payroll.id === documentId) : -1;
   if (documentId && targetIndex < 0) throw new Error("La nomina solicitada ya no aparece en el portal.");
-  const targetIndexes = documentId ? [targetIndex] : rows.map((_, index) => index);
+  const currentMadridYear = new Intl.DateTimeFormat("en", {
+    timeZone: "Europe/Madrid",
+    year: "numeric"
+  }).format(new Date());
+  const belongsToCurrentYear = (payroll) => {
+    const period = String(payroll?.period || payroll?.title || "");
+    const year = period.match(/\b(?:0[1-9]|1[0-2])\s*\/\s*(\d{2}|\d{4})\b/)?.[1] || "";
+    return year.length === 2 ? year === currentMadridYear.slice(-2) : year === currentMadridYear;
+  };
+  const targetIndexes = documentId
+    ? [targetIndex]
+    : rows
+        .map((payroll, index) => ({ payroll, index }))
+        .filter(({ payroll }) => portalRequestKind !== "history" || belongsToCurrentYear(payroll))
+        .map(({ index }) => index);
+  if (!documentId && portalRequestKind === "history") {
+    console.log(`Nominas limitadas al ano ${currentMadridYear}: ${targetIndexes.length} documentos.`);
+  }
   for (const index of targetIndexes) {
     const payroll = rows[index];
     if (storedDocumentIds.has(payroll.id)) {
@@ -2276,7 +2293,7 @@ async function main() {
       await publishProgress(
         "nominas",
         nominas,
-        portalRequestKind === "history" ? "Nominas historicas guardadas" : "Ultima nomina actualizada"
+        portalRequestKind === "history" ? "Nominas del ano actual guardadas" : "Ultima nomina actualizada"
       );
     }
     const dobles = await readOptionalSection(

@@ -1930,6 +1930,7 @@ select {
 
 .side-menu-settings { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
 .side-menu .side-logout { color: #c72f36; }
+.side-menu .side-delete-account { color: #a91f2a; }
 
 .home-dashboard { gap: 14px; }
 .home-welcome {
@@ -3865,6 +3866,34 @@ select {
 .password-change-success strong { color: var(--ink); font-size: 17px; }
 .password-change-success span { color: var(--muted); font-size: 12px; font-weight: 750; }
 .password-change-success .primary-button { width: 100%; margin-top: 8px; }
+.delete-account-modal > header > span { color: #b4232d; background: #fff0f1; }
+.delete-account-warning {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #f0b8bd;
+  border-radius: 9px;
+  background: #fff4f4;
+  color: #8e1e28;
+}
+.delete-account-warning > div { display: grid; gap: 4px; }
+.delete-account-warning strong { font-size: 13px; }
+.delete-account-warning span { color: #744047; font-size: 12px; font-weight: 700; line-height: 1.45; }
+.delete-account-button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 9px;
+  background: #b4232d;
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+}
+.delete-account-button:disabled { cursor: not-allowed; opacity: .55; }
+
+:root[data-theme="dark"] .delete-account-modal > header > span { background: #3a1c24; color: #ffb7bd; }
+:root[data-theme="dark"] .delete-account-warning { border-color: #6f3138; background: #321a20; color: #ffb7bd; }
+:root[data-theme="dark"] .delete-account-warning span { color: #e2b8bc; }
 
 .portal-inbox-list > button,
 .portal-doubles-list article,

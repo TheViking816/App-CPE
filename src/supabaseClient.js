@@ -111,6 +111,19 @@ export async function updateUserPassword({ token, currentPassword, newPassword }
   return data;
 }
 
+export async function deleteUserAccount({ token, currentPassword, confirmation }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_delete_account", {
+    p_token: token,
+    p_current_password: currentPassword,
+    p_confirmation: confirmation
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function updateUserIrpf({ token, irpfRate }) {
   if (!supabase) return null;
 

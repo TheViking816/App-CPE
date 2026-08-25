@@ -259,7 +259,7 @@ export default function AdminMonitor({ session }) {
               <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
               <ListRestart size={22} />
             </div>
-            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda todas las nóminas disponibles. Ambos botones dejan las chapas en cola para «Actualizar pendientes App CPE».</p>
+            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda las nóminas del año actual. Ambos botones dejan las chapas en cola para «Actualizar pendientes App CPE».</p>
             <div className="monitor-sync-toolbar">
               <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
               <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
