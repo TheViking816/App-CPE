@@ -35,6 +35,7 @@ import {
   Settings,
   Ship,
   Sun,
+  Trash2,
   CalendarCheck2,
   Save,
   UserRound,
@@ -65,6 +66,7 @@ import {
   vacationPayrollEntriesForMonth
 } from "./payroll.js";
 import {
+  deleteUserAccount,
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
   loadPayrollConfig,
@@ -75,6 +77,7 @@ import {
   getUserRelayHours,
   loginUser,
   queuePendingPortalActivation,
+  reactivatePortalSync,
   refreshCurrentUser,
   registerUser,
   sendPendingActivationEmails,
@@ -83,6 +86,7 @@ import {
   setPortalSecurityKey,
   setUserRelayHour,
   trackPageVisit,
+  touchPortalActivity,
   trackUsageEvent,
   updateUserIrpf,
   updateActivationEmail,
@@ -400,6 +404,22 @@ function saveSpecialtyOverride(chapa, ids) {
   localStorage.setItem(SPECIALTY_OVERRIDES_KEY, JSON.stringify(overrides));
 }
 
+function removeStoredUserData(chapa) {
+  const normalized = normalizeChapa(chapa);
+  localStorage.removeItem(STORAGE_KEY);
+  if (!normalized) return;
+  for (const key of [SPECIALTY_OVERRIDES_KEY, PORTAL_CREDENTIALS_KEY, PORTAL_SYNC_TIMINGS_KEY, PORTAL_ACTIVE_SYNC_KEY]) {
+    try {
+      const stored = JSON.parse(localStorage.getItem(key)) || {};
+      delete stored[normalized];
+      if (Object.keys(stored).length) localStorage.setItem(key, JSON.stringify(stored));
+      else localStorage.removeItem(key);
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
 function getEffectiveSpecialtyIds(session) {
   if (!session?.chapa) return [specialty.id];
   const override = getSpecialtyOverride(session.chapa);
@@ -576,7 +596,7 @@ function AppHeader({ onMenuOpen }) {
   );
 }
 
-function SideMenu({ open, activeTab, theme, isAdmin, onClose, onNavigate, onSettingsOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, onClose, onNavigate, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -628,6 +648,7 @@ function SideMenu({ open, activeTab, theme, isAdmin, onClose, onNavigate, onSett
           <p>Ajustes</p>
           <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
           <button type="button" onClick={onThemeToggle}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}<span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span><ChevronRight size={17} /></button>
+          <button className="side-delete-account" type="button" onClick={() => { onDeleteAccountOpen(); onClose(); }}><Trash2 size={19} /><span>Eliminar mi cuenta</span><ChevronRight size={17} /></button>
           <button className="side-logout" type="button" onClick={onLogout}><LogOut size={19} /><span>Cerrar sesión</span></button>
         </section>
       </aside>
@@ -1231,6 +1252,90 @@ function ChangePasswordModal({ onClose, onSave }) {
             </button>
           </form>
         )}
+      </section>
+    </div>
+  );
+}
+
+function DeleteAccountModal({ chapa, onClose, onDelete }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape" && !loading) onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [loading, onClose]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError("");
+    if (!currentPassword) {
+      setError("Introduce tu contraseña actual.");
+      return;
+    }
+    if (confirmation.trim().toUpperCase() !== "ELIMINAR") {
+      setError("Escribe ELIMINAR para confirmar la baja definitiva.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await onDelete({ currentPassword, confirmation: "ELIMINAR" });
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo eliminar la cuenta.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !loading && onClose()}>
+      <section className="inbox-modal password-modal delete-account-modal" role="dialog" aria-modal="true" aria-label="Eliminar cuenta definitivamente">
+        <header>
+          <span><Trash2 size={20} /></span>
+          <div>
+            <small>Mi cuenta</small>
+            <h2>Eliminar cuenta definitivamente</h2>
+          </div>
+          <button type="button" onClick={onClose} disabled={loading} aria-label="Cerrar"><X size={20} /></button>
+        </header>
+
+        <form className="password-change-form" onSubmit={submit}>
+          <div className="delete-account-warning">
+            <CircleAlert size={24} />
+            <div>
+              <strong>Esta acción no se puede deshacer</strong>
+              <span>Se borrarán la cuenta de la chapa {chapa}, sus sesiones, credenciales, jornales, primas, nóminas, documentos y datos de actividad.</span>
+            </div>
+          </div>
+          <label>
+            <span>Contraseña actual</span>
+            <input
+              autoFocus
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Escribe ELIMINAR para confirmar</span>
+            <input
+              type="text"
+              autoComplete="off"
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+            />
+          </label>
+          {error && <p className="form-error">{error}</p>}
+          <button className="delete-account-button" type="submit" disabled={loading || confirmation.trim().toUpperCase() !== "ELIMINAR"}>
+            {loading ? "Eliminando todos los datos..." : "Eliminar definitivamente"}
+          </button>
+        </form>
       </section>
     </div>
   );
@@ -2723,6 +2828,8 @@ function PortalPanel({
   const [activationEmail, setActivationEmail] = useState(session.email || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
+  const [portalSyncStatus, setPortalSyncStatus] = useState("active");
+  const [reactivatingPortal, setReactivatingPortal] = useState(false);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
   const [portalMessage, setPortalMessage] = useState(initialActiveSync ? "Recuperando la sincronizacion en curso..." : "");
@@ -2813,9 +2920,12 @@ function PortalPanel({
 
   useEffect(() => {
     let cancelled = false;
-    getPortalAutoSyncStatus({ token: session.token })
+    touchPortalActivity({ token: session.token })
+      .catch(() => null)
+      .then(() => getPortalAutoSyncStatus({ token: session.token }))
       .then(async (status) => {
         if (cancelled) return;
+        setPortalSyncStatus(status?.syncStatus || "active");
         if (status?.enabled) {
           setAutoSyncEnabled(true);
           if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(false);
@@ -2949,6 +3059,7 @@ function PortalPanel({
     setSavingCredentials(true);
 
     try {
+      let queuedAnnualHistory = false;
       let currentSession = session;
       const requiresActivationRequest = !securityKeyOnly && !autoSyncEnabled;
       if (requiresActivationRequest || !session.email) {
@@ -2968,7 +3079,9 @@ function PortalPanel({
         }
       }
       if (securityKeyOnly && securityKeyToUse) {
-        await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
+        const securityResult = await setPortalSecurityKey({ token: session.token, securityKey: securityKeyToUse });
+        queuedAnnualHistory = securityResult?.requestKind === "history";
+        setPortalSyncStatus("active");
       } else if (passwordToUse) {
         await setPortalAutoSync({
           token: session.token,
@@ -2990,7 +3103,9 @@ function PortalPanel({
         setPortalMessage("Solicitud enviada. Te avisaremos por correo cuando tu acceso esté activado.");
         await sendPendingActivationEmails();
       } else {
-        setPortalMessage("Datos de acceso configurados correctamente.");
+        setPortalMessage(queuedAnnualHistory
+          ? "En la próxima sincronización se cargarán tus primas y nóminas de todo el año."
+          : "Datos de acceso configurados correctamente.");
       }
     } catch (requestError) {
       setPortalMessage("");
@@ -3021,6 +3136,22 @@ function PortalPanel({
     });
   };
 
+  const reactivatePausedPortal = async () => {
+    setReactivatingPortal(true);
+    setError("");
+    try {
+      const result = await reactivatePortalSync({ token: session.token });
+      setPortalSyncStatus("active");
+      setPortalMessage(result?.requestKind === "history"
+        ? "Cuenta reactivada. La recuperación completa está en cola para la próxima ejecución."
+        : "Cuenta reactivada. La actualización del mes actual está en cola para la próxima ejecución.");
+    } catch (reactivationError) {
+      setError(reactivationError?.message || "No se pudo reactivar la actualización del portal.");
+    } finally {
+      setReactivatingPortal(false);
+    }
+  };
+
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
   const panelCopy = {
     all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
@@ -3046,9 +3177,22 @@ function PortalPanel({
         </section>
       )}
 
+      {portalSyncStatus === "paused_inactive" && !showCredentials && (
+        <section className="portal-inactivity-pause" aria-live="polite">
+          <Clock3 size={25} />
+          <div>
+            <strong>Actualizaciones en pausa por inactividad</strong>
+            <span>Tus datos siguen guardados. Reactiva la cuenta para volver a incluirla en las próximas sincronizaciones.</span>
+          </div>
+          <button type="button" onClick={reactivatePausedPortal} disabled={reactivatingPortal}>
+            {reactivatingPortal ? "Reactivando…" : "Reactivar actualizaciones"}
+          </button>
+        </section>
+      )}
+
       {snapshot?.payload && !showCredentials && (
         <div className="portal-update-row">
-          <span>Datos guardados del portal oficial</span>
+          <span>Datos guardados del portal oficial{portalMessage && <small>{portalMessage}</small>}</span>
           <div>
             {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar acceso</button>}
           </div>
@@ -3235,6 +3379,7 @@ export function App() {
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [portalConnected, setPortalConnected] = useState(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [portalCredentialsRequested, setPortalCredentialsRequested] = useState(false);
   const [chaperoLoaded, setChaperoLoaded] = useState(false);
@@ -3408,7 +3553,8 @@ export function App() {
       chapa: session.chapa,
       metadata: { specialties: getEffectiveSpecialtyIds(session) }
     });
-  }, [session?.chapa]);
+    if (session.token) touchPortalActivity({ token: session.token }).catch(() => {});
+  }, [session?.chapa, session?.token]);
 
   useEffect(() => {
     if (!session?.token) {
@@ -3521,6 +3667,22 @@ export function App() {
     trackUsageEvent({ eventType: "password_change", chapa: session.chapa });
   };
 
+  const deleteAccount = async ({ currentPassword, confirmation }) => {
+    const chapa = session.chapa;
+    await deleteUserAccount({
+      token: session.token,
+      currentPassword,
+      confirmation
+    });
+    removeStoredUserData(chapa);
+    setDeleteAccountOpen(false);
+    setMenuOpen(false);
+    setPortalSnapshot(null);
+    setPortalConnected(null);
+    setSession(null);
+    navigateToTab("inicio");
+  };
+
   if (!session) {
     return (
       <div className="login-screen">
@@ -3627,6 +3789,7 @@ export function App() {
         <ContactFooter />
       </main>
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} onSave={savePassword} />}
+      {deleteAccountOpen && <DeleteAccountModal chapa={session.chapa} onClose={() => setDeleteAccountOpen(false)} onDelete={deleteAccount} />}
       <SideMenu
         open={menuOpen}
         activeTab={activeTab}
@@ -3635,6 +3798,7 @@ export function App() {
         onClose={() => setMenuOpen(false)}
         onNavigate={navigateToTab}
         onSettingsOpen={() => setPasswordOpen(true)}
+        onDeleteAccountOpen={() => setDeleteAccountOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}
       />

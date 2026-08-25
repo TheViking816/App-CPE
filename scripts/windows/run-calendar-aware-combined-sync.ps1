@@ -54,12 +54,13 @@ if (-not $shouldRun) {
 Write-Host "Calendario validado: jornada $dayType, horario $ScheduleType."
 if ($CheckOnly) { exit 0 }
 
-$desktop = [Environment]::GetFolderPath("DesktopDirectory")
-$gatewayShortcut = Join-Path $desktop "Abrir Chrome Worker App CPE.lnk"
-$combinedShortcut = Join-Path $desktop "App CPE - 3 Actualizar TODO (mes + chapero + puertas).lnk"
-if (-not (Test-Path -LiteralPath $gatewayShortcut)) { throw "No existe el acceso directo del gateway Chrome." }
-if (-not (Test-Path -LiteralPath $combinedShortcut)) { throw "No existe el acceso directo de actualizacion completa." }
+$combinedRunner = Join-Path $RepositoryPath "scripts\windows\run-combined-current-sync.ps1"
+if (-not (Test-Path -LiteralPath $combinedRunner)) { throw "No existe el script de actualizacion combinada." }
 
-Start-Process -FilePath $gatewayShortcut
-Start-Sleep -Seconds 45
-Start-Process -FilePath $combinedShortcut
+# Se ejecuta de forma sincrona para que el Programador de tareas reciba el
+# resultado real. El runner operativo prepara su propio Chrome gateway.
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $combinedRunner -RepositoryPath $RepositoryPath
+$combinedExitCode = $LASTEXITCODE
+if ($combinedExitCode -ne 0) {
+  throw "La actualizacion combinada termino con codigo $combinedExitCode."
+}

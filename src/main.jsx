@@ -22,13 +22,13 @@ if ("serviceWorker" in navigator) {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20260816-exception-order-1");
+      forceReload("20260825-account-deletion-1");
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260822-paid-premium-history-1`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260825-account-deletion-1`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });

@@ -1,6 +1,7 @@
 param(
   [ValidateRange(1, 32)][int]$BatchSize = 10,
   [ValidateRange(1024, 65535)][int]$Port = 9223,
+  [ValidateRange(5, 120)][int]$WarmupSeconds = 45,
   [string]$RepositoryPath = "",
   [switch]$Drain
 )
@@ -14,12 +15,35 @@ $secretPath = Join-Path $env:LOCALAPPDATA "AppCPE\portal-worker\supabase-secret.
 if (-not (Test-Path -LiteralPath $secretPath)) { throw "Falta la clave cifrada del worker." }
 
 $endpoint = "http://127.0.0.1:$Port"
-try { $null = Invoke-RestMethod -Uri "$endpoint/json/version" -TimeoutSec 3 }
-catch {
-  $gatewayScript = Join-Path $RepositoryPath "scripts\windows\start-cloudflare-gateway.ps1"
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $gatewayScript -Port $Port
-  if ($LASTEXITCODE -ne 0) { throw "No se pudo abrir el gateway Chrome." }
+$gatewayScript = Join-Path $RepositoryPath "scripts\windows\start-cloudflare-gateway.ps1"
+$clearanceCheckScript = Join-Path $RepositoryPath "scripts\cloudflare-clearance-pool-check.js"
+if (-not (Test-Path -LiteralPath $gatewayScript)) { throw "No existe el iniciador del Chrome gateway." }
+if (-not (Test-Path -LiteralPath $clearanceCheckScript)) { throw "No existe la comprobacion de Cloudflare." }
+
+# Hay que preparar el gateway incluso si el puerto ya estaba abierto: una
+# sesion de Chrome viva puede conservar una autorizacion de Cloudflare caducada.
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $gatewayScript -Port $Port
+if ($LASTEXITCODE -ne 0) { throw "No se pudo abrir o recargar el gateway Chrome." }
+
+Write-Host "Chrome gateway abierto y recargado. Esperando $WarmupSeconds segundos para completar Cloudflare..." -ForegroundColor Yellow
+Start-Sleep -Seconds $WarmupSeconds
+
+$previousCdpEndpoint = $env:CPE_PORTAL_CDP_ENDPOINT
+$previousPoolSize = $env:CPE_CLOUDFLARE_POOL_SIZE
+try {
+  $env:CPE_PORTAL_CDP_ENDPOINT = $endpoint
+  $env:CPE_CLOUDFLARE_POOL_SIZE = "1"
+  Set-Location -LiteralPath $RepositoryPath
+  & node $clearanceCheckScript
+  $clearanceExitCode = $LASTEXITCODE
+} finally {
+  $env:CPE_PORTAL_CDP_ENDPOINT = $previousCdpEndpoint
+  $env:CPE_CLOUDFLARE_POOL_SIZE = $previousPoolSize
 }
+if ($clearanceExitCode -ne 0) {
+  throw "Cloudflare sigue pendiente. Completa la verificacion en la ventana Chrome gateway y vuelve a lanzar la actualizacion; no se ha iniciado ningun perfil de usuario."
+}
+Write-Host "Cloudflare validado. Iniciando la tanda de usuarios." -ForegroundColor Green
 
 $secureSecret = ConvertTo-SecureString (Get-Content -LiteralPath $secretPath -Raw).Trim()
 $secretPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSecret)

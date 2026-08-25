@@ -19,6 +19,18 @@ $chromePath = $chromeCandidates | Where-Object { Test-Path -LiteralPath $_ } | S
 if (-not $chromePath) { throw "Google Chrome no está instalado." }
 
 $versionUrl = "http://127.0.0.1:$Port/json/version"
+$verifiedReloadScript = Join-Path $PSScriptRoot "..\reload-cloudflare-gateway.js"
+if (-not (Test-Path -LiteralPath $verifiedReloadScript)) {
+  throw "No existe el recargador verificado del Chrome gateway."
+}
+
+function Invoke-VerifiedPortalReload {
+  & node $verifiedReloadScript "http://127.0.0.1:$Port"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Chrome esta abierto, pero el portal no respondio despues de recargarlo."
+  }
+}
+
 function Open-PortalGatewayTab {
   $encodedPortalUrl = [Uri]::EscapeDataString($PortalUrl)
   return Invoke-RestMethod -Method Put -Uri "http://127.0.0.1:$Port/json/new?$encodedPortalUrl" -TimeoutSec 5
@@ -48,9 +60,9 @@ function Reload-PortalGatewayTab([object]$Target) {
 
 try {
   $null = Invoke-RestMethod -Uri $versionUrl -TimeoutSec 2
-  $portalTarget = Open-PortalGatewayTab
-  Reload-PortalGatewayTab $portalTarget
-  Write-Host "Gateway Chrome ya disponible en el puerto $Port. Portal abierto y recargado para renovar Cloudflare."
+  $null = Open-PortalGatewayTab
+  Invoke-VerifiedPortalReload
+  Write-Host "Gateway Chrome ya disponible en el puerto $Port. Portal recargado y comprobado para renovar Cloudflare."
   exit 0
 } catch {}
 
@@ -75,8 +87,8 @@ do {
   try {
     $version = Invoke-RestMethod -Uri $versionUrl -TimeoutSec 2
     if ($version.webSocketDebuggerUrl) {
-      Reload-PortalGatewayTab $null
-      Write-Host "Gateway Chrome preparado y portal recargado. Deja abierta la ventana de Chrome; esta consola ya puede cerrarse."
+      Invoke-VerifiedPortalReload
+      Write-Host "Gateway Chrome preparado y portal recargado de forma verificada. Deja abierta la ventana de Chrome; esta consola ya puede cerrarse."
       exit 0
     }
   } catch {}

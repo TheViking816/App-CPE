@@ -111,6 +111,19 @@ export async function updateUserPassword({ token, currentPassword, newPassword }
   return data;
 }
 
+export async function deleteUserAccount({ token, currentPassword, confirmation }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_delete_account", {
+    p_token: token,
+    p_current_password: currentPassword,
+    p_confirmation: confirmation
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function updateUserIrpf({ token, irpfRate }) {
   if (!supabase) return null;
 
@@ -458,6 +471,28 @@ export async function getPortalAutoSyncStatus({ token }) {
   if (!supabase || !token) return null;
 
   const { data, error } = await supabase.rpc("app_cpe_get_portal_auto_sync_status", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function touchPortalActivity({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_touch_portal_activity", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function reactivatePortalSync({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_reactivate_portal_sync", {
     p_token: token
   });
 

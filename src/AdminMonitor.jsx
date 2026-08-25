@@ -108,12 +108,13 @@ export default function AdminMonitor({ session }) {
       if (portalFilter === "pending") return user.activationStatus === "pending";
       if (portalFilter === "failed") return user.jobStatus === "failed";
       if (portalFilter === "queued") return ["queued", "running"].includes(user.jobStatus);
+      if (portalFilter === "paused") return user.syncStatus === "paused_inactive";
       if (portalFilter === "history") return !user.hasPremiumHistory;
-      if (portalFilter === "attention") return user.activationStatus === "pending" || user.jobStatus === "failed" || !user.hasPremiumHistory;
+      if (portalFilter === "attention") return user.activationStatus === "pending" || user.syncStatus === "paused_inactive" || user.jobStatus === "failed" || !user.hasPremiumHistory;
       return true;
     });
   }, [portalFilter, portalQuery, portalUsers]);
-  const canSelectPortalUser = (user) => user.hasCredentials && !["queued", "running"].includes(user.jobStatus);
+  const canSelectPortalUser = (user) => user.hasCredentials && user.syncStatus !== "paused_inactive" && !["queued", "running"].includes(user.jobStatus);
   const selectableFilteredChapas = filteredPortalUsers.filter(canSelectPortalUser).map((user) => user.chapa);
   const allFilteredSelected = selectableFilteredChapas.length > 0 && selectableFilteredChapas.every((chapa) => selectedChapas.has(chapa));
 
@@ -258,11 +259,11 @@ export default function AdminMonitor({ session }) {
               <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
               <ListRestart size={22} />
             </div>
-            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda todas las nóminas disponibles. Ambos botones dejan las chapas en cola para «Actualizar pendientes App CPE».</p>
+            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda las nóminas del año actual. Ambos botones dejan las chapas en cola para «Actualizar pendientes App CPE».</p>
             <div className="monitor-sync-toolbar">
               <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
               <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
-                {[["attention", "Necesitan atención"], ["history", "Sin histórico"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
+                {[["attention", "Necesitan atención"], ["paused", "En pausa"], ["history", "Sin histórico"], ["pending", "Pendientes"], ["failed", "Fallidas"], ["queued", "En cola"], ["all", "Todas"]].map(([value, label]) => (
                   <button key={value} type="button" className={portalFilter === value ? "is-active" : ""} onClick={() => setPortalFilter(value)}>{label}</button>
                 ))}
               </div>
@@ -280,7 +281,7 @@ export default function AdminMonitor({ session }) {
                       <tr key={user.chapa} className={selectedChapas.has(user.chapa) ? "is-selected" : ""}>
                         <td><input type="checkbox" checked={selectedChapas.has(user.chapa)} disabled={!selectable} onChange={() => togglePortalUser(user.chapa)} aria-label={`Seleccionar chapa ${user.chapa}`} /></td>
                         <td><strong>{user.chapa}</strong>{user.email && <small className="monitor-sync-email">{user.email}</small>}</td>
-                        <td><span className={`monitor-job-state is-${user.activationStatus}`}>{user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span></td>
+                        <td><span className={`monitor-job-state is-${user.syncStatus === "paused_inactive" ? "paused" : user.activationStatus}`}>{user.syncStatus === "paused_inactive" ? "En pausa" : user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span>{user.syncStatus === "paused_inactive" && <small className="monitor-sync-email">Sin uso desde {formatDateTime(user.lastAppSeenAt)}</small>}</td>
                         <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
                         <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
                         <td className="monitor-sync-detail">{!user.hasPremiumHistory ? "Sin histórico de primas · usa Carga inicial completa" : user.jobMessage || (!user.hasCredentials ? "Debe configurar el acceso" : user.hasSecurityKey ? `${user.premiumHistoryMonths || 0} meses de primas guardados` : "Sin clave de nóminas")}</td>

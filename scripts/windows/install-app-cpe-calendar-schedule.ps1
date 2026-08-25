@@ -56,18 +56,13 @@ foreach ($eve in $remaining2026Eves) {
 Install-AppTask "App CPE - Sabados y visperas 11-45" (New-CalendarAction "Reduced") $reduced1145 "11:45 los sabados y visperas laborables de festivo."
 Install-AppTask "App CPE - Sabados y visperas 13-30" (New-CalendarAction "Reduced") $reduced1330 "13:30 los sabados y visperas laborables de festivo."
 
-$desktop = [Environment]::GetFolderPath("DesktopDirectory")
-$gatewayShortcut = Join-Path $desktop "Abrir Chrome Worker App CPE.lnk"
-$combinedShortcut = Join-Path $desktop "App CPE - 3 Actualizar TODO (mes + chapero + puertas).lnk"
-$flow = "Start-Process -FilePath '$gatewayShortcut'; Start-Sleep -Seconds 45; Start-Process -FilePath '$combinedShortcut'"
-$encodedFlow = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($flow))
-$dailyAction = New-ScheduledTaskAction -Execute $powerShell -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand $encodedFlow"
+$dailyAction = New-CalendarAction "Common"
 $dailyTriggers = @(
   (New-ScheduledTaskTrigger -Daily -At "02:00"),
   (New-ScheduledTaskTrigger -Daily -At "08:00"),
   (New-ScheduledTaskTrigger -Daily -At "14:00"),
   (New-ScheduledTaskTrigger -Daily -At "20:00")
 )
-Install-AppTask "App CPE - Diario 02-08-14-20" $dailyAction $dailyTriggers "Todos los dias, incluidos domingos y festivos: 02:00, 08:00, 14:00 y 20:00."
+Install-AppTask "App CPE - Diario 02-08-14-20" $dailyAction $dailyTriggers "Todos los dias, incluidos domingos y festivos: 02:00, 08:00, 14:00 y 20:00. Espera el resultado real del worker."
 
 Write-Host "Programacion App CPE instalada: seis tareas definitivas."
