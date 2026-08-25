@@ -112,10 +112,49 @@ const THEME_KEY = "app-cpe-theme";
 const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
+const FORUM_LAST_READ_KEY = "app-cpe-forum-last-read";
+const FORUM_INTRO_SEEN_KEY = "app-cpe-forum-intro-seen";
 const DEFAULT_PORTAL_SYNC_SECONDS = 55;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
 const CHAPERO_POLL_MS = 60_000;
+
+function forumStorageKey(prefix, chapa) {
+  return `${prefix}:${normalizeChapa(chapa)}`;
+}
+
+function getForumLastRead(chapa) {
+  try {
+    return Number(localStorage.getItem(forumStorageKey(FORUM_LAST_READ_KEY, chapa))) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function markForumRead(chapa, messageId) {
+  if (!chapa || !Number.isFinite(Number(messageId))) return;
+  try {
+    localStorage.setItem(forumStorageKey(FORUM_LAST_READ_KEY, chapa), String(messageId));
+  } catch {
+    // El aviso volvera a calcularse en la siguiente sesion si no hay almacenamiento.
+  }
+}
+
+function hasSeenForumIntro(chapa) {
+  try {
+    return localStorage.getItem(forumStorageKey(FORUM_INTRO_SEEN_KEY, chapa)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markForumIntroSeen(chapa) {
+  try {
+    localStorage.setItem(forumStorageKey(FORUM_INTRO_SEEN_KEY, chapa), "1");
+  } catch {
+    // La tarjeta puede volver a aparecer si no hay almacenamiento disponible.
+  }
+}
 
 function readPortalCredentials(chapa) {
   try {
@@ -607,7 +646,7 @@ function AppHeader({ onMenuOpen }) {
   );
 }
 
-function SideMenu({ open, activeTab, theme, isAdmin, onClose, onNavigate, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -642,7 +681,11 @@ function SideMenu({ open, activeTab, theme, isAdmin, onClose, onNavigate, onSett
             <p>{group.label}</p>
             {group.items.map(({ id, label, Icon }) => (
               <button key={id} className={activeTab === id ? "active" : ""} type="button" onClick={() => navigate(id)}>
-                <Icon size={19} /><span>{label}</span><ChevronRight size={17} />
+                <Icon size={19} /><span>{label}</span>
+                <span className="side-nav-trailing">
+                  {id === "foro" && forumHasUnread && <span className="side-nav-new-badge">Nuevo</span>}
+                  <ChevronRight size={17} />
+                </span>
               </button>
             ))}
           </section>
@@ -1535,7 +1578,8 @@ function HomePanel({
   activeSpecialtyId,
   onSpecialtyChange,
   onLoadPortal,
-  onNavigate
+  onNavigate,
+  showForumIntro
 }) {
   const nearest = getNearestDoor(doors);
   const firstName = portalFirstName(portalSnapshot);
@@ -1556,6 +1600,18 @@ function HomePanel({
       </header>
 
       {portalConnected === false && <PortalConnectCallout onConnect={onLoadPortal} />}
+
+      {showForumIntro && (
+        <button className="home-forum-callout" type="button" onClick={() => onNavigate("foro")}>
+          <span className="home-forum-icon"><MessageCircle size={23} /></span>
+          <span>
+            <small>Nuevo en App CPE</small>
+            <strong>Foro</strong>
+            <span>Comparte avisos, dudas y comentarios con tus compañeros.</span>
+          </span>
+          <ChevronRight size={21} />
+        </button>
+      )}
 
       <section className="home-section-block">
         <div className="home-section-heading">
@@ -3376,7 +3432,7 @@ function formatForumDate(value) {
   }).format(date);
 }
 
-function ForumPanel({ session }) {
+function ForumPanel({ session, onLatestMessage }) {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
@@ -3404,8 +3460,10 @@ function ForumPanel({ session }) {
       return [...byId.values()].sort((a, b) => a.id - b.id);
     });
 
+    const latestId = normalizedRows.reduce((latest, message) => Math.max(latest, message.id), 0);
+    if (latestId) onLatestMessage?.(latestId);
     return normalizedRows;
-  }, []);
+  }, [onLatestMessage]);
 
   const loadLatest = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -3492,8 +3550,8 @@ function ForumPanel({ session }) {
         <span><MessageCircle size={26} /></span>
         <div>
           <p>Comunidad App CPE</p>
-          <h1>Foro de compañeros</h1>
-          <small>Comparte avisos, dudas y comentarios con otros trabajadores.</small>
+          <h1>Foro</h1>
+          <small>Comparte avisos, dudas y comentarios con tus compañeros.</small>
         </div>
       </header>
 
@@ -3616,6 +3674,9 @@ export function App() {
   const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
   const [activeSpecialtyId, setActiveSpecialtyId] = useState(() => getInitialSession()?.specialties?.[0] || specialty.id);
   const [notice, setNotice] = useState("");
+  const [forumLatestId, setForumLatestId] = useState(0);
+  const [forumHasUnread, setForumHasUnread] = useState(false);
+  const [showForumIntro, setShowForumIntro] = useState(false);
   const isAdmin = normalizeChapa(session?.chapa) === "72683";
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -3649,10 +3710,69 @@ export function App() {
 
   const navigateToTab = (tab) => {
     const nextTab = tabFromHash(hashForTab(tab));
+    if (nextTab === "foro") {
+      markForumIntroSeen(session?.chapa);
+      setShowForumIntro(false);
+      if (forumLatestId) markForumRead(session?.chapa, forumLatestId);
+      setForumHasUnread(false);
+    }
     setMenuOpen(false);
     setActiveTab(nextTab);
     if (window.location.hash !== hashForTab(nextTab)) window.location.hash = hashForTab(nextTab);
   };
+
+  const handleLatestForumMessage = useCallback((messageId) => {
+    const latestId = Number(messageId) || 0;
+    if (!latestId) return;
+    setForumLatestId((current) => Math.max(current, latestId));
+    if (activeTab === "foro") {
+      markForumRead(session?.chapa, latestId);
+      setForumHasUnread(false);
+    } else {
+      setForumHasUnread(latestId > getForumLastRead(session?.chapa));
+    }
+  }, [activeTab, session?.chapa]);
+
+  useEffect(() => {
+    if (activeTab !== "foro" || !session?.chapa) return;
+    markForumIntroSeen(session.chapa);
+    setShowForumIntro(false);
+    if (forumLatestId) markForumRead(session.chapa, forumLatestId);
+    setForumHasUnread(false);
+  }, [activeTab, forumLatestId, session?.chapa]);
+
+  useEffect(() => {
+    if (!session?.token || !session?.chapa) {
+      setForumLatestId(0);
+      setForumHasUnread(false);
+      setShowForumIntro(false);
+      return undefined;
+    }
+
+    setShowForumIntro(!hasSeenForumIntro(session.chapa));
+    let cancelled = false;
+    const refreshForumStatus = async () => {
+      try {
+        const rows = await getForumMessages({ token: session.token, limit: 1 });
+        if (!cancelled) handleLatestForumMessage(Number(rows?.[0]?.id) || 0);
+      } catch {
+        // El foro mostrara el error completo solo cuando el usuario lo abra.
+      }
+    };
+    refreshForumStatus();
+    const timer = window.setInterval(refreshForumStatus, 30_000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshForumStatus();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refreshForumStatus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refreshForumStatus);
+    };
+  }, [handleLatestForumMessage, session?.chapa, session?.token]);
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -3953,6 +4073,7 @@ export function App() {
             onSpecialtyChange={setActiveSpecialtyId}
             onLoadPortal={connectPortal}
             onNavigate={navigateToTab}
+            showForumIntro={showForumIntro}
           />
         )}
         {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
@@ -4015,7 +4136,7 @@ export function App() {
           />
         )}
         {activeTab === "enlaces" && <LinksPanel />}
-        {activeTab === "foro" && <ForumPanel session={session} />}
+        {activeTab === "foro" && <ForumPanel session={session} onLatestMessage={handleLatestForumMessage} />}
         {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
         <ContactFooter />
       </main>
@@ -4026,6 +4147,7 @@ export function App() {
         activeTab={activeTab}
         theme={theme}
         isAdmin={isAdmin}
+        forumHasUnread={forumHasUnread}
         onClose={() => setMenuOpen(false)}
         onNavigate={navigateToTab}
         onSettingsOpen={() => setPasswordOpen(true)}
