@@ -47,7 +47,7 @@ async function request(path, options = {}) {
 
 async function claimNextBatch() {
   await failQueuedJobsWithoutCredentials();
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=${batchSize}`);
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&requested_at=lte.${encodeURIComponent(new Date().toISOString())}&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
 
   const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
@@ -248,10 +248,25 @@ function runJob(job, slot, clearanceCookies = []) {
         await failRunningJob(job.id, `El proceso de lectura termino con codigo ${code}`).catch((failure) => {
           console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
         });
+        await scheduleAutomaticRetry(job).catch((failure) => {
+          console.error(`[portal-worker:${slot}] No se pudo programar el reintento de ${job.chapa}:`, failure);
+        });
       }
       resolve();
     });
   });
+}
+
+async function scheduleAutomaticRetry(job) {
+  const result = await request("/rest/v1/rpc/app_cpe_retry_failed_portal_sync_job", {
+    method: "POST",
+    body: JSON.stringify({ p_chapa: job.chapa, p_job_id: job.id })
+  });
+  if (result?.ok) {
+    console.log(`[portal-worker] Reintento de ${job.chapa} programado para dentro de 5 minutos.`);
+  } else {
+    console.log(`[portal-worker] Sin reintento automático para ${job.chapa}: ${result?.reason || "motivo desconocido"}.`);
+  }
 }
 
 async function failRunningJob(jobId, message) {
