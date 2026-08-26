@@ -404,6 +404,17 @@ export function parsePrimas(html = "") {
   };
 }
 
+const protectedCollectionKeys = ["rows", "months", "history", "rules"];
+
+export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false } = {}) {
+  if (allowCollectionShrink) return false;
+  return protectedCollectionKeys.some((key) => (
+    Array.isArray(fallback?.[key])
+    && fallback[key].length > 0
+    && (!Array.isArray(value?.[key]) || value[key].length < fallback[key].length)
+  ));
+}
+
 async function writeStatus(status) {
   await fs.mkdir(privateDataDir, { recursive: true });
   await fs.writeFile(STATUS_PATH, JSON.stringify(status, null, 2), "utf8");
@@ -1040,11 +1051,13 @@ async function collectSl(page) {
   const parsed = await waitForParsedContent(
     page,
     parseSl,
-    (result) => result.rows?.length || 0,
-    10000
+    (result) => result.recognized ? (result.rows?.length || 0) + 1 : 0,
+    10000,
+    (result) => result.recognized,
+    500
   );
-  if (parsed.rows?.length) return parsed;
-  throw new Error("El portal no devolvio posiciones de Lista SL.");
+  if (parsed.recognized) return parsed;
+  throw new Error("El portal no devolvio una tabla reconocible de Lista SL.");
 }
 
 async function openPortalHash(page, hash) {
@@ -2113,22 +2126,16 @@ async function main() {
     }
     const sectionWarnings = [];
     let freshSections = 0;
-    const protectedCollectionKeys = ["rows", "months", "history", "rules"];
-    const wouldEraseStoredCollection = (value, fallback) => protectedCollectionKeys.some((key) => (
-      Array.isArray(fallback?.[key])
-      && fallback[key].length > 0
-      && (!Array.isArray(value?.[key]) || value[key].length < fallback[key].length)
-    ));
-    const readSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
+    const readSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
-        if ((!isMeaningful || isMeaningful(value)) && !wouldEraseStoredCollection(value, fallback)) {
+        if ((!isMeaningful || isMeaningful(value)) && !wouldEraseStoredCollection(value, fallback, options)) {
           freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
         }
-        const message = `${name} devolvio una respuesta vacia; se conservan los datos anteriores.`;
+        const message = `${name} devolvio una respuesta incompleta; se conservan los datos anteriores.`;
         sectionWarnings.push(message);
         console.warn(message);
       } catch (error) {
@@ -2159,6 +2166,7 @@ async function main() {
     };
 
     const hasRows = (value) => Array.isArray(value?.rows) && value.rows.length > 0;
+    const hasRecognizedSl = (value) => Boolean(value?.recognized) && Array.isArray(value?.rows);
     const hasJournalData = (value) => (
       Boolean(value?.recognized && cleanText(value?.monthLabel))
     ) || (
@@ -2240,8 +2248,9 @@ async function main() {
       "lista SL",
       () => collectSl(page),
       existingSnapshot?.payload?.sl,
-      { rows: [] },
-      hasRows
+      { recognized: true, rows: [] },
+      hasRecognizedSl,
+      { allowCollectionShrink: true }
     );
     await publishProgress("sl", sl, "Lista SL cargada");
     const descansos = await readSection(

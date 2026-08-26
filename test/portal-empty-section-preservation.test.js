@@ -11,11 +11,16 @@ const mergeOrderFixSource = await readFile(
   new URL("../supabase/migrations/20260822053508_apply_nonempty_guard_before_history_merges.sql", import.meta.url),
   "utf8"
 );
+const slRefreshSource = await readFile(
+  new URL("../supabase/migrations/20260826003827_refresh_sl_rows_from_portal.sql", import.meta.url),
+  "utf8"
+);
 
 test("la captura conserva una coleccion anterior si la nueva seccion llega vacia", () => {
   assert.match(syncSource, /protectedCollectionKeys/);
   assert.match(syncSource, /value\[key\]\.length < fallback\[key\]\.length/);
-  assert.match(syncSource, /!wouldEraseStoredCollection\(value, fallback\)/);
+  assert.match(syncSource, /!wouldEraseStoredCollection\(value, fallback, options\)/);
+  assert.match(syncSource, /lista SL[\s\S]*allowCollectionShrink: true/);
 });
 
 test("la base de datos protege las colecciones y fusiona el historico de excepciones", () => {
@@ -27,4 +32,5 @@ test("la base de datos protege las colecciones y fusiona el historico de excepci
   assert.match(mergeOrderFixSource, /v_result -> 'jornales'/);
   assert.match(mergeOrderFixSource, /v_result -> 'primas'/);
   assert.match(mergeOrderFixSource, /v_result -> 'excepciones'/);
+  assert.match(slRefreshSource, /v_section\.key <> 'sl'/);
 });
