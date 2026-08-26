@@ -2342,6 +2342,17 @@ select {
   font-weight: 950;
 }
 
+.forum-message-content header .forum-chapa-badge {
+  color: #185f90;
+  background: #e8f4fc;
+  letter-spacing: .02em;
+}
+
+.forum-message.is-own .forum-message-content header .forum-chapa-badge {
+  color: #123c6a;
+  background: #d8ebfb;
+}
+
 .forum-message-content time {
   margin-left: auto;
   color: #8b98a7;
@@ -4338,6 +4349,22 @@ select {
   font: inherit;
   font-size: 16px;
 }
+.profile-settings-form label > small { color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1.4; }
+.profile-privacy-toggle {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #ccd9e5;
+  border-radius: 9px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.profile-privacy-toggle > input { width: 19px; min-height: 19px; margin: 2px 0 0; accent-color: var(--navy); }
+.profile-privacy-toggle > span { display: grid; gap: 3px; }
+.profile-privacy-toggle strong { color: var(--ink); font-size: 13px; }
+.profile-privacy-toggle small { color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1.4; }
+.profile-settings-saved { display: flex; align-items: center; gap: 6px; margin: 0; color: #08795f; font-size: 12px; font-weight: 900; }
 .password-change-success { display: grid; justify-items: center; gap: 8px; padding: 18px 10px 4px; text-align: center; }
 .password-change-success > svg { color: #159574; }
 .password-change-success strong { color: var(--ink); font-size: 17px; }
@@ -4524,6 +4551,8 @@ select {
 :root[data-theme="dark"] .inbox-modal > header > button { background: #172d45; color: #f4f8fc; }
 :root[data-theme="dark"] .password-modal > header > span { background: #172d45; color: #f4f8fc; }
 :root[data-theme="dark"] .password-change-form input { border-color: #29435d; background: #172d45; color: #f4f8fc; }
+:root[data-theme="dark"] .profile-privacy-toggle { border-color: #29435d; background: #172d45; }
+:root[data-theme="dark"] .profile-privacy-toggle strong { color: #f4f8fc; }
 :root[data-theme="dark"] .password-change-form label,
 :root[data-theme="dark"] .password-change-success strong { color: #f4f8fc; }
 :root[data-theme="dark"] .upcoming-doubles-card { border-color: #235949; background: linear-gradient(145deg, #102b28, #102238); }

@@ -111,6 +111,19 @@ export async function updateUserPassword({ token, currentPassword, newPassword }
   return data;
 }
 
+export async function updateUserProfile({ token, displayName, forumShowChapa }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_update_profile", {
+    p_token: token,
+    p_display_name: displayName,
+    p_forum_show_chapa: Boolean(forumShowChapa)
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function deleteUserAccount({ token, currentPassword, confirmation }) {
   if (!supabase || !token) return null;
 

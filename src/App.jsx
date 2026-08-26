@@ -95,6 +95,7 @@ import {
   trackUsageEvent,
   updateUserIrpf,
   updateActivationEmail,
+  updateUserProfile,
   updateUserPassword,
   updateUserSpecialties
 } from "./supabaseClient.js";
@@ -646,7 +647,7 @@ function AppHeader({ onMenuOpen }) {
   );
 }
 
-function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onProfileOpen, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -700,6 +701,7 @@ function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, on
         )}
         <section className="side-menu-settings">
           <p>Ajustes</p>
+          <button type="button" onClick={() => { onProfileOpen(); onClose(); }}><UserRound size={19} /><span>Nombre y privacidad</span><ChevronRight size={17} /></button>
           <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
           <button type="button" onClick={onThemeToggle}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}<span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span><ChevronRight size={17} /></button>
           <button className="side-delete-account" type="button" onClick={() => { onDeleteAccountOpen(); onClose(); }}><Trash2 size={19} /><span>Eliminar mi cuenta</span><ChevronRight size={17} /></button>
@@ -1311,6 +1313,86 @@ function ChangePasswordModal({ onClose, onSave }) {
   );
 }
 
+function ProfileSettingsModal({ session, onClose, onSave }) {
+  const [displayName, setDisplayName] = useState(String(session?.displayName || ""));
+  const [forumShowChapa, setForumShowChapa] = useState(Boolean(session?.forumShowChapa));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const normalizedName = displayName.trim().replace(/\s+/g, " ");
+    setError("");
+    setSaved(false);
+    if (normalizedName.length < 1 || normalizedName.length > 40) {
+      setError("El nombre debe tener entre 1 y 40 caracteres.");
+      return;
+    }
+    try {
+      setLoading(true);
+      await onSave({ displayName: normalizedName, forumShowChapa });
+      setDisplayName(normalizedName);
+      setSaved(true);
+    } catch (requestError) {
+      setError(requestError.message || "No se pudo guardar el perfil.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="inbox-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="inbox-modal password-modal profile-settings-modal" role="dialog" aria-modal="true" aria-label="Nombre y privacidad">
+        <header>
+          <span><UserRound size={21} /></span>
+          <div><small>Mi perfil</small><h2>Nombre y privacidad</h2></div>
+          <button type="button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
+        </header>
+        <form className="password-change-form profile-settings-form" onSubmit={submit}>
+          <label>
+            <span>Nombre visible</span>
+            <input
+              autoFocus
+              type="text"
+              maxLength={40}
+              autoComplete="name"
+              placeholder="Cómo quieres que te llamemos"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+            />
+            <small>Se mostrará en Inicio y junto a tus mensajes del foro.</small>
+          </label>
+          <label className="profile-privacy-toggle">
+            <input
+              type="checkbox"
+              checked={forumShowChapa}
+              onChange={(event) => setForumShowChapa(event.target.checked)}
+            />
+            <span>
+              <strong>Mostrar mi chapa en el foro</strong>
+              <small>Si la activas, aparecerá un badge «Chapa {session?.chapa}» junto a tu nombre.</small>
+            </span>
+          </label>
+          {error && <p className="form-error">{error}</p>}
+          {saved && <p className="profile-settings-saved"><Check size={15} /> Perfil actualizado</p>}
+          <button className="primary-button" type="submit" disabled={loading}>
+            {loading ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function DeleteAccountModal({ chapa, onClose, onDelete }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -1544,6 +1626,15 @@ function portalFirstName(snapshot) {
   return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLocaleLowerCase("es");
 }
 
+function preferredFirstName(displayName, snapshot) {
+  const firstName = String(displayName || "").trim().split(/\s+/)[0];
+  if (!firstName) return portalFirstName(snapshot);
+  if (firstName === firstName.toLocaleUpperCase("es")) {
+    return firstName.charAt(0).toLocaleUpperCase("es") + firstName.slice(1).toLocaleLowerCase("es");
+  }
+  return firstName;
+}
+
 function hasRejectedPortalCredentials(snapshotOrMessage) {
   const message = typeof snapshotOrMessage === "string"
     ? snapshotOrMessage
@@ -1579,10 +1670,11 @@ function HomePanel({
   onSpecialtyChange,
   onLoadPortal,
   onNavigate,
-  showForumIntro
+  showForumIntro,
+  displayName
 }) {
   const nearest = getNearestDoor(doors);
-  const firstName = portalFirstName(portalSnapshot);
+  const firstName = preferredFirstName(displayName, portalSnapshot);
   const hasPortalData = Boolean(portalSnapshot?.payload);
   const directAccess = [
     { id: "sueldometro", title: "Sueldómetro", Icon: WalletCards, tone: "salary" },
@@ -3416,6 +3508,7 @@ function normalizeForumMessage(row) {
     id: Number(row?.id),
     authorChapa: normalizeChapa(row?.author_chapa || row?.authorChapa),
     authorName: String(row?.author_name || row?.authorName || "Usuario"),
+    authorShowChapa: Boolean(row?.author_show_chapa ?? row?.authorShowChapa),
     message: String(row?.message || ""),
     createdAt: row?.created_at || row?.createdAt || new Date().toISOString()
   };
@@ -3595,6 +3688,7 @@ function ForumPanel({ session, onLatestMessage }) {
                   <header>
                     <strong>{isAdminMessage ? "Administrador" : message.authorName}</strong>
                     {isAdminMessage && <span>ADMIN</span>}
+                    {!isAdminMessage && message.authorShowChapa && <span className="forum-chapa-badge">Chapa {message.authorChapa}</span>}
                     <time dateTime={message.createdAt}>{formatForumDate(message.createdAt)}</time>
                   </header>
                   <p>{message.message}</p>
@@ -3667,6 +3761,7 @@ export function App() {
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [portalConnected, setPortalConnected] = useState(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [portalCredentialsRequested, setPortalCredentialsRequested] = useState(false);
@@ -3812,7 +3907,12 @@ export function App() {
       try {
         const nextSession = await refreshCurrentUser({ token: session.token });
         if (cancelled || !nextSession) return;
-        if (nextSession.portalActivationStatus === session.portalActivationStatus && nextSession.email === session.email) return;
+        if (
+          nextSession.portalActivationStatus === session.portalActivationStatus
+          && nextSession.email === session.email
+          && nextSession.displayName === session.displayName
+          && Boolean(nextSession.forumShowChapa) === Boolean(session.forumShowChapa)
+        ) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
         setSession(nextSession);
       } catch {
@@ -4017,6 +4117,17 @@ export function App() {
     trackUsageEvent({ eventType: "password_change", chapa: session.chapa });
   };
 
+  const saveProfile = async ({ displayName, forumShowChapa }) => {
+    const response = await updateUserProfile({
+      token: session.token,
+      displayName,
+      forumShowChapa
+    });
+    const nextSession = response || { ...session, displayName, forumShowChapa };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
+  };
+
   const deleteAccount = async ({ currentPassword, confirmation }) => {
     const chapa = session.chapa;
     await deleteUserAccount({
@@ -4074,6 +4185,7 @@ export function App() {
             onLoadPortal={connectPortal}
             onNavigate={navigateToTab}
             showForumIntro={showForumIntro}
+            displayName={session.displayName}
           />
         )}
         {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
@@ -4141,6 +4253,7 @@ export function App() {
         {activeTab !== "foro" && <ContactFooter />}
       </main>
       {passwordOpen && <ChangePasswordModal onClose={() => setPasswordOpen(false)} onSave={savePassword} />}
+      {profileOpen && <ProfileSettingsModal session={session} onClose={() => setProfileOpen(false)} onSave={saveProfile} />}
       {deleteAccountOpen && <DeleteAccountModal chapa={session.chapa} onClose={() => setDeleteAccountOpen(false)} onDelete={deleteAccount} />}
       <SideMenu
         open={menuOpen}
@@ -4150,6 +4263,7 @@ export function App() {
         forumHasUnread={forumHasUnread}
         onClose={() => setMenuOpen(false)}
         onNavigate={navigateToTab}
+        onProfileOpen={() => setProfileOpen(true)}
         onSettingsOpen={() => setPasswordOpen(true)}
         onDeleteAccountOpen={() => setDeleteAccountOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}

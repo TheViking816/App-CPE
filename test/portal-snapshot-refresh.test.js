@@ -14,6 +14,6 @@ test("revalida el snapshot del portal mientras el usuario mantiene abierta la ap
 });
 
 test("fuerza a las instalaciones existentes a recibir la version corregida", () => {
-  assert.match(mainSource, /service-worker\.js\?v=20260825-forum-3/);
-  assert.match(serviceWorkerSource, /20260825-forum-3/);
+  assert.match(mainSource, /service-worker\.js\?v=20260826-profile-1/);
+  assert.match(serviceWorkerSource, /20260826-profile-1/);
 });

@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20260825-forum-3";
+self.__APP_CPE_SW_VERSION__ = "20260826-profile-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
