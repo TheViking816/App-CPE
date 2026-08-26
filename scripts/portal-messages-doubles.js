@@ -177,12 +177,18 @@ export function currentMadridMonth(now = new Date()) {
   };
 }
 
-export function upcomingMadridDates(month, now = new Date()) {
-  const currentDay = Number(new Intl.DateTimeFormat("en-GB", {
+export function upcomingMadridDates(now = new Date(), days = 7) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
     day: "2-digit"
-  }).format(now));
-  return (month?.dates || []).filter((date) => Number(String(date).slice(0, 2)) >= currentDay);
+  }).formatToParts(now).map(({ type, value }) => [type, value]));
+  const firstDate = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+  return Array.from({ length: Math.max(0, Number(days) || 0) }, (_, index) => {
+    const date = new Date(firstDate + index * 24 * 60 * 60 * 1000);
+    return `${String(date.getUTCDate()).padStart(2, "0")}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${date.getUTCFullYear()}`;
+  });
 }
 
 export function limitRecentPortalRows(rows = [], limit = 5) {

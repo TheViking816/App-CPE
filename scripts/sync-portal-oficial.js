@@ -15,7 +15,6 @@ import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
-  currentMadridMonth,
   extractAddedMessageText,
   limitRecentPortalRows,
   parseMessagesHtml,
@@ -1595,9 +1594,9 @@ async function collectRequestedDoubles(page) {
   let selector = await findDoublesSelector(page);
   if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
 
-  const month = currentMadridMonth();
+  const dates = upcomingMadridDates();
   const rows = [];
-  for (const date of upcomingMadridDates(month)) {
+  for (const date of dates) {
     const { frame, locator: dateInput } = selector;
     const selectorUrl = frame.url();
     await dateInput.fill(date);
@@ -1617,7 +1616,13 @@ async function collectRequestedDoubles(page) {
   }
 
   console.log(`Dobles solicitados leidos: ${rows.length}.`);
-  return { recognized: true, month: month.month, year: month.year, monthLabel: month.label, rows };
+  return {
+    recognized: true,
+    windowDays: dates.length,
+    startDate: dates[0] || null,
+    endDate: dates.at(-1) || null,
+    rows
+  };
 }
 
 async function collectPayrolls(page) {

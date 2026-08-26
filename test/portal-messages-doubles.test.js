@@ -112,10 +112,21 @@ test("limitRecentPortalRows keeps only the first five portal messages", () => {
   assert.deepEqual(limitRecentPortalRows([1, 2, 3, 4, 5, 6, 7]), [1, 2, 3, 4, 5]);
 });
 
-test("upcomingMadridDates skips days that already passed", () => {
-  const month = currentMadridMonth(new Date("2026-08-13T05:30:00Z"));
-  const dates = upcomingMadridDates(month, new Date("2026-08-13T05:30:00Z"));
-  assert.equal(dates[0], "13/08/2026");
-  assert.equal(dates.at(-1), "31/08/2026");
-  assert.equal(dates.length, 19);
+test("upcomingMadridDates returns seven calendar dates starting today", () => {
+  const dates = upcomingMadridDates(new Date("2026-08-13T05:30:00Z"));
+  assert.deepEqual(dates, [
+    "13/08/2026", "14/08/2026", "15/08/2026", "16/08/2026",
+    "17/08/2026", "18/08/2026", "19/08/2026"
+  ]);
+});
+
+test("upcomingMadridDates crosses month and year boundaries", () => {
+  assert.deepEqual(upcomingMadridDates(new Date("2026-08-28T10:00:00Z")), [
+    "28/08/2026", "29/08/2026", "30/08/2026", "31/08/2026",
+    "01/09/2026", "02/09/2026", "03/09/2026"
+  ]);
+  assert.deepEqual(upcomingMadridDates(new Date("2026-12-29T10:00:00Z")), [
+    "29/12/2026", "30/12/2026", "31/12/2026", "01/01/2027",
+    "02/01/2027", "03/01/2027", "04/01/2027"
+  ]);
 });
