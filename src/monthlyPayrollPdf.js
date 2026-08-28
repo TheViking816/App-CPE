@@ -23,10 +23,11 @@ function calculateMonth(month, irpfRate) {
   const totals = rows.reduce((summary, item) => ({
     base: summary.base + amount(item.payroll?.base),
     complement: summary.complement + amount(item.payroll?.complement),
+    meal: summary.meal + amount(item.payroll?.continuousDoubleMeal),
     prima: summary.prima + amount(item.payroll?.prima),
     relay: summary.relay + amount(item.payroll?.relayHour),
     gross: summary.gross + amount(item.payroll?.total)
-  }), { base: 0, complement: 0, prima: 0, relay: 0, gross: 0 });
+  }), { base: 0, complement: 0, meal: 0, prima: 0, relay: 0, gross: 0 });
   const withholding = totals.gross * (amount(irpfRate) / 100);
   return { rows, totals, withholding, net: totals.gross - withholding };
 }
@@ -67,7 +68,7 @@ export function createMonthlyPayrollPdf(month, irpfRate = 0) {
   document.setTextColor(12, 43, 79);
   document.setFontSize(8);
   document.text(
-    `Jornales: ${rows.length}   Bases: ${formatPdfEuro(totals.base)}   Complementos: ${formatPdfEuro(totals.complement)}   Primas: ${formatPdfEuro(totals.prima)}   Relevos: ${formatPdfEuro(totals.relay)}`,
+    `Jornales: ${rows.length}   Bases: ${formatPdfEuro(totals.base)}   Complementos: ${formatPdfEuro(totals.complement)}   Manutencion: ${formatPdfEuro(totals.meal)}   Primas: ${formatPdfEuro(totals.prima)}   Relevos: ${formatPdfEuro(totals.relay)}`,
     14,
     67
   );
@@ -76,7 +77,7 @@ export function createMonthlyPayrollPdf(month, irpfRate = 0) {
     startY: 73,
     rowPageBreak: "avoid",
     margin: { left: 10, right: 10, bottom: 14 },
-    head: [["Dia", "Jornada", "Especialidad", "Destino", "Base", "Compl.", "Prima", "Total"]],
+    head: [["Dia", "Jornada", "Especialidad", "Destino", "Base", "Compl.", "Manut.", "Prima", "Total"]],
     body: rows.map((item) => [
       String(item.dia || "-"),
       String(item.payroll?.shift || "-"),
@@ -84,6 +85,7 @@ export function createMonthlyPayrollPdf(month, irpfRate = 0) {
       [item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" - ") || "-",
       formatPdfEuro(item.payroll?.base),
       formatPdfEuro(item.payroll?.complement),
+      item.payroll?.continuousDoubleMeal > 0 ? formatPdfEuro(item.payroll.continuousDoubleMeal) : "-",
       item.payroll?.operationType === "RECEPCION_ENTREGA"
         ? "-"
         : item.payroll?.prima > 0 ? formatPdfEuro(item.payroll.prima) : "Pendiente",
@@ -93,14 +95,15 @@ export function createMonthlyPayrollPdf(month, irpfRate = 0) {
     headStyles: { fillColor: [8, 67, 112], textColor: [255, 255, 255], fontStyle: "bold" },
     alternateRowStyles: { fillColor: [244, 248, 251] },
     columnStyles: {
-      0: { cellWidth: 9, halign: "center" },
-      1: { cellWidth: 15, halign: "center" },
-      2: { cellWidth: 28 },
-      3: { cellWidth: 48 },
-      4: { cellWidth: 21, halign: "right" },
-      5: { cellWidth: 18, halign: "right" },
-      6: { cellWidth: 21, halign: "right" },
-      7: { cellWidth: 21, halign: "right", fontStyle: "bold" }
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 14, halign: "center" },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 40 },
+      4: { cellWidth: 18, halign: "right" },
+      5: { cellWidth: 16, halign: "right" },
+      6: { cellWidth: 17, halign: "right" },
+      7: { cellWidth: 18, halign: "right" },
+      8: { cellWidth: 18, halign: "right", fontStyle: "bold" }
     },
     didDrawPage: () => {
       const pageNumber = document.internal.getNumberOfPages();

@@ -191,6 +191,32 @@ export const RELAY_HOUR_RATES = Object.freeze({
   FESTIVO: 96.08
 });
 
+export const CONTINUOUS_DOUBLE_MEAL_RATE = 22.31;
+
+function continuousDoubleMeals(jornales = []) {
+  const rowsByDay = new Map();
+  jornales.forEach((jornal, index) => {
+    const day = Number(jornal?.dia);
+    const shift = parseShift(jornal?.jornada);
+    if (!Number.isFinite(day) || !shift) return;
+    if (!rowsByDay.has(day)) rowsByDay.set(day, new Map());
+    const shifts = rowsByDay.get(day);
+    if (!shifts.has(shift)) shifts.set(shift, []);
+    shifts.get(shift).push(index);
+  });
+
+  const meals = new Map();
+  rowsByDay.forEach((shifts) => {
+    if (shifts.has("08-14") && shifts.has("14-20")) {
+      meals.set(shifts.get("14-20")[0], { type: "COMIDA", hours: "14-15" });
+    }
+    if (shifts.has("14-20") && shifts.has("20-02")) {
+      meals.set(shifts.get("20-02")[0], { type: "CENA", hours: "20-21" });
+    }
+  });
+  return meals;
+}
+
 function relayHourKeyPart(value, fallback) {
   return String(value || fallback)
     .normalize("NFD")
@@ -431,7 +457,8 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     item.specialty_key,
     item
   ]));
-  return jornales.map((jornal) => {
+  const mealByIndex = continuousDoubleMeals(jornales);
+  return jornales.map((jornal, index) => {
     const day = Number(jornal.dia);
     const date = `${year}-${pad(month)}-${pad(day || 1)}`;
     const shift = parseShift(jornal.jornada);
@@ -463,7 +490,9 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const relayHourKey = getRelayHourKey(jornal, date, shift);
     const relayHourEnabled = Boolean(relayHourRate && relayHours?.[relayHourKey]);
     const relayHour = relayHourEnabled ? relayHourRate.amount : 0;
-    const total = Number((base + complement + (prima || 0) + relayHour).toFixed(2));
+    const continuousDoubleMeal = mealByIndex.has(index) ? CONTINUOUS_DOUBLE_MEAL_RATE : 0;
+    const meal = mealByIndex.get(index) || null;
+    const total = Number((base + complement + (prima || 0) + relayHour + continuousDoubleMeal).toFixed(2));
 
     return {
       ...jornal,
@@ -488,6 +517,9 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         relayHourRate: relayHourRate?.amount || 0,
         relayHourEnabled,
         relayHour,
+        continuousDoubleMeal,
+        continuousDoubleMealType: meal?.type || null,
+        continuousDoubleMealHours: meal?.hours || null,
         total
       }
     };

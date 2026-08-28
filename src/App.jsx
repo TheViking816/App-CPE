@@ -1193,6 +1193,9 @@ function PortalJornalDetailModal({ jornal, onClose }) {
         <div className="portal-jornal-detail-breakdown">
           <div><span>Base</span><strong>{formatEuro(payroll.base)}</strong></div>
           <div><span>Complemento</span><strong>{formatEuro(payroll.complement || 0)}</strong></div>
+          {payroll.continuousDoubleMeal > 0 && (
+            <div><span>Manutención doble · {payroll.continuousDoubleMealHours}</span><strong>{formatEuro(payroll.continuousDoubleMeal)}</strong></div>
+          )}
           {payroll.relayHourEnabled && (
             <div><span>Hora de relevo</span><strong>{formatEuro(payroll.relayHour)}</strong></div>
           )}
@@ -1496,10 +1499,11 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
   const totals = useMemo(() => rows.reduce((summary, item) => ({
     base: summary.base + Number(item.payroll?.base || 0),
     complement: summary.complement + Number(item.payroll?.complement || 0),
+    meal: summary.meal + Number(item.payroll?.continuousDoubleMeal || 0),
     prima: summary.prima + Number(item.payroll?.prima || 0),
     relay: summary.relay + Number(item.payroll?.relayHour || 0),
     gross: summary.gross + Number(item.payroll?.total || 0)
-  }), { base: 0, complement: 0, prima: 0, relay: 0, gross: 0 }), [rows]);
+  }), { base: 0, complement: 0, meal: 0, prima: 0, relay: 0, gross: 0 }), [rows]);
   const withholding = totals.gross * (Number(irpfRate || 0) / 100);
   const net = totals.gross - withholding;
 
@@ -1575,6 +1579,7 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
           {rows.some((item) => item.isVacation) && <div><span>Días VA</span><strong>{rows.filter((item) => item.isVacation).length}</strong></div>}
           <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
           <div><span>Complementos</span><strong>{formatEuro(totals.complement)}</strong></div>
+          {totals.meal > 0 && <div><span>Manutención dobles</span><strong>{formatEuro(totals.meal)}</strong></div>}
           <div><span>Primas</span><strong>{formatEuro(totals.prima)}</strong></div>
           <div><span>Horas relevo</span><strong>{formatEuro(totals.relay)}</strong></div>
         </div>
@@ -1591,6 +1596,9 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
               <div className="portal-month-jornal-values">
                 <span>{item.isVacation ? "Importe" : "Base"} <b>{formatEuro(item.payroll?.base)}</b></span>
                 {!item.isVacation && <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>}
+                {!item.isVacation && item.payroll?.continuousDoubleMeal > 0 && (
+                  <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>
+                )}
                 {!item.isVacation && item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
                   <span className={item.payroll?.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
                     Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
@@ -2860,6 +2868,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                     <div className="portal-jornal-breakdown">
                       <span>Base <b>{formatEuro(item.payroll?.base)}</b></span>
                       {item.payroll?.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
+                      {item.payroll?.continuousDoubleMeal > 0 && (
+                        <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>
+                      )}
                       {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
                         <span className={item.payroll?.prima > 0
                           ? `is-prima${item.payroll?.primaVerification === "pending" ? " is-unverified" : ""}`
