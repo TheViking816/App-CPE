@@ -62,6 +62,6 @@ test("la persistencia queda aislada por usuario y admite borrar con cero", async
   assert.match(migration, /if v_hours > 0[\s\S]*insert into private\.app_cpe_remate_hours[\s\S]*else[\s\S]*delete from private\.app_cpe_remate_hours/);
   assert.match(client, /app_cpe_get_remate_hours/);
   assert.match(client, /app_cpe_set_remate_hours/);
-  assert.match(app, /Remate opcional/);
+  assert.match(app, />Remate<\/span>/);
   assert.match(app, /\[0, 1, 2\]\.map/);
 });

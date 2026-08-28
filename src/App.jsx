@@ -1213,7 +1213,7 @@ function PortalJornalDetailModal({ jornal, onClose, onSetRemateHours, savingRema
         {payroll.remateEligible && (
           <div className="portal-remate-selector">
             <div>
-              <span>Remate opcional</span>
+              <span>Remate</span>
               <strong>Grupo {payroll.remateGroup} · {formatEuro(payroll.remateHourlyRate)} por hora</strong>
             </div>
             <div className="portal-remate-options" role="group" aria-label="Horas de remate">
