@@ -21,8 +21,11 @@ try {
   $env:CPE_SUPABASE_SECRET_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPointer)
   Set-Location -LiteralPath $RepositoryPath
   while ($true) {
+    $previousErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     & node $checkScript 2>&1 | Out-File -LiteralPath $logPath -Append -Encoding utf8
     $checkExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousErrorAction
     if ($checkExitCode -eq 0) {
       "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Supabase disponible; comienza la sincronizacion." |
         Out-File -LiteralPath $logPath -Append -Encoding utf8
