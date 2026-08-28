@@ -79,6 +79,7 @@ import {
   getPortalAutoSyncStatus,
   getPortalSyncJob,
   getUserRelayHours,
+  getUserRemateHours,
   loginUser,
   queuePendingPortalActivation,
   postForumMessage,
@@ -90,6 +91,7 @@ import {
   setPortalAutoSync,
   setPortalSecurityKey,
   setUserRelayHour,
+  setUserRemateHours,
   trackPageVisit,
   touchPortalActivity,
   trackUsageEvent,
@@ -1144,7 +1146,7 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
   );
 }
 
-function PortalJornalDetailModal({ jornal, onClose }) {
+function PortalJornalDetailModal({ jornal, onClose, onSetRemateHours, savingRemateKey, remateError }) {
   const logo = companyLogo(jornal?.empresa);
   const payroll = jornal?.payroll || {};
 
@@ -1196,6 +1198,9 @@ function PortalJornalDetailModal({ jornal, onClose }) {
           {payroll.continuousDoubleMeal > 0 && (
             <div><span>Manutención doble · {payroll.continuousDoubleMealHours}</span><strong>{formatEuro(payroll.continuousDoubleMeal)}</strong></div>
           )}
+          {payroll.remate > 0 && (
+            <div><span>Remate · {payroll.remateHours} {payroll.remateHours === 1 ? "hora" : "horas"}</span><strong>{formatEuro(payroll.remate)}</strong></div>
+          )}
           {payroll.relayHourEnabled && (
             <div><span>Hora de relevo</span><strong>{formatEuro(payroll.relayHour)}</strong></div>
           )}
@@ -1205,6 +1210,30 @@ function PortalJornalDetailModal({ jornal, onClose }) {
             </div>
           )}
         </div>
+        {payroll.remateEligible && (
+          <div className="portal-remate-selector">
+            <div>
+              <span>Remate opcional</span>
+              <strong>Grupo {payroll.remateGroup} · {formatEuro(payroll.remateHourlyRate)} por hora</strong>
+            </div>
+            <div className="portal-remate-options" role="group" aria-label="Horas de remate">
+              {[0, 1, 2].map((hours) => (
+                <button
+                  key={hours}
+                  type="button"
+                  className={payroll.remateHours === hours ? "is-active" : ""}
+                  disabled={savingRemateKey === payroll.remateKey}
+                  onClick={() => onSetRemateHours?.(jornal, hours)}
+                >
+                  <span>{hours === 0 ? "Sin remate" : `${hours} ${hours === 1 ? "hora" : "horas"}`}</span>
+                  <small>{hours === 0 ? formatEuro(0) : formatEuro(payroll.remateHourlyRate * hours)}</small>
+                </button>
+              ))}
+            </div>
+            {savingRemateKey === payroll.remateKey && <small className="portal-remate-status">Guardando…</small>}
+            {remateError && <small className="portal-remate-error" role="alert">{remateError}</small>}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -1500,10 +1529,11 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
     base: summary.base + Number(item.payroll?.base || 0),
     complement: summary.complement + Number(item.payroll?.complement || 0),
     meal: summary.meal + Number(item.payroll?.continuousDoubleMeal || 0),
+    remate: summary.remate + Number(item.payroll?.remate || 0),
     prima: summary.prima + Number(item.payroll?.prima || 0),
     relay: summary.relay + Number(item.payroll?.relayHour || 0),
     gross: summary.gross + Number(item.payroll?.total || 0)
-  }), { base: 0, complement: 0, meal: 0, prima: 0, relay: 0, gross: 0 }), [rows]);
+  }), { base: 0, complement: 0, meal: 0, remate: 0, prima: 0, relay: 0, gross: 0 }), [rows]);
   const withholding = totals.gross * (Number(irpfRate || 0) / 100);
   const net = totals.gross - withholding;
 
@@ -1580,6 +1610,7 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
           <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
           <div><span>Complementos</span><strong>{formatEuro(totals.complement)}</strong></div>
           {totals.meal > 0 && <div><span>Manutención dobles</span><strong>{formatEuro(totals.meal)}</strong></div>}
+          {totals.remate > 0 && <div><span>Remates</span><strong>{formatEuro(totals.remate)}</strong></div>}
           <div><span>Primas</span><strong>{formatEuro(totals.prima)}</strong></div>
           <div><span>Horas relevo</span><strong>{formatEuro(totals.relay)}</strong></div>
         </div>
@@ -1598,6 +1629,9 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, s
                 {!item.isVacation && <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>}
                 {!item.isVacation && item.payroll?.continuousDoubleMeal > 0 && (
                   <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>
+                )}
+                {!item.isVacation && item.payroll?.remate > 0 && (
+                  <span>Remate · {item.payroll.remateHours} {item.payroll.remateHours === 1 ? "hora" : "horas"} <b>{formatEuro(item.payroll.remate)}</b></span>
                 )}
                 {!item.isVacation && item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
                   <span className={item.payroll?.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
@@ -2459,6 +2493,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [relayHours, setRelayHours] = useState({});
   const [savingRelayHourKey, setSavingRelayHourKey] = useState("");
   const [relayHourError, setRelayHourError] = useState("");
+  const [remateHours, setRemateHours] = useState({});
+  const [savingRemateKey, setSavingRemateKey] = useState("");
+  const [remateError, setRemateError] = useState("");
   const jornalesRef = useRef(null);
   const descansosRef = useRef(null);
   const exceptionsRef = useRef(null);
@@ -2507,6 +2544,22 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     };
   }, [session.token]);
 
+  useEffect(() => {
+    let active = true;
+    setRemateHours({});
+    setRemateError("");
+    getUserRemateHours({ token: session.token })
+      .then((hours) => {
+        if (active) setRemateHours(hours || {});
+      })
+      .catch((error) => {
+        if (active) setRemateError(error.message || "No se pudieron cargar los remates.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [session.token]);
+
   const saveIrpfRate = async () => {
     setSavingIrpf(true);
     setIrpfMessage("");
@@ -2536,10 +2589,11 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       primas,
       currentPayrollMonthLabel,
       payrollConfig,
-      relayHours
+      relayHours,
+      remateHours
     ),
     ...vacationPayrollEntriesForMonth(vacationPayrollEntries, currentPayrollMonthLabel)
-  ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, vacationPayrollEntries]);
+  ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, remateHours, vacationPayrollEntries]);
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const annualPayroll = useMemo(
     () => summarizeAnnualPayroll(
@@ -2547,13 +2601,19 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       payrollConfig,
       relayHours,
       vacationPayrollEntries,
-      premiumHistory
+      premiumHistory,
+      remateHours
     ),
-    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries, premiumHistory]
+    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries, premiumHistory, remateHours]
   );
   const selectedAnnualMonth = useMemo(() => annualPayroll.months.find((month) => (
     `${month.year}-${month.month}` === selectedAnnualMonthKey
   )) || null, [annualPayroll.months, selectedAnnualMonthKey]);
+  const activeSelectedJornal = useMemo(() => {
+    if (!selectedJornal) return null;
+    const jornalKey = selectedJornal.payroll?.remateKey;
+    return enrichedJornales.find((item) => item.payroll?.remateKey === jornalKey) || selectedJornal;
+  }, [selectedJornal, enrichedJornales]);
   const selectedJornales = useMemo(
     () => filterJornalesByPeriod(enrichedJornales, selectedPeriod),
     [enrichedJornales, selectedPeriod]
@@ -2592,6 +2652,35 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       setRelayHourError(error.message || "No se pudo guardar la hora de relevo.");
     } finally {
       setSavingRelayHourKey("");
+    }
+  };
+
+  const updateRemateHours = async (item, hours) => {
+    const jornalKey = item.payroll?.remateKey;
+    const normalizedHours = Number(hours);
+    if (!jornalKey || !item.payroll?.remateEligible || ![0, 1, 2].includes(normalizedHours) || savingRemateKey) return;
+
+    const previous = Number(remateHours[jornalKey] || 0);
+    setRemateError("");
+    setSavingRemateKey(jornalKey);
+    setRemateHours((current) => {
+      const next = { ...current };
+      if (normalizedHours === 0) delete next[jornalKey];
+      else next[jornalKey] = normalizedHours;
+      return next;
+    });
+    try {
+      await setUserRemateHours({ token: session.token, jornalKey, hours: normalizedHours });
+    } catch (error) {
+      setRemateHours((current) => {
+        const next = { ...current };
+        if (previous === 0) delete next[jornalKey];
+        else next[jornalKey] = previous;
+        return next;
+      });
+      setRemateError(error.message || "No se pudo guardar el remate.");
+    } finally {
+      setSavingRemateKey("");
     }
   };
 
@@ -2871,6 +2960,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                       {item.payroll?.continuousDoubleMeal > 0 && (
                         <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>
                       )}
+                      {item.payroll?.remate > 0 && (
+                        <span>Remate · {item.payroll.remateHours} {item.payroll.remateHours === 1 ? "hora" : "horas"} <b>{formatEuro(item.payroll.remate)}</b></span>
+                      )}
                       {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
                         <span className={item.payroll?.prima > 0
                           ? `is-prima${item.payroll?.primaVerification === "pending" ? " is-unverified" : ""}`
@@ -2959,7 +3051,15 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           relayHourError={relayHourError}
         />
       )}
-      {selectedJornal && <PortalJornalDetailModal jornal={selectedJornal} onClose={() => setSelectedJornal(null)} />}
+      {activeSelectedJornal && (
+        <PortalJornalDetailModal
+          jornal={activeSelectedJornal}
+          onClose={() => setSelectedJornal(null)}
+          onSetRemateHours={updateRemateHours}
+          savingRemateKey={savingRemateKey}
+          remateError={remateError}
+        />
+      )}
       {selectedPayroll && (
         <PayrollDocumentErrorBoundary onClose={() => setSelectedPayroll(null)}>
           <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />

@@ -3908,6 +3908,28 @@ select {
   color: #eff7ff;
 }
 
+:root[data-theme="dark"] .portal-remate-selector {
+  border-color: #29445f;
+  background: #10273d;
+}
+
+:root[data-theme="dark"] .portal-remate-selector > div:first-child span,
+:root[data-theme="dark"] .portal-remate-options button {
+  color: #eff7ff;
+}
+
+:root[data-theme="dark"] .portal-remate-options button {
+  border-color: #36536d;
+  background: #152c43;
+}
+
+:root[data-theme="dark"] .portal-remate-options button.is-active {
+  border-color: #46c7a6;
+  background: #0d493e;
+  color: #dffaf2;
+  box-shadow: inset 0 0 0 1px #46c7a6;
+}
+
 :root[data-theme="dark"] .portal-salary-alternative .portal-salary-icon,
 :root[data-theme="dark"] .portal-salary-alternative .portal-salary-period,
 :root[data-theme="dark"] .portal-salary-alternative .portal-payroll-summary {
@@ -4872,6 +4894,82 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.portal-remate-selector {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #cbdbea;
+  border-radius: 8px;
+  background: #edf5fb;
+}
+
+.portal-remate-selector > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.portal-remate-selector > div:first-child span {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.portal-remate-selector > div:first-child strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.portal-remate-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portal-remate-options button {
+  display: grid;
+  gap: 3px;
+  padding: 10px 8px;
+  border: 1px solid #c5d4e1;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.portal-remate-options button span {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.portal-remate-options button small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-remate-options button.is-active {
+  border-color: #087960;
+  background: #e3f6ef;
+  color: #07634f;
+  box-shadow: inset 0 0 0 1px #087960;
+}
+
+.portal-remate-options button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.portal-remate-status,
+.portal-remate-error {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-remate-status { color: var(--muted); }
+.portal-remate-error { color: #b42318; }
+
 @media (max-width: 620px) {
   .portal-jornal-detail-overlay {
     align-items: end;
@@ -4904,6 +5002,11 @@ select {
 
   .portal-jornal-detail-breakdown {
     grid-template-columns: 1fr;
+  }
+
+  .portal-remate-selector > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

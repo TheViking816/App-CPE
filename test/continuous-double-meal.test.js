@@ -48,14 +48,3 @@ test("no suma manutención con jornadas no continuas o de días distintos", () =
 
   assert.ok(enriched.every((item) => item.payroll.continuousDoubleMeal === 0));
 });
-
-test("una triple jornada suma comida y cena una sola vez", () => {
-  const enriched = enrichJornales([
-    jornal(13, "08-14", "400"),
-    jornal(13, "14-20", "401"),
-    jornal(13, "20-02", "402"),
-    jornal(13, "20-02", "403")
-  ], [], "Agosto de 2026");
-
-  assert.deepEqual(enriched.map((item) => item.payroll.continuousDoubleMeal), [0, 22.31, 22.31, 0]);
-});

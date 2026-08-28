@@ -169,6 +169,26 @@ export async function setUserRelayHour({ token, jornalKey, enabled }) {
   return data;
 }
 
+export async function getUserRemateHours({ token }) {
+  if (!supabase || !token) return {};
+
+  const { data, error } = await supabase.rpc("app_cpe_get_remate_hours", { p_token: token });
+  if (error) throw error;
+  return data || {};
+}
+
+export async function setUserRemateHours({ token, jornalKey, hours }) {
+  if (!supabase || !token || !jornalKey) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_set_remate_hours", {
+    p_token: token,
+    p_jornal_key: jornalKey,
+    p_hours: hours
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function loadPayrollConfig() {
   if (!supabase) return null;
 

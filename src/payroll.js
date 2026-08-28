@@ -1,3 +1,5 @@
+import REMATE_SALARY_DATA from "../assets/remates-salariales.json" with { type: "json" };
+
 const VALENCIA_HOLIDAYS_2026 = new Set([
   "2026-01-01", "2026-01-06", "2026-01-22", "2026-03-19", "2026-04-03",
   "2026-04-06", "2026-04-13", "2026-05-01", "2026-06-24", "2026-07-16",
@@ -171,17 +173,23 @@ function getAdjacentDay(dateString, delta) {
 function parseShift(jornada = "") {
   const text = String(jornada).toUpperCase();
   if (/\b0?2\D+0?8\b/.test(text)) return "02-08";
+  if (/\b0?6\D+12\b/.test(text)) return "06-12";
   if (/\b0?8\D+14\b/.test(text)) return "08-14";
   if (/\b14\D+20\b/.test(text)) return "14-20";
+  if (/\b18\D+0?0\b/.test(text)) return "18-00";
+  if (/\b19\D+0?1\b/.test(text)) return "19-01";
   if (/\b20\D+0?2\b/.test(text)) return "20-02";
   return "";
 }
 
 const SHIFT_ORDER = {
   "02-08": 0,
-  "08-14": 1,
-  "14-20": 2,
-  "20-02": 3
+  "06-12": 1,
+  "08-14": 2,
+  "14-20": 3,
+  "18-00": 4,
+  "19-01": 5,
+  "20-02": 6
 };
 
 export const VACATION_DAY_RATE = 214.11;
@@ -291,6 +299,14 @@ function getOperationType(operation = "") {
 function getGroup(specialty = "") {
   const normalized = normalizeSpecialty(specialty);
   if (/CONDUCTOR(?:\s+DE)?\s*[12]\s*A\b/.test(normalized)) return "II";
+  return "II";
+}
+
+export function getRemateGroup(specialty = "") {
+  const normalized = normalizeSpecialty(specialty);
+  if (/SOBORDISTA|CAPATAZ/.test(normalized)) return "IV";
+  if (/CLASIF(?:ICADOR)?/.test(normalized)) return "III";
+  if (/ESPECIALISTA|TRINCADOR/.test(normalized)) return "I";
   return "II";
 }
 
@@ -422,6 +438,35 @@ function getRateKey(dateString, shift, holidaySet) {
   return dayType;
 }
 
+function getRemateRateKey(dateString, shift, holidaySet) {
+  if (shift === "06-12") return isHoliday(dateString, holidaySet) ? "FESTIVO" : "LABORABLE";
+  if (shift !== "18-00" && shift !== "19-01") return getRateKey(dateString, shift, holidaySet);
+
+  const dayType = getDayType(dateString, holidaySet);
+  if (dayType === "SABADO") return "SABADO";
+  const nextDay = getAdjacentDay(dateString, 1);
+  if (isHoliday(dateString, holidaySet)) {
+    return isHoliday(nextDay, holidaySet) ? "FESTIVO_TO_FESTIVO" : "FESTIVO_TO_LABORABLE";
+  }
+  if (isConfiguredHoliday(nextDay, holidaySet)) return "LABORABLE_TO_FESTIVO";
+  return "LABORABLE";
+}
+
+const REMATE_RATE_LOOKUP = new Map((REMATE_SALARY_DATA.rows || []).flatMap((row) => (
+  Object.entries(row.rates || {}).map(([group, amount]) => [
+    [row.shift, row.dayType, group].join("|"),
+    Number(amount)
+  ])
+)));
+
+export function getRemateRate(dateString, shift, specialty, holidaySet = VALENCIA_HOLIDAYS_2026) {
+  const group = getRemateGroup(specialty);
+  const rateKey = getRemateRateKey(dateString, shift, holidaySet);
+  const amount = REMATE_RATE_LOOKUP.get([shift, rateKey, group].join("|"));
+  if (!Number.isFinite(amount)) return null;
+  return { group, rateKey, amount };
+}
+
 function findMatchingPrima(jornal, primas = []) {
   const parte = String(jornal.parte || "").trim();
   if (!parte) return null;
@@ -440,7 +485,7 @@ function findMatchingPrima(jornal, primas = []) {
   };
 }
 
-export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null, relayHours = {}) {
+export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null, relayHours = {}, remateHours = {}) {
   const { month, year } = parseMonthLabel(monthLabel);
   const configuredHolidays = payrollConfig?.holidays
     ?.filter((item) => item.enabled !== false)
@@ -490,9 +535,16 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const relayHourKey = getRelayHourKey(jornal, date, shift);
     const relayHourEnabled = Boolean(relayHourRate && relayHours?.[relayHourKey]);
     const relayHour = relayHourEnabled ? relayHourRate.amount : 0;
+    const remateRate = getRemateRate(date, shift, jornal.especialidad, holidaySet);
+    const remateKey = getRelayHourKey(jornal, date, shift);
+    const savedRemateHours = Number(remateHours?.[remateKey] || 0);
+    const selectedRemateHours = remateRate && (savedRemateHours === 1 || savedRemateHours === 2)
+      ? savedRemateHours
+      : 0;
+    const remate = Number(((remateRate?.amount || 0) * selectedRemateHours).toFixed(2));
     const continuousDoubleMeal = mealByIndex.has(index) ? CONTINUOUS_DOUBLE_MEAL_RATE : 0;
     const meal = mealByIndex.get(index) || null;
-    const total = Number((base + complement + (prima || 0) + relayHour + continuousDoubleMeal).toFixed(2));
+    const total = Number((base + complement + (prima || 0) + relayHour + continuousDoubleMeal + remate).toFixed(2));
 
     return {
       ...jornal,
@@ -517,6 +569,13 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         relayHourRate: relayHourRate?.amount || 0,
         relayHourEnabled,
         relayHour,
+        remateEligible: Boolean(remateRate),
+        remateKey,
+        remateGroup: remateRate?.group || null,
+        remateRateKey: remateRate?.rateKey || null,
+        remateHourlyRate: remateRate?.amount || 0,
+        remateHours: selectedRemateHours,
+        remate,
         continuousDoubleMeal,
         continuousDoubleMealType: meal?.type || null,
         continuousDoubleMealHours: meal?.hours || null,
@@ -640,7 +699,8 @@ export function summarizeAnnualPayroll(
   payrollConfig = null,
   relayHours = {},
   vacationEntries = [],
-  premiumHistory = []
+  premiumHistory = [],
+  remateHours = {}
 ) {
   const historyKeys = new Set(history.map((month) => `${month.year}-${pad(month.month)}`));
   const vacationOnlyMonths = vacationEntries.reduce((months, item) => {
@@ -662,7 +722,7 @@ export function summarizeAnnualPayroll(
     const vacationRows = vacationEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
     const premiumRows = premiumRowsForMonth(premiumHistory, month);
     const enriched = [
-      ...enrichJornales(month.rows || [], premiumRows, month.monthLabel || "", payrollConfig, relayHours),
+      ...enrichJornales(month.rows || [], premiumRows, month.monthLabel || "", payrollConfig, relayHours, remateHours),
       ...vacationRows
     ];
     const summary = summarizePayroll(enriched);

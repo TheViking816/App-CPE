@@ -1,0 +1,175 @@
+{
+  "concept": "remate",
+  "currency": "EUR",
+  "unit": "hour",
+  "groups": {
+    "I": ["ESPECIALISTA", "TRINCADOR"],
+    "II": ["MANIPULADORES", "CAMIONES", "TRASTAINERS", "GRUAS", "CONTAINERS"],
+    "III": ["CLASIFICADOR"],
+    "IV": ["SOBORDISTA", "CAPATAZ"]
+  },
+  "rows": [
+    {
+      "shift": "02-08",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 63.06, "II": 65.11, "III": 67.50, "IV": 71.46 }
+    },
+    {
+      "shift": "02-08",
+      "dayType": "FESTIVO_TO_LABORABLE",
+      "dayLabel": "Fest. a Lab.",
+      "rates": { "I": 72.26, "II": 76.15, "III": 80.79, "IV": 88.31 }
+    },
+    {
+      "shift": "02-08",
+      "dayType": "FESTIVO",
+      "dayLabel": "Festivo",
+      "rates": { "I": 113.56, "II": 117.23, "III": 121.57, "IV": 128.66 }
+    },
+    {
+      "shift": "02-08",
+      "dayType": "FESTIVO_TO_FESTIVO",
+      "dayLabel": "Fest. a Fest.",
+      "rates": { "I": 123.78, "II": 127.83, "III": 132.53, "IV": 140.26 }
+    },
+    {
+      "shift": "06-12",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 42.24, "II": 43.61, "III": 45.21, "IV": 47.84 }
+    },
+    {
+      "shift": "06-12",
+      "dayType": "FESTIVO",
+      "dayLabel": "Festivo",
+      "rates": { "I": 62.56, "II": 64.66, "III": 67.04, "IV": 70.96 }
+    },
+    {
+      "shift": "08-14",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 29.80, "II": 31.16, "III": 31.92, "IV": 33.75 }
+    },
+    {
+      "shift": "08-14",
+      "dayType": "SABADO",
+      "dayLabel": "Sábado",
+      "rates": { "I": 53.65, "II": 55.41, "III": 57.41, "IV": 60.79 }
+    },
+    {
+      "shift": "08-14",
+      "dayType": "FESTIVO",
+      "dayLabel": "Festivo",
+      "rates": { "I": 77.50, "II": 80.03, "III": 82.99, "IV": 87.80 }
+    },
+    {
+      "shift": "14-20",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 44.68, "II": 46.14, "III": 47.85, "IV": 50.66 }
+    },
+    {
+      "shift": "14-20",
+      "dayType": "SABADO",
+      "dayLabel": "Sábado",
+      "rates": { "I": 80.49, "II": 83.09, "III": 86.18, "IV": 91.23 }
+    },
+    {
+      "shift": "14-20",
+      "dayType": "FESTIVO",
+      "dayLabel": "Festivo",
+      "rates": { "I": 113.99, "II": 117.68, "III": 122.02, "IV": 129.16 }
+    },
+    {
+      "shift": "18-00",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 42.24, "II": 43.61, "III": 45.21, "IV": 47.84 }
+    },
+    {
+      "shift": "18-00",
+      "dayType": "LABORABLE_TO_FESTIVO",
+      "dayLabel": "Lab. a Fest.",
+      "rates": { "I": 86.75, "II": 89.55, "III": 92.88, "IV": 98.30 }
+    },
+    {
+      "shift": "18-00",
+      "dayType": "SABADO",
+      "dayLabel": "Sábado",
+      "rates": { "I": 74.53, "II": 76.96, "III": 79.81, "IV": 84.44 }
+    },
+    {
+      "shift": "18-00",
+      "dayType": "FESTIVO_TO_LABORABLE",
+      "dayLabel": "Fest. a Lab.",
+      "rates": { "I": 95.94, "II": 99.10, "III": 102.73, "IV": 108.71 }
+    },
+    {
+      "shift": "18-00",
+      "dayType": "FESTIVO_TO_FESTIVO",
+      "dayLabel": "Fest. a Fest.",
+      "rates": { "I": 101.80, "II": 105.13, "III": 109.02, "IV": 115.34 }
+    },
+    {
+      "shift": "19-01",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 42.24, "II": 43.61, "III": 45.21, "IV": 47.84 }
+    },
+    {
+      "shift": "19-01",
+      "dayType": "LABORABLE_TO_FESTIVO",
+      "dayLabel": "Lab. a Fest.",
+      "rates": { "I": 86.75, "II": 89.55, "III": 92.88, "IV": 98.30 }
+    },
+    {
+      "shift": "19-01",
+      "dayType": "SABADO",
+      "dayLabel": "Sábado",
+      "rates": { "I": 74.53, "II": 76.96, "III": 79.81, "IV": 84.44 }
+    },
+    {
+      "shift": "19-01",
+      "dayType": "FESTIVO_TO_LABORABLE",
+      "dayLabel": "Fest. a Lab.",
+      "rates": { "I": 95.94, "II": 99.10, "III": 102.73, "IV": 108.71 }
+    },
+    {
+      "shift": "19-01",
+      "dayType": "FESTIVO_TO_FESTIVO",
+      "dayLabel": "Fest. a Fest.",
+      "rates": { "I": 101.80, "II": 105.13, "III": 109.02, "IV": 115.34 }
+    },
+    {
+      "shift": "20-02",
+      "dayType": "LABORABLE",
+      "dayLabel": "Laborable",
+      "rates": { "I": 44.68, "II": 46.14, "III": 47.85, "IV": 50.66 }
+    },
+    {
+      "shift": "20-02",
+      "dayType": "LABORABLE_TO_FESTIVO",
+      "dayLabel": "Lab. a Fest.",
+      "rates": { "I": 101.93, "II": 105.30, "III": 109.14, "IV": 115.50 }
+    },
+    {
+      "shift": "20-02",
+      "dayType": "SABADO",
+      "dayLabel": "Sábado",
+      "rates": { "I": 78.92, "II": 81.46, "III": 84.47, "IV": 89.44 }
+    },
+    {
+      "shift": "20-02",
+      "dayType": "FESTIVO_TO_LABORABLE",
+      "dayLabel": "Fest. a Lab.",
+      "rates": { "I": 90.58, "II": 93.52, "III": 97.00, "IV": 102.66 }
+    },
+    {
+      "shift": "20-02",
+      "dayType": "FESTIVO_TO_FESTIVO",
+      "dayLabel": "Fest. a Fest.",
+      "rates": { "I": 102.29, "II": 105.65, "III": 109.50, "IV": 115.93 }
+    }
+  ]
+}
