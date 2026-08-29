@@ -35,6 +35,12 @@ export function normalizeJourney(value) {
   return match ? `${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}` : String(value || "Sin jornada").trim();
 }
 
+export function formatBolsaChapa(value) {
+  const digits = String(value || "").replace(/[^0-9]/g, "");
+  if (/^80\d{3}$/.test(digits)) return digits;
+  return /^\d{1,3}$/.test(digits) ? `80${digits.padStart(3, "0")}` : String(value || "").trim();
+}
+
 function madridParts(now = new Date()) {
   return Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Madrid", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
@@ -280,6 +286,12 @@ export async function fetchGeneralBoard() {
   if (snapshotError || !snapshotRow?.payload) throw snapshotError || new Error("No hay contratación de Turno");
   const { data: currentRows, error: currentError } = await portalSupabase.from("tablon_actual").select("id,chapa,empresa,buque,parte,puesto,jornada,fecha").order("id");
   if (currentError) throw currentError;
+  const { data: directoryRows, error: directoryError } = await supabase
+    .from("app_cpe_bolsa_worker_directory")
+    .select("bolsa_chapa,display_name")
+    .order("censo_number");
+  if (directoryError) throw directoryError;
+  const bolsaNames = new Map((directoryRows || []).map((row) => [row.bolsa_chapa, row.display_name]));
   const snapshot = {
     ...snapshotRow.payload,
     jornadas: (snapshotRow.payload.jornadas || []).filter((item) => normalizeDate(item.fecha || snapshotRow.payload.fecha) >= todayIso)
@@ -295,7 +307,10 @@ export async function fetchGeneralBoard() {
   const bolsaRows = dedupeRows([
     ...storedRows,
     ...(syncResult.success ? syncResult.rows || [] : [])
-  ]).filter((row) => normalizeDate(row.fecha) >= todayIso);
+  ]).filter((row) => normalizeDate(row.fecha) >= todayIso).map((row) => ({
+    ...row,
+    name: bolsaNames.get(formatBolsaChapa(row.chapa)) || ""
+  }));
   return {
     journeys: buildGeneralBoard(bolsaRows, snapshot),
     expectedKey: expected.key,

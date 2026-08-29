@@ -103,7 +103,9 @@ import {
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
 import AdminMonitor from "./AdminMonitor.jsx";
-import { companyLogo, shipImage } from "./generalBoard.js";
+import { companyLogo, fetchGeneralBoard, shipImage } from "./generalBoard.js";
+import { currentAssignmentsFromSnapshot } from "./currentAssignments.js";
+import { findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialties } from "./fullPartMerge.js";
 import { hashForTab, tabFromHash } from "./navigation.js";
 import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
@@ -882,21 +884,33 @@ function normalizeAssignmentShift(value) {
 
 function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const assignments = useMemo(() => {
-    const today = new Date(currentTime || Date.now());
-    today.setHours(0, 0, 0, 0);
-    return (snapshot?.payload?.asignaciones?.rows || [])
-      .filter((item) => {
-        const date = parsePortalDate(item.fecha);
-        return date && date >= today;
-      })
-      .sort((a, b) => {
-        const dateDiff = parsePortalDate(a.fecha) - parsePortalDate(b.fecha);
-        if (dateDiff) return dateDiff;
-        return (ASSIGNMENT_SHIFT_ORDER[normalizeAssignmentShift(a.jornada)] || 99)
-          - (ASSIGNMENT_SHIFT_ORDER[normalizeAssignmentShift(b.jornada)] || 99);
-      });
-  }, [snapshot, currentTime]);
+  const [loadingPart, setLoadingPart] = useState("");
+  const assignments = useMemo(
+    () => currentAssignmentsFromSnapshot(snapshot, currentTime),
+    [snapshot, currentTime]
+  );
+
+  const openAssignment = async (item) => {
+    const selectionKey = `${item.parte}|${item.fecha}|${item.jornada}`;
+    setLoadingPart(selectionKey);
+    let enriched = item;
+    try {
+      const board = await fetchGeneralBoard();
+      const bolsaWorkers = findPartBolsaWorkers(board, item);
+      enriched = {
+        ...item,
+        detail: {
+          ...(item.detail || {}),
+          specialties: mergeFullPartSpecialties(item.detail?.specialties || [], bolsaWorkers),
+        },
+      };
+    } catch {
+      enriched = item;
+    } finally {
+      setLoadingPart("");
+      setSelectedAssignment(enriched);
+    }
+  };
 
   if (!assignments.length) {
     const hasPortalData = Boolean(snapshot?.payload);
@@ -946,7 +960,7 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
           <article key={`${item.parte}-${item.fecha}-${item.jornada}-${index}`}>
             <button
               type="button"
-              onClick={() => setSelectedAssignment(item)}
+              onClick={() => openAssignment(item)}
               aria-label={`Ver parte ${item.parte}`}
             >
               <span className="current-assignment-logo">
@@ -965,7 +979,9 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
                 <span>Parte</span>
                 <strong>{item.parte}</strong>
               </span>
-              <ChevronRight size={18} aria-hidden="true" />
+              {loadingPart === `${item.parte}|${item.fecha}|${item.jornada}`
+                ? <RefreshCw className="is-spinning" size={18} aria-hidden="true" />
+                : <ChevronRight size={18} aria-hidden="true" />}
             </button>
           </article>
           );
@@ -1127,16 +1143,12 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
                       key={`${specialty.name}-${worker.code}-${worker.name}`}
                       className={isCurrentWorker ? "is-current-worker" : ""}
                     >
-                      <b>{worker.code}</b>
-                      <span>{worker.name}</span>
+                      <b>{formatFullPartWorkerCode(worker.code)}</b>
+                      {worker.name && <span>{worker.name}</span>}
                       {isCurrentWorker && <em>Tu chapa</em>}
                     </p>
                   );
                 })}
-                {specialty.bolsa > 0 && (
-                  <p className="bolsa"><b>Bolsa</b><span>{specialty.bolsa} trabajadores</span></p>
-                )}
-                {specialty.unnamed > 0 && <p className="unnamed"><span>{specialty.unnamed} sin nombre publicado</span></p>}
               </div>
             </article>
           ))}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Building2, ChevronDown, Search, Ship, UsersRound } from "lucide-react";
-import { boardCounts, companyLogo, dateLabel, defaultJourneyKey, fetchGeneralBoard, groupImage, normalizeText, sortGroups, sortSpecialties } from "./generalBoard.js";
+import { boardCounts, companyLogo, dateLabel, defaultJourneyKey, fetchGeneralBoard, formatBolsaChapa, groupImage, normalizeText, sortGroups, sortSpecialties } from "./generalBoard.js";
 
 function sourceCounts(group) {
   return [...group.specialties.values()].reduce((sum, item) => ({ bolsa: sum.bolsa + item.bolsa.length, turno: sum.turno + item.turno }), { bolsa: 0, turno: 0 });
@@ -13,7 +13,7 @@ function Specialty({ specialty }) {
       <div className="general-specialty-title"><strong>{specialty.name}</strong><span>{total}</span></div>
       <div className="general-workers">
         {specialty.turno > 0 && <span className="worker-chip turno">Turno {specialty.turno}</span>}
-        {specialty.bolsa.map((item, index) => <span className="worker-chip bolsa" key={`${item.id || item.chapa}-${index}`}>{item.chapa || "S/N"}</span>)}
+        {specialty.bolsa.map((item, index) => <span className="worker-chip bolsa" key={`${item.id || item.chapa}-${index}`}>{formatBolsaChapa(item.chapa) || "S/N"}{item.name ? ` · ${item.name}` : ""}</span>)}
       </div>
     </div>
   );
@@ -47,7 +47,7 @@ function Company({ company, journey, query, expandAll }) {
   const logo = companyLogo(company.name);
   const groups = useMemo(() => sortGroups(company.groups.values()).filter((group) => {
     if (!query) return true;
-    return normalizeText([company.name, group.name, group.operacion, group.muelle, ...[...group.specialties.values()].flatMap((item) => [item.name, ...item.bolsa.map((worker) => worker.chapa)])].join(" ")).toUpperCase().includes(query);
+    return normalizeText([company.name, group.name, group.operacion, group.muelle, ...[...group.specialties.values()].flatMap((item) => [item.name, ...item.bolsa.flatMap((worker) => [worker.chapa, worker.name])])].join(" ")).toUpperCase().includes(query);
   }), [company, query]);
   if (!groups.length) return null;
   const counts = groups.reduce((sum, group) => { const current = sourceCounts(group); return { turno: sum.turno + current.turno, bolsa: sum.bolsa + current.bolsa }; }, { turno: 0, bolsa: 0 });
