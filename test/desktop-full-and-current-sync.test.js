@@ -14,6 +14,9 @@ test("desktop launchers explicitly select full history or current month", async 
   assert.match(queue, /--current-month/);
   assert.match(queue, /p_full_history: fullHistory/);
   assert.match(powershell, /ValidateSet\("FullHistory", "CurrentMonth"\)/);
+  assert.match(powershell, /\[int\]\$BatchSize = 6/);
+  assert.match(powershell, /-BatchSize \$BatchSize -Drain/);
+  assert.match(powershell, /tandas de hasta \$BatchSize/);
   assert.match(installer, /Carga completa anual \(todos\)/);
   assert.match(installer, /Actualizar mes actual \(todos\)/);
 });

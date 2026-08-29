@@ -1,6 +1,7 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
-  [ValidateSet("FullHistory", "CurrentMonth")][string]$Mode
+  [ValidateSet("FullHistory", "CurrentMonth")][string]$Mode,
+  [ValidateRange(1, 32)][int]$BatchSize = 6
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,9 +27,9 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "No se pudieron crear los trabajos." }
 
   $batchScript = Join-Path $RepositoryPath "scripts\windows\run-cloudflare-gateway-batch.ps1"
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $batchScript -RepositoryPath $RepositoryPath -BatchSize 5 -Drain
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $batchScript -RepositoryPath $RepositoryPath -BatchSize $BatchSize -Drain
   if ($LASTEXITCODE -ne 0) { throw "No se pudo procesar la cola." }
-  Write-Host "$modeLabel finalizada en tandas de hasta 5." -ForegroundColor Green
+  Write-Host "$modeLabel finalizada en tandas de hasta $BatchSize." -ForegroundColor Green
 }
 finally {
   $env:CPE_SUPABASE_SECRET_KEY = $null
