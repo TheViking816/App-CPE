@@ -3,6 +3,7 @@ import path from "node:path";
 import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeGeneralBoardJourney } from "./general-board-merge.js";
+import { generalBoardPortalDates } from "./general-board-dates.js";
 
 const PORTAL_URL = "https://portal.cpevalencia.com/#User";
 let portalUser = String(process.env.CPE_PORTAL_USER || "").trim();
@@ -227,23 +228,6 @@ async function collectDate(selectionFrame, targetDate) {
   return journeys;
 }
 
-function madridDates() {
-  const format = (date, locale) => new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric"
-  }).format(date);
-  const now = new Date();
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit"
-  }).formatToParts(now).map(({ type, value }) => [type, value]));
-  const noon = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), 12));
-  const tomorrow = new Date(noon.getTime() + 86400000);
-  return {
-    todayPortal: format(noon, "en-GB"),
-    tomorrowPortal: format(tomorrow, "en-GB"),
-    todayIso: format(noon, "en-CA")
-  };
-}
-
 function journeyIsoDate(journey) {
   const match = String(journey?.fecha || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   return match ? `${match[3]}-${match[2]}-${match[1]}` : "";
@@ -294,11 +278,11 @@ async function main() {
     await context.addInitScript(() => Object.defineProperty(navigator, "webdriver", { get: () => undefined }));
     await login(page);
     const frame = await openContracting(page);
-    const dates = madridDates();
-    const journeys = [
-      ...await collectDate(frame, dates.todayPortal),
-      ...await collectDate(frame, dates.tomorrowPortal).catch(() => [])
-    ];
+    const dates = generalBoardPortalDates();
+    const journeys = [];
+    for (const portalDate of dates.portalDates) {
+      journeys.push(...await collectDate(frame, portalDate).catch(() => []));
+    }
     if (!journeys.length) throw new Error("El portal no devolvio ninguna jornada del tablon general.");
 
     const previous = await getExistingSnapshot();
