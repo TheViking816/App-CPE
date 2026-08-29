@@ -51,10 +51,25 @@ async function readStored(adminKey) {
   return response.json();
 }
 
+async function fetchAppCpeObservedNames(adminKey) {
+  const response = await fetch(`${APP_CPE_URL}/rest/v1/rpc/app_cpe_observed_bolsa_worker_names`, {
+    method: "POST",
+    headers: supabaseAdminHeaders(adminKey, { "Content-Type": "application/json" }),
+    body: "{}"
+  });
+  if (!response.ok) throw new Error(`App CPE nombres observados HTTP ${response.status}`);
+  return response.json();
+}
+
 export async function syncBolsaWorkerDirectory() {
   const adminKey = resolveSupabaseAdminKey();
   if (!adminKey) throw new Error("Falta la clave de Supabase para actualizar el directorio de bolsa.");
-  const [portalUsers, stored, assetRows] = await Promise.all([fetchAllPortalUsers(), readStored(adminKey), readAsset()]);
+  const [portalUsers, appCpeObserved, stored, assetRows] = await Promise.all([
+    fetchAllPortalUsers(),
+    fetchAppCpeObservedNames(adminKey),
+    readStored(adminKey),
+    readAsset()
+  ]);
   const directory = new Map();
 
   const remember = (row) => {
@@ -75,6 +90,12 @@ export async function syncBolsaWorkerDirectory() {
   assetRows.forEach(remember);
   stored.forEach(remember);
   portalUsers.forEach((row) => remember({ ...row, source: "portalestibavlc" }));
+  appCpeObserved.forEach((row) => remember({
+    chapa: row.worker_code,
+    nombre: row.display_name,
+    source: "app_cpe",
+    first_seen_at: row.observed_at
+  }));
 
   const now = new Date().toISOString();
   const rows = [...directory.values()].sort((a, b) => Number(a.bolsa_chapa) - Number(b.bolsa_chapa));
@@ -97,5 +118,9 @@ export async function syncBolsaWorkerDirectory() {
     fuente: row.source
   }));
   await fs.writeFile(ASSET_PATH, `${JSON.stringify(asset, null, 2)}\n`, "utf8");
-  return { total: asset.length, assetPath: ASSET_PATH };
+  return {
+    total: asset.length,
+    observedInAppCpe: appCpeObserved.filter((row) => normalizeBolsaChapa(row.worker_code)).length,
+    assetPath: ASSET_PATH
+  };
 }

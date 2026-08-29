@@ -7,6 +7,8 @@ test("normaliza una chapa del censo de bolsa con el prefijo 80", () => {
   assert.equal(normalizeBolsaChapa("7"), "80007");
   assert.equal(normalizeBolsaChapa("584"), "80584");
   assert.equal(normalizeBolsaChapa("80584"), "80584");
+  assert.equal(normalizeBolsaChapa("B80584"), "80584");
+  assert.equal(normalizeBolsaChapa("C-80584"), "80584");
   assert.equal(normalizeBolsaChapa("72683"), "");
 });
 
