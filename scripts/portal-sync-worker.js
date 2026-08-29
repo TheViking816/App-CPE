@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
+import { syncBolsaWorkerDirectory } from "./bolsa-worker-directory.js";
 
 const projectRef = "wvwdiywtlbffumshbboa";
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
@@ -339,6 +340,9 @@ async function workerLoop() {
             ...jobs.map((job, index) => runJob(job, index + 1, clearanceCookies)),
             boardPromise
           ]);
+          await syncBolsaWorkerDirectory().catch((error) => {
+            console.warn(`[portal-worker:nombres-bolsa] No se pudo actualizar el directorio: ${error instanceof Error ? error.message : error}`);
+          });
           console.log(`[portal-worker] Tanda de ${jobs.length} finalizada`);
         } catch (error) {
           await requeueRunningJobs(jobs, "En cola; no se pudo preparar Chrome").catch(() => {});

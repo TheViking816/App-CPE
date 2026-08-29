@@ -42,6 +42,7 @@ const profileDir = path.resolve(process.env.CPE_PORTAL_PROFILE_DIR || path.join(
 const browserChannel = String(process.env.CPE_PORTAL_BROWSER_CHANNEL || "bundled").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const portalCdpContextSlot = String(process.env.CPE_PORTAL_CDP_CONTEXT_SLOT || "").trim();
+const MOBILE_PART_USER_AGENT = "Mozilla/5.0 (Linux; Android 15; 24040RN64Y) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36";
 const portalClearanceCookies = (() => {
   try {
     const parsed = JSON.parse(process.env.CPE_PORTAL_CLEARANCE_COOKIES || "[]");
@@ -1750,6 +1751,12 @@ async function enrichAssignmentsWithDetails(context, result, previousResult) {
   const rows = [...(result?.rows || [])];
   const sourcePage = await context.newPage();
   try {
+    await sourcePage.setViewportSize({ width: 412, height: 915 });
+    await sourcePage.setExtraHTTPHeaders({
+      "User-Agent": MOBILE_PART_USER_AGENT,
+      "Sec-CH-UA-Mobile": "?1",
+      "Sec-CH-UA-Platform": '"Android"'
+    });
     await sourcePage.goto("https://portal.cpevalencia.com/Noray/DondeVoy.asp", {
       waitUntil: "domcontentloaded",
       timeout: 20000

@@ -4,7 +4,6 @@ import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeGeneralBoardJourney } from "./general-board-merge.js";
 import { generalBoardPortalDates } from "./general-board-dates.js";
-import { syncBolsaWorkerDirectory } from "./bolsa-worker-directory.js";
 
 const PORTAL_URL = "https://portal.cpevalencia.com/#User";
 let portalUser = String(process.env.CPE_PORTAL_USER || "").trim();
@@ -304,9 +303,6 @@ async function main() {
       jornadas: [...merged.values()].sort((a, b) => `${a.fecha}|${a.jornada}`.localeCompare(`${b.fecha}|${b.jornada}`))
     };
     await publishSnapshot(snapshot);
-    await syncBolsaWorkerDirectory().catch((error) => {
-      console.warn(`El tablón se publicó, pero no se pudo actualizar el directorio de bolsa: ${error instanceof Error ? error.message : error}`);
-    });
     const total = journeys.reduce((sum, journey) => sum + journey.bloques.reduce((blockSum, block) =>
       blockSum + block.especialidades.reduce((specialtySum, specialty) => specialtySum + specialty.solicitudes, 0), 0), 0);
     console.log(`OK: tablon general publicado (${journeys.length} jornadas, ${total} puestos).`);

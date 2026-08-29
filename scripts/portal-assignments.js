@@ -102,7 +102,7 @@ const DETAIL_FIELDS = [
 function parseWorkers(value = "") {
   const text = normalizeCell(value);
   const workers = [];
-  const pattern = /([A-Z]?\d{5})\s*-\s*(.*?)(?=\s+(?:[A-Z]?\d{5}\s*-|00000\b)|$)/gi;
+  const pattern = /([A-Z]?\d{5})\s*(?:-\s*)?(.*?)(?=\s+(?:[A-Z]?\d{5}(?:\s*-?\s+|$)|00000\b)|$)/gi;
   for (const match of text.matchAll(pattern)) {
     workers.push({ code: match[1], name: normalizeCell(match[2]) });
   }

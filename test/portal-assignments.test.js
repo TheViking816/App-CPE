@@ -45,6 +45,22 @@ test("agrega cinco nombres publicados en una fila de continuacion", () => {
   assert.equal(isAssignmentDetailComplete(parsed), true);
 });
 
+test("lee las chapas de bolsa sin guion que publica la version movil de Donde voy", () => {
+  const parsed = parseAssignmentDetailFromTables(detailTable(
+    "80539 ANDREA PEREZ CARRASCOSA 80682 PABLO CHACON RUIZ 80200 MIREYA SEVILLA JAFFIER "
+    + "80248 LUIS MARTIN MONSOLIU 80735 CARLOTA CIVERA CABRERA"
+  ));
+
+  assert.deepEqual(parsed.specialties[0].workers, [
+    { code: "80539", name: "ANDREA PEREZ CARRASCOSA" },
+    { code: "80682", name: "PABLO CHACON RUIZ" },
+    { code: "80200", name: "MIREYA SEVILLA JAFFIER" },
+    { code: "80248", name: "LUIS MARTIN MONSOLIU" },
+    { code: "80735", name: "CARLOTA CIVERA CABRERA" }
+  ]);
+  assert.equal(isAssignmentDetailComplete(parsed), true);
+});
+
 test("puntua por debajo una lectura temprana aunque sus primeros grupos ya esten completos", () => {
   const early = parseAssignmentDetailFromTables([[
     ["Parte:", "23259"],
