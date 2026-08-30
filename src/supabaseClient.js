@@ -189,6 +189,27 @@ export async function setUserRemateHours({ token, jornalKey, hours }) {
   return data;
 }
 
+export async function getUserManualPremiums({ token }) {
+  if (!supabase || !token) return {};
+
+  const { data, error } = await supabase.rpc("app_cpe_get_manual_premiums", { p_token: token });
+  if (error) throw error;
+  return data || {};
+}
+
+export async function setUserManualPremium({ token, jornalKey, amount = null, portalAmount = null }) {
+  if (!supabase || !token || !jornalKey) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_set_manual_premium", {
+    p_token: token,
+    p_jornal_key: jornalKey,
+    p_amount: amount,
+    p_portal_amount: portalAmount
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function loadPayrollConfig() {
   if (!supabase) return null;
 
