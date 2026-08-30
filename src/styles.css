@@ -1827,6 +1827,34 @@ select {
 }
 
 .header-menu-button:hover { background: rgba(255, 255, 255, 0.18); }
+.header-notifications-button {
+  position: relative;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.header-notifications-button:hover { background: rgba(255, 255, 255, 0.18); }
+.header-notifications-button > span {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  place-items: center;
+  border: 2px solid #0d3567;
+  border-radius: 999px;
+  background: #f58220;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 950;
+}
 
 .side-menu-layer {
   position: fixed;
@@ -1988,6 +2016,58 @@ select {
 
 .side-nav-trailing { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .side-nav-new-badge { padding: 4px 7px; border-radius: 999px; background: #f58220; color: #fff; font-size: 9px; font-weight: 950; letter-spacing: .03em; text-transform: uppercase; }
+.side-nav-count-badge { display: grid; min-width: 22px; height: 22px; padding: 0 6px; place-items: center; border-radius: 999px; background: #f58220; color: #fff; font-size: 10px; font-weight: 950; }
+
+.notifications-page { display: grid; gap: 16px; padding: 18px 14px 110px; }
+.notifications-hero { display: grid; gap: 13px; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #08284d, #0d6575); color: #fff; box-shadow: 0 12px 28px rgba(6, 31, 63, .18); }
+.notifications-hero small { color: #72e2e2; font-size: 10px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+.notifications-hero h1 { margin: 4px 0 5px; font-size: 26px; line-height: 1.05; }
+.notifications-hero p { margin: 0; color: rgba(255,255,255,.75); font-size: 12px; font-weight: 700; }
+.notifications-hero > button { justify-self: start; min-height: 34px; padding: 0 12px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; font-size: 10px; font-weight: 900; }
+.notifications-filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.notifications-filters::-webkit-scrollbar { display: none; }
+.notifications-filters button { flex: 0 0 auto; min-height: 36px; padding: 0 13px; border: 1px solid #c8d8e6; border-radius: 999px; background: #fff; color: #4d6076; font-size: 11px; font-weight: 900; }
+.notifications-filters button.active { border-color: #10aebb; background: #10aebb; color: #fff; box-shadow: 0 6px 14px rgba(16,174,187,.18); }
+.notifications-group { display: grid; gap: 8px; }
+.notifications-group > h2 { margin: 0 3px; color: #60758e; font-size: 11px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+.notifications-list { display: grid; gap: 9px; }
+.notification-card { position: relative; display: grid; grid-template-columns: 48px minmax(0,1fr) auto; align-items: center; gap: 11px; width: 100%; min-height: 88px; padding: 12px 14px 12px 12px; overflow: hidden; border: 1px solid #d9e4ed; border-radius: 14px; background: #fff; color: #102842; text-align: left; box-shadow: 0 7px 18px rgba(7,31,63,.07); }
+.notification-card::before { position: absolute; inset: 0 auto 0 0; width: 4px; content: ""; background: #9fb3c6; }
+.notification-card.is-unread { border-color: #badbe2; background: linear-gradient(135deg, #fff, #f4fcfd); }
+.notification-card.is-read { opacity: .78; }
+.notification-card.is-journal::before { background: #0ea5b4; }
+.notification-card.is-premium::before { background: #16a34a; }
+.notification-card.is-premium-change::before { background: #f58220; }
+.notification-card.is-payroll::before { background: #2563eb; }
+.notification-card.is-rests::before { background: #64748b; }
+.notification-card.is-holidays::before { background: #eab308; }
+.notification-card.is-exceptions::before { background: #8b5cf6; }
+.notification-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 12px; background: #edf6f8; color: #0d6575; }
+.is-premium .notification-icon { background: #ecf9f0; color: #15803d; }
+.is-premium-change .notification-icon { background: #fff4e8; color: #c65c0b; }
+.is-payroll .notification-icon { background: #edf4ff; color: #2563eb; }
+.is-holidays .notification-icon { background: #fff9dc; color: #a16207; }
+.is-exceptions .notification-icon { background: #f4efff; color: #7c3aed; }
+.notification-copy { display: grid; gap: 3px; min-width: 0; }
+.notification-copy > strong { color: #102842; font-size: 14px; font-weight: 950; }
+.notification-copy > span { color: #52677e; font-size: 10px; font-weight: 750; line-height: 1.35; }
+.notification-copy > small { color: #0d8390; font-size: 8px; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+.notification-card time { align-self: start; color: #708197; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.notification-card > i { position: absolute; right: 13px; bottom: 13px; width: 8px; height: 8px; border-radius: 50%; background: #1683ff; box-shadow: 0 0 0 4px rgba(22,131,255,.1); }
+.notifications-state, .notifications-empty { display: grid; min-height: 190px; place-items: center; align-content: center; gap: 8px; padding: 25px; border: 1px dashed #c8d8e6; border-radius: 16px; background: rgba(255,255,255,.72); color: #60758e; text-align: center; }
+.notifications-empty strong { color: #18344f; font-size: 15px; }
+.notifications-empty span { font-size: 11px; font-weight: 700; }
+.notifications-state.is-error { color: #a33a3a; }
+
+:root[data-theme="dark"] .notifications-filters button { border-color: #38536d; background: #172b40; color: #b7c7d9; }
+:root[data-theme="dark"] .notifications-filters button.active { border-color: #1bb5c1; background: #117985; color: #fff; }
+:root[data-theme="dark"] .notification-card { border-color: #29445e; background: #112338; color: #ecf5ff; box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+:root[data-theme="dark"] .notification-card.is-unread { border-color: #326577; background: linear-gradient(135deg, #11283b, #102d3a); }
+:root[data-theme="dark"] .notification-copy > strong { color: #edf6ff; }
+:root[data-theme="dark"] .notification-copy > span, :root[data-theme="dark"] .notification-card time { color: #9eb1c5; }
+:root[data-theme="dark"] .notifications-group > h2 { color: #91a9c1; }
+:root[data-theme="dark"] .notifications-state, :root[data-theme="dark"] .notifications-empty { border-color: #38536d; background: rgba(17,35,56,.8); color: #9eb1c5; }
+:root[data-theme="dark"] .notifications-empty strong { color: #edf6ff; }
 
 .home-section-block { display: grid; gap: 9px; }
 .home-section-heading { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 8px; }

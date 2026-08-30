@@ -9,9 +9,11 @@ import {
   parseAssignmentsFromTables
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
+import { buildPortalNotifications } from "./portal-notifications.js";
 import { parseExceptions } from "./portal-exceptions.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
+import { assignmentsFromCurrentJournals } from "./portal-current-assignments.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
@@ -709,7 +711,7 @@ async function login(page, attempt = 0) {
   await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
 
-  const entryState = await waitForPortalEntry(page);
+  let entryState = await waitForPortalEntry(page);
   if (entryState === "authenticated") {
     if (authenticatedForPortalUser) return;
     const loggedOut = await logoutExistingPortalSession(page);
@@ -717,6 +719,11 @@ async function login(page, attempt = 0) {
       throw new Error("No se pudo cerrar la sesion anterior del portal de forma segura.");
     }
     await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
+    // A shared worker profile can still contain the session of the previous
+    // chapa. The legacy GWT portal often takes considerably longer to rebuild
+    // the login iframe after logging that user out. Wait for the new entry
+    // state again instead of giving the iframe only the generic 10 seconds.
+    entryState = await waitForPortalEntry(page);
   }
   if (entryState === "security_challenge") {
     if (attempt < 1) return login(page, attempt + 1);
@@ -737,6 +744,7 @@ async function login(page, attempt = 0) {
     if (state === "security_challenge") {
       throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
     }
+    if (attempt < 1) return login(page, attempt + 1);
     throw new Error("El portal oficial no ha mostrado el formulario de acceso. Vuelve a intentarlo.");
   }
 
@@ -1809,6 +1817,20 @@ async function collectAssignments(page, previousResult) {
   return enrichAssignmentsWithDetails(page.context(), result, previousResult);
 }
 
+async function completeAssignmentsFromJournals(context, assignments, journals) {
+  const candidates = assignmentsFromCurrentJournals(journals, assignments);
+  if (!candidates.length) return assignments;
+  const enriched = await enrichAssignmentsWithDetails(
+    context,
+    { recognized: true, rows: candidates },
+    assignments
+  );
+  return {
+    recognized: true,
+    rows: [...(assignments?.rows || []), ...(enriched.rows || [])]
+  };
+}
+
 async function collectVacaciones(page) {
   try {
     const result = await readDirectPortalPage(
@@ -2017,6 +2039,20 @@ async function getExistingSupabaseSnapshot() {
   }
 }
 
+async function recordPortalNotifications(previousPayload, nextPayload) {
+  if (!supabaseServiceRole || portalSnapshotChannel || !previousPayload || !nextPayload) return;
+  const notifications = buildPortalNotifications(previousPayload, nextPayload);
+  if (!notifications.length) return;
+  const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/rpc/app_cpe_record_portal_notifications`, {
+    method: "POST",
+    headers: supabaseAdminHeaders(supabaseServiceRole, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ p_chapa: portalUser, p_notifications: notifications })
+  });
+  if (!response.ok) throw new Error(`Supabase novedades HTTP ${response.status}: ${await response.text()}`);
+  const result = await response.json().catch(() => null);
+  console.log(`Novedades guardadas: ${Number(result?.inserted || 0)}.`);
+}
+
 async function openPortalBrowserSession() {
   if (portalCdpEndpoint) {
     const browser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
@@ -2125,6 +2161,9 @@ async function main() {
       };
       await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
       await upsertSupabase(snapshot);
+      await recordPortalNotifications(existingSnapshot?.payload, payload).catch((error) => {
+        console.warn(`No se pudieron guardar las novedades. ${error instanceof Error ? error.message : ""}`);
+      });
       await writeStatus({
         ok: true,
         chapa: portalUser,
@@ -2157,11 +2196,11 @@ async function main() {
       }
       return isMeaningful(fallback) ? fallback : emptyValue;
     };
-    const readOptionalSection = async (name, reader, fallback, emptyValue, isMeaningful) => {
+    const readOptionalSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
-        if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback)) {
+        if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options)) {
           freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
@@ -2238,13 +2277,14 @@ async function main() {
       throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");
     }
     await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
-    const asignaciones = await readOptionalSection(
+    let asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
       existingSnapshot?.payload?.asignaciones,
       { recognized: false, rows: [] },
       hasVacationData
     );
+    asignaciones = await completeAssignmentsFromJournals(page.context(), asignaciones, jornales);
     await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");
     jornales = mergeAssignmentsIntoPortalJornales(jornales, asignaciones);
     await publishProgress("jornales", jornales, "Jornales y contratacion consolidados");
@@ -2278,7 +2318,8 @@ async function main() {
       () => collectExceptions(page),
       existingSnapshot?.payload?.excepciones,
       { recognized: false, year: new Date().getFullYear(), maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [], rules: [] },
-      hasExceptionData
+      hasExceptionData,
+      { allowCollectionShrink: true }
     );
     await publishProgress("excepciones", excepciones, "Excepciones cargadas");
     const vacaciones = await readOptionalSection(
@@ -2366,6 +2407,9 @@ async function main() {
 
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
+    await recordPortalNotifications(existingSnapshot?.payload, payload).catch((error) => {
+      console.warn(`No se pudieron guardar las novedades. ${error instanceof Error ? error.message : ""}`);
+    });
     await writeStatus({
       ok: true,
       chapa: portalUser,

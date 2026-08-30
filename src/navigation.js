@@ -8,6 +8,7 @@ export const VALID_TABS = new Set([
   "excepciones",
   "vacaciones",
   "nominas",
+  "novedades",
   "estado",
   "puertas",
   "censo",

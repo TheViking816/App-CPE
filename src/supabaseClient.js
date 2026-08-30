@@ -511,6 +511,27 @@ export async function getPortalAutoSyncStatus({ token }) {
   return data || null;
 }
 
+export async function getUserNotifications({ token, limit = 100 }) {
+  if (!supabase || !token) return { rows: [], unread: 0 };
+  const { data, error } = await supabase.rpc("app_cpe_get_notifications", {
+    p_token: token,
+    p_limit: Math.max(1, Math.min(100, Number(limit) || 100))
+  });
+  if (error) throw error;
+  return data || { rows: [], unread: 0 };
+}
+
+export async function markUserNotificationsRead({ token, notificationId = null, all = false }) {
+  if (!supabase || !token) return null;
+  const { data, error } = await supabase.rpc("app_cpe_mark_notifications_read", {
+    p_token: token,
+    p_notification_id: notificationId,
+    p_all: Boolean(all)
+  });
+  if (error) throw error;
+  return data || null;
+}
+
 export async function getForumMessages({ token, limit = 50, beforeId = null }) {
   if (!supabase || !token) return [];
 

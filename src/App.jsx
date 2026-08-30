@@ -4,6 +4,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
   BriefcaseBusiness,
   BarChart3,
+  Bell,
   Building2,
   CalendarDays,
   CalendarOff,
@@ -72,6 +73,7 @@ import {
   deleteUserAccount,
   getLatestChaperoSnapshot,
   getLatestDoorSnapshot,
+  getUserNotifications,
   getForumMessages,
   loadPayrollConfig,
   getOfficialPortalDocument,
@@ -81,6 +83,7 @@ import {
   getUserRelayHours,
   getUserRemateHours,
   loginUser,
+  markUserNotificationsRead,
   queuePendingPortalActivation,
   postForumMessage,
   reactivatePortalSync,
@@ -247,6 +250,7 @@ const SIDE_NAV_GROUPS = [
   {
     label: "Operativa",
     items: [
+      { id: "novedades", label: "Novedades", Icon: Bell },
       { id: "estado", label: "Chapero", Icon: BriefcaseBusiness },
       { id: "puertas", label: "Puertas", Icon: CalendarRange },
       { id: "excepciones", label: "Excepciones", Icon: CalendarOff },
@@ -635,7 +639,7 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
   );
 }
 
-function AppHeader({ onMenuOpen }) {
+function AppHeader({ onMenuOpen, unreadNotifications = 0, onNotificationsOpen }) {
   return (
     <header className="app-header">
       <button className="header-menu-button" type="button" onClick={onMenuOpen} aria-label="Abrir menú">
@@ -647,11 +651,15 @@ function AppHeader({ onMenuOpen }) {
       <div className="header-title">
         <strong>App CPE</strong>
       </div>
+      <button className="header-notifications-button" type="button" onClick={onNotificationsOpen} aria-label={`Abrir novedades${unreadNotifications ? `, ${unreadNotifications} sin leer` : ""}`}>
+        <Bell size={23} />
+        {unreadNotifications > 0 && <span>{Math.min(99, unreadNotifications)}</span>}
+      </button>
     </header>
   );
 }
 
-function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onProfileOpen, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, unreadNotifications = 0, onClose, onNavigate, onProfileOpen, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -689,6 +697,7 @@ function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, on
                 <Icon size={19} /><span>{label}</span>
                 <span className="side-nav-trailing">
                   {id === "foro" && forumHasUnread && <span className="side-nav-new-badge">Nuevo</span>}
+                  {id === "novedades" && unreadNotifications > 0 && <span className="side-nav-count-badge">{Math.min(99, unreadNotifications)}</span>}
                   <ChevronRight size={17} />
                 </span>
               </button>
@@ -2416,7 +2425,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>
-      <a className="portal-official-action" href="https://portal.cpevalencia.com/Noray/Prueba.asp" target="_blank" rel="noreferrer">
+      <a className="portal-official-action" href="https://portal.cpevalencia.com/#User,ViewNoray,18" target="_blank" rel="noreferrer">
         Gestionar descansos en el Portal <ExternalLink size={15} />
       </a>
     </section>
@@ -3847,6 +3856,92 @@ function ForumPanel({ session, onLatestMessage }) {
   );
 }
 
+const NOTIFICATION_TYPES = {
+  new_journal: { label: "Jornal", Icon: CalendarCheck2, tone: "journal" },
+  new_premium: { label: "Prima", Icon: WalletCards, tone: "premium" },
+  premium_modified: { label: "Prima", Icon: ReceiptText, tone: "premium-change" },
+  new_payroll: { label: "Nómina", Icon: FileLock2, tone: "payroll" },
+  rests_changed: { label: "Descansos", Icon: CalendarDays, tone: "rests" },
+  vacations_changed: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
+  exceptions_changed: { label: "Excepciones", Icon: CalendarOff, tone: "exceptions" }
+};
+
+function notificationGroupLabel(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Anteriores";
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((start - target) / 86400000);
+  if (days === 0) return "Hoy";
+  if (days === 1) return "Ayer";
+  return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long" }).format(date);
+}
+
+function notificationTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 60) return "Ahora";
+  if (seconds < 3600) return `Hace ${Math.floor(seconds / 60)} min`;
+  if (seconds < 86400) return `Hace ${Math.floor(seconds / 3600)} h`;
+  return new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+function NotificationsPanel({ notifications, loading, error, onOpen, onMarkAll }) {
+  const [filter, setFilter] = useState("all");
+  const rows = notifications?.rows || [];
+  const filtered = rows.filter((item) => {
+    if (filter === "unread") return !item.readAt;
+    if (filter === "journals") return item.eventType === "new_journal";
+    if (filter === "payments") return ["new_premium", "premium_modified", "new_payroll"].includes(item.eventType);
+    return true;
+  });
+  const groups = [];
+  filtered.forEach((item) => {
+    const label = notificationGroupLabel(item.createdAt);
+    const current = groups.at(-1);
+    if (current?.label === label) current.rows.push(item);
+    else groups.push({ label, rows: [item] });
+  });
+
+  return (
+    <section className="notifications-page">
+      <header className="notifications-hero">
+        <div><small>Cambios del portal</small><h1>Centro de novedades</h1><p>Jornales, primas, nóminas y calendarios actualizados.</p></div>
+        {notifications?.unread > 0 && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}
+      </header>
+      <div className="notifications-filters" role="tablist" aria-label="Filtrar novedades">
+        {[
+          ["all", "Todas"], ["unread", `Sin leer${notifications?.unread ? ` ${notifications.unread}` : ""}`],
+          ["journals", "Jornales"], ["payments", "Pagos"]
+        ].map(([id, label]) => <button key={id} type="button" className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{label}</button>)}
+      </div>
+      {loading ? <div className="notifications-state"><LoaderCircle className="is-spinning" size={24} /><strong>Cargando novedades…</strong></div>
+        : error ? <div className="notifications-state is-error"><CircleAlert size={24} /><strong>{error}</strong></div>
+          : groups.length ? groups.map((group) => (
+            <section className="notifications-group" key={group.label}>
+              <h2>{group.label}</h2>
+              <div className="notifications-list">
+                {group.rows.map((item) => {
+                  const config = NOTIFICATION_TYPES[item.eventType] || NOTIFICATION_TYPES.new_journal;
+                  const Icon = config.Icon;
+                  return (
+                    <button key={item.id} className={`notification-card is-${config.tone}${item.readAt ? " is-read" : " is-unread"}`} type="button" onClick={() => onOpen(item)}>
+                      <span className="notification-icon"><Icon size={23} /></span>
+                      <span className="notification-copy"><strong>{item.title}</strong><span>{item.body}</span><small>{config.label}</small></span>
+                      <time>{notificationTime(item.createdAt)}</time>
+                      {!item.readAt && <i aria-label="Sin leer" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )) : <div className="notifications-empty"><Bell size={31} /><strong>No hay novedades</strong><span>{filter === "unread" ? "Has leído todas las novedades." : "Los próximos cambios del portal aparecerán aquí."}</span></div>}
+    </section>
+  );
+}
+
 function BottomNav({ activeTab, onChange }) {
   return (
     <nav className="bottom-nav" aria-label="Navegacion inferior">
@@ -3883,6 +3978,7 @@ export function App() {
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [portalConnected, setPortalConnected] = useState(null);
+  const [portalRefreshQueued, setPortalRefreshQueued] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
@@ -3895,6 +3991,9 @@ export function App() {
   const [forumLatestId, setForumLatestId] = useState(0);
   const [forumHasUnread, setForumHasUnread] = useState(false);
   const [showForumIntro, setShowForumIntro] = useState(false);
+  const [notifications, setNotifications] = useState({ rows: [], unread: 0 });
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
   const isAdmin = normalizeChapa(session?.chapa) === "72683";
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
@@ -3950,6 +4049,57 @@ export function App() {
       setForumHasUnread(latestId > getForumLastRead(session?.chapa));
     }
   }, [activeTab, session?.chapa]);
+
+  const refreshNotifications = useCallback(async ({ quiet = false } = {}) => {
+    if (!session?.token) return;
+    if (!quiet) setNotificationsLoading(true);
+    try {
+      const result = await getUserNotifications({ token: session.token, limit: 100 });
+      setNotifications({ rows: result?.rows || [], unread: Number(result?.unread || 0) });
+      setNotificationsError("");
+    } catch (error) {
+      setNotificationsError(error?.message || "No se pudieron cargar las novedades.");
+    } finally {
+      if (!quiet) setNotificationsLoading(false);
+    }
+  }, [session?.token]);
+
+  useEffect(() => {
+    if (!session?.token) {
+      setNotifications({ rows: [], unread: 0 });
+      return undefined;
+    }
+    refreshNotifications();
+    const timer = window.setInterval(() => refreshNotifications({ quiet: true }), 60_000);
+    const onVisible = () => document.visibilityState === "visible" && refreshNotifications({ quiet: true });
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refreshNotifications, session?.token]);
+
+  const openNotification = async (item) => {
+    if (!item.readAt) {
+      const readAt = new Date().toISOString();
+      setNotifications((current) => ({
+        unread: Math.max(0, Number(current.unread || 0) - 1),
+        rows: current.rows.map((row) => row.id === item.id ? { ...row, readAt } : row)
+      }));
+      markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => refreshNotifications({ quiet: true }));
+    }
+    navigateToTab(item.targetTab || "novedades");
+  };
+
+  const markAllNotificationsRead = async () => {
+    const readAt = new Date().toISOString();
+    setNotifications((current) => ({ unread: 0, rows: current.rows.map((row) => ({ ...row, readAt: row.readAt || readAt })) }));
+    try {
+      await markUserNotificationsRead({ token: session.token, all: true });
+    } catch {
+      await refreshNotifications({ quiet: true });
+    }
+  };
 
   useEffect(() => {
     if (activeTab !== "foro" || !session?.chapa) return;
@@ -4035,6 +4185,7 @@ export function App() {
           && nextSession.email === session.email
           && nextSession.displayName === session.displayName
           && Boolean(nextSession.forumShowChapa) === Boolean(session.forumShowChapa)
+          && Number(nextSession.irpfRate) === Number(session.irpfRate)
         ) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
         setSession(nextSession);
@@ -4126,7 +4277,11 @@ export function App() {
       chapa: session.chapa,
       metadata: { specialties: getEffectiveSpecialtyIds(session) }
     });
-    if (session.token) touchPortalActivity({ token: session.token }).catch(() => {});
+    if (session.token) {
+      touchPortalActivity({ token: session.token })
+        .then((status) => setPortalRefreshQueued(Boolean(status?.refreshQueued)))
+        .catch(() => {});
+    }
   }, [session?.chapa, session?.token]);
 
   useEffect(() => {
@@ -4141,19 +4296,38 @@ export function App() {
       return undefined;
     }
     let cancelled = false;
+    let pollTimer = null;
+    let stopTimer = null;
+    let initialUpdatedAt = null;
     const loadPortalSnapshot = async () => {
       try {
         const data = await getOfficialPortalSnapshot({ token: session.token });
-        if (!cancelled) setPortalSnapshot(data || null);
+        if (!cancelled) {
+          setPortalSnapshot(data || null);
+          if (initialUpdatedAt === null) initialUpdatedAt = data?.updatedAt || "";
+          else if ((data?.updatedAt || "") !== initialUpdatedAt && !data?.payload?.sync?.inProgress) {
+            setPortalRefreshQueued(false);
+          }
+        }
       } catch {
         if (!cancelled) setPortalSnapshot(null);
       }
     };
     loadPortalSnapshot();
+    if (portalRefreshQueued) {
+      pollTimer = window.setInterval(loadPortalSnapshot, 15000);
+      stopTimer = window.setTimeout(() => {
+        if (pollTimer) window.clearInterval(pollTimer);
+        pollTimer = null;
+        setPortalRefreshQueued(false);
+      }, 4 * 60 * 1000);
+    }
     return () => {
       cancelled = true;
+      if (pollTimer) window.clearInterval(pollTimer);
+      if (stopTimer) window.clearTimeout(stopTimer);
     };
-  }, [session?.portalActivationStatus, session?.token]);
+  }, [portalRefreshQueued, session?.portalActivationStatus, session?.token]);
 
   useEffect(() => {
     if (!session?.token) return undefined;
@@ -4290,6 +4464,8 @@ export function App() {
     <div className={`mobile-app${activeTab === "foro" ? " mobile-app-forum" : ""}`}>
       <AppHeader
         onMenuOpen={() => setMenuOpen(true)}
+        unreadNotifications={notifications.unread}
+        onNotificationsOpen={() => navigateToTab("novedades")}
       />
       <main className={`content${activeTab === "foro" ? " content-forum" : ""}`}>
         {activeTab === "inicio" && (
@@ -4317,6 +4493,7 @@ export function App() {
         {activeTab === "excepciones" && <PortalPanel view="exceptions" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "vacaciones" && <PortalPanel view="holidays" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "nominas" && <PortalPanel view="payrolls" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
+        {activeTab === "novedades" && <NotificationsPanel notifications={notifications} loading={notificationsLoading} error={notificationsError} onOpen={openNotification} onMarkAll={markAllNotificationsRead} />}
         {activeTab === "estado" && (
           <OperationalStatusPanel
             user={displayUser}
@@ -4384,6 +4561,7 @@ export function App() {
         theme={theme}
         isAdmin={isAdmin}
         forumHasUnread={forumHasUnread}
+        unreadNotifications={notifications.unread}
         onClose={() => setMenuOpen(false)}
         onNavigate={navigateToTab}
         onProfileOpen={() => setProfileOpen(true)}
