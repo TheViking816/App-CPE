@@ -12,7 +12,9 @@ const portalUrl = "https://portal.cpevalencia.com/#User";
 const portalUser = String(process.env.CPE_PORTAL_USER || process.env.CPE_USER || "").trim();
 const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || process.env.CPE_PASSWORD || "");
 const headless = String(process.env.CPE_PORTAL_HEADLESS || process.env.CPE_HEADLESS || "true").toLowerCase() !== "false";
+const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const applyChanges = process.argv.includes("--apply");
+const captureOnly = process.argv.includes("--capture-only");
 const inputArgIndex = process.argv.indexOf("--input");
 const inputPath = inputArgIndex >= 0 && process.argv[inputArgIndex + 1]
   ? path.resolve(process.argv[inputArgIndex + 1])
@@ -138,6 +140,10 @@ async function openChaperoEspecialidades(page) {
   do {
     let submitted = false;
     for (const frame of page.frames()) {
+      const frameText = await frame.locator("body").innerText().catch(() => "");
+      if (/chapero-especialidades/i.test(frame.url()) && /\d+\s+trabajadores/i.test(frameText)) {
+        return { frame, text: frameText };
+      }
       const submit = frame.locator('form[action*="InformeEspecialidadesChapSinE"] input[type="submit"]').first();
       if (await submit.isVisible().catch(() => false)) {
         await submit.click();
@@ -153,7 +159,8 @@ async function openChaperoEspecialidades(page) {
   do {
     for (const frame of page.frames()) {
       const text = await frame.locator("body").innerText().catch(() => "");
-      if (/CHAPERO POR ESPECIALIDADES/i.test(text) && /CONDUCTOR\s+1a/i.test(text)) return { frame, text };
+      if ((/CHAPERO POR ESPECIALIDADES/i.test(text) || /chapero-especialidades/i.test(frame.url()))
+        && /\d+\s+trabajadores/i.test(text)) return { frame, text };
     }
     await page.waitForTimeout(250);
   } while (Date.now() < deadline);
@@ -223,7 +230,13 @@ async function main() {
     pageText = await readPortalCensos();
   }
 
-  await fs.writeFile(path.join(outputDir, "chapero-especialidades.txt"), pageText, "utf8");
+  const captureName = portalUser ? `chapero-especialidades-${portalUser}.txt` : "chapero-especialidades.txt";
+  await fs.writeFile(path.join(outputDir, captureName), pageText, "utf8");
+
+  if (captureOnly) {
+    console.log(`Chapero por especialidades guardado en ${captureName}.`);
+    return;
+  }
 
   const parsed = TARGETS.map((target) => parseSpecialty(pageText, target));
   let source = await fs.readFile(censoSourcePath, "utf8");
@@ -251,26 +264,37 @@ async function main() {
 
 async function readPortalCensos() {
   await fs.mkdir(profileDir, { recursive: true });
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless,
-    viewport: { width: 1500, height: 1100 },
-    locale: "es-ES",
-    timezoneId: "Europe/Madrid",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-    args: ["--disable-blink-features=AutomationControlled"]
-  });
-  await context.addInitScript(() => {
-    Object.defineProperty(navigator, "platform", { get: () => "Win32" });
-    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
-  });
-  const page = context.pages()[0] || await context.newPage();
+  let browser = null;
+  let context;
+  if (portalCdpEndpoint) {
+    browser = await chromium.connectOverCDP(portalCdpEndpoint, { timeout: 15000 });
+    context = browser.contexts()[0];
+    if (!context) throw new Error("Chrome no expone el contexto principal del gateway.");
+  } else {
+    context = await chromium.launchPersistentContext(profileDir, {
+      headless,
+      viewport: { width: 1500, height: 1100 },
+      locale: "es-ES",
+      timezoneId: "Europe/Madrid",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      args: ["--disable-blink-features=AutomationControlled"]
+    });
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, "platform", { get: () => "Win32" });
+      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+    });
+  }
+  const page = context.pages().find((candidate) => candidate.url().startsWith("https://portal.cpevalencia.com"))
+    || context.pages()[0]
+    || await context.newPage();
 
   try {
     await login(page);
     const chapero = await openChaperoEspecialidades(page);
     return chapero.text;
   } finally {
-    await context.close();
+    if (browser) browser._connection.close();
+    else await context.close();
   }
 }
 

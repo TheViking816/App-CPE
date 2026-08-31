@@ -56,6 +56,7 @@ async function upsertSupabaseSnapshot(parsed) {
 const specialtyRows = [
   { code: "11", name: "CONDUCTOR 1a", snapshotName: "CONDUCTOR 1a", mode: "turno" },
   { code: "12", name: "CONDUCTOR 2a", snapshotName: "CONDUCTOR 2a", mode: "turno" },
+  { code: "02", name: "CLASIFICADOR", snapshotName: "CLASIFICADOR", mode: "turno" },
   { code: "22", name: "TRASTAINERS RTT", snapshotName: "TRASTAINERS RTT", mode: "turno" },
   { code: "11", name: "CONDUCTOR 1a", snapshotName: "POL. CONDUCTOR 1a", mode: "polivalencia" },
   { code: "12", name: "CONDUCTOR 2a", snapshotName: "POL. CONDUCTOR 2a", mode: "polivalencia" },

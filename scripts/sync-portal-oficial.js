@@ -130,6 +130,76 @@ function parseRowsFromTable(html = "") {
   return rows;
 }
 
+function normalizePortalPersonName(value = "") {
+  const cleaned = cleanText(value)
+    .replace(/^[\s\-:]+/, "")
+    .replace(/\s+(?:GRUPO|DESCANSOS|SOLICITUDES|CALENDARIO)\b.*$/i, "")
+    .trim();
+  const comma = cleaned.match(/^([^,]{2,}),\s*(.{2,})$/);
+  return comma ? cleanText(`${comma[2]} ${comma[1]}`) : cleaned;
+}
+
+export function parsePortalIdentity(value = "", expectedChapa = portalUser) {
+  const chapa = String(expectedChapa || "").replace(/\D/g, "").slice(-5);
+  if (!chapa) return { chapa: "", name: "", recognized: false };
+  const match = cleanText(value).match(new RegExp(`\\b${chapa}\\b\\s*-\\s*([^|\\n]{3,100}?)(?=\\s+(?:Finalizar\\s+sesi[oó]n|Consultas|Solicitudes)\\b|$)`, "i"));
+  const name = normalizePortalPersonName(match?.[1] || "");
+  return { chapa, name, recognized: Boolean(name) };
+}
+
+export function parseUserSpecialties(html = "") {
+  const text = textFromHtml(html);
+  const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const recognized = /(?:MIS\s+)?ESPECIALIDADES|POLIVALENCIAS/.test(normalized);
+  if (!recognized) return { recognized: false, specialties: [], polyvalences: [], ids: [] };
+
+  const taggedIds = [];
+  const taggedDefinitions = [
+    ["clasificador", "clasificador", /CLASIFICADOR/],
+    ["conductor-1a", "pol-conductor-1a", /CONDUCTOR\s+1(?:A|ª)/],
+    ["conductor-2a", "pol-conductor-2a", /CONDUCTOR\s+2(?:A|ª)/],
+    ["trastainers-rtt", null, /TRASTAINERS?\s+RTT/],
+    [null, "pol-especialista", /ESPECIALISTA/],
+    [null, "pol-trincador", /TRINCADOR(?:ES)?/],
+    [null, "pol-trinca-coches", /TRINCA(?:\s+DE)?\s+COCHES/]
+  ];
+  for (const [tuId, tpId, pattern] of taggedDefinitions) {
+    const match = normalized.match(new RegExp(`${pattern.source}[\\s|:;-]{0,30}\\b(TU|TP)\\b`, "i"));
+    const tag = match?.[1];
+    const id = tag === "TU" ? tuId : tag === "TP" ? tpId : null;
+    if (id) taggedIds.push(id);
+  }
+
+  const polyvalenceIndex = normalized.search(/POLIVALENCIAS?/);
+  const specialtyText = polyvalenceIndex >= 0 ? normalized.slice(0, polyvalenceIndex) : normalized;
+  const polyvalenceText = polyvalenceIndex >= 0 ? normalized.slice(polyvalenceIndex) : "";
+  const specialtyDefinitions = [
+    ["clasificador", /\bCLASIFICADOR\b/],
+    ["conductor-1a", /\bCONDUCTOR\s+1(?:A|ª)\b/],
+    ["conductor-2a", /\bCONDUCTOR\s+2(?:A|ª)\b/],
+    ["trastainers-rtt", /\bTRASTAINERS?\s+RTT\b/]
+  ];
+  const polyvalenceDefinitions = [
+    ["pol-conductor-1a", /\bCONDUCTOR\s+1(?:A|ª)\b/],
+    ["pol-conductor-2a", /\bCONDUCTOR\s+2(?:A|ª)\b/],
+    ["pol-especialista", /\bESPECIALISTA\b/],
+    ["pol-trincador", /\bTRINCADOR(?:ES)?\b/],
+    ["pol-trinca-coches", /\bTRINCA(?:\s+DE)?\s+COCHES\b/]
+  ];
+  const specialties = specialtyDefinitions.filter(([, pattern]) => pattern.test(specialtyText)).map(([id]) => id);
+  const polyvalences = polyvalenceDefinitions.filter(([, pattern]) => pattern.test(polyvalenceText)).map(([id]) => id);
+  const taggedSpecialties = taggedIds.filter((id) => !id.startsWith("pol-"));
+  const taggedPolyvalences = taggedIds.filter((id) => id.startsWith("pol-"));
+  const resolvedSpecialties = taggedIds.length > 0 ? taggedSpecialties : specialties;
+  const resolvedPolyvalences = taggedIds.length > 0 ? taggedPolyvalences : polyvalences;
+  return {
+    recognized: true,
+    specialties: resolvedSpecialties,
+    polyvalences: resolvedPolyvalences,
+    ids: [...new Set([...resolvedSpecialties, ...resolvedPolyvalences])]
+  };
+}
+
 function parseDetailedRowsFromTable(html = "") {
   const rows = [];
   for (const rowMatch of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
@@ -297,9 +367,14 @@ function parseVacaciones(html = "") {
 
 function parseDescansos(html = "") {
   const pageText = textFromHtml(html);
+  const expectedChapa = String(portalUser || "").replace(/\D/g, "").slice(-5);
+  const workerPattern = expectedChapa
+    ? new RegExp(`\\b${expectedChapa}\\b\\s*(?:-|:)?\\s*([^|\\n]{3,100})`, "i")
+    : /\b([2678]\d{4})\b\s*(?:-|:)?\s*([^|\n]{3,100})/i;
+  const workerMatch = pageText.match(workerPattern);
   const worker = {
-    chapa: normalizeChapa(pageText.match(/\b7\d{4}\b/)?.[0] || ""),
-    name: pageText.match(/\b7\d{4}\b\s+([A-Z ]{6,})/i)?.[1]?.trim() || "",
+    chapa: normalizeChapa(expectedChapa || workerMatch?.[1] || ""),
+    name: normalizePortalPersonName(workerMatch?.[expectedChapa ? 1 : 2] || ""),
     group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([^\n|]+)/i)?.[1]?.trim() || "",
     currentMonthRest: Number(pageText.match(/Descansos\s+mes\s+actual:\s*\((\d+)\)/i)?.[1] || 0),
     nextMonthRest: Number(pageText.match(/Descansos\s+proximo\s+mes:\s*\((\d+)\)/i)?.[1] || 0)
@@ -828,6 +903,14 @@ function jornalesPeriodMatches(monthLabel, month, year) {
     && normalizedLabel.includes(String(year));
 }
 
+async function collectPortalIdentity(page) {
+  for (const frame of page.frames()) {
+    const identity = parsePortalIdentity(await frame.locator("body").innerText().catch(() => ""), portalUser);
+    if (identity.recognized) return identity;
+  }
+  return { chapa: portalUser, name: "", recognized: false };
+}
+
 async function readJornalesPeriod(selectorFrame, selectorUrl, month, year) {
   const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
 
@@ -1066,6 +1149,19 @@ async function collectSl(page) {
   );
   if (parsed.recognized) return parsed;
   throw new Error("El portal no devolvio una tabla reconocible de Lista SL.");
+}
+
+async function collectUserSpecialties(page) {
+  await openMenu(page, "Consultas", "Mis especialidades");
+  const result = await waitForParsedContent(
+    page,
+    parseUserSpecialties,
+    (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.ids?.length || 0),
+    12000,
+    (parsed) => parsed.recognized && parsed.ids.length > 0
+  );
+  if (result.recognized && result.ids.length > 0) return result;
+  throw new Error("El portal no devolvio las especialidades y polivalencias del usuario.");
 }
 
 async function openPortalHash(page, hash) {
@@ -2039,6 +2135,29 @@ async function getExistingSupabaseSnapshot() {
   }
 }
 
+async function updateUserProfileFromPortal(identity, descansos, userSpecialties) {
+  if (!supabaseServiceRole || portalSnapshotChannel || !portalUser) return;
+  const body = {};
+  const displayName = cleanText(identity?.name || descansos?.worker?.name || "");
+  if (displayName) body.display_name = displayName;
+  if (userSpecialties?.recognized && Array.isArray(userSpecialties.ids) && userSpecialties.ids.length > 0) {
+    body.specialties = userSpecialties.ids;
+  }
+  if (Object.keys(body).length === 0) return;
+  const response = await fetch(
+    `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_users?chapa=eq.${encodeURIComponent(portalUser)}`,
+    {
+      method: "PATCH",
+      headers: supabaseAdminHeaders(supabaseServiceRole, {
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      }),
+      body: JSON.stringify(body)
+    }
+  );
+  if (!response.ok) throw new Error(`Supabase perfil HTTP ${response.status}: ${await response.text()}`);
+}
+
 async function recordPortalNotifications(previousPayload, nextPayload) {
   if (!supabaseServiceRole || portalSnapshotChannel || !previousPayload || !nextPayload) return;
   const notifications = buildPortalNotifications(previousPayload, nextPayload);
@@ -2139,6 +2258,7 @@ async function main() {
       return;
     }
     await login(page);
+    const portalIdentity = await collectPortalIdentity(page);
     const existingSnapshot = await getExistingSupabaseSnapshot();
     if (portalRequestKind === "payrolls") {
       const nominas = await collectPayrolls(page);
@@ -2305,6 +2425,15 @@ async function main() {
       { allowCollectionShrink: true }
     );
     await publishProgress("sl", sl, "Lista SL cargada");
+    const especialidades = await readOptionalSection(
+      "especialidades y polivalencias",
+      () => collectUserSpecialties(page),
+      existingSnapshot?.payload?.especialidades,
+      { recognized: false, specialties: [], polyvalences: [], ids: [] },
+      (value) => Boolean(value?.recognized && Array.isArray(value?.ids) && value.ids.length > 0),
+      { allowCollectionShrink: true }
+    );
+    await publishProgress("especialidades", especialidades, "Especialidades y polivalencias cargadas");
     const descansos = await readSection(
       "descansos",
       () => collectDescansos(page),
@@ -2312,6 +2441,13 @@ async function main() {
       { worker: { chapa: portalUser, name: "", group: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
       hasMonths
     );
+    if (portalIdentity.recognized && !cleanText(descansos?.worker?.name)) {
+      descansos.worker = {
+        ...(descansos.worker || {}),
+        chapa: portalIdentity.chapa,
+        name: portalIdentity.name
+      };
+    }
     await publishProgress("descansos", descansos, "Descansos cargados");
     const excepciones = await readOptionalSection(
       "bolsa de excepciones",
@@ -2375,6 +2511,7 @@ async function main() {
       jornales,
       asignaciones,
       descansos,
+      especialidades,
       excepciones,
       sl,
       primas,
@@ -2408,6 +2545,9 @@ async function main() {
 
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
+    await updateUserProfileFromPortal(portalIdentity, descansos, especialidades).catch((error) => {
+      console.warn(`No se pudo actualizar el nombre o las especialidades del perfil. ${error instanceof Error ? error.message : ""}`);
+    });
     await recordPortalNotifications(existingSnapshot?.payload, payload).catch((error) => {
       console.warn(`No se pudieron guardar las novedades. ${error instanceof Error ? error.message : ""}`);
     });
