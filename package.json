@@ -16,6 +16,7 @@
     "sync:portal:job": "node scripts/sync-portal-oficial-job.js",
     "sync:portal:batch": "node scripts/sync-portal-batch.js",
     "worker:portal": "node scripts/portal-sync-worker.js",
+    "worker:bolsa-names": "node scripts/bolsa-name-scan-worker.js --queue-all",
     "push:supabase": "node scripts/push-latest-to-supabase.js"
   },
   "dependencies": {
