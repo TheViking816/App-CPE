@@ -1,6 +1,6 @@
 create table if not exists public.app_cpe_bolsa_name_scan_jobs (
   id uuid primary key default gen_random_uuid(),
-  chapa text not null check (chapa ~ '^(24|63|71|72)[0-9]{3}$'),
+  chapa text not null check (chapa ~ '^[0-9]{5}$'),
   portal_password text,
   security_key text,
   status text not null default 'queued' check (status in ('queued', 'running', 'completed', 'failed')),
