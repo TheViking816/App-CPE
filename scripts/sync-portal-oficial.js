@@ -6,7 +6,9 @@ import {
   assignmentDetailScore,
   isAssignmentDetailComplete,
   parseAssignmentDetailFromTables,
-  parseAssignmentsFromTables
+  parseAssignmentDetailFromText,
+  parseAssignmentsFromTables,
+  parseAssignmentsFromText
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 import { buildPortalNotifications } from "./portal-notifications.js";
@@ -702,6 +704,173 @@ async function readAssignmentDetailViaPortal(sourcePage, assignment) {
     isAssignmentDetailComplete,
     2500
   );
+}
+
+async function readAssignmentDetailViaDesktopWhereAmI(sourcePage, assignment) {
+  await sourcePage.goto("https://portal.cpevalencia.com/Noray/DondeVoy.asp", {
+    waitUntil: "domcontentloaded",
+    timeout: 20000
+  });
+  const deadline = Date.now() + 20000;
+  let best = { recognized: false, specialties: [] };
+  let bestScore = 0;
+  let lastImprovementAt = Date.now();
+  let diagnosticLogged = false;
+
+  while (Date.now() < deadline) {
+    for (const frame of sourcePage.frames()) {
+      const rows = await frame.locator("tr").evaluateAll((elements) => elements.map((row) => (
+        [...row.cells].map((cell) => cell.innerText || "")
+      ))).catch(() => []);
+      const pageText = await frame.locator("body").innerText().catch(() => "");
+      if (!diagnosticLogged && /DondeVoy\.asp/i.test(frame.url()) && rows.length) {
+        diagnosticLogged = true;
+        console.log(`[parte-dom-rows] ${JSON.stringify(rows.slice(0, 80))}`);
+      }
+      const parsed = parseAssignmentDetailFromTables([rows], pageText);
+      const score = assignmentDetailScore(parsed);
+      if (score > bestScore) {
+        best = parsed;
+        bestScore = score;
+        lastImprovementAt = Date.now();
+      }
+    }
+    if (best.recognized
+      && String(best.parte || "") === String(assignment.parte || "")
+      && Date.now() - lastImprovementAt >= 2500) return best;
+    await sourcePage.waitForTimeout(200);
+  }
+  return best;
+}
+
+async function readAssignmentDetailViaMenu(page, assignment) {
+  await openPortalHash(page, "User");
+  await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
+  const listFrame = await waitForFrame(page, /DondeVoy\.asp/i, 12000);
+  const part = String(assignment.parte || "").trim();
+  const partCandidates = listFrame.locator("a, button, [role=button], [onclick], td, span")
+    .filter({ hasText: part });
+  const count = Math.min(await partCandidates.count().catch(() => 0), 40);
+  let clicked = false;
+  let clickedTarget = null;
+  for (let index = 0; index < count; index += 1) {
+    const candidate = partCandidates.nth(index);
+    const text = cleanText(await candidate.innerText().catch(() => ""));
+    if (text !== part || !await candidate.isVisible().catch(() => false)) continue;
+    clickedTarget = await candidate.evaluate((node) => {
+      const actionable = node.matches("a, button, [role=button], [onclick]") ? node : null
+        || node.querySelector?.("a, button, [role=button], [onclick]")
+        || node.closest("a, button, [role=button], [onclick]")
+        || node.parentElement?.closest("a, button, [role=button], [onclick]")
+        || node;
+      actionable.click();
+      return {
+        clicked: true,
+        tag: actionable.tagName,
+        href: actionable.getAttribute("href"),
+        onclick: actionable.getAttribute("onclick"),
+        target: actionable.getAttribute("target")
+      };
+    }).catch(() => null);
+    clicked = Boolean(clickedTarget?.clicked);
+    if (clicked) break;
+  }
+  if (!clicked) throw new Error(`No se pudo abrir el parte ${part} desde ¿Dónde voy?.`);
+  await page.waitForTimeout(1000);
+  const deadline = Date.now() + 20000;
+  let best = { recognized: false, specialties: [] };
+  let bestScore = 0;
+  let lastImprovementAt = Date.now();
+
+  while (Date.now() < deadline) {
+    const contextPages = page.context().pages();
+    for (const contextPage of contextPages) {
+      for (const frame of contextPage.frames()) {
+        const rows = await frame.locator("tr").evaluateAll((elements) => elements.map((row) => (
+          [...row.cells].map((cell) => cell.innerText || "")
+        ))).catch(() => []);
+        const pageText = await frame.locator("body").innerText().catch(() => "");
+        const parsed = parseAssignmentDetailFromTables([rows], pageText);
+        if (String(parsed.parte || "") !== part) continue;
+        const score = assignmentDetailScore(parsed);
+        if (score > bestScore) {
+          best = parsed;
+          bestScore = score;
+          lastImprovementAt = Date.now();
+        }
+      }
+    }
+    if (best.recognized
+      && String(best.parte || "") === String(assignment.parte || "")
+      && Date.now() - lastImprovementAt >= 2500) return best;
+    await page.waitForTimeout(200);
+  }
+  return best;
+}
+
+async function readAssignmentDetailViaContractings(sourcePage, assignment) {
+  await sourcePage.goto("https://portal.cpevalencia.com/#User,ViewContractings,,1", {
+    waitUntil: "domcontentloaded",
+    timeout: 20000
+  });
+  await sourcePage.waitForTimeout(1200);
+
+  const date = cleanText(assignment?.fecha || "");
+  const shortDate = date.replace(/\/(20)?(\d{2})$/, "/$2");
+  const journey = cleanText(assignment?.jornada || "")
+    .replace(/^DE\s+/i, "")
+    .replace(/\s*A\s*/i, "-")
+    .replace(/\s*H\.?$/i, "");
+  let clicked = false;
+
+  for (const frame of sourcePage.frames()) {
+    const candidates = frame.locator("a, button, [role=button], [onclick], div, td, span")
+      .filter({ hasText: shortDate });
+    const count = Math.min(await candidates.count().catch(() => 0), 120);
+    const visible = [];
+    for (let index = 0; index < count; index += 1) {
+      const candidate = candidates.nth(index);
+      if (!await candidate.isVisible().catch(() => false)) continue;
+      const text = cleanText(await candidate.innerText().catch(() => ""));
+      if (!text.includes(shortDate)
+        || (journey && !text.replace(/\s+/g, "").includes(journey.replace(/\s+/g, "")))) continue;
+      visible.push({ candidate, length: text.length });
+    }
+    visible.sort((left, right) => left.length - right.length);
+    for (const item of visible) {
+      clicked = await item.candidate.evaluate((node) => {
+        const actionable = node.closest("a, button, [role=button], [onclick]")
+          || node.parentElement?.closest("a, button, [role=button], [onclick]")
+          || node;
+        actionable.click();
+        return true;
+      }).catch(() => false);
+      if (clicked) break;
+    }
+    if (clicked) break;
+  }
+  if (!clicked) throw new Error(`No se encontro la tarjeta del parte ${assignment.parte}.`);
+
+  const deadline = Date.now() + 20000;
+  let best = parseAssignmentDetailFromText("");
+  let bestScore = assignmentDetailScore(best);
+  let lastImprovementAt = Date.now();
+  while (Date.now() < deadline) {
+    for (const frame of sourcePage.frames()) {
+      const parsed = parseAssignmentDetailFromText(await frame.locator("body").innerText().catch(() => ""));
+      const score = assignmentDetailScore(parsed);
+      if (score > bestScore) {
+        best = parsed;
+        bestScore = score;
+        lastImprovementAt = Date.now();
+      }
+    }
+    if (best.recognized
+      && String(best.parte || assignment.parte) === String(assignment.parte)
+      && Date.now() - lastImprovementAt >= 2500) return best;
+    await sourcePage.waitForTimeout(200);
+  }
+  return best;
 }
 
 async function readPortalAuthState(page) {
@@ -1843,6 +2012,104 @@ async function collectAssignmentsViaMenu(page) {
   throw new Error("No se pudo leer la contratacion actual. Se conservaran los ultimos datos disponibles.");
 }
 
+async function collectAssignmentsViaContractings(page) {
+  await openPortalHash(page, "User,ViewContractings,,1");
+  let result = await waitForParsedContent(
+    page,
+    parseAssignments,
+    (parsed) => parsed.rows?.length || 0,
+    10000
+  );
+  if (result.recognized && result.rows?.length) return result;
+
+  for (const frame of page.frames()) {
+    const textResult = parseAssignmentsFromText(await frame.locator("body").innerText().catch(() => ""));
+    if (textResult.recognized && textResult.rows.length) {
+      console.log(`Jornadas contratadas actuales: ${textResult.rows.length}.`);
+      return textResult;
+    }
+  }
+
+  const contractingsDiagnostic = await Promise.all(page.frames().map(async (frame) => ({
+    location: safePortalLocation(frame.url()),
+    text: cleanText(await frame.locator("body").innerText().catch(() => "")).slice(0, 700),
+    controls: (await frame.locator("a:visible, button:visible, [role=button]:visible").allTextContents().catch(() => []))
+      .map((value) => cleanText(value))
+      .filter(Boolean)
+      .slice(0, 20)
+  })));
+  console.log(`[contratacion:contractings-diagnostic] ${JSON.stringify(contractingsDiagnostic)}`);
+
+  const today = new Date();
+  const todaySerial = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const visibleDates = [];
+  for (const frame of page.frames()) {
+    const text = await frame.locator("body").innerText().catch(() => "");
+    for (const match of text.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})\b/g)) {
+      const year = match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]);
+      const date = new Date(year, Number(match[2]) - 1, Number(match[1]));
+      if (date.getTime() >= todaySerial) visibleDates.push({ label: match[0], time: date.getTime() });
+    }
+  }
+  const targetDates = [...new Map(visibleDates
+    .sort((left, right) => right.time - left.time)
+    .map((item) => [item.label, item])).values()];
+
+  for (const targetDate of targetDates) {
+    let clicked = false;
+    for (const frame of page.frames()) {
+      const candidates = frame.locator("a, button, [role=button], td, div, span").filter({ hasText: targetDate.label });
+      const count = Math.min(await candidates.count().catch(() => 0), 80);
+      const visible = [];
+      for (let index = 0; index < count; index += 1) {
+        const candidate = candidates.nth(index);
+        if (!await candidate.isVisible().catch(() => false)) continue;
+        const text = cleanText(await candidate.innerText().catch(() => ""));
+        if (text.includes(targetDate.label) && text.length <= 180) visible.push({ candidate, length: text.length });
+      }
+      visible.sort((left, right) => left.length - right.length);
+      for (const item of visible) {
+        clicked = await item.candidate.evaluate((node) => {
+          const actionable = node.closest("a, button, [role=button], [onclick]")
+            || node.parentElement?.closest("a, button, [role=button], [onclick]")
+            || node;
+          actionable.click();
+          return true;
+        }).catch(() => false);
+        if (clicked) break;
+      }
+      if (clicked) break;
+    }
+    if (!clicked) continue;
+    await page.waitForTimeout(1200);
+    result = await waitForParsedContent(
+      page,
+      parseAssignments,
+      (parsed) => parsed.rows?.length || 0,
+      10000
+    );
+    if (result.recognized && result.rows?.length) {
+      console.log(`Contratacion ${targetDate.label}: ${result.rows.length} parte(s) leidos desde la tarjeta actual.`);
+      return result;
+    }
+    await openPortalHash(page, "User,ViewContractings,,1");
+  }
+
+  const contractedCard = await findVisibleMatchAcrossFrames(page, "div, td, span, a, button", "Jornadas contratadas", 5000);
+  if (contractedCard) {
+    await contractedCard.click({ timeout: 10000 });
+    await page.waitForTimeout(1200);
+    result = await waitForParsedContent(
+      page,
+      parseAssignments,
+      (parsed) => parsed.rows?.length || 0,
+      10000
+    );
+  }
+  if (result.recognized && result.rows?.length) return result;
+  throw new Error("La vista actual de Jornadas contratadas no devolvio ninguna contratacion.");
+}
+
 async function collectVacacionesViaMenu(page) {
   await openMenu(page, "Solicitudes", "Solicitud Vacaciones");
   const result = await waitForParsedFrame(
@@ -1856,69 +2123,40 @@ async function collectVacacionesViaMenu(page) {
   throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
 }
 
-async function enrichAssignmentsWithDetails(context, result, previousResult) {
+async function enrichAssignmentsWithDetails(page, result, previousResult) {
   const previousByPart = new Map((previousResult?.rows || [])
     .filter((item) => item.parte && item.detail?.recognized)
     .map((item) => [String(item.parte), item.detail]));
   const rows = [...(result?.rows || [])];
-  const sourcePage = await context.newPage();
-  try {
-    await sourcePage.setViewportSize({ width: 412, height: 915 });
-    await sourcePage.setExtraHTTPHeaders({
-      "User-Agent": MOBILE_PART_USER_AGENT,
-      "Sec-CH-UA-Mobile": "?1",
-      "Sec-CH-UA-Platform": '"Android"'
-    });
-    await sourcePage.goto("https://portal.cpevalencia.com/Noray/DondeVoy.asp", {
-      waitUntil: "domcontentloaded",
-      timeout: 20000
-    });
-
-    for (let index = 0; index < rows.length; index += 1) {
-      const item = rows[index];
-      let detail = previousByPart.get(String(item.parte)) || null;
-      try {
-        const freshDetail = await readAssignmentDetailViaPortal(sourcePage, item);
-        if (freshDetail.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
-          detail = freshDetail;
-          console.log(`Parte ${item.parte}: ${freshDetail.specialties.length} especialidades leidas.`);
-        } else if (freshDetail.recognized) {
-          console.warn(`Parte ${item.parte}: la lectura nueva estaba incompleta; se conserva el detalle anterior.`);
-        } else {
-          console.warn(`Parte ${item.parte}: la ventana se abrio, pero no contenia un equipo reconocible.`);
-        }
-      } catch (error) {
-        console.warn(`Parte ${item.parte}: no se pudo leer el detalle. ${error instanceof Error ? error.message : "Error desconocido"}`);
-        // Keep the previous detail when the legacy portal fails to open a part.
+  console.log(`Completando el equipo de ${rows.length} parte(s) desde Jornadas contratadas...`);
+  for (let index = 0; index < rows.length; index += 1) {
+    const item = rows[index];
+    let detail = previousByPart.get(String(item.parte)) || null;
+    try {
+      const freshDetail = await readAssignmentDetailViaMenu(page, item);
+      console.log(`Parte ${item.parte}: detalle donde-voy=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
+      if (freshDetail.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
+        detail = freshDetail;
+        console.log(`Parte ${item.parte}: ${freshDetail.specialties.length} especialidades leidas.`);
+      } else if (freshDetail.recognized) {
+        console.log(`Parte ${item.parte}: la lectura nueva estaba incompleta; se conserva el detalle anterior.`);
+      } else {
+        console.log(`Parte ${item.parte}: la vista se abrio, pero no contenia un equipo reconocible.`);
       }
-      if (detail) rows[index] = { ...item, detail };
+    } catch (error) {
+      console.log(`Parte ${item.parte}: no se pudo leer el detalle. ${error instanceof Error ? error.message : "Error desconocido"}`);
+      // Keep the previous detail when the legacy portal fails to open a part.
     }
-  } finally {
-    await sourcePage.close().catch(() => {});
+    if (detail) rows[index] = { ...item, detail };
   }
 
   return { ...result, rows };
 }
 
 async function collectAssignments(page, previousResult) {
-  let result;
-  try {
-    await assignmentNavigationState(page, "direct-before");
-    result = await readDirectPortalPage(
-      page.context(),
-      "https://portal.cpevalencia.com/Noray/DondeVoy.asp",
-      parseAssignments,
-      (parsed) => parsed.rows?.length || 0,
-      8000
-    );
-    console.log(`[contratacion:direct-result] ${JSON.stringify({ recognized: result.recognized, rows: result.rows?.length || 0 })}`);
-    if (!(result.recognized && result.rows?.length)) result = null;
-  } catch (error) {
-    console.warn(`[contratacion:direct-error] ${error instanceof Error ? error.message : "Error desconocido"}`);
-    // The menu fallback handles portal-side route changes.
-  }
-  if (!result) result = await collectAssignmentsViaMenu(page);
-  return enrichAssignmentsWithDetails(page.context(), result, previousResult);
+  const result = await collectAssignmentsViaMenu(page);
+  console.log(`[contratacion:donde-voy-result] ${JSON.stringify({ recognized: result.recognized, rows: result.rows?.length || 0 })}`);
+  return await enrichAssignmentsWithDetails(page, result, previousResult);
 }
 
 async function completeAssignmentsFromJournals(context, assignments, journals) {
@@ -2410,7 +2648,8 @@ async function main() {
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
       existingSnapshot?.payload?.asignaciones,
       { recognized: false, rows: [] },
-      hasVacationData
+      hasVacationData,
+      { allowCollectionShrink: true }
     );
     asignaciones = await completeAssignmentsFromJournals(page.context(), asignaciones, jornales);
     await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");

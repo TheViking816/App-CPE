@@ -104,6 +104,7 @@ function parseWorkers(value = "") {
   const workers = [];
   const pattern = /([A-Z]?\d{5})\s*(?:-\s*)?(.*?)(?=\s+(?:[A-Z]?\d{5}(?:\s*-?\s+|$)|00000\b)|$)/gi;
   for (const match of text.matchAll(pattern)) {
+    if (match[1] === "00000") continue;
     workers.push({ code: match[1], name: normalizeCell(match[2]) });
   }
   return workers;
@@ -167,12 +168,93 @@ export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
   return { recognized, ...detail, specialties };
 }
 
+export function parseAssignmentDetailFromText(pageText = "") {
+  const lines = String(pageText || "")
+    .split(/\r?\n/)
+    .map(normalizeCell)
+    .filter(Boolean);
+  const detail = {};
+
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const field = DETAIL_FIELDS.find(([, pattern]) => pattern.test(lines[index]))?.[0];
+    if (!field || detail[field]) continue;
+    detail[field] = lines[index + 1];
+  }
+
+  const specialties = [];
+  const teamIndex = lines.findIndex((line) => /equipo\s+del\s+parte/i.test(line));
+  const start = teamIndex >= 0 ? teamIndex + 1 : 0;
+  let current = null;
+
+  for (let index = start; index < lines.length; index += 1) {
+    const line = lines[index];
+    const next = lines[index + 1] || "";
+    if (!/^\d+$/.test(line) && /^\d+$/.test(next)) {
+      const requested = Number(next);
+      if (requested > 0 && requested < 100) {
+        current = { name: line, requested, workers: [], bolsa: 0, unnamed: requested };
+        specialties.push(current);
+        index += 1;
+        continue;
+      }
+    }
+    if (!current) continue;
+    const match = line.match(/^([A-Z]?\d{5})(?:\s+(.*))?$/i);
+    if (!match || match[1] === "00000") continue;
+    const code = match[1];
+    if (current.workers.some((worker) => worker.code.toUpperCase() === code.toUpperCase())) continue;
+    current.workers.push({ code, name: normalizeCell(match[2] || "") });
+    current.unnamed = Math.max(current.requested - current.workers.length, 0);
+  }
+
+  const recognized = Boolean(detail.parte && specialties.length)
+    || teamIndex >= 0 && specialties.length > 0;
+  return { recognized, ...detail, specialties };
+}
+
 export function assignmentDetailScore(detail = {}) {
   const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
+  const namedWorkers = specialties.reduce((total, specialty) => (
+    total + (specialty.workers || []).filter((worker) => normalizeCell(worker?.name)).length
+  ), 0);
   const resolvedWorkers = specialties.reduce((total, specialty) => (
     total + (specialty.workers?.length || 0) + Number(specialty.bolsa || 0)
   ), 0);
-  return specialties.length * 1_000_000 + resolvedWorkers;
+  // Keep completeness as the main signal, but prefer a published chapa/name
+  // over an unresolved 00000 when the responsive portal replaces it later.
+  return specialties.length * 1_000_000 + resolvedWorkers * 1_000 + namedWorkers;
+}
+
+export function parseAssignmentsFromText(pageText = "") {
+  const lines = String(pageText || "")
+    .split(/\r?\n/)
+    .map(normalizeCell)
+    .filter(Boolean);
+  const assignments = [];
+  let assignment = {};
+
+  const saveAssignment = () => {
+    if (assignment.parte && (assignment.fecha || assignment.jornada)) assignments.push(assignment);
+    assignment = {};
+  };
+
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const key = findLabel(lines[index]);
+    if (!key) continue;
+    if (key === "parte" && assignment.parte) saveAssignment();
+    const value = lines[index + 1];
+    if (value && !findLabel(value) && !assignment[key]) assignment[key] = value;
+  }
+  saveAssignment();
+
+  const unique = new Map(assignments.map((item) => (
+    [[item.parte, item.fecha, item.jornada].join("|"), item]
+  )));
+  return {
+    recognized: /jornadas\s+contratadas|(?:donde|dónde)\s+voy|orden\s+servicio/i.test(pageText)
+      || unique.size > 0,
+    rows: [...unique.values()]
+  };
 }
 
 export function isAssignmentDetailComplete(detail = {}) {

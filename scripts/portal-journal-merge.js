@@ -16,6 +16,15 @@ function rowKey(row, day = row?.dia) {
   return [Number(day), normalizePart(row?.parte), String(row?.jornada || "").replace(/\s+/g, "").toUpperCase()].join("|");
 }
 
+function periodKey(year, month) {
+  return Number(year) * 12 + Number(month) - 1;
+}
+
+function periodLabel(year, month) {
+  const name = MONTHS_ES[month - 1] || "";
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} de ${year}`;
+}
+
 export function mergeAssignmentsIntoPortalJornales(jornales, asignaciones, today = new Date()) {
   const rows = Array.isArray(jornales?.rows) ? jornales.rows : [];
   const assignments = Array.isArray(asignaciones?.rows) ? asignaciones.rows : [];
@@ -25,8 +34,29 @@ export function mergeAssignmentsIntoPortalJornales(jornales, asignaciones, today
   if (!month || !year || !Number.isFinite(today?.getTime?.())) return jornales;
 
   const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-  const keys = new Set(rows.map((row) => rowKey(row)));
-  const mergedRows = [...rows];
+  const basePeriodKey = periodKey(year, month);
+  const periods = new Map();
+  (Array.isArray(jornales?.history) ? jornales.history : []).forEach((period) => {
+    const periodMonth = Number(period?.month);
+    const periodYear = Number(period?.year);
+    if (!periodMonth || !periodYear) return;
+    periods.set(periodKey(periodYear, periodMonth), {
+      ...period,
+      year: periodYear,
+      month: periodMonth,
+      monthLabel: period.monthLabel || periodLabel(periodYear, periodMonth),
+      rows: Array.isArray(period.rows) ? [...period.rows] : []
+    });
+  });
+  periods.set(basePeriodKey, {
+    ...(periods.get(basePeriodKey) || {}),
+    year,
+    month,
+    monthLabel: jornales.monthLabel || periodLabel(year, month),
+    rows: [...rows]
+  });
+
+  let nextAssignmentPeriod = null;
 
   assignments.forEach((assignment) => {
     const match = String(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -35,12 +65,26 @@ export function mergeAssignmentsIntoPortalJornales(jornales, asignaciones, today
     const assignmentMonth = Number(match[2]);
     const assignmentYear = Number(match[3]);
     const dateKey = `${assignmentYear}-${pad(assignmentMonth)}-${pad(day)}`;
-    if (assignmentMonth !== month || assignmentYear !== year || dateKey < todayKey) return;
+    const assignmentPeriodKey = periodKey(assignmentYear, assignmentMonth);
+    if (assignmentPeriodKey < basePeriodKey || dateKey < todayKey) return;
+
+    if (assignmentPeriodKey > basePeriodKey) {
+      nextAssignmentPeriod = nextAssignmentPeriod === null
+        ? assignmentPeriodKey
+        : Math.min(nextAssignmentPeriod, assignmentPeriodKey);
+    }
+
+    const period = periods.get(assignmentPeriodKey) || {
+      year: assignmentYear,
+      month: assignmentMonth,
+      monthLabel: periodLabel(assignmentYear, assignmentMonth),
+      rows: []
+    };
+    const keys = new Set(period.rows.map((row) => rowKey(row)));
 
     const key = rowKey(assignment, day);
     if (keys.has(key)) return;
-    keys.add(key);
-    mergedRows.push({
+    period.rows.push({
       ...assignment,
       dia: pad(day),
       jornal: assignment.jornal || "",
@@ -48,14 +92,20 @@ export function mergeAssignmentsIntoPortalJornales(jornales, asignaciones, today
       produccionEstado: assignment.produccionEstado || "unknown",
       upcomingAssignment: true
     });
+    periods.set(assignmentPeriodKey, period);
   });
 
-  const history = Array.isArray(jornales?.history)
-    ? jornales.history.map((period) => (
-        Number(period?.year) === year && Number(period?.month) === month
-          ? { ...period, rows: mergedRows }
-          : period
-      ))
-    : jornales?.history;
-  return { ...jornales, rows: mergedRows, ...(history ? { history } : {}) };
+  const activePeriodKey = nextAssignmentPeriod ?? basePeriodKey;
+  const activePeriod = periods.get(activePeriodKey) || periods.get(basePeriodKey);
+  const history = [...periods.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, period]) => period);
+  return {
+    ...jornales,
+    year: activePeriod.year,
+    month: activePeriod.month,
+    monthLabel: activePeriod.monthLabel,
+    rows: activePeriod.rows,
+    history
+  };
 }
