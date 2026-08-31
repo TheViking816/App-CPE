@@ -37,11 +37,15 @@ function periodRows(section) {
 
 function journalKey(item) {
   const row = item.row || {};
-  return [item.period, row.dia, row.parte, row.jornada, row.especialidad, row.tipo].map(clean).join("|");
+  const period = clean(item.period).toLocaleLowerCase("es-ES");
+  const day = clean(row.dia).padStart(2, "0");
+  const shift = clean(row.jornada).replace(/[^0-9]/g, "");
+  return [period, day, shift].join("|");
 }
 
 function premiumKey(item) {
-  return journalKey(item);
+  const row = item.row || {};
+  return [item.period, row.dia, row.parte, row.jornada, row.especialidad, row.tipo].map(clean).join("|");
 }
 
 function premiumAmount(row) {
@@ -161,4 +165,3 @@ export function buildPortalNotifications(previousPayload, nextPayload, { now = n
 
   return result.slice(0, 50);
 }
-

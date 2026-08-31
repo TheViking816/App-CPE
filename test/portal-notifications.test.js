@@ -48,3 +48,16 @@ test("una pantalla intermedia de excepciones sin cargar no crea una novedad", ()
   const rows = buildPortalNotifications(base, next);
   assert.equal(rows.some((row) => row.eventType === "exceptions_changed"), false);
 });
+
+test("no repite un jornal cuando el portal completa el parte, tipo o formato de especialidad", () => {
+  const previous = structuredClone(base);
+  previous.jornales = {
+    monthLabel: "Septiembre de 2026",
+    rows: [{ dia: "01", parte: "CONTRATACIÓN ANTICIPADA", jornada: "DE 02 A 08 H.", especialidad: "CONDUCTOR 1A", tipo: "" }]
+  };
+  const next = structuredClone(previous);
+  next.jornales.rows = [{ dia: "01", parte: "24943", jornada: "DE 02 A 08 H.", especialidad: "CONDUCTOR 1a", tipo: "TUR" }];
+
+  const rows = buildPortalNotifications(previous, next, { now: new Date("2026-09-01T00:00:00Z") });
+  assert.equal(rows.some((row) => row.eventType === "new_journal"), false);
+});

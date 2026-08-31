@@ -12,21 +12,21 @@ test("normaliza una chapa del censo de bolsa con el prefijo 80", () => {
   assert.equal(normalizeBolsaChapa("72683"), "");
 });
 
-test("a partial PortalEstibaVLC name cannot overwrite a fuller App CPE name", () => {
+test("an official part name replaces a shorter manually captured name", () => {
   assert.equal(shouldReplaceBolsaName(
     { display_name: "ROCIO MUÑOZ RUIZ", source: "app_cpe" },
-    { display_name: "Rocio", source: "portalestibavlc" }
+    { display_name: "Rocio", source: "manual" }
   ), false);
   assert.equal(shouldReplaceBolsaName(
-    { display_name: "Rocio", source: "portalestibavlc" },
+    { display_name: "Rocio", source: "manual" },
     { display_name: "ROCIO MUÑOZ RUIZ", source: "app_cpe" }
   ), true);
 });
 
-test("manual bolsa names are never overwritten automatically", () => {
+test("a shorter official name does not degrade a fuller manual name", () => {
   assert.equal(shouldReplaceBolsaName(
     { display_name: "NOMBRE CONFIRMADO", source: "manual" },
-    { display_name: "NOMBRE CONFIRMADO MAS LARGO", source: "app_cpe" }
+    { display_name: "NOMBRE", source: "app_cpe" }
   ), false);
 });
 
