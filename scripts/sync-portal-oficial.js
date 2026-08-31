@@ -2363,7 +2363,8 @@ async function main() {
       () => collectRequestedDoubles(page),
       existingSnapshot?.payload?.dobles,
       { recognized: false, month: null, year: null, monthLabel: "", rows: [] },
-      hasVacationData
+      hasVacationData,
+      { allowCollectionShrink: true }
     );
     await publishProgress("dobles", dobles, "Dobles solicitados cargados");
     if (freshSections === 0) {
