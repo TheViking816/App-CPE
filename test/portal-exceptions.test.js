@@ -32,3 +32,9 @@ test("reconoce la sección aunque el trabajador todavía no tenga solicitudes", 
   assert.equal(result.remaining, 15);
   assert.deepEqual(result.rows, []);
 });
+
+test("no interpreta como lista vacía el título mostrado mientras carga el iframe", () => {
+  const result = parseExceptions("<h1>Bolsa de Excepciones</h1>");
+  assert.equal(result.recognized, false);
+  assert.deepEqual(result.rows, []);
+});

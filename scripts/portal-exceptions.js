@@ -54,7 +54,10 @@ export function parseExceptions(html = "") {
       && values.some((value) => value.includes("jornada"))
       && values.some((value) => value.includes("situacion"));
   });
-  const recognized = /bolsa\s+de\s+excepciones|excepciones\s+solicitadas|solicitud\s+excepci[oó]n/i.test(pageText)
+  // El título "Bolsa de Excepciones" aparece antes de que el iframe termine
+  // de cargar. No lo consideramos una lectura válida por sí solo: hacerlo
+  // convertía unos milisegundos de pantalla vacía en una lista real vacía.
+  const recognized = /excepciones\s+solicitadas|solicitud\s+excepci[oó]n/i.test(pageText)
     || headerIndex !== -1;
 
   if (headerIndex === -1) {

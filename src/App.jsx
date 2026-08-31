@@ -252,7 +252,6 @@ const SIDE_NAV_GROUPS = [
   {
     label: "Operativa",
     items: [
-      { id: "novedades", label: "Novedades", Icon: Bell },
       { id: "estado", label: "Chapero", Icon: BriefcaseBusiness },
       { id: "puertas", label: "Puertas", Icon: CalendarRange },
       { id: "excepciones", label: "Excepciones", Icon: CalendarOff },
@@ -270,8 +269,7 @@ const SIDE_NAV_GROUPS = [
     label: "Recursos y cuenta",
     items: [
       { id: "nominas", label: "Nóminas", Icon: FileLock2 },
-      { id: "enlaces", label: "Enlaces útiles", Icon: LinkIcon },
-      { id: "portal", label: "Sincronización del portal", Icon: RefreshCw }
+      { id: "enlaces", label: "Enlaces útiles", Icon: LinkIcon }
     ]
   }
 ];
@@ -661,7 +659,7 @@ function AppHeader({ onMenuOpen, unreadNotifications = 0, onNotificationsOpen })
   );
 }
 
-function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, unreadNotifications = 0, onClose, onNavigate, onProfileOpen, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onProfileOpen, onSettingsOpen, onPortalAccessOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -699,7 +697,6 @@ function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, unreadNotif
                 <Icon size={19} /><span>{label}</span>
                 <span className="side-nav-trailing">
                   {id === "foro" && forumHasUnread && <span className="side-nav-new-badge">Nuevo</span>}
-                  {id === "novedades" && unreadNotifications > 0 && <span className="side-nav-count-badge">{Math.min(99, unreadNotifications)}</span>}
                   <ChevronRight size={17} />
                 </span>
               </button>
@@ -718,6 +715,7 @@ function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, unreadNotif
           <p>Ajustes</p>
           <button type="button" onClick={() => { onProfileOpen(); onClose(); }}><UserRound size={19} /><span>Nombre y privacidad</span><ChevronRight size={17} /></button>
           <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
+          <button type="button" onClick={() => { onPortalAccessOpen(); onClose(); }}><Lock size={19} /><span>Acceso al portal</span><ChevronRight size={17} /></button>
           <button type="button" onClick={onThemeToggle}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}<span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span><ChevronRight size={17} /></button>
           <button className="side-delete-account" type="button" onClick={() => { onDeleteAccountOpen(); onClose(); }}><Trash2 size={19} /><span>Eliminar mi cuenta</span><ChevronRight size={17} /></button>
           <button className="side-logout" type="button" onClick={onLogout}><LogOut size={19} /><span>Cerrar sesión</span></button>
@@ -3577,16 +3575,6 @@ function PortalPanel({
     }
   };
 
-  const changeCredentials = () => {
-    writePortalCredentials(session.chapa, null);
-    setSavedCredentials(null);
-    setPortalPassword("");
-    setSecurityKey("");
-    setError("");
-    setSecurityKeyOnly(false);
-    setShowCredentials(true);
-  };
-
   const requestSecurityKey = () => {
     setError("");
     setPortalPassword("");
@@ -3616,7 +3604,7 @@ function PortalPanel({
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
   const panelCopy = {
-    all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
+    all: { eyebrow: "Ajustes", title: "Acceso al portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
     rests: { eyebrow: "Calendario personal", title: "Descansos" },
     exceptions: { eyebrow: "Bolsa anual", title: "Excepciones" },
@@ -3650,15 +3638,6 @@ function PortalPanel({
             {reactivatingPortal ? "Reactivando…" : "Reactivar actualizaciones"}
           </button>
         </section>
-      )}
-
-      {snapshot?.payload && !showCredentials && (
-        <div className="portal-update-row">
-          <span>Datos guardados del portal oficial{portalMessage && <small>{portalMessage}</small>}</span>
-          <div>
-            {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar acceso</button>}
-          </div>
-        </div>
       )}
 
       {error && <p ref={portalErrorRef} className="portal-warning">{error}</p>}
@@ -4732,11 +4711,11 @@ export function App() {
         theme={theme}
         isAdmin={isAdmin}
         forumHasUnread={forumHasUnread}
-        unreadNotifications={notifications.unread}
         onClose={() => setMenuOpen(false)}
         onNavigate={navigateToTab}
         onProfileOpen={() => setProfileOpen(true)}
         onSettingsOpen={() => setPasswordOpen(true)}
+        onPortalAccessOpen={connectPortal}
         onDeleteAccountOpen={() => setDeleteAccountOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}

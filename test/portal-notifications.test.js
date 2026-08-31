@@ -41,3 +41,10 @@ test("no convierte la carga de meses históricos en nuevos jornales", () => {
   const rows = buildPortalNotifications(base, next, { now: new Date("2026-08-30T12:00:00Z") });
   assert.equal(rows.some((row) => row.eventType === "new_journal"), false);
 });
+
+test("una pantalla intermedia de excepciones sin cargar no crea una novedad", () => {
+  const next = structuredClone(base);
+  next.excepciones = { recognized: false, rows: [] };
+  const rows = buildPortalNotifications(base, next);
+  assert.equal(rows.some((row) => row.eventType === "exceptions_changed"), false);
+});

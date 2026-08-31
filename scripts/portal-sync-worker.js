@@ -197,14 +197,11 @@ async function gatewayAuthorizationIsValid() {
   const cookies = await gatewayClearanceCookies();
   if (!browser || !cookies.some((cookie) => cookie.name === "cf_clearance")) return false;
 
-  const context = await browser.newContext({
-    locale: "es-ES",
-    timezoneId: "Europe/Madrid",
-    viewport: { width: 1365, height: 900 }
-  });
+  const context = browser.contexts()[0];
+  if (!context) return false;
   try {
-    await context.addCookies(cookies);
-    const page = await context.newPage();
+    const page = context.pages().find((candidate) => candidate.url().startsWith("https://portal.cpevalencia.com"))
+      || await context.newPage();
     const response = await page.goto("https://portal.cpevalencia.com/#User", {
       waitUntil: "domcontentloaded",
       timeout: 45000
@@ -220,8 +217,6 @@ async function gatewayAuthorizationIsValid() {
     return false;
   } catch {
     return false;
-  } finally {
-    await context.close().catch(() => {});
   }
 }
 
@@ -272,7 +267,7 @@ async function scheduleAutomaticRetry(job) {
     body: JSON.stringify({ p_chapa: job.chapa, p_job_id: job.id })
   });
   if (result?.ok) {
-    console.log(`[portal-worker] Reintento de ${job.chapa} programado para dentro de 5 minutos.`);
+    console.log(`[portal-worker] Reintento de ${job.chapa} programado para dentro de 2 minutos.`);
   } else {
     console.log(`[portal-worker] Sin reintento automático para ${job.chapa}: ${result?.reason || "motivo desconocido"}.`);
   }

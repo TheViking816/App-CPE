@@ -19,20 +19,39 @@ try {
 
   let state = "empty";
   let status = 0;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const response = await page.reload({ waitUntil: "domcontentloaded", timeout: 90000 });
-    status = response?.status() || 0;
-    await page.waitForTimeout(5000);
+  const readPortalState = async () => {
     const contents = await Promise.all(page.frames().map((frame) => frame.content().catch(() => "")));
     const content = contents.join("\n");
     if (portalPattern.test(content)) {
       state = "portal";
-      break;
+      return state;
     }
     if (challengePattern.test(content)) {
       state = "challenge";
-      break;
+      return state;
     }
+    return "empty";
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    // A browser reload can resubmit the POST used by the portal login. The
+    // portal rejects that replay with HTTP 405, so force a fresh GET while
+    // preserving the gateway context, cookies and authenticated session.
+    await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 15000 });
+    const response = await page.goto(portalUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
+    status = response?.status() || 0;
+    await page.waitForTimeout(5000);
+    state = await readPortalState();
+    if (state !== "empty") break;
+
+    // En este estado el portal ha contestado 200 pero ha dejado el documento
+    // vacío. Una recarga normal de la pestaña es exactamente lo que lo
+    // desbloquea manualmente, así que la hacemos y volvemos a verificar.
+    const reloadResponse = await page.reload({ waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => null);
+    status = reloadResponse?.status() || status;
+    await page.waitForTimeout(5000);
+    state = await readPortalState();
+    if (state !== "empty") break;
   }
 
   console.log(JSON.stringify({ ok: state !== "empty", state, status, location: page.url().split("?")[0] }));
