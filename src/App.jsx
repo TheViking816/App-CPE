@@ -2534,9 +2534,8 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const payload = snapshot?.payload || null;
   const primas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
-  const currentPayrollMonthLabel = (!payload?.primas?.locked && primas.length > 0
-    ? payload?.primas?.monthLabel
-    : payload?.jornales?.monthLabel) || "";
+  const currentPayrollMonthLabel = payload?.jornales?.monthLabel
+    || (!payload?.primas?.locked && primas.length > 0 ? payload?.primas?.monthLabel : "");
   const portalJornales = selectPortalJornales(payload?.jornales, payload?.primas);
   const jornales = useMemo(() => mergeUpcomingAssignmentsIntoJornales(
     portalJornales,
