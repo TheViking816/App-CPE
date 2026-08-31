@@ -1,5 +1,23 @@
 [
   {
+    "chapa": "80114",
+    "censo": 114,
+    "nombre": "GUILLERMO BLASCO ORENGA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80117",
+    "censo": 117,
+    "nombre": "DANIEL CASAIS RIEGO",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80119",
+    "censo": 119,
+    "nombre": "JAVIER FONTFRIA VALLS",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80120",
     "censo": 120,
     "nombre": "Marta",
@@ -38,14 +56,20 @@
   {
     "chapa": "80149",
     "censo": 149,
-    "nombre": "Alicia",
-    "fuente": "portalestibavlc"
+    "nombre": "ALICIA LAS HERAS BESES",
+    "fuente": "manual"
   },
   {
     "chapa": "80151",
     "censo": 151,
     "nombre": "Sergio",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80153",
+    "censo": 153,
+    "nombre": "ALEJANDRO MARTINEZ BENEDITO",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80156",
@@ -58,6 +82,12 @@
     "censo": 158,
     "nombre": "Elena",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80172",
+    "censo": 172,
+    "nombre": "MARIA NACHER MORENO",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80175",
@@ -74,8 +104,8 @@
   {
     "chapa": "80185",
     "censo": 185,
-    "nombre": "Sandra",
-    "fuente": "portalestibavlc"
+    "nombre": "SANDRA RAGA LOPEZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80188",
@@ -84,10 +114,22 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80189",
+    "censo": 189,
+    "nombre": "GUILLERMO FERNANDEZ MARTINEZ",
+    "fuente": "manual"
+  },
+  {
     "chapa": "80190",
     "censo": 190,
     "nombre": "Amparo Pablo Aparici",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80191",
+    "censo": 191,
+    "nombre": "DANIEL MESEGUER QUEL",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80195",
@@ -102,10 +144,22 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80200",
+    "censo": 200,
+    "nombre": "MIREYA SEVILLA JAFFIER",
+    "fuente": "manual"
+  },
+  {
     "chapa": "80205",
     "censo": 205,
     "nombre": "Alejandro",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80206",
+    "censo": 206,
+    "nombre": "ANTONIO MONRABAL MATALLIN",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80209",
@@ -120,10 +174,22 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80214",
+    "censo": 214,
+    "nombre": "MERCEDES RAMIREZ TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80217",
     "censo": 217,
     "nombre": "Abel Lloris",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80221",
+    "censo": 221,
+    "nombre": "FACUNDO NICOLAS UHRIG POUSADA",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80223",
@@ -156,6 +222,12 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80239",
+    "censo": 239,
+    "nombre": "ANDREA GARCIA DE MATEOS JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80240",
     "censo": 240,
     "nombre": "Sheila",
@@ -174,10 +246,34 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80248",
+    "censo": 248,
+    "nombre": "LUIS MARTIN MONSOLIU",
+    "fuente": "manual"
+  },
+  {
     "chapa": "80249",
     "censo": 249,
     "nombre": "Raul",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80316",
+    "censo": 316,
+    "nombre": "LEONARDO MENDEZ IGLESIAS",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80321",
+    "censo": 321,
+    "nombre": "LUZ DE LUNA GARCIA CHISVERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80328",
+    "censo": 328,
+    "nombre": "ALEJANDRO PLANA LAZARO",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80331",
@@ -210,6 +306,12 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80339",
+    "censo": 339,
+    "nombre": "JOAQUIN TIRADO FERRANDIS",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80347",
     "censo": 347,
     "nombre": "Isabel",
@@ -226,6 +328,12 @@
     "censo": 380,
     "nombre": "Vicen",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80388",
+    "censo": 388,
+    "nombre": "EDUARDO CABALLERO MAYORAL",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80401",
@@ -246,10 +354,16 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80418",
+    "censo": 418,
+    "nombre": "JOAN PRIMA PIQUER",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80419",
     "censo": 419,
-    "nombre": "Lydia",
-    "fuente": "portalestibavlc"
+    "nombre": "LYDIA MARTINEZ BROSETA",
+    "fuente": "manual"
   },
   {
     "chapa": "80421",
@@ -258,10 +372,46 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80423",
+    "censo": 423,
+    "nombre": "SONIA SANTIAGO LLOVET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80424",
+    "censo": 424,
+    "nombre": "NOELIA MASO CAMPOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80436",
+    "censo": 436,
+    "nombre": "SARA DASI CUQUERELLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80441",
+    "censo": 441,
+    "nombre": "ANA VICTORIA ZAMORANO GISMERO",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80446",
     "censo": 446,
     "nombre": "Paula",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80448",
+    "censo": 448,
+    "nombre": "DANIEL GUILLEM MARIN",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80451",
+    "censo": 451,
+    "nombre": "ERIK LLOPIS QUEIRUGA",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80453",
@@ -286,6 +436,30 @@
     "censo": 461,
     "nombre": "Kike",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80466",
+    "censo": 466,
+    "nombre": "ALICIA GARCIA VERDERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80468",
+    "censo": 468,
+    "nombre": "CARLOS ATILANO CATALA",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80469",
+    "censo": 469,
+    "nombre": "FRANCISCO FERRANDIS MIÑARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80470",
+    "censo": 470,
+    "nombre": "CARLOS FERNÁNDEZ MARTÍNEZ",
+    "fuente": "manual"
   },
   {
     "chapa": "80472",
@@ -318,10 +492,16 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80498",
+    "censo": 498,
+    "nombre": "ALBERTO BILBAO CRESPO",
+    "fuente": "manual"
+  },
+  {
     "chapa": "80502",
     "censo": 502,
-    "nombre": "Nacho",
-    "fuente": "portalestibavlc"
+    "nombre": "IGNACIO HUET MUÑOZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80505",
@@ -336,6 +516,18 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80539",
+    "censo": 539,
+    "nombre": "ANDREA PEREZ CARRASCOSA",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80544",
+    "censo": 544,
+    "nombre": "VICTOR MONTESINOS PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80553",
     "censo": 553,
     "nombre": "Miguel Angel",
@@ -344,8 +536,8 @@
   {
     "chapa": "80555",
     "censo": 555,
-    "nombre": "TANIA",
-    "fuente": "portalestibavlc"
+    "nombre": "TANIA COLL MELGUIZO",
+    "fuente": "manual"
   },
   {
     "chapa": "80563",
@@ -354,10 +546,40 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80575",
+    "censo": 575,
+    "nombre": "YOLANDA GONZALEZ BENEDITO",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80578",
     "censo": 578,
     "nombre": "Eva",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80588",
+    "censo": 588,
+    "nombre": "YADHIRA ESTEVE MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80597",
+    "censo": 597,
+    "nombre": "IVAN NAVARRETE MARTINEZ",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80603",
+    "censo": 603,
+    "nombre": "RAFAEL ALEIXANDRE MARTI",
+    "fuente": "manual"
+  },
+  {
+    "chapa": "80604",
+    "censo": 604,
+    "nombre": "FRANCISCO JOSE ALVAREZ PUIG",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80607",
@@ -378,10 +600,22 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80613",
+    "censo": 613,
+    "nombre": "VICTOR SOBRINO TAURA",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80617",
     "censo": 617,
     "nombre": "Pablo Bermúdez",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80619",
+    "censo": 619,
+    "nombre": "MARIA LARIOS BAYONA",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80620",
@@ -398,14 +632,14 @@
   {
     "chapa": "80640",
     "censo": 640,
-    "nombre": "María",
-    "fuente": "portalestibavlc"
+    "nombre": "MARIA BLANCH AGUILAR",
+    "fuente": "manual"
   },
   {
     "chapa": "80646",
     "censo": 646,
-    "nombre": "Sandra Pizá Caballero",
-    "fuente": "portalestibavlc"
+    "nombre": "SANDRA CABALLERO PIZA",
+    "fuente": "manual"
   },
   {
     "chapa": "80647",
@@ -432,22 +666,46 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80671",
+    "censo": 671,
+    "nombre": "Sandra Navarro Ruiz",
+    "fuente": "portalestibavlc"
+  },
+  {
     "chapa": "80680",
     "censo": 680,
     "nombre": "Edu ciscar",
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80682",
+    "censo": 682,
+    "nombre": "PABLO CHACON RUIZ",
+    "fuente": "manual"
+  },
+  {
     "chapa": "80685",
     "censo": 685,
-    "nombre": "Taichi80685",
-    "fuente": "portalestibavlc"
+    "nombre": "JOSE RAMON CISCAR MOLNER",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80690",
     "censo": 690,
     "nombre": "María jose",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80691",
+    "censo": 691,
+    "nombre": "DAVID MARIN RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "80693",
+    "censo": 693,
+    "nombre": "DAVID MESTRE LOPEZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80702",
@@ -500,8 +758,8 @@
   {
     "chapa": "80720",
     "censo": 720,
-    "nombre": "Jonatan burgos",
-    "fuente": "portalestibavlc"
+    "nombre": "JONATAN BURGOS NAVARRO",
+    "fuente": "manual"
   },
   {
     "chapa": "80722",
@@ -524,7 +782,7 @@
   {
     "chapa": "80728",
     "censo": 728,
-    "nombre": "Carla",
+    "nombre": "Carla Andres",
     "fuente": "portalestibavlc"
   },
   {
@@ -542,8 +800,8 @@
   {
     "chapa": "80735",
     "censo": 735,
-    "nombre": "carlota civera",
-    "fuente": "portalestibavlc"
+    "nombre": "CARLOTA CIVERA CABRERA",
+    "fuente": "manual"
   },
   {
     "chapa": "80736",
@@ -654,6 +912,12 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80772",
+    "censo": 772,
+    "nombre": "PABLO GARCIA DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
     "chapa": "80774",
     "censo": 774,
     "nombre": "Miguel",
@@ -668,14 +932,14 @@
   {
     "chapa": "80778",
     "censo": 778,
-    "nombre": "Capi",
-    "fuente": "portalestibavlc"
+    "nombre": "JOSÉ MANUEL MARTÍNEZ CAPILLA",
+    "fuente": "manual"
   },
   {
     "chapa": "80782",
     "censo": 782,
-    "nombre": "Alejandro",
-    "fuente": "portalestibavlc"
+    "nombre": "ALEJANDRO LACEN CATALÁ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80784",
@@ -746,19 +1010,19 @@
   {
     "chapa": "80802",
     "censo": 802,
-    "nombre": "Vicent",
-    "fuente": "portalestibavlc"
+    "nombre": "VICENT CASANOVA MONTAÑANA",
+    "fuente": "manual"
   },
   {
     "chapa": "80804",
     "censo": 804,
-    "nombre": "Cristian Prats Perez",
-    "fuente": "portalestibavlc"
+    "nombre": "CRISTIAN PRATS PÉREZ",
+    "fuente": "manual"
   },
   {
     "chapa": "80806",
     "censo": 806,
-    "nombre": "Ñauleta 80806",
+    "nombre": "Ñauleta",
     "fuente": "portalestibavlc"
   },
   {
@@ -848,7 +1112,7 @@
   {
     "chapa": "80838",
     "censo": 838,
-    "nombre": "Vicente Navarro Martínez",
+    "nombre": "Vicente \"Tatín\"",
     "fuente": "portalestibavlc"
   },
   {
@@ -866,7 +1130,7 @@
   {
     "chapa": "80843",
     "censo": 843,
-    "nombre": "Marcos",
+    "nombre": "Marcos Tramoyeres",
     "fuente": "portalestibavlc"
   },
   {
@@ -880,6 +1144,12 @@
     "censo": 849,
     "nombre": "849",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80850",
+    "censo": 850,
+    "nombre": "PELAYO RODRÍGUEZ CUBELLS",
+    "fuente": "manual"
   },
   {
     "chapa": "80854",
@@ -912,10 +1182,16 @@
     "fuente": "portalestibavlc"
   },
   {
+    "chapa": "80867",
+    "censo": 867,
+    "nombre": "SALVADOR CARPI CARABAL",
+    "fuente": "manual"
+  },
+  {
     "chapa": "80869",
     "censo": 869,
-    "nombre": "Raul Latorre Grueso",
-    "fuente": "portalestibavlc"
+    "nombre": "RAUL LATORRE GRUESO",
+    "fuente": "manual"
   },
   {
     "chapa": "80874",
@@ -926,8 +1202,8 @@
   {
     "chapa": "80878",
     "censo": 878,
-    "nombre": "Lusy",
-    "fuente": "portalestibavlc"
+    "nombre": "ADRIANA SÁNCHEZ RAGA",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80880",
@@ -956,8 +1232,8 @@
   {
     "chapa": "80887",
     "censo": 887,
-    "nombre": "Hector Atienzar Piza",
-    "fuente": "portalestibavlc"
+    "nombre": "HÉCTOR ATIENZAR PIZA",
+    "fuente": "manual"
   },
   {
     "chapa": "80888",
@@ -970,6 +1246,12 @@
     "censo": 889,
     "nombre": "Carmen Larios Gil",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80890",
+    "censo": 890,
+    "nombre": "SABRINA MUÑOZ JIMÉNEZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80891",
@@ -998,20 +1280,20 @@
   {
     "chapa": "80905",
     "censo": 905,
-    "nombre": "Jaume",
+    "nombre": "..",
     "fuente": "portalestibavlc"
   },
   {
     "chapa": "80906",
     "censo": 906,
-    "nombre": "Raul",
-    "fuente": "portalestibavlc"
+    "nombre": "RAUL LLADOSA SÁNCHEZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80910",
     "censo": 910,
-    "nombre": "Rocio",
-    "fuente": "portalestibavlc"
+    "nombre": "ROCIO MUÑOZ RUIZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80911",
@@ -1040,20 +1322,20 @@
   {
     "chapa": "80916",
     "censo": 916,
-    "nombre": "Álvaro",
-    "fuente": "portalestibavlc"
+    "nombre": "ALVARO LLORCA MARTÍNEZ",
+    "fuente": "manual"
   },
   {
     "chapa": "80917",
     "censo": 917,
-    "nombre": "Marcos",
-    "fuente": "portalestibavlc"
+    "nombre": "MARCOS MARTI COCERA",
+    "fuente": "manual"
   },
   {
     "chapa": "80921",
     "censo": 921,
-    "nombre": "Miguel Raga",
-    "fuente": "portalestibavlc"
+    "nombre": "MIGUEL PERTEGAZ RAGA",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80923",
@@ -1064,8 +1346,8 @@
   {
     "chapa": "80924",
     "censo": 924,
-    "nombre": "amanda soler",
-    "fuente": "portalestibavlc"
+    "nombre": "AMANDA SOLER GÓMEZ",
+    "fuente": "app_cpe"
   },
   {
     "chapa": "80930",
@@ -1094,19 +1376,19 @@
   {
     "chapa": "80937",
     "censo": 937,
-    "nombre": "Marcos Aleixandre",
-    "fuente": "portalestibavlc"
+    "nombre": "MARCOS ALEIXANDRE CABANILLAS",
+    "fuente": "manual"
   },
   {
     "chapa": "80938",
     "censo": 938,
-    "nombre": "Carmen",
-    "fuente": "portalestibavlc"
+    "nombre": "CARMEN MARTÍ BARBERA",
+    "fuente": "manual"
   },
   {
     "chapa": "80940",
     "censo": 940,
-    "nombre": "Pruden Lafuente",
+    "nombre": "PRU",
     "fuente": "portalestibavlc"
   },
   {
@@ -1124,7 +1406,7 @@
   {
     "chapa": "80946",
     "censo": 946,
-    "nombre": "Melcior Martínez i Català",
+    "nombre": "80946",
     "fuente": "portalestibavlc"
   },
   {
@@ -1150,6 +1432,12 @@
     "censo": 983,
     "nombre": "Fer",
     "fuente": "portalestibavlc"
+  },
+  {
+    "chapa": "80994",
+    "censo": 994,
+    "nombre": "ALBA MARIN MORATAL",
+    "fuente": "manual"
   },
   {
     "chapa": "80995",

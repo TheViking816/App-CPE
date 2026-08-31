@@ -20,6 +20,27 @@ function cleanName(value) {
   return name.length >= 2 && !INVALID_NAMES.test(name) ? name : "";
 }
 
+function nameQuality(value) {
+  const name = cleanName(value);
+  if (!name) return 0;
+  const words = name.split(/\s+/).filter(Boolean);
+  return (words.length * 100) + name.length;
+}
+
+const SOURCE_PRIORITY = Object.freeze({ portalestibavlc: 1, app_cpe: 2, manual: 3 });
+
+export function shouldReplaceBolsaName(previous, candidate) {
+  if (!previous) return true;
+  const previousSource = previous.source || previous.fuente || "portalestibavlc";
+  const candidateSource = candidate.source || candidate.fuente || "portalestibavlc";
+  if (previousSource === "manual" && candidateSource !== "manual") return false;
+  if (candidateSource === "manual" && previousSource !== "manual") return true;
+  const qualityDifference = nameQuality(candidate.display_name || candidate.nombre)
+    - nameQuality(previous.display_name || previous.nombre);
+  if (qualityDifference !== 0) return qualityDifference > 0;
+  return (SOURCE_PRIORITY[candidateSource] || 0) > (SOURCE_PRIORITY[previousSource] || 0);
+}
+
 async function fetchAllPortalUsers() {
   const users = [];
   for (let offset = 0; ; offset += 1000) {
@@ -77,7 +98,7 @@ export async function syncBolsaWorkerDirectory() {
     const displayName = cleanName(row.display_name || row.nombre);
     if (!bolsaChapa || !displayName) return;
     const previous = directory.get(bolsaChapa);
-    if (!previous || previous.source !== "manual" || row.source === "manual") {
+    if (shouldReplaceBolsaName(previous, row)) {
       directory.set(bolsaChapa, {
         bolsa_chapa: bolsaChapa,
         display_name: displayName,
