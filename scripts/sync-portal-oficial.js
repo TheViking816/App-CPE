@@ -65,6 +65,32 @@ const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim()
 let collectedPayrollDocuments = [];
 let authenticatedForPortalUser = false;
 
+export function isPayrollWithinLastMonths(payroll, now = new Date(), monthCount = 12) {
+  const match = String(payroll?.period || payroll?.title || "")
+    .match(/\b(0[1-9]|1[0-2])\s*\/\s*(\d{2}|\d{4})\b/);
+  if (!match || !Number.isInteger(monthCount) || monthCount < 1) return false;
+
+  const payrollMonth = Number(match[1]);
+  const payrollYear = match[2].length === 2 ? 2000 + Number(match[2]) : Number(match[2]);
+  const madridParts = new Intl.DateTimeFormat("en", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "numeric"
+  }).formatToParts(now);
+  const currentYear = Number(madridParts.find((part) => part.type === "year")?.value);
+  const currentMonth = Number(madridParts.find((part) => part.type === "month")?.value);
+  if (!currentYear || !currentMonth) return false;
+
+  const payrollSerial = payrollYear * 12 + payrollMonth - 1;
+  const currentSerial = currentYear * 12 + currentMonth - 1;
+  return payrollSerial <= currentSerial && payrollSerial >= currentSerial - (monthCount - 1);
+}
+
+export function limitPayrollRowsToLastMonths(rows, now = new Date(), monthCount = 12) {
+  return (Array.isArray(rows) ? rows : [])
+    .filter((payroll) => isPayrollWithinLastMonths(payroll, now, monthCount));
+}
+
 function sanitizePortalError(value) {
   let message = String(value || "Error desconocido");
   for (const secret of [portalPassword, portalSecurityKey]) {
@@ -1487,23 +1513,14 @@ async function collectPayrollDocumentFiles(page, rows, documentId) {
   const storedDocumentIds = await getStoredPayrollDocumentIds();
   const targetIndex = documentId ? rows.findIndex((payroll) => payroll.id === documentId) : -1;
   if (documentId && targetIndex < 0) throw new Error("La nomina solicitada ya no aparece en el portal.");
-  const currentMadridYear = new Intl.DateTimeFormat("en", {
-    timeZone: "Europe/Madrid",
-    year: "numeric"
-  }).format(new Date());
-  const belongsToCurrentYear = (payroll) => {
-    const period = String(payroll?.period || payroll?.title || "");
-    const year = period.match(/\b(?:0[1-9]|1[0-2])\s*\/\s*(\d{2}|\d{4})\b/)?.[1] || "";
-    return year.length === 2 ? year === currentMadridYear.slice(-2) : year === currentMadridYear;
-  };
   const targetIndexes = documentId
     ? [targetIndex]
     : rows
         .map((payroll, index) => ({ payroll, index }))
-        .filter(({ payroll }) => portalRequestKind !== "history" || belongsToCurrentYear(payroll))
+        .filter(({ payroll }) => portalRequestKind !== "history" || isPayrollWithinLastMonths(payroll))
         .map(({ index }) => index);
   if (!documentId && portalRequestKind === "history") {
-    console.log(`Nominas limitadas al ano ${currentMadridYear}: ${targetIndexes.length} documentos.`);
+    console.log(`Nominas limitadas a los ultimos 12 meses: ${targetIndexes.length} documentos.`);
   }
   for (const index of targetIndexes) {
     const payroll = rows[index];
@@ -1615,6 +1632,9 @@ async function completePayrollResult(page, result) {
       await upsertPayrollDocuments();
     }
   }
+  if (portalRequestKind === "history" && !portalDocumentId && Array.isArray(result?.rows)) {
+    return { ...result, rows: limitPayrollRowsToLastMonths(result.rows) };
+  }
   return result;
 }
 
@@ -1628,7 +1648,7 @@ function mergePayrollHistory(previous, incoming) {
     seen.add(key);
     rows.push(payroll);
   }
-  return { ...(previous || {}), ...incoming, rows };
+  return { ...(previous || {}), ...incoming, rows: limitPayrollRowsToLastMonths(rows) };
 }
 
 async function restoreSecurePayrollList(page) {
@@ -2474,7 +2494,7 @@ async function main() {
       await publishProgress(
         "nominas",
         nominas,
-        portalRequestKind === "history" ? "Nominas del ano actual guardadas" : "Ultima nomina actualizada"
+        portalRequestKind === "history" ? "Nominas de los ultimos 12 meses guardadas" : "Ultima nomina actualizada"
       );
     }
     const dobles = await readOptionalSection(
