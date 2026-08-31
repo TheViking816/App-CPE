@@ -1005,24 +1005,29 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
   }
 }
 
-async function collectJornales(page, previous = null, { currentOnly = false } = {}) {
+async function collectJornales(page, previous = null, { currentOnly = false, forceMenu = false } = {}) {
   const directSelectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJor1.asp";
   let selectorFrame = null;
-  try {
-    await page.goto(directSelectorUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: PORTAL_PERIOD_TIMEOUT_MS
-    });
-    const monthSelect = page.locator('select[name="Mes"]');
-    const yearSelect = page.locator('select[name="Any"]');
-    if (await monthSelect.count() > 0 && await yearSelect.count() > 0) {
-      selectorFrame = page;
+  if (!forceMenu) {
+    try {
+      await page.goto(directSelectorUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: PORTAL_PERIOD_TIMEOUT_MS
+      });
+      const monthSelect = page.locator('select[name="Mes"]');
+      const yearSelect = page.locator('select[name="Any"]');
+      if (await monthSelect.count() > 0 && await yearSelect.count() > 0) {
+        selectorFrame = page;
+      }
+    } catch (error) {
+      console.warn(`La ruta directa de jornales no respondio; se usara el menu. ${error instanceof Error ? error.message : ""}`);
     }
-  } catch (error) {
-    console.warn(`La ruta directa de jornales no respondio; se usara el menu. ${error instanceof Error ? error.message : ""}`);
   }
 
   if (!selectorFrame) {
+    console.warn(forceMenu
+      ? "Reintentando Consulta de jornales desde el menu del portal."
+      : "Abriendo Consulta de jornales desde el menu del portal.");
     await openMenu(page, "Consultas", "Consulta de jornales", /SelDatJor1\.asp/i);
     selectorFrame = await waitForFrame(page, /SelDatJor1\.asp/i);
   }
@@ -1109,7 +1114,7 @@ async function collectJornalesWithFreshSession(page, previous = null, options = 
     );
     await page.context().clearCookies();
     await login(page);
-    return collectJornales(page, previous, options);
+    return collectJornales(page, previous, { ...options, forceMenu: true });
   }
 }
 

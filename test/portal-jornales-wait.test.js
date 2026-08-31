@@ -35,6 +35,8 @@ test("renueva una sola vez la sesion cuando el portal devuelve la tabla vacia", 
   assert.match(syncSource, /async function collectJornalesWithFreshSession/);
   assert.match(syncSource, /await page\.context\(\)\.clearCookies\(\)/);
   assert.match(syncSource, /await login\(page\)/);
+  assert.match(syncSource, /collectJornales\(page, previous, \{ \.\.\.options, forceMenu: true \}\)/);
+  assert.match(syncSource, /Reintentando Consulta de jornales desde el menu del portal/);
   assert.match(syncSource, /collectJornalesWithFreshSession\(page,/);
 });
 
