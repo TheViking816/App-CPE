@@ -6,14 +6,21 @@ import { findByChapa, getSpecialty, validateSpecialtyCenso } from "../src/censo.
 test("lee especialidades y polivalencias desde Mis especialidades", () => {
   const parsed = parseUserSpecialties(`
     <h2>Mis especialidades</h2>
-    <h3>Especialidades</h3><div>CLASIFICADOR</div>
-    <h3>Polivalencias</h3><div>CONDUCTOR 1A</div><div>ESPECIALISTA</div>
+    <h3>Especialidades</h3><div>CLASIFICADOR TU</div>
+    <h3>Polivalencias</h3><div>CONDUCTOR 1A TP</div><div>ESPECIALISTA TP</div>
   `);
 
   assert.equal(parsed.recognized, true);
   assert.deepEqual(parsed.specialties, ["clasificador"]);
   assert.deepEqual(parsed.polyvalences, ["pol-conductor-1a", "pol-especialista"]);
   assert.deepEqual(parsed.ids, ["clasificador", "pol-conductor-1a", "pol-especialista"]);
+});
+
+test("el menú general no se confunde con la pantalla real de especialidades", () => {
+  assert.equal(parseUserSpecialties(`
+    <nav>Consultas · Mis especialidades</nav>
+    <main>TRASTAINERS RTT · TU POSICIÓN</main>
+  `).recognized, false);
 });
 
 test("TU se guarda como especialidad y TP como polivalencia", () => {

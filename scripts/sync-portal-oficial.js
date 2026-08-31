@@ -150,7 +150,8 @@ export function parsePortalIdentity(value = "", expectedChapa = portalUser) {
 export function parseUserSpecialties(html = "") {
   const text = textFromHtml(html);
   const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const recognized = /(?:MIS\s+)?ESPECIALIDADES|POLIVALENCIAS/.test(normalized);
+  const recognized = /(?:MIS\s+)?ESPECIALIDADES|POLIVALENCIAS/.test(normalized)
+    && /\b(?:TU|TP)\b/.test(normalized);
   if (!recognized) return { recognized: false, specialties: [], polyvalences: [], ids: [] };
 
   const taggedIds = [];
@@ -170,33 +171,13 @@ export function parseUserSpecialties(html = "") {
     if (id) taggedIds.push(id);
   }
 
-  const polyvalenceIndex = normalized.search(/POLIVALENCIAS?/);
-  const specialtyText = polyvalenceIndex >= 0 ? normalized.slice(0, polyvalenceIndex) : normalized;
-  const polyvalenceText = polyvalenceIndex >= 0 ? normalized.slice(polyvalenceIndex) : "";
-  const specialtyDefinitions = [
-    ["clasificador", /\bCLASIFICADOR\b/],
-    ["conductor-1a", /\bCONDUCTOR\s+1(?:A|ª)\b/],
-    ["conductor-2a", /\bCONDUCTOR\s+2(?:A|ª)\b/],
-    ["trastainers-rtt", /\bTRASTAINERS?\s+RTT\b/]
-  ];
-  const polyvalenceDefinitions = [
-    ["pol-conductor-1a", /\bCONDUCTOR\s+1(?:A|ª)\b/],
-    ["pol-conductor-2a", /\bCONDUCTOR\s+2(?:A|ª)\b/],
-    ["pol-especialista", /\bESPECIALISTA\b/],
-    ["pol-trincador", /\bTRINCADOR(?:ES)?\b/],
-    ["pol-trinca-coches", /\bTRINCA(?:\s+DE)?\s+COCHES\b/]
-  ];
-  const specialties = specialtyDefinitions.filter(([, pattern]) => pattern.test(specialtyText)).map(([id]) => id);
-  const polyvalences = polyvalenceDefinitions.filter(([, pattern]) => pattern.test(polyvalenceText)).map(([id]) => id);
   const taggedSpecialties = taggedIds.filter((id) => !id.startsWith("pol-"));
   const taggedPolyvalences = taggedIds.filter((id) => id.startsWith("pol-"));
-  const resolvedSpecialties = taggedIds.length > 0 ? taggedSpecialties : specialties;
-  const resolvedPolyvalences = taggedIds.length > 0 ? taggedPolyvalences : polyvalences;
   return {
-    recognized: true,
-    specialties: resolvedSpecialties,
-    polyvalences: resolvedPolyvalences,
-    ids: [...new Set([...resolvedSpecialties, ...resolvedPolyvalences])]
+    recognized: taggedIds.length > 0,
+    specialties: taggedSpecialties,
+    polyvalences: taggedPolyvalences,
+    ids: [...new Set(taggedIds)]
   };
 }
 
@@ -1153,14 +1134,16 @@ async function collectSl(page) {
 
 async function collectUserSpecialties(page) {
   await openMenu(page, "Consultas", "Mis especialidades");
-  const result = await waitForParsedContent(
-    page,
-    parseUserSpecialties,
-    (parsed) => (parsed.recognized ? 1000 : 0) + (parsed.ids?.length || 0),
-    12000,
-    (parsed) => parsed.recognized && parsed.ids.length > 0
-  );
-  if (result.recognized && result.ids.length > 0) return result;
+  const deadline = Date.now() + 12000;
+  do {
+    for (const frame of page.frames()) {
+      const location = frame.url();
+      if (!/\.asp(?:[?#]|$)|especial/i.test(location)) continue;
+      const result = parseUserSpecialties(await frame.content().catch(() => ""));
+      if (result.recognized && result.ids.length > 0) return result;
+    }
+    await page.waitForTimeout(200);
+  } while (Date.now() < deadline);
   throw new Error("El portal no devolvio las especialidades y polivalencias del usuario.");
 }
 
