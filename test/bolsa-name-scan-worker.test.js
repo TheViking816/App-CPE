@@ -15,9 +15,9 @@ test("el rastreador de nombres usa una cola independiente", () => {
   assert.doesNotMatch(portalWorker, /bolsa-name-scan-worker|app_cpe_bolsa_name_scan_jobs/);
 });
 
-test("la cola admite usuarios de todas las especialidades", () => {
-  assert.match(chapaConstraintMigration, /\^\[0-9\]\{5\}\$/);
-  assert.doesNotMatch(chapaConstraintMigration, /\^7\[0-9\]/);
+test("la cola admite exclusivamente las familias de chapa necesarias", () => {
+  assert.match(chapaConstraintMigration, /24\|63\|71\|72/);
+  assert.doesNotMatch(chapaConstraintMigration, /\^\[0-9\]\{5\}\$/);
 });
 
 test("el lector abre Jornadas contratadas y solo conserva chapas 80xxx", () => {
