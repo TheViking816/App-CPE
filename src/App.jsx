@@ -545,11 +545,13 @@ function LoginPanel({ theme, onThemeToggle, onLogin }) {
         : await loginUser({ chapa: normalized, password });
 
       if (!response?.token) throw new Error("No se pudo iniciar sesion.");
-      trackUsageEvent({
-        eventType: mode === "register" ? "register" : "login",
-        chapa: normalized,
-        metadata: { specialties: response.specialties || detectedSpecialties }
-      });
+      if (!response.supportAccess) {
+        trackUsageEvent({
+          eventType: mode === "register" ? "register" : "login",
+          chapa: normalized,
+          metadata: { specialties: response.specialties || detectedSpecialties }
+        });
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
       onLogin(response);
     } catch (requestError) {
@@ -4422,17 +4424,19 @@ export function App() {
 
   useEffect(() => {
     if (!session?.chapa) return;
-    trackUsageEvent({
-      eventType: "app_open",
-      chapa: session.chapa,
-      metadata: { specialties: getEffectiveSpecialtyIds(session) }
-    });
+    if (!session.supportAccess) {
+      trackUsageEvent({
+        eventType: "app_open",
+        chapa: session.chapa,
+        metadata: { specialties: getEffectiveSpecialtyIds(session) }
+      });
+    }
     if (session.token) {
       touchPortalActivity({ token: session.token })
         .then((status) => setPortalRefreshQueued(Boolean(status?.refreshQueued)))
         .catch(() => {});
     }
-  }, [session?.chapa, session?.token]);
+  }, [session?.chapa, session?.supportAccess, session?.token]);
 
   useEffect(() => {
     if (!session?.token) {
@@ -4500,9 +4504,9 @@ export function App() {
   }, [session?.chapa, session?.token]);
 
   useEffect(() => {
-    if (!session?.token || !activeTab || activeTab === "monitor") return;
+    if (!session?.token || session.supportAccess || !activeTab || activeTab === "monitor") return;
     trackPageVisit({ token: session.token, page: activeTab });
-  }, [activeTab, session?.token]);
+  }, [activeTab, session?.supportAccess, session?.token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4537,11 +4541,13 @@ export function App() {
     const nextSession = response || { ...session, specialties: nextIds };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
-    trackUsageEvent({
-      eventType: "specialties_update",
-      chapa: session.chapa,
-      metadata: { specialties: nextIds }
-    });
+    if (!session.supportAccess) {
+      trackUsageEvent({
+        eventType: "specialties_update",
+        chapa: session.chapa,
+        metadata: { specialties: nextIds }
+      });
+    }
     if (!nextIds.includes(activeSpecialtyId)) setActiveSpecialtyId(nextIds[0]);
   };
 
@@ -4561,7 +4567,9 @@ export function App() {
     const nextSession = response || session;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
-    trackUsageEvent({ eventType: "password_change", chapa: session.chapa });
+    if (!session.supportAccess) {
+      trackUsageEvent({ eventType: "password_change", chapa: session.chapa });
+    }
   };
 
   const saveProfile = async ({ displayName, forumShowChapa }) => {
@@ -4682,7 +4690,9 @@ export function App() {
         {activeTab === "tablon" && (
           <GeneralBoard
             chapa={session.chapa}
-            onOpen={(chapa) => trackUsageEvent({ eventType: "tablon_general_open", chapa })}
+            onOpen={(chapa) => {
+              if (!session.supportAccess) trackUsageEvent({ eventType: "tablon_general_open", chapa });
+            }}
           />
         )}
         {activeTab === "portal" && (
