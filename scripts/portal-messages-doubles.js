@@ -191,6 +191,21 @@ export function upcomingMadridDates(now = new Date(), days = 7) {
   });
 }
 
+export function isCompleteRequestedDoublesWindow(value) {
+  const queriedDates = Array.isArray(value?.queriedDates) ? value.queriedDates : [];
+  const windowDays = Number(value?.windowDays);
+  return Boolean(
+    value?.recognized
+    && value?.complete
+    && Number.isInteger(windowDays)
+    && windowDays > 0
+    && queriedDates.length === windowDays
+    && queriedDates[0] === value?.startDate
+    && queriedDates.at(-1) === value?.endDate
+    && Array.isArray(value?.rows)
+  );
+}
+
 export function limitRecentPortalRows(rows = [], limit = 5) {
   return Array.isArray(rows) ? rows.slice(0, Math.max(0, limit)) : [];
 }

@@ -5,6 +5,7 @@ import {
   cleanMessageBodyText,
   currentMadridMonth,
   extractAddedMessageText,
+  isCompleteRequestedDoublesWindow,
   limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
@@ -129,4 +130,23 @@ test("upcomingMadridDates crosses month and year boundaries", () => {
     "29/12/2026", "30/12/2026", "31/12/2026", "01/01/2027",
     "02/01/2027", "03/01/2027", "04/01/2027"
   ]);
+});
+
+test("only a fully queried doubles window is authoritative", () => {
+  const dates = [
+    "31/08/2026", "01/09/2026", "02/09/2026", "03/09/2026",
+    "04/09/2026", "05/09/2026", "06/09/2026"
+  ];
+  const complete = {
+    recognized: true,
+    complete: true,
+    windowDays: 7,
+    startDate: dates[0],
+    endDate: dates.at(-1),
+    queriedDates: dates,
+    rows: []
+  };
+  assert.equal(isCompleteRequestedDoublesWindow(complete), true);
+  assert.equal(isCompleteRequestedDoublesWindow({ ...complete, complete: false }), false);
+  assert.equal(isCompleteRequestedDoublesWindow({ ...complete, queriedDates: dates.slice(0, -1) }), false);
 });

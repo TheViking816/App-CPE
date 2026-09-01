@@ -20,6 +20,7 @@ import {
   buildRequestedDoubles,
   cleanMessageBodyText,
   extractAddedMessageText,
+  isCompleteRequestedDoublesWindow,
   limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
@@ -1870,6 +1871,22 @@ async function extractCheckedDoubles(frame, date) {
   return buildRequestedDoubles(date, selections);
 }
 
+async function waitForDoublesResult(frame, date, timeoutMs = 15000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (frame.isDetached()) break;
+    const matrixSize = await frame.locator('input[type="checkbox"]').count().catch(() => 0);
+    if (matrixSize > 0) {
+      // The selector page has no checkboxes. Seeing the matrix proves that the
+      // portal finished the query for this date, even when none are checked.
+      await frame.waitForTimeout(250);
+      return matrixSize;
+    }
+    await frame.waitForTimeout(150);
+  }
+  throw new Error(`El portal no termino de cargar los dobles del ${date}.`);
+}
+
 async function collectRequestedDoubles(page) {
   await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
@@ -1878,6 +1895,7 @@ async function collectRequestedDoubles(page) {
 
   const dates = upcomingMadridDates();
   const rows = [];
+  const queriedDates = [];
   for (const date of dates) {
     const { frame, locator: dateInput } = selector;
     const selectorUrl = frame.url();
@@ -1890,8 +1908,9 @@ async function collectRequestedDoubles(page) {
       frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => null),
       submit.click({ timeout: 10000 })
     ]);
-    await frame.locator("body").waitFor({ state: "visible", timeout: 10000 });
+    await waitForDoublesResult(frame, date);
     rows.push(...await extractCheckedDoubles(frame, date));
+    queriedDates.push(date);
     await frame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
     selector = await findDoublesSelector(page);
     if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
@@ -1900,9 +1919,11 @@ async function collectRequestedDoubles(page) {
   console.log(`Dobles solicitados leidos: ${rows.length}.`);
   return {
     recognized: true,
+    complete: queriedDates.length === dates.length,
     windowDays: dates.length,
     startDate: dates[0] || null,
     endDate: dates.at(-1) || null,
+    queriedDates,
     rows
   };
 }
@@ -2746,7 +2767,7 @@ async function main() {
       () => collectRequestedDoubles(page),
       existingSnapshot?.payload?.dobles,
       { recognized: false, month: null, year: null, monthLabel: "", rows: [] },
-      hasVacationData,
+      isCompleteRequestedDoublesWindow,
       { allowCollectionShrink: true }
     );
     await publishProgress("dobles", dobles, "Dobles solicitados cargados");
