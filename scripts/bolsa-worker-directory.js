@@ -3,6 +3,8 @@ import path from "node:path";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const APP_CPE_URL = String(process.env.CPE_SUPABASE_URL || "https://wvwdiywtlbffumshbboa.supabase.co").replace(/\/$/, "");
+const PORTAL_URL = "https://icszzxkdxatfytpmoviq.supabase.co";
+const PORTAL_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imljc3p6eGtkeGF0Znl0cG1vdmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2Mzk2NjUsImV4cCI6MjA3ODIxNTY2NX0.hmQWNB3sCyBh39gdNgQLjjlIvliwJje-OYf0kkPObVA";
 const ASSET_PATH = path.resolve("assets", "bolsa-trabajadores.json");
 const INVALID_NAMES = /^(?:PERSONAL DE BOLSA|SIN NOMBRE(?: PUBLICADO)?|CHAPA\s+\d+|CERO)$/i;
 
@@ -25,16 +27,34 @@ function nameQuality(value) {
   return (words.length * 100) + name.length;
 }
 
-const SOURCE_PRIORITY = Object.freeze({ manual: 1, app_cpe: 2 });
+const SOURCE_PRIORITY = Object.freeze({ portalestibavlc: 0, manual: 1, app_cpe: 2 });
 
 export function shouldReplaceBolsaName(previous, candidate) {
   if (!previous) return true;
   const previousSource = previous.source || previous.fuente || "manual";
   const candidateSource = candidate.source || candidate.fuente || "manual";
+  if (previousSource === "app_cpe" && candidateSource !== "app_cpe") return false;
+  if (candidateSource === "app_cpe" && previousSource !== "app_cpe") return true;
+  if (previousSource === "manual" && candidateSource === "portalestibavlc") return false;
+  if (candidateSource === "manual" && previousSource === "portalestibavlc") return true;
   const qualityDifference = nameQuality(candidate.display_name || candidate.nombre)
     - nameQuality(previous.display_name || previous.nombre);
   if (qualityDifference !== 0) return qualityDifference > 0;
   return (SOURCE_PRIORITY[candidateSource] || 0) > (SOURCE_PRIORITY[previousSource] || 0);
+}
+
+async function fetchAllPortalUsers() {
+  const users = [];
+  for (let offset = 0; ; offset += 1000) {
+    const response = await fetch(`${PORTAL_URL}/rest/v1/usuarios?select=chapa,nombre&nombre=not.is.null&order=chapa.asc&limit=1000&offset=${offset}`, {
+      headers: { apikey: PORTAL_ANON_KEY, authorization: `Bearer ${PORTAL_ANON_KEY}` }
+    });
+    if (!response.ok) throw new Error(`PortalEstibaVLC usuarios HTTP ${response.status}`);
+    const page = await response.json();
+    users.push(...page);
+    if (page.length < 1000) break;
+  }
+  return users;
 }
 
 async function readAsset() {
@@ -67,7 +87,8 @@ async function fetchAppCpeObservedNames(adminKey) {
 export async function syncBolsaWorkerDirectory() {
   const adminKey = resolveSupabaseAdminKey();
   if (!adminKey) throw new Error("Falta la clave de Supabase para actualizar el directorio de bolsa.");
-  const [appCpeObserved, stored, assetRows] = await Promise.all([
+  const [portalUsers, appCpeObserved, stored, assetRows] = await Promise.all([
+    fetchAllPortalUsers(),
     fetchAppCpeObservedNames(adminKey),
     readStored(adminKey),
     readAsset()
@@ -76,7 +97,6 @@ export async function syncBolsaWorkerDirectory() {
 
   const remember = (row) => {
     const source = row.source || row.fuente || "manual";
-    if (source === "portalestibavlc") return;
     const bolsaChapa = normalizeBolsaChapa(row.bolsa_chapa || row.chapa);
     const displayName = cleanName(row.display_name || row.nombre);
     if (!bolsaChapa || !displayName) return;
@@ -93,6 +113,7 @@ export async function syncBolsaWorkerDirectory() {
 
   assetRows.forEach(remember);
   stored.forEach(remember);
+  portalUsers.forEach((row) => remember({ ...row, source: "portalestibavlc" }));
   appCpeObserved.forEach((row) => remember({
     chapa: row.worker_code,
     nombre: row.display_name,

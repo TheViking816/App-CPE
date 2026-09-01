@@ -23,11 +23,22 @@ test("an official part name replaces a shorter manually captured name", () => {
   ), true);
 });
 
-test("a shorter official name does not degrade a fuller manual name", () => {
+test("an observed official name is authoritative over a manual fallback", () => {
   assert.equal(shouldReplaceBolsaName(
     { display_name: "NOMBRE CONFIRMADO", source: "manual" },
     { display_name: "NOMBRE", source: "app_cpe" }
+  ), true);
+});
+
+test("a PortalEstibaVLC profile is fallback only and never replaces an official name", () => {
+  assert.equal(shouldReplaceBolsaName(
+    { display_name: "ROCIO MUÑOZ RUIZ", source: "app_cpe" },
+    { display_name: "Rochi", source: "portalestibavlc" }
   ), false);
+  assert.equal(shouldReplaceBolsaName(
+    { display_name: "Rochi", source: "portalestibavlc" },
+    { display_name: "ROCIO MUÑOZ RUIZ", source: "app_cpe" }
+  ), true);
 });
 
 test("el tablón muestra siempre completa la chapa de bolsa", () => {

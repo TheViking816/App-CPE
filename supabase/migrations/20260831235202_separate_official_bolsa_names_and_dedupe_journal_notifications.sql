@@ -1,8 +1,6 @@
--- El directorio compartido contiene nombres oficiales observados en partes.
--- Los alias elegidos por usuarios de PortalEstibaVLC viven en su tabla de
--- perfiles y no deben utilizarse para componer los equipos de los partes.
-delete from public.app_cpe_bolsa_worker_directory
-where source = 'portalestibavlc';
+-- Los nombres de PortalEstibaVLC se conservan como respaldo temporal. El
+-- sincronizador solo los usa cuando todavia no existe un nombre oficial del
+-- parte (app_cpe) o uno incorporado manualmente desde un parte oficial.
 
 -- Un jornal se identifica por usuario, periodo, dia y jornada. El numero de
 -- parte, el tipo y la grafia de la especialidad pueden completarse o cambiar

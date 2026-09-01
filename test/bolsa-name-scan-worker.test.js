@@ -27,6 +27,11 @@ test("el lector abre Jornadas contratadas y solo conserva chapas 80xxx", () => {
   assert.match(job, /PERSONAL DE BOLSA/);
 });
 
+test("el nombre oficial del parte sustituye siempre al alias de PortalEstibaVLC", () => {
+  assert.match(job, /previous\.source === "portalestibavlc"/);
+  assert.match(job, /source: "app_cpe"/);
+});
+
 test("el resumen final imprime nombres nuevos y nombres mejorados", () => {
   assert.match(worker, /Chapas y nombres NUEVOS guardados/);
   assert.match(worker, /Nombres existentes MEJORADOS/);

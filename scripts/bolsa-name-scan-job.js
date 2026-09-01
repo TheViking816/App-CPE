@@ -264,7 +264,9 @@ async function saveWorkers(found) {
   for (const worker of found) {
     const previous = byChapa.get(worker.chapa);
     if (!previous) newWorkers.push(worker);
-    else if (previous.source !== "manual" && isBetterName(previous, worker.nombre)) {
+    else if ((previous.source === "portalestibavlc"
+      && cleanText(previous.display_name).localeCompare(cleanText(worker.nombre), "es", { sensitivity: "base" }) !== 0)
+      || (previous.source !== "manual" && isBetterName(previous, worker.nombre))) {
       updatedWorkers.push({ ...worker, anterior: previous.display_name });
     }
   }
