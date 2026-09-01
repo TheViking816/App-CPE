@@ -1,3 +1,5 @@
+import { canonicalPortalPart } from "../src/portalRowIdentity.js";
+
 const MONTHS_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
@@ -5,15 +7,20 @@ const MONTHS_ES = [
 
 const pad = (value) => String(value).padStart(2, "0");
 
-function normalizePart(value) {
-  const normalized = String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (normalized === "CA" || normalized.includes("CONTRATACIONANTICIPADA")) return "CA";
-  return normalized;
+function rowKey(row, day = row?.dia) {
+  return [Number(day), canonicalPortalPart(row), String(row?.jornada || "").replace(/\s+/g, "").toUpperCase()].join("|");
 }
 
-function rowKey(row, day = row?.dia) {
-  return [Number(day), normalizePart(row?.parte), String(row?.jornada || "").replace(/\s+/g, "").toUpperCase()].join("|");
+function dedupeRows(rows = []) {
+  const unique = new Map();
+  rows.forEach((row) => {
+    const key = rowKey(row);
+    const previous = unique.get(key);
+    if (!previous || (previous.upcomingAssignment && !row?.upcomingAssignment)) {
+      unique.set(key, row);
+    }
+  });
+  return [...unique.values()];
 }
 
 function periodKey(year, month) {
@@ -45,7 +52,7 @@ export function mergeAssignmentsIntoPortalJornales(jornales, asignaciones, today
       year: periodYear,
       month: periodMonth,
       monthLabel: period.monthLabel || periodLabel(periodYear, periodMonth),
-      rows: Array.isArray(period.rows) ? [...period.rows] : []
+      rows: dedupeRows(Array.isArray(period.rows) ? period.rows : [])
     });
   });
   periods.set(basePeriodKey, {
@@ -53,7 +60,7 @@ export function mergeAssignmentsIntoPortalJornales(jornales, asignaciones, today
     year,
     month,
     monthLabel: jornales.monthLabel || periodLabel(year, month),
-    rows: [...rows]
+    rows: dedupeRows(rows)
   });
 
   let nextAssignmentPeriod = null;

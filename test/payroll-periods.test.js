@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildVacationPayrollEntries,
+  enrichJornales,
   filterJornalesByPeriod,
   mergeUpcomingAssignmentsIntoJornales,
   selectPortalJornales,
@@ -136,6 +137,38 @@ test("no duplica el jornal cuando el portal ya lo ha publicado", () => {
   );
 
   assert.equal(merged.length, 1);
+});
+
+test("el Sueldometro no duplica reservas de clasificador de los grupos III y IV", () => {
+  for (const group of ["III", "IV"]) {
+    const merged = mergeUpcomingAssignmentsIntoJornales(
+      [
+        { dia: "01", parte: "C/A", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV", especialidad: `RESERVA G ${group}` },
+        { dia: "01", fecha: "01/09/2026", parte: "RESERVA", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV", upcomingAssignment: true }
+      ],
+      [{ fecha: "01/09/2026", parte: "RESERVA", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV" }],
+      "Septiembre de 2026",
+      new Date(2026, 8, 1)
+    );
+
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].especialidad, group === "III" ? "CLASIFICADOR" : "RESERVA G IV");
+    assert.equal(merged[0].payrollGroup, group);
+  }
+});
+
+test("la reserva de clasificador conserva la tarifa del grupo III", () => {
+  const [merged] = mergeUpcomingAssignmentsIntoJornales(
+    [{ dia: "01", parte: "C/A", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV", especialidad: "RESERVA G III" }],
+    [],
+    "Septiembre de 2026",
+    new Date(2026, 8, 1)
+  );
+  const [payroll] = enrichJornales([merged], [], "Septiembre de 2026");
+
+  assert.equal(payroll.especialidad, "CLASIFICADOR");
+  assert.equal(payroll.payroll.group, "III");
+  assert.equal(payroll.payroll.base, 159.91);
 });
 
 test("el resumen anual cruza cada mes de jornales con su historico de primas", () => {

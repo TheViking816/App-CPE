@@ -1,3 +1,5 @@
+import { canonicalPortalPart, normalizeReservePortalRow } from "./portalRowIdentity.js";
+
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
@@ -20,7 +22,13 @@ function journalPeriod(journals, now) {
 }
 
 function assignmentKey(item) {
-  return [item.fecha, normalizeShift(item.jornada), item.parte].map((value) => String(value || "").trim()).join("|");
+  return [item.fecha, normalizeShift(item.jornada), canonicalPortalPart(item)].map((value) => String(value || "").trim()).join("|");
+}
+
+function mergeAssignmentRows(previous, incoming) {
+  if (!previous) return incoming;
+  return Object.fromEntries([...new Set([...Object.keys(previous), ...Object.keys(incoming)])]
+    .map((field) => [field, incoming[field] === "" || incoming[field] == null ? previous[field] : incoming[field]]));
 }
 
 export function currentAssignmentsFromSnapshot(snapshot, currentTime = Date.now()) {
@@ -48,10 +56,11 @@ export function currentAssignmentsFromSnapshot(snapshot, currentTime = Date.now(
   [...journalAssignments, ...assignments].forEach((item) => {
     const date = parseDate(item.fecha);
     if (!date || date < today) return;
-    unique.set(assignmentKey(item), item);
+    const itemKey = assignmentKey(item);
+    unique.set(itemKey, mergeAssignmentRows(unique.get(itemKey), item));
   });
 
-  return [...unique.values()].sort((left, right) => (
+  return [...unique.values()].map(normalizeReservePortalRow).sort((left, right) => (
     parseDate(left.fecha) - parseDate(right.fecha)
     || normalizeShift(left.jornada).localeCompare(normalizeShift(right.jornada))
   ));

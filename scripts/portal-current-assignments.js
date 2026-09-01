@@ -1,3 +1,5 @@
+import { canonicalPortalPart } from "../src/portalRowIdentity.js";
+
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
@@ -8,7 +10,7 @@ function normalizeShift(value) {
 }
 
 function key(item) {
-  return [item.parte, item.fecha, normalizeShift(item.jornada)].map((value) => String(value || "").trim()).join("|");
+  return [canonicalPortalPart(item), item.fecha, normalizeShift(item.jornada)].map((value) => String(value || "").trim()).join("|");
 }
 
 export function assignmentsFromCurrentJournals(journals, assignments, now = new Date()) {
@@ -36,4 +38,3 @@ export function assignmentsFromCurrentJournals(journals, assignments, now = new 
 
   return [...unique.values()];
 }
-

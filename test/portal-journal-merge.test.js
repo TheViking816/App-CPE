@@ -40,6 +40,51 @@ test("no duplica una asignacion ya publicada como jornal", () => {
   assert.equal(result.rows.length, 1);
 });
 
+for (const group of ["III", "IV"]) {
+  test(`no duplica una reserva de grupo ${group} publicada como C/A`, () => {
+    const result = mergeAssignmentsIntoPortalJornales({
+      year: 2026,
+      month: 9,
+      monthLabel: "Septiembre de 2026",
+      rows: [{
+        dia: "01",
+        parte: "C/A",
+        jornada: "DE 20 A 02 H.",
+        operacion: "RESERVA III y IV",
+        especialidad: `RESERVA G ${group}`
+      }]
+    }, {
+      rows: [{
+        fecha: "01/09/2026",
+        parte: "RESERVA",
+        jornada: "DE 20 A 02 H.",
+        operacion: "RESERVA III y IV"
+      }]
+    }, new Date(2026, 8, 1));
+
+    assert.equal(result.rows.length, 1);
+    assert.equal(result.rows[0].especialidad, `RESERVA G ${group}`);
+  });
+}
+
+test("limpia una reserva III duplicada que ya venia del snapshot anterior", () => {
+  const result = mergeAssignmentsIntoPortalJornales({
+    year: 2026,
+    month: 9,
+    monthLabel: "Septiembre de 2026",
+    rows: [
+      { dia: "01", parte: "C/A", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV", especialidad: "RESERVA G III" },
+      { dia: "01", parte: "RESERVA", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV", upcomingAssignment: true }
+    ]
+  }, {
+    rows: [{ fecha: "01/09/2026", parte: "RESERVA", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV" }]
+  }, new Date(2026, 8, 1));
+
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.rows[0].parte, "C/A");
+  assert.equal(result.rows[0].especialidad, "RESERVA G III");
+});
+
 test("promueve el mes siguiente al Sueldometro y conserva el anterior en el historico", () => {
   const result = mergeAssignmentsIntoPortalJornales({
     recognized: true,

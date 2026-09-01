@@ -21,3 +21,15 @@ test("no vuelve a leer un parte que Donde voy ya entrego completo", () => {
   const assignments = { rows: [{ fecha: "29/08/2026", parte: "24673", jornada: "DE 08 A 14 H.", detail: { recognized: true } }] };
   assert.deepEqual(assignmentsFromCurrentJournals(journals, assignments, new Date(2026, 7, 29, 9)), []);
 });
+
+test("no añade como segundo parte la reserva III y IV ya presente en Donde voy", () => {
+  const journals = {
+    monthLabel: "Septiembre de 2026",
+    rows: [{ dia: "01", parte: "C/A", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV", especialidad: "RESERVA G III" }]
+  };
+  const assignments = {
+    rows: [{ fecha: "01/09/2026", parte: "RESERVA", jornada: "DE 20 A 02 H.", operacion: "RESERVA III y IV" }]
+  };
+
+  assert.deepEqual(assignmentsFromCurrentJournals(journals, assignments, new Date(2026, 8, 1, 9)), []);
+});

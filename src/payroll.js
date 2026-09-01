@@ -1,4 +1,5 @@
 import REMATE_SALARY_DATA from "../assets/remates-salariales.json" with { type: "json" };
+import { canonicalPortalPart, normalizeReservePortalRow } from "./portalRowIdentity.js";
 
 const VALENCIA_HOLIDAYS_2026 = new Set([
   "2026-01-01", "2026-01-06", "2026-01-22", "2026-03-19", "2026-04-03",
@@ -296,7 +297,10 @@ function getOperationType(operation = "") {
     : "ESTIBA";
 }
 
-function getGroup(specialty = "") {
+function getGroup(specialty = "", explicitGroup = "") {
+  if (/^(?:I|II|III|IV)$/.test(String(explicitGroup || "").trim().toUpperCase())) {
+    return String(explicitGroup).trim().toUpperCase();
+  }
   const normalized = normalizeSpecialty(specialty);
   if (/CONDUCTOR(?:\s+DE)?\s*[12]\s*A\b/.test(normalized)) return "II";
   return "II";
@@ -507,7 +511,7 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const day = Number(jornal.dia);
     const date = `${year}-${pad(month)}-${pad(day || 1)}`;
     const shift = parseShift(jornal.jornada);
-    const group = getGroup(jornal.especialidad);
+    const group = getGroup(jornal.especialidad, jornal.payrollGroup);
     const operationType = getOperationType(jornal.operacion);
     const rateKey = getRateKey(date, shift, holidaySet);
     const operationTable = SALARY_TABLE[operationType] || SALARY_TABLE.ESTIBA;
@@ -635,18 +639,8 @@ export function selectPortalJornales(jornales = null, primas = null) {
   return Array.isArray(primas?.rows) ? primas.rows : [];
 }
 
-function normalizePortalPart(value) {
-  const normalized = String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
-  if (normalized === "CA" || normalized.includes("CONTRATACIONANTICIPADA")) return "CA";
-  return normalized;
-}
-
 function portalJornalKey(row, day = row?.dia) {
-  const part = normalizePortalPart(row?.parte);
+  const part = canonicalPortalPart(row);
   const shift = parseShift(row?.jornada);
   if (part) return `${Number(day)}|${part}|${shift}`;
   return [
@@ -670,8 +664,18 @@ export function mergeUpcomingAssignmentsIntoJornales(
   if (!month || !year || !Number.isFinite(today?.getTime?.())) return rows;
 
   const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-  const existingKeys = new Set(rows.map((row) => portalJornalKey(row)));
-  const merged = [...rows];
+  const existingKeys = new Set();
+  const merged = [];
+  rows.forEach((row) => {
+    const key = portalJornalKey(row);
+    const duplicateIndex = merged.findIndex((item) => portalJornalKey(item) === key);
+    if (duplicateIndex === -1) {
+      existingKeys.add(key);
+      merged.push(normalizeReservePortalRow(row));
+    } else if (merged[duplicateIndex]?.upcomingAssignment && !row?.upcomingAssignment) {
+      merged[duplicateIndex] = normalizeReservePortalRow(row);
+    }
+  });
 
   upcoming.forEach((assignment) => {
     const match = String(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
