@@ -2402,11 +2402,9 @@ async function getExistingSupabaseSnapshot() {
   }
 }
 
-async function updateUserProfileFromPortal(identity, descansos, userSpecialties) {
+async function updateUserSpecialtiesFromPortal(userSpecialties) {
   if (!supabaseServiceRole || portalSnapshotChannel || !portalUser) return;
   const body = {};
-  const displayName = cleanText(identity?.name || descansos?.worker?.name || "");
-  if (displayName) body.display_name = displayName;
   if (userSpecialties?.recognized && Array.isArray(userSpecialties.ids) && userSpecialties.ids.length > 0) {
     body.specialties = userSpecialties.ids;
   }
@@ -2813,8 +2811,8 @@ async function main() {
 
     await fs.writeFile(path.join(privateDataDir, `portal-${portalUser}.json`), JSON.stringify(snapshot, null, 2), "utf8");
     await upsertSupabase(snapshot);
-    await updateUserProfileFromPortal(portalIdentity, descansos, especialidades).catch((error) => {
-      console.warn(`No se pudo actualizar el nombre o las especialidades del perfil. ${error instanceof Error ? error.message : ""}`);
+    await updateUserSpecialtiesFromPortal(especialidades).catch((error) => {
+      console.warn(`No se pudieron actualizar las especialidades del perfil. ${error instanceof Error ? error.message : ""}`);
     });
     await recordPortalNotifications(existingSnapshot?.payload, payload).catch((error) => {
       console.warn(`No se pudieron guardar las novedades. ${error instanceof Error ? error.message : ""}`);
