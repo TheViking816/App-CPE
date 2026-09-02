@@ -3404,8 +3404,10 @@ function PortalPanel({
 
   useEffect(() => {
     let cancelled = false;
-    touchPortalActivity({ token: session.token })
-      .catch(() => null)
+    const activity = session.supportAccess
+      ? Promise.resolve(null)
+      : touchPortalActivity({ token: session.token }).catch(() => null);
+    activity
       .then(() => getPortalAutoSyncStatus({ token: session.token }))
       .then(async (status) => {
         if (cancelled) return;
@@ -3438,7 +3440,7 @@ function PortalPanel({
         if (!cancelled) console.warn("No se pudo leer la sincronizacion automatica:", statusError.message);
       });
     return () => { cancelled = true; };
-  }, [credentialsOnly, initialCredentials, onConnectionChange, session.token]);
+  }, [credentialsOnly, initialCredentials, onConnectionChange, session.supportAccess, session.token]);
 
   useEffect(() => {
     if (!syncingPortal || !syncStartedAtRef.current) return undefined;
@@ -4468,7 +4470,7 @@ export function App() {
         metadata: { specialties: getEffectiveSpecialtyIds(session) }
       });
     }
-    if (session.token) {
+    if (session.token && !session.supportAccess) {
       touchPortalActivity({ token: session.token })
         .then((status) => setPortalRefreshQueued(Boolean(status?.refreshQueued)))
         .catch(() => {});
