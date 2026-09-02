@@ -11,7 +11,7 @@ if (-not $RepositoryPath) {
 $runner = Join-Path $RepositoryPath "scripts\windows\run-calendar-aware-combined-sync.ps1"
 $powerShell = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 4) -MultipleInstances IgnoreNew
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 4) -MultipleInstances IgnoreNew
 
 function New-CalendarAction([string]$ScheduleType) {
   $arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$runner`" -ScheduleType $ScheduleType -RepositoryPath `"$RepositoryPath`""
@@ -65,4 +65,10 @@ $dailyTriggers = @(
 )
 Install-AppTask "App CPE - Diario 02-08-14-20" $dailyAction $dailyTriggers "Todos los dias, incluidos domingos y festivos: 02:00, 08:00, 14:00 y 20:00. Espera el resultado real del worker."
 
-Write-Host "Programacion App CPE instalada: seis tareas definitivas."
+# Comprobacion diaria muy barata: solo actualiza si el mes actual aun no se
+# completo. Si el equipo estaba apagado el dia 1, lo hara al estar disponible.
+Install-AppTask "App CPE - Cambio de mes 00-15" (New-CalendarAction "MonthRollover") @(
+  New-ScheduledTaskTrigger -Daily -At "00:15"
+) "Una vez al mes renueva el mes actual y el siguiente para todos los perfiles."
+
+Write-Host "Programacion App CPE instalada: siete tareas definitivas."

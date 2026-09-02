@@ -7,6 +7,7 @@ const chaperoSource = fs.readFileSync(new URL("../scripts/sync-chapero.js", impo
 const runnerSource = fs.readFileSync(new URL("../scripts/windows/run-operational-sync.ps1", import.meta.url), "utf8");
 const calendarRunnerSource = fs.readFileSync(new URL("../scripts/windows/run-calendar-aware-combined-sync.ps1", import.meta.url), "utf8");
 const calendarInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-app-cpe-calendar-schedule.ps1", import.meta.url), "utf8");
+const restMonthVerifierSource = fs.readFileSync(new URL("../scripts/verify-rest-month-window.js", import.meta.url), "utf8");
 const installerSource = fs.readFileSync(new URL("../scripts/windows/install-operational-sync-schedule.ps1", import.meta.url), "utf8");
 const workflowSource = fs.readFileSync(new URL("../.github/workflows/sync-puertas.yml", import.meta.url), "utf8");
 
@@ -50,5 +51,11 @@ test("el horario combinado espera el resultado real y lo devuelve al Programador
 
 test("los horarios comunes ejecutan el runner sin accesos directos asincronos", () => {
   assert.match(calendarInstallerSource, /\$dailyAction = New-CalendarAction "Common"/);
+  assert.match(calendarInstallerSource, /New-CalendarAction "MonthRollover"/);
+  assert.match(calendarInstallerSource, /StartWhenAvailable/);
+  assert.match(calendarRunnerSource, /lastRolloverMonth/);
+  assert.match(calendarRunnerSource, /verify-rest-month-window\.js/);
+  assert.match(calendarRunnerSource, /Cambio de mes \$monthKey marcado como completado/);
+  assert.match(restMonthVerifierSource, /invalid\.length/);
   assert.doesNotMatch(calendarInstallerSource, /EncodedCommand|Start-Process|Start-Sleep/);
 });

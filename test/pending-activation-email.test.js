@@ -10,6 +10,7 @@ const isolationMigration = fs.readFileSync(new URL("../supabase/migrations/20260
 const pendingQueueMigration = fs.readFileSync(new URL("../supabase/migrations/20260818132500_queue_pending_portal_activations.sql", import.meta.url), "utf8");
 const atomicFirstSyncMigration = fs.readFileSync(new URL("../supabase/migrations/20260822053803_make_first_portal_sync_atomic_and_visible.sql", import.meta.url), "utf8");
 const rejectedCredentialsEmailMigration = fs.readFileSync(new URL("../supabase/migrations/20260822054449_email_user_on_rejected_portal_credentials.sql", import.meta.url), "utf8");
+const deduplicatedRejectedCredentialsEmailMigration = fs.readFileSync(new URL("../supabase/migrations/20260902010155_deduplicate_rejected_credentials_email.sql", import.meta.url), "utf8");
 const currentUserMigration = fs.readFileSync(new URL("../supabase/migrations/20260818133000_refresh_current_app_cpe_user.sql", import.meta.url), "utf8");
 
 test("el registro pide correo y la primera conexión queda pendiente sin lanzar una lectura", () => {
@@ -50,4 +51,18 @@ test("el rechazo de las claves avisa al usuario y vuelve a dejar su cuenta pendi
   assert.match(rejectedCredentialsEmailMigration, /v_user\.email/);
   assert.match(rejectedCredentialsEmailMigration, /portal_activation_status = 'pending'/);
   assert.match(app, /setShowCredentials\(rejectedCredentials\)/);
+});
+
+test("el rechazo repetido de las mismas claves solo encola un correo", () => {
+  const retireFunction = deduplicatedRejectedCredentialsEmailMigration.match(
+    /create or replace function private\.app_cpe_retire_rejected_portal_credentials\(\)[\s\S]*?revoke all/
+  )?.[0] || "";
+  assert.match(retireFunction, /on conflict \(user_id, kind\) do nothing/);
+  assert.doesNotMatch(retireFunction, /do update set/);
+  assert.match(deduplicatedRejectedCredentialsEmailMigration, /app_cpe_reset_rejected_credentials_email/);
+  assert.match(deduplicatedRejectedCredentialsEmailMigration, /after insert or update of portal_password_secret_id/);
+  assert.match(deduplicatedRejectedCredentialsEmailMigration, /outbox\.kind = 'portal_credentials_rejected'/);
+  assert.match(worker, /hasRejectedCredentialsNotice\(job\.chapa\)/);
+  assert.match(worker, /el usuario ya fue avisado/);
+  assert.match(worker, /clearRejectedCredentialsNotice\(job\.chapa\)/);
 });

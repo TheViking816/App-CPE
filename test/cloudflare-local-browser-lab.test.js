@@ -51,9 +51,10 @@ test("el worker no confunde los scripts normales de Cloudflare con un desafio", 
   assert.match(challengePatternLine, /Ray ID/);
 });
 
-test("la prueba de autorización crea como máximo diez contextos aislados", () => {
-  assert.match(poolSource, /Math\.min\(10/);
-  assert.match(poolSource, /browser\.newContext/);
+test("la prueba de autorización valida el mismo contexto visible del gateway", () => {
+  assert.match(poolSource, /const contextCount = 1/);
+  assert.match(poolSource, /gatewayContext\.pages\(\)/);
+  assert.doesNotMatch(poolSource, /browser\.newContext/);
   assert.match(poolSource, /cookie\.name === "cf_clearance"/);
   assert.doesNotMatch(poolSource, /console\.log\([^\n]*cookie\.value/);
 });
@@ -79,10 +80,12 @@ test("la regeneración de 72683 restaura y valida las demás filas", () => {
   assert.doesNotMatch(requeueSource, /console\.log\([^\n]*portal_password/);
 });
 
-test("la tanda real usa perfiles aislados y termina tras un solo lote", () => {
+test("la tanda real reutiliza el gateway autorizado y termina tras un solo lote", () => {
   assert.match(workerSource, /CPE_PORTAL_PROFILE_DIR: profileDir/);
   assert.match(workerSource, /CPE_PORTAL_CLEARANCE_COOKIES: JSON\.stringify/);
   assert.match(workerSource, /CPE_PORTAL_CDP_ENDPOINT: ""/);
+  assert.match(workerSource, /CPE_PORTAL_PROFILE_DIR: profileDir/);
+  assert.match(workerSource, /limit=\$\{batchSize\}/);
   assert.match(syncSource, /context\.addCookies\(portalClearanceCookies\)/);
   assert.match(workerSource, /CPE_PORTAL_WORKER_ONCE/);
   assert.match(workerSource, /failQueuedJobsWithoutCredentials/);

@@ -102,10 +102,14 @@ const DETAIL_FIELDS = [
 function parseWorkers(value = "") {
   const text = normalizeCell(value);
   const workers = [];
-  const pattern = /([A-Z]?\d{5})\s*(?:-\s*)?(.*?)(?=\s+(?:[A-Z]?\d{5}(?:\s*-?\s+|$)|00000\b)|$)/gi;
-  for (const match of text.matchAll(pattern)) {
+  const matches = [...text.matchAll(/\b([A-Z]?\d{5})\b/gi)];
+  for (let index = 0; index < matches.length; index += 1) {
+    const match = matches[index];
     if (match[1] === "00000") continue;
-    workers.push({ code: match[1], name: normalizeCell(match[2]) });
+    const nameStart = Number(match.index) + match[0].length;
+    const nameEnd = index + 1 < matches.length ? Number(matches[index + 1].index) : text.length;
+    const name = normalizeCell(text.slice(nameStart, nameEnd).replace(/^\s*-\s*/, ""));
+    workers.push({ code: match[1], name });
   }
   return workers;
 }

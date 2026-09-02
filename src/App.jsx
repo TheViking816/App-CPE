@@ -1143,26 +1143,30 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
           {specialties.length === 0 && (
             <p className="assignment-detail-empty">Actualiza el portal para cargar los nombres del parte.</p>
           )}
-          {specialties.map((specialty) => (
-            <article key={specialty.name}>
-              <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
-              <div>
-                {specialty.workers?.map((worker) => {
+          {specialties.map((specialty) => {
+            const workers = Array.isArray(specialty.workers) ? specialty.workers : [];
+            const useCompactCodeGrid = workers.length >= 12 && workers.every((worker) => !String(worker?.name || "").trim());
+            return (
+              <article key={specialty.name} className={useCompactCodeGrid ? "is-code-grid" : ""}>
+                <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
+                <div>
+                  {workers.map((worker) => {
                   const isCurrentWorker = normalizeChapa(worker.code) === normalizedCurrentChapa;
                   return (
                     <p
                       key={`${specialty.name}-${worker.code}-${worker.name}`}
-                      className={isCurrentWorker ? "is-current-worker" : ""}
+                      className={`${isCurrentWorker ? "is-current-worker" : ""}${worker.name ? "" : " is-code-only"}`.trim()}
                     >
                       <b>{formatFullPartWorkerCode(worker.code)}</b>
                       {worker.name && <span>{worker.name}</span>}
                       {isCurrentWorker && <em>Tu chapa</em>}
                     </p>
                   );
-                })}
-              </div>
-            </article>
-          ))}
+                  })}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </div>

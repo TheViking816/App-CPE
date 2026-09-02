@@ -1,7 +1,8 @@
 param(
-  [ValidateSet("Common", "Normal", "Reduced")][string]$ScheduleType,
+  [ValidateSet("Common", "Normal", "Reduced", "MonthRollover")][string]$ScheduleType,
   [string]$RepositoryPath = "",
   [datetime]$Now = (Get-Date),
+  [string]$RolloverStatePath = "",
   [switch]$CheckOnly
 )
 
@@ -22,13 +23,33 @@ $holidaysByYear = @{
   )
 }
 
-if (-not $holidaysByYear.ContainsKey($Now.Year)) {
+$isMonthRollover = $ScheduleType -eq "MonthRollover"
+if ($isMonthRollover) {
+  if (-not $RolloverStatePath) {
+    $RolloverStatePath = Join-Path $env:LOCALAPPDATA "AppCPE\calendar-sync-state.json"
+  }
+  $monthKey = $Now.ToString("yyyy-MM")
+  $lastRolloverMonth = ""
+  if (Test-Path -LiteralPath $RolloverStatePath) {
+    try {
+      $lastRolloverMonth = [string]((Get-Content -LiteralPath $RolloverStatePath -Raw | ConvertFrom-Json).lastRolloverMonth)
+    } catch {
+      Write-Warning "No se pudo leer el estado del cambio de mes; se reintentara la actualizacion."
+    }
+  }
+  if ($lastRolloverMonth -eq $monthKey) {
+    Write-Host "Actualizacion omitida: el cambio de mes $monthKey ya se completo."
+    exit 0
+  }
+}
+
+if (-not $isMonthRollover -and -not $holidaysByYear.ContainsKey($Now.Year)) {
   Write-Warning "No hay calendario de festivos configurado para $($Now.Year). Se omite la actualizacion por seguridad."
   exit 0
 }
 
 $holidaySet = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-foreach ($date in $holidaysByYear[$Now.Year]) { $null = $holidaySet.Add($date) }
+foreach ($date in @($holidaysByYear[$Now.Year])) { $null = $holidaySet.Add($date) }
 
 function Test-Holiday([datetime]$Date) {
   return $holidaySet.Contains($Date.ToString("yyyy-MM-dd"))
@@ -39,13 +60,13 @@ $todayIsSunday = $Now.DayOfWeek -eq [DayOfWeek]::Sunday
 $todayIsSaturday = $Now.DayOfWeek -eq [DayOfWeek]::Saturday
 $tomorrowIsHoliday = Test-Holiday $Now.Date.AddDays(1)
 
-if ($todayIsHoliday -or $todayIsSunday) {
+if (-not $isMonthRollover -and ($todayIsHoliday -or $todayIsSunday)) {
   Write-Host "Actualizacion omitida: hoy es domingo o festivo en Valencia."
   exit 0
 }
 
 $dayType = if ($todayIsSaturday -or $tomorrowIsHoliday) { "Reduced" } else { "Normal" }
-$shouldRun = $ScheduleType -eq "Common" -or $ScheduleType -eq $dayType
+$shouldRun = $isMonthRollover -or $ScheduleType -eq "Common" -or $ScheduleType -eq $dayType
 if (-not $shouldRun) {
   Write-Host "Actualizacion omitida: el horario $ScheduleType no corresponde a una jornada $dayType."
   exit 0
@@ -63,4 +84,34 @@ if (-not (Test-Path -LiteralPath $combinedRunner)) { throw "No existe el script 
 $combinedExitCode = $LASTEXITCODE
 if ($combinedExitCode -ne 0) {
   throw "La actualizacion combinada termino con codigo $combinedExitCode."
+}
+
+if ($isMonthRollover) {
+  $secretPath = Join-Path $env:LOCALAPPDATA "AppCPE\portal-worker\supabase-secret.dpapi"
+  if (-not (Test-Path -LiteralPath $secretPath)) {
+    throw "No existe la clave cifrada para validar el cambio de mes."
+  }
+  $secureSecret = ConvertTo-SecureString (Get-Content -LiteralPath $secretPath -Raw).Trim()
+  $secretPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSecret)
+  try {
+    $env:CPE_SUPABASE_SECRET_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPointer)
+    & node (Join-Path $RepositoryPath "scripts\verify-rest-month-window.js") $monthKey
+    $validationExitCode = $LASTEXITCODE
+  } finally {
+    $env:CPE_SUPABASE_SECRET_KEY = $null
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPointer)
+  }
+  if ($validationExitCode -ne 0) {
+    throw "El cambio de mes sigue incompleto para uno o mas perfiles; se reintentara en la proxima ejecucion."
+  }
+
+  $stateDirectory = Split-Path -Parent $RolloverStatePath
+  if (-not (Test-Path -LiteralPath $stateDirectory)) {
+    New-Item -ItemType Directory -Path $stateDirectory -Force | Out-Null
+  }
+  @{
+    lastRolloverMonth = $monthKey
+    completedAt = (Get-Date).ToString("o")
+  } | ConvertTo-Json | Set-Content -LiteralPath $RolloverStatePath -Encoding UTF8
+  Write-Host "Cambio de mes $monthKey marcado como completado."
 }

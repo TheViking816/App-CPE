@@ -187,6 +187,34 @@ function publicErrorMessage(error) {
   );
 }
 
+function isRejectedPortalCredentials(message) {
+  return /usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(String(message || ""));
+}
+
+async function hasRejectedCredentialsNotice(chapa) {
+  try {
+    const rows = await supabaseRequest(
+      `/rest/v1/app_cpe_activation_email_outbox?select=id&chapa=eq.${encodeURIComponent(chapa)}&kind=eq.portal_credentials_rejected&limit=1`,
+    );
+    return Boolean(rows?.length);
+  } catch (error) {
+    // Fail closed: if deduplication cannot be checked, suppress another email
+    // rather than risk spamming the user.
+    console.warn("No se pudo comprobar el aviso previo de credenciales; se suprime el reenvío.");
+    return true;
+  }
+}
+
+async function clearRejectedCredentialsNotice(chapa) {
+  await supabaseRequest(
+    `/rest/v1/app_cpe_activation_email_outbox?chapa=eq.${encodeURIComponent(chapa)}&kind=eq.portal_credentials_rejected`,
+    {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    },
+  );
+}
+
 async function sendActivationEmails() {
   const response = await fetch(
     "https://portalestiba-push-backend-one.vercel.app/api/push/notify-new-hire",
@@ -251,9 +279,20 @@ async function main() {
       security_key: null,
       finished_at: new Date().toISOString(),
     });
+    // A successful login closes the previous invalid-credentials episode. If
+    // credentials fail again later, that new episode may notify once.
+    await clearRejectedCredentialsNotice(job.chapa).catch(() => {
+      console.warn("No se pudo cerrar el aviso anterior de credenciales.");
+    });
     await sendActivationEmails().catch(() => {});
   } catch (error) {
-    const message = publicErrorMessage(error);
+    let message = publicErrorMessage(error);
+    if (isRejectedPortalCredentials(message) && await hasRejectedCredentialsNotice(job.chapa)) {
+      // The database email trigger only reacts to the canonical rejection
+      // wording. Use a neutral status after the first notice to avoid rearming
+      // the same outbox row and sending spam on every automatic retry.
+      message = "Las claves del Portal siguen pendientes de corrección; el usuario ya fue avisado.";
+    }
     await updateJob({
       status: "failed",
       message,

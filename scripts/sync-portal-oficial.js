@@ -16,6 +16,7 @@ import { parseExceptions } from "./portal-exceptions.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
 import { assignmentsFromCurrentJournals } from "./portal-current-assignments.js";
+import { normalizePortalPart } from "../src/portalRowIdentity.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
@@ -375,7 +376,35 @@ function parseVacaciones(html = "") {
   return parseVacacionesFromRows(parseRowsFromTable(html), textFromHtml(html));
 }
 
-function parseDescansos(html = "") {
+export function restMonthWindow(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "numeric"
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return [{ year, month }, { year: nextYear, month: nextMonth }];
+}
+
+export function selectCurrentRestMonths(months, now = new Date()) {
+  const requested = restMonthWindow(now);
+  const byKey = new Map((Array.isArray(months) ? months : []).map((item) => [
+    `${Number(item?.year)}-${Number(item?.month)}`,
+    item
+  ]));
+  return requested
+    .map(({ year, month }) => byKey.get(`${year}-${month}`))
+    .filter(Boolean);
+}
+
+export function hasCurrentRestMonthWindow(value, now = new Date()) {
+  return selectCurrentRestMonths(value?.months, now).length === 2;
+}
+
+export function parseDescansos(html = "", now = new Date()) {
   const pageText = textFromHtml(html);
   const expectedChapa = String(portalUser || "").replace(/\D/g, "").slice(-5);
   const workerPattern = expectedChapa
@@ -420,12 +449,15 @@ function parseDescansos(html = "") {
     if (dayData) dayData.code = code;
   }
 
-  const months = [...monthsByKey.values()]
+  const parsedMonths = [...monthsByKey.values()]
     .map((monthData) => ({
       ...monthData,
       codes: monthData.days.map((day) => day.code).filter(Boolean)
     }))
     .sort((a, b) => (a.year - b.year) || (a.month - b.month));
+  // El portal puede dejar el mes anterior en el HTML durante el cambio de
+  // mes. App CPE solo debe publicar el mes actual de Madrid y el siguiente.
+  const months = selectCurrentRestMonths(parsedMonths, now);
 
   const allCodes = months.flatMap((month) => month.days.map((day) => day.code).filter(Boolean));
   return {
@@ -635,6 +667,38 @@ async function waitForParsedContent(
     }
     if (isComplete(bestResult, bestScore) && Date.now() - lastImprovementAt >= settleMs) return bestResult;
     await page.waitForTimeout(200);
+  }
+
+  return bestResult;
+}
+
+async function waitForParsedContext(
+  context,
+  parser,
+  score,
+  timeout = 12000,
+  isComplete = (_result, resultScore) => resultScore > 0,
+  settleMs = 0
+) {
+  const deadline = Date.now() + timeout;
+  let bestResult = parser("");
+  let bestScore = score(bestResult);
+  let lastImprovementAt = Date.now();
+
+  while (Date.now() < deadline) {
+    for (const contextPage of context.pages()) {
+      for (const frame of contextPage.frames()) {
+        const result = parser(await frame.content().catch(() => ""));
+        const resultScore = score(result);
+        if (resultScore > bestScore) {
+          bestResult = result;
+          bestScore = resultScore;
+          lastImprovementAt = Date.now();
+        }
+      }
+    }
+    if (isComplete(bestResult, bestScore) && Date.now() - lastImprovementAt >= settleMs) return bestResult;
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
   return bestResult;
@@ -869,6 +933,76 @@ async function readAssignmentDetailViaContractings(sourcePage, assignment) {
     if (best.recognized
       && String(best.parte || assignment.parte) === String(assignment.parte)
       && Date.now() - lastImprovementAt >= 2500) return best;
+    await sourcePage.waitForTimeout(200);
+  }
+  return best;
+}
+
+async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
+  await openPortalHash(sourcePage, "User");
+  await sourcePage.waitForTimeout(1200);
+
+  const dateMatch = cleanText(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const dateTokens = dateMatch
+    ? [
+        `${Number(dateMatch[1])}/${dateMatch[2].padStart(2, "0")}`,
+        `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}`
+      ]
+    : [];
+  let clicked = false;
+
+  for (const frame of sourcePage.frames()) {
+    const candidates = frame.locator("a, button, [role=button], [onclick], tr, td, div, span")
+      .filter({ hasText: /anticipada/i });
+    const count = Math.min(await candidates.count().catch(() => 0), 100);
+    const visible = [];
+    for (let index = 0; index < count; index += 1) {
+      const candidate = candidates.nth(index);
+      if (!await candidate.isVisible().catch(() => false)) continue;
+      const text = cleanText(await candidate.innerText().catch(() => ""));
+      if (!/anticipada/i.test(text) || text.length > 220) continue;
+      const normalizedText = text.replace(/\s+/g, "");
+      const hasExpectedDate = dateTokens.length === 0
+        || dateTokens.some((token) => normalizedText.includes(token.replace(/\s+/g, "")));
+      if (hasExpectedDate) visible.push({ candidate, length: text.length });
+    }
+    visible.sort((left, right) => left.length - right.length);
+    for (const item of visible) {
+      clicked = await item.candidate.evaluate((node) => {
+        const actionable = node.closest("a, button, [role=button], [onclick]")
+          || node.querySelector?.("a, button, [role=button], [onclick]")
+          || node.parentElement?.closest("a, button, [role=button], [onclick], tr")
+          || node;
+        actionable.click();
+        return true;
+      }).catch(() => false);
+      if (clicked) break;
+    }
+    if (clicked) break;
+  }
+  if (!clicked) throw new Error("No se encontro la tarjeta de contratacion anticipada en la portada.");
+
+  const deadline = Date.now() + 20000;
+  let best = { recognized: false, specialties: [] };
+  let bestScore = 0;
+  let lastImprovementAt = Date.now();
+  while (Date.now() < deadline) {
+    for (const contextPage of sourcePage.context().pages()) {
+      for (const frame of contextPage.frames()) {
+        const rows = await frame.locator("tr").evaluateAll((elements) => elements.map((row) => (
+          [...row.cells].map((cell) => cell.innerText || "")
+        ))).catch(() => []);
+        const pageText = await frame.locator("body").innerText().catch(() => "");
+        const parsed = parseAssignmentDetailFromTables([rows], pageText);
+        const score = assignmentDetailScore(parsed);
+        if (score > bestScore) {
+          best = parsed;
+          bestScore = score;
+          lastImprovementAt = Date.now();
+        }
+      }
+    }
+    if (best.recognized && Date.now() - lastImprovementAt >= 2500) return best;
     await sourcePage.waitForTimeout(200);
   }
   return best;
@@ -1289,34 +1423,44 @@ async function collectJornalesWithFreshSession(page, previous = null, options = 
 }
 
 async function collectDescansos(page) {
-  await openMenu(page, "Solicitudes", "Solicitar Descansos", /Prueba\.asp/i);
-  const calendarFrame = await waitForFrame(page, /Prueba\.asp/i, 12000);
-  let result = await waitForParsedContent(
-    page,
-    parseDescansos,
-    (result) => result.months?.length || 0,
-    12000
-  );
-  if (result.months?.length) return result;
-
+  const directUrl = new URL("/Noray/Prueba.asp", PORTAL_URL);
+  directUrl.searchParams.set("f", "1");
+  directUrl.searchParams.set("mode", "GWT");
+  directUrl.searchParams.set("devType", "Desktop");
+  directUrl.searchParams.set("device", "Desktop");
+  directUrl.searchParams.set("browser", "Chrome");
+  directUrl.searchParams.set("os", "Windows");
+  directUrl.searchParams.set("rd", String(Date.now()));
   const directPage = await page.context().newPage();
   try {
-    await directPage.goto(calendarFrame.url(), {
-      waitUntil: "domcontentloaded",
-      timeout: 12000
-    });
-    result = await waitForParsedContent(
+    await directPage.goto(directUrl.toString(), { waitUntil: "domcontentloaded", timeout: 30000 });
+    const directResult = await waitForParsedContent(
       directPage,
       parseDescansos,
       (parsed) => parsed.months?.length || 0,
-      8000
+      20000,
+      (parsed) => hasCurrentRestMonthWindow(parsed),
+      800
     );
-    if (result.months?.length) return result;
+    if (hasCurrentRestMonthWindow(directResult)) return directResult;
+  } catch (error) {
+    console.warn(`La ruta directa de descansos no respondio; se usara el menu. ${error instanceof Error ? error.message : ""}`);
   } finally {
-    await directPage.close();
+    await directPage.close().catch(() => {});
   }
 
-  throw new Error("No se pudo leer el calendario de descansos. Se conservaran los ultimos datos disponibles.");
+  await openMenu(page, "Solicitudes", "Solicitar Descansos");
+  const result = await waitForParsedContext(
+    page.context(),
+    parseDescansos,
+    (parsed) => parsed.months?.length || 0,
+    30000,
+    (parsed) => hasCurrentRestMonthWindow(parsed),
+    800
+  );
+  if (hasCurrentRestMonthWindow(result)) return result;
+
+  throw new Error("El calendario no incluye el mes actual y el siguiente. Se conservaran los ultimos datos disponibles.");
 }
 
 async function collectSl(page) {
@@ -2154,7 +2298,17 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
     const item = rows[index];
     let detail = previousByPart.get(String(item.parte)) || null;
     try {
-      const freshDetail = await readAssignmentDetailViaMenu(page, item);
+      let freshDetail;
+      if (normalizePortalPart(item.parte) === "CA") {
+        try {
+          freshDetail = await readAssignmentDetailViaHomeCard(page, item);
+        } catch (homeCardError) {
+          console.log(`Parte ${item.parte}: la tarjeta de portada no respondio. ${homeCardError instanceof Error ? homeCardError.message : ""}`);
+          freshDetail = await readAssignmentDetailViaContractings(page, item);
+        }
+      } else {
+        freshDetail = await readAssignmentDetailViaMenu(page, item);
+      }
       console.log(`Parte ${item.parte}: detalle donde-voy=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
       if (freshDetail.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
         detail = freshDetail;
@@ -2180,11 +2334,11 @@ async function collectAssignments(page, previousResult) {
   return await enrichAssignmentsWithDetails(page, result, previousResult);
 }
 
-async function completeAssignmentsFromJournals(context, assignments, journals) {
+async function completeAssignmentsFromJournals(page, assignments, journals) {
   const candidates = assignmentsFromCurrentJournals(journals, assignments);
   if (!candidates.length) return assignments;
   const enriched = await enrichAssignmentsWithDetails(
-    context,
+    page,
     { recognized: true, rows: candidates },
     assignments
   );
@@ -2670,7 +2824,7 @@ async function main() {
       hasVacationData,
       { allowCollectionShrink: true }
     );
-    asignaciones = await completeAssignmentsFromJournals(page.context(), asignaciones, jornales);
+    asignaciones = await completeAssignmentsFromJournals(page, asignaciones, jornales);
     await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");
     jornales = mergeAssignmentsIntoPortalJornales(jornales, asignaciones);
     await publishProgress("jornales", jornales, "Jornales y contratacion consolidados");
