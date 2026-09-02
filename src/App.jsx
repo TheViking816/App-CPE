@@ -1798,6 +1798,25 @@ function PortalConnectCallout({ compact = false, onConnect }) {
   );
 }
 
+function HomeInitialLoading() {
+  return (
+    <section className="page-panel home-dashboard home-initial-loading" aria-busy="true" aria-live="polite">
+      <div className="home-loading-card">
+        <RefreshCw className="is-spinning" size={25} aria-hidden="true" />
+        <div>
+          <strong>Cargando tu inicio</strong>
+          <span>Estamos preparando tu contratación y tus datos.</span>
+        </div>
+      </div>
+      <div className="home-loading-skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+    </section>
+  );
+}
+
 function HomePanel({
   user,
   doors,
@@ -4133,6 +4152,9 @@ export function App() {
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [portalConnected, setPortalConnected] = useState(null);
+  const [doorConfigLoadedFor, setDoorConfigLoadedFor] = useState("");
+  const [portalSnapshotLoadedFor, setPortalSnapshotLoadedFor] = useState("");
+  const [portalConnectionLoadedFor, setPortalConnectionLoadedFor] = useState("");
   const [portalRefreshQueued, setPortalRefreshQueued] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -4165,6 +4187,14 @@ export function App() {
   const chaperoWorker = useMemo(
     () => findChaperoWorker(chaperoSnapshot, session?.chapa),
     [chaperoSnapshot, session?.chapa]
+  );
+  const homeInitialLoading = Boolean(
+    session?.token
+    && (
+      doorConfigLoadedFor !== activeSpecialty.id
+      || (session.portalActivationStatus !== "pending" && portalSnapshotLoadedFor !== session.token)
+      || portalConnectionLoadedFor !== session.token
+    )
   );
 
   useEffect(() => {
@@ -4380,6 +4410,7 @@ export function App() {
       const response = await loadLatestSnapshot();
       if (!cancelled && Array.isArray(response?.doors)) {
         setDoorConfig(response);
+        setDoorConfigLoadedFor(activeSpecialty.id);
       }
       return response;
     }
@@ -4392,7 +4423,10 @@ export function App() {
         }, SNAPSHOT_POLL_MS);
       })
       .catch(() => {
-        if (!cancelled) setDoorConfig(null);
+        if (!cancelled) {
+          setDoorConfig(null);
+          setDoorConfigLoadedFor(activeSpecialty.id);
+        }
       });
 
     return () => {
@@ -4468,6 +4502,8 @@ export function App() {
         }
       } catch {
         if (!cancelled) setPortalSnapshot(null);
+      } finally {
+        if (!cancelled) setPortalSnapshotLoadedFor(session.token);
       }
     };
     loadPortalSnapshot();
@@ -4499,6 +4535,9 @@ export function App() {
       })
       .catch(() => {
         if (!cancelled && localCredentials?.portalPassword) setPortalConnected(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPortalConnectionLoadedFor(session.token);
       });
 
     return () => {
@@ -4630,23 +4669,25 @@ export function App() {
       />
       <main className={`content${activeTab === "foro" ? " content-forum" : ""}`}>
         {activeTab === "inicio" && (
-          <HomePanel
-            user={displayUser}
-            doors={doors}
-            doorConfig={doorConfig}
-            currentTime={currentTime}
-            portalSnapshot={portalSnapshot}
-            portalConnected={portalConnected}
-            notice={notice}
-            activeSpecialty={activeSpecialty}
-            activeSpecialtyId={activeSpecialtyId}
-            availableSpecialties={availableSpecialties}
-            onSpecialtyChange={setActiveSpecialtyId}
-            onLoadPortal={connectPortal}
-            onNavigate={navigateToTab}
-            showForumIntro={showForumIntro}
-            displayName={session.displayName}
-          />
+          homeInitialLoading
+            ? <HomeInitialLoading />
+            : <HomePanel
+                user={displayUser}
+                doors={doors}
+                doorConfig={doorConfig}
+                currentTime={currentTime}
+                portalSnapshot={portalSnapshot}
+                portalConnected={portalConnected}
+                notice={notice}
+                activeSpecialty={activeSpecialty}
+                activeSpecialtyId={activeSpecialtyId}
+                availableSpecialties={availableSpecialties}
+                onSpecialtyChange={setActiveSpecialtyId}
+                onLoadPortal={connectPortal}
+                onNavigate={navigateToTab}
+                showForumIntro={showForumIntro}
+                displayName={session.displayName}
+              />
         )}
         {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
         {activeTab === "sueldometro" && <PortalPanel view="salary" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}

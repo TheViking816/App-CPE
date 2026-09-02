@@ -1961,6 +1961,14 @@ select {
 .side-menu .side-delete-account { color: #a91f2a; }
 
 .home-dashboard { gap: 14px; }
+.home-initial-loading { min-height: calc(100dvh - 150px); align-content: center; }
+.home-loading-card { display: flex; align-items: center; justify-content: center; gap: 13px; padding: 24px 18px; border-radius: 12px; background: linear-gradient(135deg, #061f3f, #0d3567 68%, #0d6575); color: #fff; box-shadow: 0 12px 26px rgba(8,38,75,.2); }
+.home-loading-card > div { display: grid; gap: 4px; }
+.home-loading-card strong { font-size: 17px; font-weight: 950; }
+.home-loading-card span { color: rgba(255,255,255,.76); font-size: 11px; font-weight: 750; }
+.home-loading-skeleton { display: grid; gap: 10px; }
+.home-loading-skeleton span { min-height: 78px; border: 1px solid #dce6ee; border-radius: 11px; background: linear-gradient(100deg, #edf3f7 25%, #f8fbfd 42%, #edf3f7 60%); background-size: 220% 100%; animation: home-loading-shimmer 1.25s ease-in-out infinite; }
+@keyframes home-loading-shimmer { to { background-position-x: -220%; } }
 .home-welcome {
   padding: 20px 18px;
   border-radius: 12px;
@@ -2136,6 +2144,7 @@ select {
 :root[data-theme="dark"] .home-forum-callout { border-color: #28736f; background: linear-gradient(135deg,#102c33,#10283a); }
 :root[data-theme="dark"] .home-forum-callout strong { color: #e8f8f6; }
 :root[data-theme="dark"] .home-forum-callout > span > span { color: #9fc8c8; }
+:root[data-theme="dark"] .home-loading-skeleton span { border-color: #29435d; background: linear-gradient(100deg, #102238 25%, #18314b 42%, #102238 60%); background-size: 220% 100%; }
 :root[data-theme="dark"] .portal-template-lines i { background: #22384f; }
 
 @media (min-width: 760px) {
