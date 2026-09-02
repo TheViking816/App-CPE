@@ -18,5 +18,5 @@ test("todos los grupos formados solo por chapas usan la misma cuadricula compact
   assert.match(app, /workers\.length > 0 && workers\.every/);
   assert.doesNotMatch(app, /<em>Tu chapa<\/em>/i);
   assert.match(styles, /\.assignment-detail-workers p\.is-current-worker \{[\s\S]*?background: #0f766e;[\s\S]*?color: #fff;/);
-  assert.match(styles, /\.assignment-detail-workers \.is-code-grid p\.is-current-worker \{[\s\S]*?justify-content: center;/);
+  assert.match(styles, /\.assignment-detail-workers \.is-code-grid p\.is-current-worker \{[\s\S]*?justify-content: center;[\s\S]*?background: #0f766e;[\s\S]*?color: #fff;/);
 });

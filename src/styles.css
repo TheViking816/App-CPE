@@ -5587,6 +5587,9 @@ select {
   margin: 0;
   justify-content: center;
   padding: 7px;
+  border-color: #0b5f59;
+  background: #0f766e;
+  color: #fff;
 }
 
 .assignment-detail-workers p.unnamed,
