@@ -1145,7 +1145,7 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
           )}
           {specialties.map((specialty) => {
             const workers = Array.isArray(specialty.workers) ? specialty.workers : [];
-            const useCompactCodeGrid = workers.length >= 12 && workers.every((worker) => !String(worker?.name || "").trim());
+            const useCompactCodeGrid = workers.length > 0 && workers.every((worker) => !String(worker?.name || "").trim());
             return (
               <article key={specialty.name} className={useCompactCodeGrid ? "is-code-grid" : ""}>
                 <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
@@ -1159,7 +1159,6 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
                     >
                       <b>{formatFullPartWorkerCode(worker.code)}</b>
                       {worker.name && <span>{worker.name}</span>}
-                      {isCurrentWorker && <em>Tu chapa</em>}
                     </p>
                   );
                   })}

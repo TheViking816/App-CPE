@@ -5571,28 +5571,21 @@ select {
 .assignment-detail-workers p.is-current-worker {
   margin: 2px -5px;
   padding: 6px 5px;
-  border: 1px solid rgba(15, 118, 110, 0.24);
+  border: 1px solid #0b5f59;
   border-radius: 6px;
-  background: #e8faf4;
+  background: #0f766e;
+  color: #fff;
   font-weight: 950;
 }
 
-.assignment-detail-workers p.is-current-worker em {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: #0f766e;
+.assignment-detail-workers p.is-current-worker b,
+.assignment-detail-workers p.is-current-worker span {
   color: #fff;
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 950;
-  text-transform: uppercase;
 }
 
 .assignment-detail-workers .is-code-grid p.is-current-worker {
   margin: 0;
-  justify-content: space-between;
+  justify-content: center;
   padding: 7px;
 }
 
@@ -6395,8 +6388,9 @@ select {
 }
 
 :root[data-theme="dark"] .assignment-detail-workers p.is-current-worker {
-  border-color: rgba(45, 212, 191, 0.35);
-  background: rgba(13, 148, 136, 0.17);
+  border-color: #2dd4bf;
+  background: #115e59;
+  color: #fff;
 }
 
 :root[data-theme="dark"] .assignment-detail-workers .is-code-grid p.is-code-only {
@@ -6405,8 +6399,8 @@ select {
 }
 
 :root[data-theme="dark"] .assignment-detail-workers .is-code-grid p.is-current-worker {
-  border-color: rgba(45, 212, 191, 0.42);
-  background: rgba(13, 148, 136, 0.2);
+  border-color: #2dd4bf;
+  background: #115e59;
 }
 
 :root[data-theme="dark"] .assignment-detail-workers > article > header {
