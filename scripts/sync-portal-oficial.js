@@ -69,6 +69,24 @@ const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim()
 let collectedPayrollDocuments = [];
 let authenticatedForPortalUser = false;
 
+export function premiumMonthsToRead({
+  currentMonth,
+  parsedCurrentMonth,
+  fast = false,
+  refreshFullHistory = false,
+  savedMonths = []
+}) {
+  const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
+  if (fast) {
+    return parsedCurrentMonth === currentMonth ? [] : [currentMonth];
+  }
+  const saved = new Set(savedMonths.map(Number));
+  return (refreshFullHistory
+    ? availableMonths
+    : availableMonths.filter((month) => month === currentMonth || !saved.has(month)))
+    .filter((month) => month !== parsedCurrentMonth);
+}
+
 export function isPayrollWithinLastMonths(payroll, now = new Date(), monthCount = 12) {
   const match = String(payroll?.period || payroll?.title || "")
     .match(/\b(0[1-9]|1[0-2])\s*\/\s*(\d{2}|\d{4})\b/);
@@ -1269,10 +1287,9 @@ async function readJornalesPeriod(selectorFrame, selectorUrl, month, year) {
 async function readPrimasPeriod(context, selectorUrl, month, year) {
   const periodPage = await context.newPage();
   const expectedLabel = `${MONTH_NAMES_ES[month - 1]} de ${year}`;
-  const initialPages = new Set(context.pages());
 
   try {
-    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await periodPage.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS });
     const selects = periodPage.locator("select");
     if (await selects.count() < 2) {
       throw new Error(`No se encontraron los selectores de primas para ${expectedLabel}.`);
@@ -1280,32 +1297,37 @@ async function readPrimasPeriod(context, selectorUrl, month, year) {
 
     await selectPortalOption(selects.nth(0), MONTH_NAMES_ES[month - 1]);
     await selectPortalOption(selects.nth(1), String(year));
-    await periodPage.getByRole("button", { name: /Aceptar/i }).click({ noWaitAfter: true });
+    const submit = periodPage.locator('input[type="submit"][value*="Aceptar" i], button[type="submit"]:has-text("Aceptar")').first();
+    if (!await submit.isVisible().catch(() => false)) {
+      throw new Error(`No se encontro el boton para consultar las primas de ${expectedLabel}.`);
+    }
+    await Promise.all([
+      periodPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: PORTAL_PERIOD_TIMEOUT_MS }).catch(() => null),
+      submit.click({ timeout: 10000 })
+    ]);
 
-    const deadline = Date.now() + 20000;
+    const deadline = Date.now() + PORTAL_PERIOD_TIMEOUT_MS;
     while (Date.now() < deadline) {
-      for (const candidatePage of context.pages()) {
-        for (const root of [candidatePage, ...candidatePage.frames()]) {
-          const parsed = parsePrimas(await contentWithComputedProductionColors(root));
-          if (!parsed.locked && parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
-            return {
-              year,
-              month,
-              monthLabel: parsed.monthLabel || expectedLabel,
-              rows: Array.isArray(parsed.rows) ? parsed.rows : []
-            };
-          }
+      for (const root of [periodPage, ...periodPage.frames()]) {
+        const parsed = parsePrimas(await contentWithComputedProductionColors(root));
+        if (!parsed.locked && parsed.recognized && jornalesPeriodMatches(parsed.monthLabel, month, year)) {
+          return {
+            year,
+            month,
+            monthLabel: parsed.monthLabel || expectedLabel,
+            rows: Array.isArray(parsed.rows) ? parsed.rows : []
+          };
         }
       }
       await periodPage.waitForTimeout(200);
     }
 
-    throw new Error(`El portal no devolvio las primas de ${expectedLabel}.`);
+    const responseSample = cleanText(await periodPage.locator("body").innerText().catch(() => "")).slice(0, 240) || "respuesta vacia";
+    throw new Error(
+      `El portal no devolvio las primas de ${expectedLabel}. Destino: ${safePortalLocation(periodPage.url())}. Respuesta: ${responseSample}`
+    );
   } finally {
-    await Promise.all(context.pages()
-      .filter((candidatePage) => !initialPages.has(candidatePage) && candidatePage !== periodPage)
-      .map((candidatePage) => candidatePage.close().catch(() => {})));
-    await periodPage.close();
+    await periodPage.close().catch(() => {});
   }
 }
 
@@ -2450,12 +2472,14 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
     });
   }
 
-  const availableMonths = Array.from({ length: currentMonth }, (_, index) => index + 1);
   const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
-  const monthsToRead = (fastMode ? [] : (refreshFullHistory
-    ? availableMonths
-    : availableMonths.filter((month) => month === currentMonth || !historyByMonth.has(month))))
-    .filter((month) => month !== parsedCurrentMonth);
+  const monthsToRead = premiumMonthsToRead({
+    currentMonth,
+    parsedCurrentMonth,
+    fast: fastMode,
+    refreshFullHistory,
+    savedMonths: [...historyByMonth.keys()]
+  });
   const selectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp";
   const periodWarnings = [];
 
@@ -2833,7 +2857,8 @@ async function main() {
       () => collectPrimas(page, existingSnapshot?.payload?.primas),
       existingSnapshot?.payload?.primas,
       { locked: true, rows: [] },
-      hasPremiumData
+      hasPremiumData,
+      { allowCollectionShrink: true }
     );
     await publishProgress("primas", primas, "Primas cargadas");
     const sl = await readSection(

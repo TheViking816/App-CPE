@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parsePrimas } from "../scripts/sync-portal-oficial.js";
+import {
+  parsePrimas,
+  premiumMonthsToRead,
+  wouldEraseStoredCollection
+} from "../scripts/sync-portal-oficial.js";
 import { enrichJornales } from "../src/payroll.js";
 
 const html = `
@@ -31,4 +35,30 @@ test("propaga el estado de verificacion al calculo del jornal", () => {
   assert.equal(pending.payroll.primaVerification, "pending");
   assert.equal(paid.payroll.prima, 99.25);
   assert.equal(paid.payroll.primaVerification, "paid");
+});
+
+test("el modo rapido consulta el mes actual cuando el portal conserva el anterior", () => {
+  assert.deepEqual(premiumMonthsToRead({
+    currentMonth: 9,
+    parsedCurrentMonth: 8,
+    fast: true,
+    savedMonths: [1, 2, 3, 4, 5, 6, 7, 8]
+  }), [9]);
+});
+
+test("el modo rapido no repite la lectura si el portal ya muestra el mes actual", () => {
+  assert.deepEqual(premiumMonthsToRead({
+    currentMonth: 9,
+    parsedCurrentMonth: 9,
+    fast: true,
+    savedMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  }), []);
+});
+
+test("permite que el nuevo mes tenga menos primas que el anterior", () => {
+  assert.equal(wouldEraseStoredCollection(
+    { monthLabel: "Septiembre de 2026", rows: [{ dia: "01" }, { dia: "02" }] },
+    { monthLabel: "Agosto de 2026", rows: Array.from({ length: 24 }, (_, index) => ({ dia: String(index + 1) })) },
+    { allowCollectionShrink: true }
+  ), false);
 });
