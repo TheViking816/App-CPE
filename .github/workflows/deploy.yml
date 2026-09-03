@@ -3,6 +3,10 @@ name: Deploy App CPE
 on:
   workflow_dispatch:
 
+concurrency:
+  group: app-cpe-production
+  cancel-in-progress: false
+
 permissions:
   contents: read
   pages: write
@@ -25,6 +29,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify production branch
+        run: test "${GITHUB_REF_NAME}" = "main"
+
+      - name: Regression tests
+        run: node --test test/portal-access-location.test.js test/remote-pending-worker.test.js
 
       - name: Build
         env:

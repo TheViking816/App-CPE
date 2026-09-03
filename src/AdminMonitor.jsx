@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, BarChart3, CheckSquare2, Clock3, Eye, ListRestart, Play, RefreshCw, Search, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
-import { getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestPendingWorkerRun } from "./supabaseClient.js";
+import { getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestCurrentMonthWorkerRun, requestPendingWorkerRun } from "./supabaseClient.js";
 
 const PAGE_LABELS = {
   inicio: "Inicio", contratacion: "Contratación", sueldometro: "Sueldómetro",
@@ -58,6 +58,7 @@ export default function AdminMonitor({ session }) {
   const [portalError, setPortalError] = useState("");
   const [workerControl, setWorkerControl] = useState(null);
   const [startingWorker, setStartingWorker] = useState(false);
+  const [startingCurrentMonthWorker, setStartingCurrentMonthWorker] = useState(false);
 
   const load = async ({ quiet = false } = {}) => {
     if (quiet) setRefreshing(true);
@@ -191,6 +192,21 @@ export default function AdminMonitor({ session }) {
     }
   };
 
+  const runCurrentMonthWorker = async () => {
+    setStartingCurrentMonthWorker(true);
+    setQueueMessage("");
+    setPortalError("");
+    try {
+      await requestCurrentMonthWorkerRun({ token: session.token });
+      setQueueMessage("Orden mensual enviada al PC. Se actualizarán Chapero, Puertas, el mes actual de todos y el Tablón General.");
+      setWorkerControl(await getAdminWorkerControlStatus({ token: session.token }));
+    } catch (requestError) {
+      setPortalError(requestError?.message || "No se pudo enviar la actualización mensual al PC.");
+    } finally {
+      setStartingCurrentMonthWorker(false);
+    }
+  };
+
   return (
     <section className="page-panel admin-monitor">
       <header className="monitor-hero">
@@ -299,9 +315,13 @@ export default function AdminMonitor({ session }) {
                   ? ` · ${workerControl.pcStatus === "executing" ? "Procesando pendientes" : "Preparado"}`
                   : workerControl?.lastSeenAt ? ` · Última conexión ${formatDateTime(workerControl.lastSeenAt)}` : " · Aún no se ha conectado el agente"}
               </span>
-              <button type="button" onClick={runPendingWorker} disabled={startingWorker || ["queued", "claimed"].includes(workerControl?.commandStatus)}>
+              <button type="button" onClick={runPendingWorker} disabled={startingWorker || ["queued", "claimed"].includes(workerControl?.pendingCommandStatus)}>
                 <Play size={17} />
-                {startingWorker ? "Enviando…" : workerControl?.commandStatus === "queued" ? "Esperando al PC" : workerControl?.commandStatus === "claimed" ? "Ejecutando en el PC" : "Ejecutar pendientes en el PC"}
+                {startingWorker ? "Enviando…" : workerControl?.pendingCommandStatus === "queued" ? "Pendientes esperando al PC" : workerControl?.pendingCommandStatus === "claimed" ? "Procesando pendientes" : "Ejecutar pendientes en el PC"}
+              </button>
+              <button type="button" onClick={runCurrentMonthWorker} disabled={startingCurrentMonthWorker || ["queued", "claimed"].includes(workerControl?.currentMonthCommandStatus)}>
+                <RefreshCw size={17} />
+                {startingCurrentMonthWorker ? "Enviando…" : workerControl?.currentMonthCommandStatus === "queued" ? "Mes actual esperando al PC" : workerControl?.currentMonthCommandStatus === "claimed" ? "Actualizando mes actual" : "Actualizar todos · mes actual"}
               </button>
             </div>
             <div className="monitor-sync-toolbar">

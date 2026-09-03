@@ -30,7 +30,7 @@ test("legacy users without portal data re-enter onboarding and null payload open
   assert.match(sql, /app_cpe_update_activation_email/);
   assert.match(repairSql, /portal_activation_status = 'active'/);
   assert.match(repairSql, /portal_activation_status = 'pending'/);
-  assert.match(app, /setShowCredentials\(!data\?\.payload \|\| rejectedCredentials\)/);
+  assert.match(app, /setShowCredentials\(credentialsOnly \|\| !data\?\.payload \|\| rejectedCredentials\)/);
   assert.match(app, /updateActivationEmail/);
 });
 
@@ -46,7 +46,8 @@ test("Monitor exposes individual and multi-user queue controls", async () => {
   assert.match(monitor, /Sincronizar usuarios concretos/);
   assert.match(monitor, /Actualizar mes actual/);
   assert.match(monitor, /Carga inicial completa/);
-  assert.match(monitor, /Actualizar pendientes App CPE/);
+  assert.match(monitor, /Ejecutar pendientes en el PC/);
+  assert.match(monitor, /Actualizar todos · mes actual/);
   assert.match(monitor, /Seleccionar chapa/);
   assert.ok(monitor.indexOf("monitor-recent-card") < monitor.indexOf("monitor-sync-card"));
 });

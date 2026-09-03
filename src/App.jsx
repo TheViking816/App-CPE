@@ -262,8 +262,7 @@ const SIDE_NAV_GROUPS = [
     label: "Recursos y cuenta",
     items: [
       { id: "nominas", label: "Nóminas", Icon: FileLock2 },
-      { id: "enlaces", label: "Enlaces útiles", Icon: LinkIcon },
-      { id: "portal", label: "Sincronización del portal", Icon: RefreshCw }
+      { id: "enlaces", label: "Enlaces útiles", Icon: LinkIcon }
     ]
   }
 ];
@@ -649,7 +648,7 @@ function AppHeader({ onMenuOpen }) {
   );
 }
 
-function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onProfileOpen, onSettingsOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
+function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, onNavigate, onProfileOpen, onSettingsOpen, onPortalAccessOpen, onDeleteAccountOpen, onThemeToggle, onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     const closeOnEscape = (event) => {
@@ -705,6 +704,7 @@ function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, on
           <p>Ajustes</p>
           <button type="button" onClick={() => { onProfileOpen(); onClose(); }}><UserRound size={19} /><span>Nombre y privacidad</span><ChevronRight size={17} /></button>
           <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
+          <button type="button" onClick={() => { onPortalAccessOpen(); onClose(); }}><Lock size={19} /><span>Acceso al portal</span><ChevronRight size={17} /></button>
           <button type="button" onClick={onThemeToggle}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}<span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span><ChevronRight size={17} /></button>
           <button className="side-delete-account" type="button" onClick={() => { onDeleteAccountOpen(); onClose(); }}><Trash2 size={19} /><span>Eliminar mi cuenta</span><ChevronRight size={17} /></button>
           <button className="side-logout" type="button" onClick={onLogout}><LogOut size={19} /><span>Cerrar sesión</span></button>
@@ -3084,6 +3084,7 @@ function PortalPanel({
   openCredentialsOnLoad = false,
   onCredentialsRequestChange
 }) {
+  const credentialsOnly = view === "all";
   const initialCredentials = useMemo(() => readPortalCredentials(session.chapa), [session.chapa]);
   const pendingActivation = session.portalActivationStatus === "pending";
   const initialActiveSync = useMemo(
@@ -3103,7 +3104,7 @@ function PortalPanel({
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
   const [portalMessage, setPortalMessage] = useState(initialActiveSync ? "Recuperando la sincronizacion en curso..." : "");
-  const [showCredentials, setShowCredentials] = useState(Boolean(openCredentialsOnLoad));
+  const [showCredentials, setShowCredentials] = useState(credentialsOnly || Boolean(openCredentialsOnLoad));
   const [savingCredentials, setSavingCredentials] = useState(false);
   const [securityKeyOnly, setSecurityKeyOnly] = useState(false);
   const [syncProgress, setSyncProgress] = useState(initialActiveSync ? 3 : 0);
@@ -3122,7 +3123,7 @@ function PortalPanel({
     if (pendingActivation) {
       setSnapshot(null);
       onSnapshotChange?.(null);
-      if (!autoSyncEnabled) setShowCredentials(true);
+      if (credentialsOnly || !autoSyncEnabled) setShowCredentials(true);
       setLoading(false);
       return;
     }
@@ -3131,7 +3132,7 @@ function PortalPanel({
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
       const rejectedCredentials = hasRejectedPortalCredentials(data);
-      setShowCredentials(!data?.payload || rejectedCredentials);
+      setShowCredentials(credentialsOnly || !data?.payload || rejectedCredentials);
       if (rejectedCredentials) {
         setError("");
         setAutoSyncEnabled(false);
@@ -3144,7 +3145,7 @@ function PortalPanel({
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [autoSyncEnabled, onConnectionChange, onSessionChange, onSnapshotChange, pendingActivation, session.token]);
+  }, [autoSyncEnabled, credentialsOnly, onConnectionChange, onSessionChange, onSnapshotChange, pendingActivation, session.token]);
 
   useEffect(() => {
     loadSnapshot({ silent: Boolean(initialSnapshot) });
@@ -3198,7 +3199,7 @@ function PortalPanel({
         setPortalSyncStatus(status?.syncStatus || "active");
         if (status?.enabled) {
           setAutoSyncEnabled(true);
-          if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(false);
+          if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(credentialsOnly);
           onConnectionChange?.(true);
           return;
         }
@@ -3224,7 +3225,7 @@ function PortalPanel({
         if (!cancelled) console.warn("No se pudo leer la sincronizacion automatica:", statusError.message);
       });
     return () => { cancelled = true; };
-  }, [initialCredentials, onConnectionChange, session.token]);
+  }, [credentialsOnly, initialCredentials, onConnectionChange, session.token]);
 
   useEffect(() => {
     if (!syncingPortal || !syncStartedAtRef.current) return undefined;
@@ -3283,7 +3284,7 @@ function PortalPanel({
           setPortalMessage("Portal actualizado.");
           window.clearInterval(timer);
           await loadSnapshot();
-          setShowCredentials(false);
+          setShowCredentials(credentialsOnly);
           setSyncingPortal(false);
           writePortalActiveSync(session.chapa, null);
         }
@@ -3291,7 +3292,7 @@ function PortalPanel({
           const rejectedCredentials = hasRejectedPortalCredentials(job.message);
           setPortalMessage("");
           setSyncingPortal(false);
-          setShowCredentials(rejectedCredentials);
+          setShowCredentials(credentialsOnly || rejectedCredentials);
           if (rejectedCredentials) {
             setError("");
             setAutoSyncEnabled(false);
@@ -3310,7 +3311,7 @@ function PortalPanel({
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [portalJob?.jobId, portalJob?.status, session.token]);
+  }, [credentialsOnly, portalJob?.jobId, portalJob?.status, session.token]);
 
   const saveCredentials = async () => {
     const passwordToUse = portalPassword.trim() || savedCredentials?.portalPassword || "";
@@ -3367,7 +3368,7 @@ function PortalPanel({
       setPortalPassword("");
       setSecurityKey("");
       setSecurityKeyOnly(false);
-      setShowCredentials(false);
+      setShowCredentials(credentialsOnly);
       if (requiresActivationRequest || (currentSession.portalActivationStatus === "pending" && !snapshot?.payload)) {
         await queuePendingPortalActivation({ token: session.token });
         setPortalMessage("Solicitud enviada. Te avisaremos por correo cuando tu acceso esté activado.");
@@ -3383,16 +3384,6 @@ function PortalPanel({
     } finally {
       setSavingCredentials(false);
     }
-  };
-
-  const changeCredentials = () => {
-    writePortalCredentials(session.chapa, null);
-    setSavedCredentials(null);
-    setPortalPassword("");
-    setSecurityKey("");
-    setError("");
-    setSecurityKeyOnly(false);
-    setShowCredentials(true);
   };
 
   const requestSecurityKey = () => {
@@ -3424,7 +3415,7 @@ function PortalPanel({
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
   const panelCopy = {
-    all: { eyebrow: "Portal oficial", title: "Sincronización del portal" },
+    all: { eyebrow: "Ajustes", title: "Acceso al portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
     rests: { eyebrow: "Calendario personal", title: "Descansos" },
     exceptions: { eyebrow: "Bolsa anual", title: "Excepciones" },
@@ -3439,7 +3430,7 @@ function PortalPanel({
         <h1>{panelCopy.title}</h1>
       </div>
 
-      {session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot?.payload && !showCredentials && (
+      {!credentialsOnly && session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot?.payload && !showCredentials && (
         <section className="portal-empty-state portal-activation-pending" aria-live="polite">
           <Clock3 size={28} />
           <strong>Cuenta pendiente de activación</strong>
@@ -3447,7 +3438,7 @@ function PortalPanel({
         </section>
       )}
 
-      {portalSyncStatus === "paused_inactive" && !showCredentials && (
+      {!credentialsOnly && portalSyncStatus === "paused_inactive" && !showCredentials && (
         <section className="portal-inactivity-pause" aria-live="polite">
           <Clock3 size={25} />
           <div>
@@ -3460,22 +3451,13 @@ function PortalPanel({
         </section>
       )}
 
-      {snapshot?.payload && !showCredentials && (
-        <div className="portal-update-row">
-          <span>Datos guardados del portal oficial{portalMessage && <small>{portalMessage}</small>}</span>
-          <div>
-            {autoSyncEnabled && <button className="portal-forget-button" type="button" onClick={changeCredentials}>Cambiar acceso</button>}
-          </div>
-        </div>
-      )}
-
       {error && <p ref={portalErrorRef} className="portal-warning">{error}</p>}
 
-      {showCredentials && !syncingPortal && (
+      {showCredentials && (
         <>
-          <p className="portal-first-sync-note">
+          {!credentialsOnly && <p className="portal-first-sync-note">
             Introduce tus datos de acceso para conectar tu cuenta con el Portal CPE.
-          </p>
+          </p>}
 
           <section ref={credentialsRef} className="portal-security-card">
             <div>
@@ -3525,7 +3507,7 @@ function PortalPanel({
               />
             </label>
             <div className="portal-security-actions">
-              {snapshot?.payload && !syncingPortal && (
+              {!credentialsOnly && snapshot?.payload && !syncingPortal && (
                 <button className="secondary-button" type="button" onClick={() => setShowCredentials(false)}>
                   Cancelar
                 </button>
@@ -3533,10 +3515,10 @@ function PortalPanel({
               <button
                 className="primary-button"
                 type="button"
-                disabled={savingCredentials || ((!autoSyncEnabled || !session.email) && !securityKeyOnly && !activationEmail.trim()) || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
+                disabled={syncingPortal || savingCredentials || ((!autoSyncEnabled || !session.email) && !securityKeyOnly && !activationEmail.trim()) || (securityKeyOnly ? !securityKey.trim() : !portalPassword.trim())}
                 onClick={saveCredentials}
               >
-                {savingCredentials ? "Cargando datos..." : securityKeyOnly ? "Actualizar datos" : "Cargar datos"}
+                {syncingPortal ? "Sincronización en curso" : savingCredentials ? "Cargando datos..." : securityKeyOnly ? "Actualizar datos" : "Cargar datos"}
               </button>
             </div>
             {portalMessage && <small>{portalMessage}</small>}
@@ -3544,7 +3526,7 @@ function PortalPanel({
         </>
       )}
 
-      {syncingPortal && (
+      {!credentialsOnly && syncingPortal && (
         <section className="portal-progress-card" aria-live="polite">
           <div className="portal-progress-heading">
             <span><RefreshCw size={18} className="is-spinning" />Actualizando portal</span>
@@ -3560,7 +3542,7 @@ function PortalPanel({
         </section>
       )}
 
-      {syncingPortal && !snapshot?.payload ? (
+      {!credentialsOnly && (syncingPortal && !snapshot?.payload ? (
         <div className="portal-empty-state">
           <RefreshCw className="is-spinning" size={26} />
           <strong>Conectado con el portal</strong>
@@ -3581,7 +3563,7 @@ function PortalPanel({
           onRequestSecurityKey={() => requestSecurityKey()}
           hideSyncFailure={showCredentials}
         />
-      )}
+      ))}
     </section>
   );
 }
@@ -4376,6 +4358,7 @@ export function App() {
         onNavigate={navigateToTab}
         onProfileOpen={() => setProfileOpen(true)}
         onSettingsOpen={() => setPasswordOpen(true)}
+        onPortalAccessOpen={connectPortal}
         onDeleteAccountOpen={() => setDeleteAccountOpen(true)}
         onThemeToggle={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
         onLogout={logout}

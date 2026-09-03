@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test",
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && node scripts/verify-production-bundle.js",
+    "build": "node scripts/verify-production-regressions.js && vite build && node scripts/verify-production-bundle.js",
     "preview": "vite preview --host 127.0.0.1",
     "sync:cpe": "node scripts/sync-cpe.js",
     "sync:censos": "node scripts/sync-censos.js",

@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 test("rejected portal access reopens the editable email and credentials form", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /hasRejectedPortalCredentials\(data\)/);
-  assert.match(app, /setShowCredentials\(!data\?\.payload \|\| rejectedCredentials\)/);
+  assert.match(app, /setShowCredentials\(credentialsOnly \|\| !data\?\.payload \|\| rejectedCredentials\)/);
   assert.match(app, /!securityKeyOnly && \(!autoSyncEnabled \|\| !session\.email\)/);
   assert.match(app, /Correo electrónico para avisarte del alta/);
   assert.match(app, /requiresActivationRequest \|\| \(currentSession\.portalActivationStatus === "pending"/);
