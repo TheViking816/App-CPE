@@ -39,3 +39,20 @@ test("remote control can launch the complete current-month worker", async () => 
   assert.match(monitor, /Actualizar todos · mes actual/);
   assert.match(client, /app_cpe_admin_request_current_month_worker/);
 });
+
+test("remote control can launch the bolsa name scan", async () => {
+  const [sql, agent, monitor, client] = await Promise.all([
+    read("../supabase/migrations/20260903040147_add_remote_bolsa_name_scan.sql"),
+    read("../scripts/remote-pending-worker-agent.js"),
+    read("../src/AdminMonitor.jsx"),
+    read("../src/supabaseClient.js")
+  ]);
+
+  assert.match(sql, /bolsa_name_scan/);
+  assert.match(sql, /app_cpe_admin_request_bolsa_name_scan/);
+  assert.match(sql, /v_admin\.chapa <> '72683'/);
+  assert.match(agent, /run-bolsa-name-scan\.ps1/);
+  assert.match(agent, /command\.commandType === "bolsa_name_scan"/);
+  assert.match(monitor, /Escanear nombres de bolsa/);
+  assert.match(client, /app_cpe_admin_request_bolsa_name_scan/);
+});

@@ -34,9 +34,12 @@ async function heartbeat(status = running ? "executing" : "idle", message = runn
 
 function runWorkerCommand(commandType) {
   const currentMonth = commandType === "current_month_all";
-  const runner = path.join(repositoryPath, "scripts", "windows", currentMonth ? "run-combined-current-sync.ps1" : "run-pending-sync.ps1");
+  const bolsaNames = commandType === "bolsa_name_scan";
+  const scriptName = currentMonth ? "run-combined-current-sync.ps1" : bolsaNames ? "run-bolsa-name-scan.ps1" : "run-pending-sync.ps1";
+  const runner = path.join(repositoryPath, "scripts", "windows", scriptName);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const log = createWriteStream(path.join(logDirectory, `remote-${currentMonth ? "current-month" : "pending"}-${stamp}.log`), { flags: "a" });
+  const logLabel = currentMonth ? "current-month" : bolsaNames ? "bolsa-names" : "pending";
+  const log = createWriteStream(path.join(logDirectory, `remote-${logLabel}-${stamp}.log`), { flags: "a" });
   const child = spawn("powershell.exe", [
     "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", runner,
     "-RepositoryPath", repositoryPath
@@ -45,7 +48,7 @@ function runWorkerCommand(commandType) {
   child.stderr.pipe(log);
   return new Promise((resolve) => {
     child.once("error", (error) => { log.end(); resolve({ code: 1, message: error.message }); });
-    child.once("exit", (code) => { log.end(); resolve({ code: Number(code ?? 1), message: code === 0 ? (currentMonth ? "Actualización mensual de todos completada correctamente" : "Trabajos pendientes procesados correctamente") : `El worker terminó con código ${code ?? 1}` }); });
+    child.once("exit", (code) => { log.end(); resolve({ code: Number(code ?? 1), message: code === 0 ? (currentMonth ? "Actualización mensual de todos completada correctamente" : bolsaNames ? "Escaneo de nombres de bolsa completado correctamente" : "Trabajos pendientes procesados correctamente") : `El worker terminó con código ${code ?? 1}` }); });
   });
 }
 
@@ -56,7 +59,8 @@ async function poll() {
   if (!command?.id) return;
   running = true;
   const currentMonth = command.commandType === "current_month_all";
-  await heartbeat("executing", currentMonth ? "Actualizando el mes actual de todos" : "Abriendo Chrome y procesando pendientes");
+  const bolsaNames = command.commandType === "bolsa_name_scan";
+  await heartbeat("executing", currentMonth ? "Actualizando el mes actual de todos" : bolsaNames ? "Escaneando nombres de bolsa" : "Abriendo Chrome y procesando pendientes");
   const result = await runWorkerCommand(command.commandType);
   await rpc("app_cpe_finish_worker_command", {
     p_id: command.id,
