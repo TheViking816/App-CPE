@@ -19,7 +19,7 @@ test("el registro pide correo y la primera conexión queda pendiente sin lanzar 
   assert.match(app, /portalActivationStatus === "pending" && !snapshot/);
   assert.match(app, /Cuenta pendiente de activación/);
   assert.match(app, /Te enviaremos un correo a \{session\.email/);
-  assert.match(app, /useState\(Boolean\(openCredentialsOnLoad\)\)/);
+  assert.match(app, /useState\(credentialsOnly \|\| Boolean\(openCredentialsOnLoad\)\)/);
   assert.doesNotMatch(app, /No necesitas mantener esta pantalla abierta/);
   assert.match(app, /queuePendingPortalActivation\(\{ token: session\.token \}\)/);
   assert.match(pendingQueueMigration, /'activation_pending'/);
@@ -50,7 +50,7 @@ test("el rechazo de las claves avisa al usuario y vuelve a dejar su cuenta pendi
   assert.match(rejectedCredentialsEmailMigration, /portal_credentials_rejected/);
   assert.match(rejectedCredentialsEmailMigration, /v_user\.email/);
   assert.match(rejectedCredentialsEmailMigration, /portal_activation_status = 'pending'/);
-  assert.match(app, /setShowCredentials\(rejectedCredentials\)/);
+  assert.match(app, /setShowCredentials\(credentialsOnly \|\| rejectedCredentials\)/);
 });
 
 test("el rechazo repetido de las mismas claves solo encola un correo", () => {

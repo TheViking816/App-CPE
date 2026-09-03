@@ -485,6 +485,17 @@ export async function requestPendingWorkerRun({ token }) {
   return data || null;
 }
 
+export async function requestCurrentMonthWorkerRun({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_admin_request_current_month_worker", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function refreshCurrentUser({ token }) {
   if (!supabase || !token) return null;
 

@@ -32,10 +32,11 @@ async function heartbeat(status = running ? "executing" : "idle", message = runn
   await rpc("app_cpe_worker_heartbeat", { p_worker_id: workerId, p_status: status, p_message: message });
 }
 
-function runPendingSync() {
-  const runner = path.join(repositoryPath, "scripts", "windows", "run-pending-sync.ps1");
+function runWorkerCommand(commandType) {
+  const currentMonth = commandType === "current_month_all";
+  const runner = path.join(repositoryPath, "scripts", "windows", currentMonth ? "run-combined-current-sync.ps1" : "run-pending-sync.ps1");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const log = createWriteStream(path.join(logDirectory, `remote-pending-${stamp}.log`), { flags: "a" });
+  const log = createWriteStream(path.join(logDirectory, `remote-${currentMonth ? "current-month" : "pending"}-${stamp}.log`), { flags: "a" });
   const child = spawn("powershell.exe", [
     "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", runner,
     "-RepositoryPath", repositoryPath
@@ -44,7 +45,7 @@ function runPendingSync() {
   child.stderr.pipe(log);
   return new Promise((resolve) => {
     child.once("error", (error) => { log.end(); resolve({ code: 1, message: error.message }); });
-    child.once("exit", (code) => { log.end(); resolve({ code: Number(code ?? 1), message: code === 0 ? "Trabajos pendientes procesados correctamente" : `El worker terminó con código ${code ?? 1}` }); });
+    child.once("exit", (code) => { log.end(); resolve({ code: Number(code ?? 1), message: code === 0 ? (currentMonth ? "Actualización mensual de todos completada correctamente" : "Trabajos pendientes procesados correctamente") : `El worker terminó con código ${code ?? 1}` }); });
   });
 }
 
@@ -54,8 +55,9 @@ async function poll() {
   const command = await rpc("app_cpe_claim_worker_command", { p_worker_id: workerId });
   if (!command?.id) return;
   running = true;
-  await heartbeat("executing", "Abriendo Chrome y procesando pendientes");
-  const result = await runPendingSync();
+  const currentMonth = command.commandType === "current_month_all";
+  await heartbeat("executing", currentMonth ? "Actualizando el mes actual de todos" : "Abriendo Chrome y procesando pendientes");
+  const result = await runWorkerCommand(command.commandType);
   await rpc("app_cpe_finish_worker_command", {
     p_id: command.id,
     p_worker_id: workerId,

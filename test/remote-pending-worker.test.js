@@ -22,3 +22,20 @@ test("remote pending worker is restricted, claimed once and runs the existing pe
   assert.match(monitor, /Ejecutar pendientes en el PC/);
   assert.match(client, /app_cpe_admin_request_pending_worker/);
 });
+
+test("remote control can launch the complete current-month worker", async () => {
+  const [sql, agent, monitor, client] = await Promise.all([
+    read("../supabase/migrations/20260903023523_add_remote_current_month_worker.sql"),
+    read("../scripts/remote-pending-worker-agent.js"),
+    read("../src/AdminMonitor.jsx"),
+    read("../src/supabaseClient.js")
+  ]);
+
+  assert.match(sql, /current_month_all/);
+  assert.match(sql, /app_cpe_admin_request_current_month_worker/);
+  assert.match(sql, /v_admin\.chapa <> '72683'/);
+  assert.match(agent, /run-combined-current-sync\.ps1/);
+  assert.match(agent, /command\.commandType === "current_month_all"/);
+  assert.match(monitor, /Actualizar todos · mes actual/);
+  assert.match(client, /app_cpe_admin_request_current_month_worker/);
+});
