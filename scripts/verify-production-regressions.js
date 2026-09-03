@@ -10,6 +10,7 @@ const currentAssignments = read("src/currentAssignments.js");
 const payroll = read("src/payroll.js");
 const fullPartMerge = read("src/fullPartMerge.js");
 const styles = read("src/styles.css");
+const generalBoard = read("src/GeneralBoard.jsx");
 
 if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_GIT_COMMIT_REF) {
   assert.equal(process.env.VERCEL_GIT_COMMIT_REF, "main", "Producción solo se puede construir desde la rama main.");
@@ -31,6 +32,9 @@ assert.match(styles, /\.assignment-detail-workers \.is-code-grid p\.is-current-w
 assert.match(currentAssignments, /canonicalPortalPart/, "Falta la deduplicación de jornadas de clasificadores en Contratación.");
 assert.match(currentAssignments, /normalizeReservePortalRow/, "Falta la normalización de reservas de clasificadores.");
 assert.match(payroll, /normalizeReservePortalRow/, "Falta la deduplicación de jornadas de clasificadores en Sueldómetro.");
+assert.doesNotMatch(generalBoard, /item\.name \? ` · \$\{item\.name\}`/, "El Tablón general vuelve a publicar nombres de trabajadores.");
+assert.doesNotMatch(generalBoard, /worker\.chapa, worker\.name/, "El buscador del Tablón general vuelve a indexar nombres privados.");
+assert.match(generalBoard, /item\.bolsa\.map\(\(worker\) => worker\.chapa\)/, "El Tablón general debe permitir buscar por chapa sin publicar nombres.");
 assert.match(monitor, /Ejecutar pendientes en el PC/, "Falta el control remoto de pendientes.");
 assert.match(monitor, /Actualizar todos · mes actual/, "Falta el control remoto mensual.");
 assert.match(monitor, /Escanear nombres de bolsa/, "Falta el control remoto del escaneo de bolsa.");
