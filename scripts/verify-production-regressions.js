@@ -18,8 +18,11 @@ assert.doesNotMatch(app, />Cambiar acceso<\/button>/, "Ha reaparecido el botón 
 assert.match(app, /Noray\/Prueba\.asp\?f=1&mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows/, "El enlace para gestionar descansos no apunta a la vista completa del portal.");
 assert.match(monitor, /Ejecutar pendientes en el PC/, "Falta el control remoto de pendientes.");
 assert.match(monitor, /Actualizar todos · mes actual/, "Falta el control remoto mensual.");
+assert.match(monitor, /Escanear nombres de bolsa/, "Falta el control remoto del escaneo de bolsa.");
 assert.match(client, /app_cpe_admin_request_pending_worker/, "Falta la orden remota de pendientes.");
 assert.match(client, /app_cpe_admin_request_current_month_worker/, "Falta la orden remota mensual.");
+assert.match(client, /app_cpe_admin_request_bolsa_name_scan/, "Falta la orden remota del escaneo de bolsa.");
 assert.match(remoteWorker, /run-combined-current-sync\.ps1/, "El agente local no puede ejecutar la carga mensual.");
+assert.match(remoteWorker, /run-bolsa-name-scan\.ps1/, "El agente local no puede ejecutar el escaneo de bolsa.");
 
 console.log("Protecciones de regresión de producción verificadas.");

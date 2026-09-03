@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, BarChart3, CheckSquare2, Clock3, Eye, ListRestart, Play, RefreshCw, Search, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
-import { getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestCurrentMonthWorkerRun, requestPendingWorkerRun } from "./supabaseClient.js";
+import { getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestBolsaNameScanRun, requestCurrentMonthWorkerRun, requestPendingWorkerRun } from "./supabaseClient.js";
 
 const PAGE_LABELS = {
   inicio: "Inicio", contratacion: "Contratación", sueldometro: "Sueldómetro",
@@ -59,6 +59,7 @@ export default function AdminMonitor({ session }) {
   const [workerControl, setWorkerControl] = useState(null);
   const [startingWorker, setStartingWorker] = useState(false);
   const [startingCurrentMonthWorker, setStartingCurrentMonthWorker] = useState(false);
+  const [startingBolsaNameScan, setStartingBolsaNameScan] = useState(false);
 
   const load = async ({ quiet = false } = {}) => {
     if (quiet) setRefreshing(true);
@@ -207,6 +208,21 @@ export default function AdminMonitor({ session }) {
     }
   };
 
+  const runBolsaNameScan = async () => {
+    setStartingBolsaNameScan(true);
+    setQueueMessage("");
+    setPortalError("");
+    try {
+      await requestBolsaNameScanRun({ token: session.token });
+      setQueueMessage("Orden enviada al PC. Comenzará el escaneo de nombres de bolsa.");
+      setWorkerControl(await getAdminWorkerControlStatus({ token: session.token }));
+    } catch (requestError) {
+      setPortalError(requestError?.message || "No se pudo iniciar el escaneo de nombres de bolsa.");
+    } finally {
+      setStartingBolsaNameScan(false);
+    }
+  };
+
   return (
     <section className="page-panel admin-monitor">
       <header className="monitor-hero">
@@ -322,6 +338,10 @@ export default function AdminMonitor({ session }) {
               <button type="button" onClick={runCurrentMonthWorker} disabled={startingCurrentMonthWorker || ["queued", "claimed"].includes(workerControl?.currentMonthCommandStatus)}>
                 <RefreshCw size={17} />
                 {startingCurrentMonthWorker ? "Enviando…" : workerControl?.currentMonthCommandStatus === "queued" ? "Mes actual esperando al PC" : workerControl?.currentMonthCommandStatus === "claimed" ? "Actualizando mes actual" : "Actualizar todos · mes actual"}
+              </button>
+              <button type="button" onClick={runBolsaNameScan} disabled={startingBolsaNameScan || ["queued", "claimed"].includes(workerControl?.bolsaNameScanCommandStatus)}>
+                <Search size={17} />
+                {startingBolsaNameScan ? "Enviando…" : workerControl?.bolsaNameScanCommandStatus === "queued" ? "Escaneo esperando al PC" : workerControl?.bolsaNameScanCommandStatus === "claimed" ? "Escaneando nombres" : "Escanear nombres de bolsa"}
               </button>
             </div>
             <div className="monitor-sync-toolbar">

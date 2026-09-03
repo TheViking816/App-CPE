@@ -475,6 +475,17 @@ export async function requestCurrentMonthWorkerRun({ token }) {
   return data || null;
 }
 
+export async function requestBolsaNameScanRun({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_admin_request_bolsa_name_scan", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function refreshCurrentUser({ token }) {
   if (!supabase || !token) return null;
 
