@@ -19,7 +19,9 @@ assert.match(app, /Acceso al portal/, "Falta el acceso dedicado a las claves del
 assert.match(app, /const credentialsOnly = view === "all"/, "Falta el aislamiento del formulario de claves.");
 assert.doesNotMatch(app, /Datos guardados del portal oficial/, "Ha reaparecido el acceso a claves en las pantallas de datos.");
 assert.doesNotMatch(app, />Cambiar acceso<\/button>/, "Ha reaparecido el botón de claves fuera de Ajustes.");
-assert.match(app, /Noray\/Prueba\.asp\?f=1&mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows/, "El enlace para gestionar descansos no apunta a la vista completa del portal.");
+assert.equal((app.match(/href="https:\/\/portal\.cpevalencia\.com\/#User"/g) || []).length, 2, "Descansos y vacaciones deben abrir el acceso estable del portal.");
+assert.doesNotMatch(app, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/Prueba\.asp/, "Descansos vuelve a depender de una sesion activa del portal.");
+assert.doesNotMatch(app, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/src\/VacacionesC24UniVac\/VacacionesC24\.asp"/, "Vacaciones vuelve a depender de una sesion activa del portal.");
 assert.match(app, /Centro de novedades/, "Ha desaparecido el centro de novedades.");
 assert.match(app, /findPartBolsaWorkers/, "Ha desaparecido la carga de nombres de bolsa en los partes.");
 assert.match(app, /mergeFullPartSpecialties/, "Ha desaparecido la unión del parte completo con la bolsa.");

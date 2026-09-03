@@ -11,7 +11,8 @@ test("el centro de novedades está disponible desde la campana y el menú", () =
   assert.match(navigationSource, /"novedades"/);
 });
 
-test("gestionar descansos abre la ruta oficial completa del portal", () => {
-  assert.match(appSource, /https:\/\/portal\.cpevalencia\.com\/Noray\/Prueba\.asp\?f=1&mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows/);
-  assert.doesNotMatch(appSource, /#User,ViewNoray,18/);
+test("descansos y vacaciones abren el login estable si la sesion ha caducado", () => {
+  assert.equal((appSource.match(/href="https:\/\/portal\.cpevalencia\.com\/#User"/g) || []).length, 2);
+  assert.doesNotMatch(appSource, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/Prueba\.asp/);
+  assert.doesNotMatch(appSource, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/src\/VacacionesC24UniVac\/VacacionesC24\.asp"/);
 });
