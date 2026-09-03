@@ -84,6 +84,9 @@ if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar los horarios de Chaper
 $pendingShortcutInstaller = Join-Path $RepositoryPath "scripts\windows\install-pending-sync-shortcut.ps1"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $pendingShortcutInstaller -RepositoryPath $RepositoryPath
 if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el acceso para actualizar pendientes." }
+$remoteAgentInstaller = Join-Path $RepositoryPath "scripts\windows\install-remote-pending-worker-agent.ps1"
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $remoteAgentInstaller -RepositoryPath $RepositoryPath
+if ($LASTEXITCODE -ne 0) { throw "No se pudo instalar el control remoto de pendientes." }
 
 Write-Host "Worker instalado en modo manual en tandas de hasta $BatchSize."
 Write-Host "Estado y logs: $workerStateDir"

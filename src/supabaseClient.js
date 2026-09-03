@@ -442,6 +442,28 @@ export async function queueAdminPortalSyncUsers({ token, chapas, fullHistory = f
   return data;
 }
 
+export async function getAdminWorkerControlStatus({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_admin_worker_control_status", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function requestPendingWorkerRun({ token }) {
+  if (!supabase || !token) return null;
+
+  const { data, error } = await supabase.rpc("app_cpe_admin_request_pending_worker", {
+    p_token: token
+  });
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function refreshCurrentUser({ token }) {
   if (!supabase || !token) return null;
 
