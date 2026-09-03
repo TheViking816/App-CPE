@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, BarChart3, CheckSquare2, Clock3, Eye, ListRestart, Play, RefreshCw, Search, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
-import { getAdminPortalSyncUsers, getUsageMonitor, queueAdminPortalSyncUsers } from "./supabaseClient.js";
+import { getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestPendingWorkerRun } from "./supabaseClient.js";
 
 const PAGE_LABELS = {
   inicio: "Inicio", contratacion: "Contratación", sueldometro: "Sueldómetro",
@@ -56,6 +56,8 @@ export default function AdminMonitor({ session }) {
   const [queueing, setQueueing] = useState(false);
   const [queueMessage, setQueueMessage] = useState("");
   const [portalError, setPortalError] = useState("");
+  const [workerControl, setWorkerControl] = useState(null);
+  const [startingWorker, setStartingWorker] = useState(false);
 
   const load = async ({ quiet = false } = {}) => {
     if (quiet) setRefreshing(true);
@@ -63,9 +65,10 @@ export default function AdminMonitor({ session }) {
     setError("");
     setPortalError("");
     try {
-      const [usageResult, portalResult] = await Promise.allSettled([
+      const [usageResult, portalResult, workerResult] = await Promise.allSettled([
         getUsageMonitor({ token: session.token }),
-        getAdminPortalSyncUsers({ token: session.token })
+        getAdminPortalSyncUsers({ token: session.token }),
+        getAdminWorkerControlStatus({ token: session.token })
       ]);
       if (usageResult.status === "rejected") throw usageResult.reason;
       setData(usageResult.value);
@@ -75,6 +78,7 @@ export default function AdminMonitor({ session }) {
       } else {
         setPortalError(portalResult.reason?.message || "No se pudieron cargar las sincronizaciones.");
       }
+      if (workerResult.status === "fulfilled") setWorkerControl(workerResult.value);
     } catch (requestError) {
       setError(requestError?.message || "No se pudo cargar el monitor.");
     } finally {
@@ -86,6 +90,18 @@ export default function AdminMonitor({ session }) {
   useEffect(() => {
     load();
     const timer = window.setInterval(() => load({ quiet: true }), 60_000);
+    return () => window.clearInterval(timer);
+  }, [session.token]);
+
+  useEffect(() => {
+    const refreshWorkerControl = async () => {
+      try {
+        setWorkerControl(await getAdminWorkerControlStatus({ token: session.token }));
+      } catch {
+        // El resto del monitor sigue disponible si falla un latido puntual.
+      }
+    };
+    const timer = window.setInterval(refreshWorkerControl, 10_000);
     return () => window.clearInterval(timer);
   }, [session.token]);
 
@@ -148,7 +164,7 @@ export default function AdminMonitor({ session }) {
       const result = await queueAdminPortalSyncUsers({ token: session.token, chapas, fullHistory });
       const queued = Number(result?.queued || 0);
       const skipped = Number(result?.skipped || 0);
-      setQueueMessage(`${queued} ${queued === 1 ? "chapa añadida" : "chapas añadidas"} a la cola para ${fullHistory ? "la carga inicial completa" : "la actualización normal"}${skipped ? ` · ${skipped} omitidas` : ""}. Ejecuta “Actualizar pendientes App CPE” en el escritorio.`);
+      setQueueMessage(`${queued} ${queued === 1 ? "chapa añadida" : "chapas añadidas"} a la cola para ${fullHistory ? "la carga inicial completa" : "la actualización normal"}${skipped ? ` · ${skipped} omitidas` : ""}. Ya puedes ejecutar los pendientes desde el botón del monitor.`);
       setSelectedChapas(new Set());
       const refreshed = await getAdminPortalSyncUsers({ token: session.token });
       setPortalUsers(refreshed?.users || []);
@@ -156,6 +172,22 @@ export default function AdminMonitor({ session }) {
       setPortalError(requestError?.message || "No se pudieron encolar las chapas seleccionadas.");
     } finally {
       setQueueing(false);
+    }
+  };
+
+  const runPendingWorker = async () => {
+    setStartingWorker(true);
+    setQueueMessage("");
+    setPortalError("");
+    try {
+      await requestPendingWorkerRun({ token: session.token });
+      setQueueMessage("Orden enviada al PC. Chrome se abrirá y comenzará a procesar la cola.");
+      const status = await getAdminWorkerControlStatus({ token: session.token });
+      setWorkerControl(status);
+    } catch (requestError) {
+      setPortalError(requestError?.message || "No se pudo enviar la orden al PC.");
+    } finally {
+      setStartingWorker(false);
     }
   };
 
@@ -259,7 +291,19 @@ export default function AdminMonitor({ session }) {
               <div><small>Control manual</small><h2>Sincronizar usuarios concretos <span>{selectedChapas.size} seleccionados</span></h2></div>
               <ListRestart size={22} />
             </div>
-            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda las nóminas de los últimos 12 meses. Ambos botones dejan las chapas en cola para «Actualizar pendientes App CPE».</p>
+            <p className="monitor-sync-help">La actualización normal renueva el mes actual. La carga inicial completa recupera todo el año de jornales y primas y guarda las nóminas de los últimos 12 meses. Después puedes ejecutar la cola en el PC directamente desde este monitor.</p>
+            <div className="monitor-sync-actions monitor-worker-actions">
+              <span>
+                <strong>{workerControl?.pcOnline ? "PC conectado" : "PC sin conexión"}</strong>
+                {workerControl?.pcOnline
+                  ? ` · ${workerControl.pcStatus === "executing" ? "Procesando pendientes" : "Preparado"}`
+                  : workerControl?.lastSeenAt ? ` · Última conexión ${formatDateTime(workerControl.lastSeenAt)}` : " · Aún no se ha conectado el agente"}
+              </span>
+              <button type="button" onClick={runPendingWorker} disabled={startingWorker || ["queued", "claimed"].includes(workerControl?.commandStatus)}>
+                <Play size={17} />
+                {startingWorker ? "Enviando…" : workerControl?.commandStatus === "queued" ? "Esperando al PC" : workerControl?.commandStatus === "claimed" ? "Ejecutando en el PC" : "Ejecutar pendientes en el PC"}
+              </button>
+            </div>
             <div className="monitor-sync-toolbar">
               <label><Search size={17} /><input value={portalQuery} onChange={(event) => setPortalQuery(event.target.value)} inputMode="numeric" placeholder="Buscar chapa" /></label>
               <div className="monitor-sync-filters" role="group" aria-label="Filtrar sincronizaciones">
