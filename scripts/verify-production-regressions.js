@@ -15,6 +15,7 @@ assert.match(app, /Acceso al portal/, "Falta el acceso dedicado a las claves del
 assert.match(app, /const credentialsOnly = view === "all"/, "Falta el aislamiento del formulario de claves.");
 assert.doesNotMatch(app, /Datos guardados del portal oficial/, "Ha reaparecido el acceso a claves en las pantallas de datos.");
 assert.doesNotMatch(app, />Cambiar acceso<\/button>/, "Ha reaparecido el botón de claves fuera de Ajustes.");
+assert.match(app, /Noray\/Prueba\.asp\?f=1&mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows/, "El enlace para gestionar descansos no apunta a la vista completa del portal.");
 assert.match(monitor, /Ejecutar pendientes en el PC/, "Falta el control remoto de pendientes.");
 assert.match(monitor, /Actualizar todos · mes actual/, "Falta el control remoto mensual.");
 assert.match(client, /app_cpe_admin_request_pending_worker/, "Falta la orden remota de pendientes.");

@@ -2404,7 +2404,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>
-      <a className="portal-official-action" href="https://portal.cpevalencia.com/Noray/Prueba.asp" target="_blank" rel="noreferrer">
+      <a className="portal-official-action" href="https://portal.cpevalencia.com/Noray/Prueba.asp?f=1&mode=GWT&devType=Desktop&device=Desktop&browser=Chrome&os=Windows" target="_blank" rel="noreferrer">
         Gestionar descansos en el Portal <ExternalLink size={15} />
       </a>
     </section>
