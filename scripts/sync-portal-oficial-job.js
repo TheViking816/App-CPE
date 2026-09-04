@@ -176,6 +176,7 @@ async function runSync(job) {
 
 function publicErrorMessage(error) {
   const message = error instanceof Error ? error.message : "Error desconocido";
+  if (message.startsWith("Lectura parcial:")) return message;
   if (/usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(message)) {
     return "Usuario o contraseña del portal oficial incorrectos.";
   }
@@ -272,6 +273,13 @@ async function main() {
 
   try {
     await runSync(job);
+    if (job.request_kind !== "document") {
+      const snapshots = await supabaseRequest(`/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(job.chapa)}&limit=1`);
+      const sync = snapshots?.[0]?.payload?.sync;
+      if (!sync || sync.inProgress || (sync.partial && (sync.warnings || []).length > 0)) {
+        throw new Error("Lectura parcial: se conservan los datos anteriores. Algunas secciones no se han podido actualizar; se reintentará la carga.");
+      }
+    }
     await updateJob({
       status: "completed",
       message: "Portal sincronizado",

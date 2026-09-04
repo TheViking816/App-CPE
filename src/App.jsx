@@ -1,5 +1,6 @@
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
+import { selectPremiumRowsForMonth } from "./portal-premium-period.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
   BriefcaseBusiness,
@@ -2556,10 +2557,11 @@ function PortalFeatureTemplate({ view = "all" }) {
 
 function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onRequestSecurityKey, hideSyncFailure = false }) {
   const payload = snapshot?.payload || null;
-  const primas = payload?.primas?.rows || [];
+  const latestPrimas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
   const currentPayrollMonthLabel = payload?.jornales?.monthLabel
-    || (!payload?.primas?.locked && primas.length > 0 ? payload?.primas?.monthLabel : "");
+    || (!payload?.primas?.locked && latestPrimas.length > 0 ? payload?.primas?.monthLabel : "");
+  const primas = useMemo(() => selectPremiumRowsForMonth(payload?.primas, currentPayrollMonthLabel), [payload?.primas, currentPayrollMonthLabel]);
   const portalJornales = selectPortalJornales(payload?.jornales, payload?.primas);
   const jornales = useMemo(() => mergeUpcomingAssignmentsIntoJornales(
     portalJornales,
@@ -2911,6 +2913,15 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </section>
       )}
 
+      {payload?.sync?.partial && !payload?.sync?.inProgress && (
+        <section className="portal-sync-warning" role="status">
+          <CircleAlert size={20} />
+          <div><strong>Lectura parcial: se conservan tus datos anteriores</strong>
+            <p>Algunas secciones no se han podido actualizar. Los datos guardados siguen disponibles.</p>
+            {(payload.sync.warnings || []).map((warning, index) => <small key={index}>{warning}</small>)}
+          </div>
+        </section>
+      )}
       {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && needsSecurityKey && (
         <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestSecurityKey}>
           <CircleAlert size={20} />
