@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { isPremiumCredentialNotice } from "./portal-sync-outcome.js";
+import { isPremiumCredentialNotice, isExplicitSectionFailure } from "./portal-sync-outcome.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -2779,6 +2779,7 @@ async function main() {
       return;
     }
     const sectionWarnings = [];
+    const sectionErrors = [];
     const sectionNotices = [];
     let freshSections = 0;
     const readSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
@@ -2786,6 +2787,7 @@ async function main() {
       try {
         const value = await reader();
         if ((!isMeaningful || isMeaningful(value)) && !wouldEraseStoredCollection(value, fallback, options)) {
+          sectionErrors.push(...(value?.historyWarnings || []));
           freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
@@ -2795,6 +2797,7 @@ async function main() {
         console.warn(message);
       } catch (error) {
         const message = `${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim();
+        sectionErrors.push(message);
         sectionWarnings.push(message);
         console.warn(message);
       }
@@ -2809,6 +2812,7 @@ async function main() {
           return isMeaningful(fallback) ? fallback : emptyValue;
         }
         if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options)) {
+          sectionErrors.push(...(value?.historyWarnings || []));
           freshSections += 1;
           console.log(`${name} actualizado.`);
           return value;
@@ -2823,6 +2827,7 @@ async function main() {
           console.warn(message);
           return isMeaningful(fallback) ? fallback : emptyValue;
         }
+        if (isExplicitSectionFailure(message)) sectionErrors.push(message);
         sectionWarnings.push(message);
         console.warn(message);
       }
@@ -3020,6 +3025,7 @@ async function main() {
         freshSections,
         warnings: sectionWarnings,
         notices: [...new Set(sectionNotices)],
+        errors: [...sectionErrors],
         ...(portalRequestKind === "history"
           && sectionNotices.length === 0
           && sectionWarnings.length === 0

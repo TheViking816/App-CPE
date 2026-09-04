@@ -80,7 +80,7 @@ async function closeSnapshotWithError(job, message) {
             inProgress: false,
             failed: true,
             partial: true,
-            stage: "No se pudo conectar con el portal",
+            stage: "Sincronizacion no completada",
             error: message,
           },
         },
@@ -280,7 +280,7 @@ async function main() {
       const sync = snapshots?.[0]?.payload?.sync;
       const outcome = syncOutcome(sync);
       if (outcome.failed) {
-        throw new Error("Lectura parcial: se conservan los datos anteriores. Algunas secciones no se han podido actualizar; se reintentará la carga.");
+        throw new Error("Lectura parcial: " + outcome.errorMessage);
       }
       completionMessage = outcome.message;
     }

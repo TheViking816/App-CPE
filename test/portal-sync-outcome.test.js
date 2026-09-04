@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { syncOutcome } from "../scripts/portal-sync-outcome.js";
+import { syncOutcome, isExplicitSectionFailure } from "../scripts/portal-sync-outcome.js";
 test("mes reconocido vacio sin avisos es una sync correcta", () => {
   assert.equal(syncOutcome({inProgress:false,partial:false,warnings:[]}).failed,false);
 });
@@ -10,7 +10,21 @@ test("clave de primas incorrecta no falla toda la sync", () => {
   assert.match(result.message,/avisos/);
 });
 test("aviso de clave no oculta un fallo real en otra seccion", () => {
-  assert.equal(syncOutcome({partial:true,warnings:["La clave de seguridad de primas es incorrecta.","descansos no se pudo actualizar"]}).failed,true);
+  assert.equal(syncOutcome({partial:true,warnings:["La clave de seguridad de primas es incorrecta."],errors:["descansos: timeout"]}).failed,true);
+});
+test("72710: siete secciones cargadas y avisos de conservacion no son failed", () => {
+  assert.equal(syncOutcome({inProgress:false,partial:true,freshSections:7,warnings:[
+    "contratacion actual no se pudo actualizar. No se pudo leer la contratacion actual.",
+    "vacaciones no devolvio datos; se conserva la ultima lectura disponible."
+  ],errors:[]}).failed,false);
+});
+test("errores de transporte y cargas fallidas siguen siendo errores", () => {
+  for (const message of ["Timeout 30000ms","HTTP 503","El portal no termino de cargar los dobles","El calendario no incluye el mes actual y el siguiente."]) {
+    assert.equal(isExplicitSectionFailure(message),true);
+    assert.equal(syncOutcome({errors:[message]}).failed,true);
+  }
+  assert.equal(isExplicitSectionFailure("La clave de seguridad de primas es incorrecta."),false);
+  assert.equal(syncOutcome({failed:true,error:"No se pudo guardar"}).failed,true);
 });
 test("sin resultado o aun en progreso no puede completarse", () => {
   assert.equal(syncOutcome(null).failed,true);

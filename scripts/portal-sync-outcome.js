@@ -4,10 +4,16 @@ export function isPremiumCredentialNotice(message) {
 }
 
 export function syncOutcome(sync) {
-  const warnings = (sync?.warnings || []).filter(message => !isPremiumCredentialNotice(message));
-  const notices = [...(sync?.notices || []), ...(sync?.warnings || []).filter(isPremiumCredentialNotice)];
+  const notices = [...(sync?.notices || []), ...(sync?.warnings || [])];
+  const errors = sync?.errors || [];
   return {
-    failed: !sync || Boolean(sync.inProgress) || Boolean(sync.partial && warnings.length),
+    failed: !sync || Boolean(sync.inProgress) || Boolean(sync.failed) || errors.length > 0,
+    errorMessage: errors.join(" ") || sync?.error || "La sincronizacion no ha finalizado.",
     message: notices.length ? "Portal sincronizado con avisos: " + notices.join(" ") : "Portal sincronizado"
   };
+}
+
+export function isExplicitSectionFailure(message) {
+  if (isPremiumCredentialNotice(message)) return false;
+  return /timeout|timed out|net::|ECONN|HTTP\s*[45]\d\d|no termin[oó] de cargar|calendario no incluye|no devolvi[oó].*(?:PDF|tabla reconocible)/i.test(String(message || ""));
 }
