@@ -8,6 +8,12 @@ const guard=vm.runInNewContext(block.replace('export function','function')+'; wo
 test('septiembre con menos jornales no se compara con agosto',()=>{
   assert.equal(guard({recognized:true,monthLabel:'Septiembre de 2026',rows:[{}]},{monthLabel:'Agosto de 2026',rows:[{},{},{}]}),false);
 });
+test('un mes nuevo puede empezar vacío sin borrar el anterior',()=>{
+  assert.equal(guard({recognized:true,monthLabel:'Septiembre de 2026',rows:[]},{monthLabel:'Agosto de 2026',rows:[{},{},{}]}),false);
+});
+test('el mes en curso admite los nuevos jornales diarios',()=>{
+  assert.equal(guard({recognized:true,monthLabel:'Septiembre de 2026',rows:[{parte:'1'},{parte:'2'}]},{monthLabel:'Septiembre de 2026',rows:[{parte:'1'}]}),false);
+});
 test('una lectura reducida del mismo mes sigue protegida',()=>{
   assert.equal(guard({recognized:true,monthLabel:'Agosto de 2026',rows:[]},{monthLabel:'Agosto de 2026',rows:[{}]}),true);
 });
