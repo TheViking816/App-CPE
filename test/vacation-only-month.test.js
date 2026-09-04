@@ -10,5 +10,5 @@ test('septiembre sin jornales incluye siete días de vacaciones y mantiene el or
   const annual=summarizeAnnualPayroll([{month:9,year:2026,monthLabel:'Septiembre de 2026',rows:[]},{month:8,year:2026,monthLabel:'Agosto de 2026',rows:[]}],null,{},entries);
   assert.deepEqual(annual.months.map(m=>m.month),[8,9]);
   assert.equal(annual.months[1].vacationDays,7);
-  assert.equal(annual.months[1].total,summary.total);
+  assert.equal(annual.months[1].total,Number(summary.total.toFixed(2)));
 });
