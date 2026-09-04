@@ -545,10 +545,17 @@ const protectedCollectionKeys = ["rows", "months", "history", "rules"];
 
 export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false } = {}) {
   if (allowCollectionShrink) return false;
+  const period = (label) => String(label || "").trim().toLocaleLowerCase("es");
+  const nextMonth = period(value?.monthLabel);
+  const previousMonth = period(fallback?.monthLabel);
+  const differentMonth = value?.recognized && nextMonth && previousMonth && nextMonth !== previousMonth;
+  const matchingHistory = differentMonth
+    ? fallback?.history?.find((entry) => period(entry?.monthLabel) === nextMonth)
+    : null;
   return protectedCollectionKeys.some((key) => (
-    Array.isArray(fallback?.[key])
-    && fallback[key].length > 0
-    && (!Array.isArray(value?.[key]) || value[key].length < fallback[key].length)
+    Array.isArray(key === "rows" && differentMonth ? matchingHistory?.rows : fallback?.[key])
+    && (key === "rows" && differentMonth ? matchingHistory.rows : fallback[key]).length > 0
+    && (!Array.isArray(value?.[key]) || value[key].length < (key === "rows" && differentMonth ? matchingHistory.rows : fallback[key]).length)
   ));
 }
 
