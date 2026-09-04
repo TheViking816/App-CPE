@@ -19,6 +19,7 @@ mkdirSync(logDirectory, { recursive: true });
 
 async function rpc(name, body = {}) {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
+    signal: AbortSignal.timeout(20_000),
     method: "POST",
     headers: supabaseAdminHeaders(adminKey, { "Content-Type": "application/json" }),
     body: JSON.stringify(body)
@@ -58,6 +59,7 @@ async function poll() {
   const command = await rpc("app_cpe_claim_worker_command", { p_worker_id: workerId });
   if (!command?.id) return;
   running = true;
+  try {
   const currentMonth = command.commandType === "current_month_all";
   const bolsaNames = command.commandType === "bolsa_name_scan";
   await heartbeat("executing", currentMonth ? "Actualizando el mes actual de todos" : bolsaNames ? "Escaneando nombres de bolsa" : "Abriendo Chrome y procesando pendientes");
@@ -68,12 +70,23 @@ async function poll() {
     p_status: result.code === 0 ? "completed" : "failed",
     p_message: result.message
   });
-  running = false;
-  await heartbeat("idle", result.message);
+  } finally {
+    running = false;
+  }
+  await heartbeat("idle", "PC preparado");
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { stopping = true; });
-await heartbeat("idle", "PC preparado para órdenes remotas");
+// Mantener la conexión visible también durante comandos largos.
+let heartbeatPending = false;
+const heartbeatTimer = setInterval(async () => {
+  if (!running || stopping || heartbeatPending) return;
+  heartbeatPending = true;
+  try { await heartbeat(); }
+  catch (error) { console.error("[remote-worker] No se pudo actualizar el latido:", error.message); }
+  finally { heartbeatPending = false; }
+}, pollMs);
+heartbeatTimer.unref();
 while (!stopping) {
   try { await poll(); }
   catch (error) { console.error(`[remote-worker] ${error instanceof Error ? error.message : error}`); }
