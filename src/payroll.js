@@ -744,7 +744,12 @@ export function summarizeAnnualPayroll(
     return months;
   }, []);
 
-  const months = [...history, ...vacationOnlyMonths].map((month) => {
+  const months = [...history, ...vacationOnlyMonths].sort((left, right) => {
+    const a = parseMonthLabel(left.monthLabel || "");
+    const b = parseMonthLabel(right.monthLabel || "");
+    return (Number(left.year) || a.year) - (Number(right.year) || b.year)
+      || (Number(left.month) || a.month) - (Number(right.month) || b.month);
+  }).map((month) => {
     const monthKey = `${month.year}-${pad(month.month)}`;
     const vacationRows = vacationEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
     const premiumRows = premiumRowsForMonth(premiumHistory, month);
