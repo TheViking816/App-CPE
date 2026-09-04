@@ -87,6 +87,23 @@ export function premiumMonthsToRead({
     .filter((month) => month !== parsedCurrentMonth);
 }
 
+export function pendingPremiumPeriods(history, year, month) {
+  const periods = new Map();
+  for (const period of history || []) {
+    const y = Number(period?.year);
+    const m = Number(period?.month);
+    if (!Number.isInteger(y) || y < 2000 || !Number.isInteger(m) || m < 1 || m > 12
+      || y * 12 + m >= year * 12 + month) continue;
+    // An empty production cell can mean a job without a premium, not an unpaid premium.
+    const pending = (period.rows || []).some((row) =>
+      row.produccionEstado === "pending"
+      || (!["verified", "paid"].includes(row.produccionEstado)
+        && /[1-9]/.test(String(row.produccion || ""))));
+    if (pending) periods.set(`${y}-${m}`, { year: y, month: m });
+  }
+  return [...periods.values()].sort((a, b) => b.year - a.year || b.month - a.month);
+}
+
 export function isPayrollWithinLastMonths(payroll, now = new Date(), monthCount = 12) {
   const match = String(payroll?.period || payroll?.title || "")
     .match(/\b(0[1-9]|1[0-2])\s*\/\s*(\d{2}|\d{4})\b/);
@@ -2459,19 +2476,25 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
   const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
   const previousHistory = Array.isArray(previous?.history)
     ? previous.history.filter((period) => (
-        Number(period?.year) === year
+        Number(period?.year) >= 2000
+        && Number(period?.year) <= year
         && Number(period?.month) >= 1
-        && Number(period?.month) <= currentMonth
+        && Number(period?.month) <= (Number(period?.year) === year ? currentMonth : 12)
         && Array.isArray(period?.rows)
       ))
     : [];
-  const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
+  const periodKey = (y, m) => `${Number(y)}-${Number(m)}`;
+  const historyByMonth = new Map(previousHistory.map((period) => [periodKey(period.year, period.month), period]));
+  let loadedMonth = 0;
   const normalizedCurrentLabel = cleanText(currentResult?.monthLabel).toLocaleLowerCase("es");
   const parsedCurrentMonth = MONTH_NAMES_ES.findIndex((monthName) => (
     normalizedCurrentLabel.includes(monthName.toLocaleLowerCase("es"))
   )) + 1;
-  if (parsedCurrentMonth > 0 && jornalesPeriodMatches(currentResult?.monthLabel, parsedCurrentMonth, year)) {
-    historyByMonth.set(parsedCurrentMonth, {
+  if (parsedCurrentMonth > 0 && currentResult?.recognized
+    && jornalesPeriodMatches(currentResult?.monthLabel, parsedCurrentMonth, year)
+    && (currentResult.rows || []).length >= (historyByMonth.get(periodKey(year, parsedCurrentMonth))?.rows?.length || 0)) {
+    loadedMonth = parsedCurrentMonth;
+    historyByMonth.set(periodKey(year, parsedCurrentMonth), {
       year,
       month: parsedCurrentMonth,
       monthLabel: currentResult.monthLabel,
@@ -2482,28 +2505,37 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
   const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
   const monthsToRead = premiumMonthsToRead({
     currentMonth,
-    parsedCurrentMonth,
+    parsedCurrentMonth: loadedMonth,
     fast: fastMode,
     refreshFullHistory,
-    savedMonths: [...historyByMonth.keys()]
+    savedMonths: [...historyByMonth.values()].filter((period) => Number(period.year) === year).map((period) => Number(period.month))
   });
+  const periodsToRead = new Map(monthsToRead.map((month) => [periodKey(year, month), { year, month }]));
+  for (const period of pendingPremiumPeriods([...historyByMonth.values()], year, currentMonth)) {
+    if (period.year === year && period.month === loadedMonth) continue;
+    periodsToRead.set(periodKey(period.year, period.month), period);
+  }
   const selectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp";
   const periodWarnings = [];
 
-  for (const month of monthsToRead) {
+  for (const { year: periodYear, month } of periodsToRead.values()) {
     try {
-      const period = await readPrimasPeriod(page.context(), selectorUrl, month, year);
-      historyByMonth.set(month, period);
+      const period = await readPrimasPeriod(page.context(), selectorUrl, month, periodYear);
+      const saved = historyByMonth.get(periodKey(periodYear, month));
+      if (saved?.rows?.length > period.rows.length) {
+        throw new Error("Lectura parcial de primas; se conserva el periodo anterior.");
+      }
+      historyByMonth.set(periodKey(periodYear, month), period);
       console.log(`Primas ${period.monthLabel}: ${period.rows.length}.`);
     } catch (error) {
-      const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
+      const warning = `${MONTH_NAMES_ES[month - 1]} de ${periodYear}: ${error instanceof Error ? error.message : "lectura fallida"}`;
       periodWarnings.push(warning);
       console.warn(`No se actualizaron las primas de ${warning}`);
     }
   }
 
-  const history = [...historyByMonth.values()].sort((left, right) => Number(left.month) - Number(right.month));
-  const current = historyByMonth.get(currentMonth)
+  const history = [...historyByMonth.values()].sort((left, right) => Number(left.year) - Number(right.year) || Number(left.month) - Number(right.month));
+  const current = historyByMonth.get(periodKey(year, currentMonth))
     || (Array.isArray(currentResult?.rows) ? currentResult : null)
     || (Array.isArray(previous?.rows) ? previous : null)
     || { monthLabel: "", rows: [] };
