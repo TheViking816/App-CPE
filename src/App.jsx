@@ -2913,15 +2913,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </section>
       )}
 
-      {payload?.sync?.partial && !payload?.sync?.inProgress && (
-        <section className="portal-sync-warning" role="status">
-          <CircleAlert size={20} />
-          <div><strong>Lectura parcial: se conservan tus datos anteriores</strong>
-            <p>Algunas secciones no se han podido actualizar. Los datos guardados siguen disponibles.</p>
-            {(payload.sync.warnings || []).map((warning, index) => <small key={index}>{warning}</small>)}
-          </div>
-        </section>
-      )}
       {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && needsSecurityKey && (
         <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestSecurityKey}>
           <CircleAlert size={20} />
