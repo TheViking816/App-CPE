@@ -1,6 +1,7 @@
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import { selectPremiumRowsForMonth } from "./portal-premium-period.js";
+import { hasSalaryData } from "./portal-salary-state.js";
 import { calendarDays, calendarMonths } from "./portal-calendar.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
@@ -2734,6 +2735,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     ...vacationPayrollEntriesForMonth(vacationPayrollEntries, currentPayrollMonthLabel)
   ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, remateHours, manualPremiums, vacationPayrollEntries]);
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
+  const showSalary = hasSalaryData(payload?.jornales, journalHistory, enrichedJornales);
   const annualPayroll = useMemo(
     () => summarizeAnnualPayroll(
       journalHistory,
@@ -2962,7 +2964,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </nav>
       )}
 
-      {(view === "all" || view === "salary") && enrichedJornales.length > 0 && (
+      {(view === "all" || view === "salary") && showSalary && (
         <section className="portal-salary-section portal-salary-alternative">
           <div className="portal-salary-hero">
             <div className="portal-salary-hero-heading">
@@ -2979,7 +2981,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
               <div>
                 <span>Neto estimado</span>
                 <strong>{formatEuro(selectedNet)}</strong>
-                <small>{selectedCountLabel || "Sin conceptos"} · IRPF {irpfRate}%</small>
+                <small>{selectedCountLabel || "0 jornales"} · IRPF {irpfRate}%</small>
               </div>
               <div className="portal-salary-ring" style={{ "--salary-progress": `${Math.min(Math.max(100 - irpfRate, 0), 100) * 3.6}deg` }}>
                 <span>{irpfRate}%</span>
@@ -3279,7 +3281,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />
         </PayrollDocumentErrorBoundary>
       )}
-      {view === "salary" && enrichedJornales.length === 0 && <PortalFeatureTemplate view="salary" />}
+      {view === "salary" && !showSalary && <PortalFeatureTemplate view="salary" />}
       {view === "rests" && !descansos && <PortalFeatureTemplate view="rests" />}
       {view === "exceptions" && !exceptions?.recognized && <PortalFeatureTemplate view="exceptions" />}
       {view === "holidays" && !vacaciones?.recognized && <PortalFeatureTemplate view="holidays" />}
