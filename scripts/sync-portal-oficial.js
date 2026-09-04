@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { isPremiumCredentialNotice } from "./portal-sync-outcome.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -2778,6 +2779,7 @@ async function main() {
       return;
     }
     const sectionWarnings = [];
+    const sectionNotices = [];
     let freshSections = 0;
     const readSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
       console.log(`Leyendo ${name}...`);
@@ -2802,6 +2804,10 @@ async function main() {
       console.log(`Leyendo ${name}...`);
       try {
         const value = await reader();
+        if (value?.locked && !portalSecurityKey && /primas|nomina/.test(name)) {
+          sectionNotices.push("Primas y nominas pendientes de introducir la clave de seguridad.");
+          return isMeaningful(fallback) ? fallback : emptyValue;
+        }
         if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options)) {
           freshSections += 1;
           console.log(`${name} actualizado.`);
@@ -2812,6 +2818,11 @@ async function main() {
         console.warn(message);
       } catch (error) {
         const message = `${name} no se pudo actualizar. ${error instanceof Error ? error.message : ""}`.trim();
+        if (isPremiumCredentialNotice(message)) {
+          sectionNotices.push("Clave de primas incorrecta: primas y nominas pendientes de actualizar; se conservan los datos guardados.");
+          console.warn(message);
+          return isMeaningful(fallback) ? fallback : emptyValue;
+        }
         sectionWarnings.push(message);
         console.warn(message);
       }
@@ -3008,7 +3019,10 @@ async function main() {
         partial: sectionWarnings.length > 0,
         freshSections,
         warnings: sectionWarnings,
+        notices: [...new Set(sectionNotices)],
         ...(portalRequestKind === "history"
+          && sectionNotices.length === 0
+          && sectionWarnings.length === 0
           && hasJournalData(jornales)
           && hasPremiumData(primas)
           && nominas?.recognized

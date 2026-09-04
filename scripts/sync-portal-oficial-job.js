@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { syncOutcome } from "./portal-sync-outcome.js";
 import {
   resolveSupabaseAdminKey,
   supabaseAdminHeaders,
@@ -273,16 +274,19 @@ async function main() {
 
   try {
     await runSync(job);
+    let completionMessage = "Portal sincronizado";
     if (job.request_kind !== "document") {
       const snapshots = await supabaseRequest(`/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(job.chapa)}&limit=1`);
       const sync = snapshots?.[0]?.payload?.sync;
-      if (!sync || sync.inProgress || (sync.partial && (sync.warnings || []).length > 0)) {
+      const outcome = syncOutcome(sync);
+      if (outcome.failed) {
         throw new Error("Lectura parcial: se conservan los datos anteriores. Algunas secciones no se han podido actualizar; se reintentará la carga.");
       }
+      completionMessage = outcome.message;
     }
     await updateJob({
       status: "completed",
-      message: "Portal sincronizado",
+      message: completionMessage,
       portal_password: null,
       security_key: null,
       finished_at: new Date().toISOString(),
