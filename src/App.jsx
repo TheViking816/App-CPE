@@ -1,6 +1,7 @@
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import { selectPremiumRowsForMonth } from "./portal-premium-period.js";
+import { calendarDays, calendarMonths } from "./portal-calendar.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
   BriefcaseBusiness,
@@ -2431,7 +2432,7 @@ function PortalExceptionsPreview({ exceptions }) {
 }
 
 function PortalCalendarPreview({ descansos, slRows = [] }) {
-  const months = descansos?.months || [];
+  const months = useMemo(() => calendarMonths(descansos?.months || []), [descansos?.months]);
   const slPositionByDate = useMemo(() => {
     const positions = new Map();
     slRows.forEach((item) => {
@@ -2461,9 +2462,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
 
   const month = months[selectedMonthIndex] || months[defaultMonthIndex] || months[0];
   if (!month) return null;
-  const days = month.days?.length
-    ? month.days
-    : Array.from({ length: 31 }, (_, index) => ({ day: index + 1, code: month.codes?.[index] || "" }));
+  const days = calendarDays(month);
   const today = new Date();
   const isCurrentMonth = Number(month.month) === today.getMonth() + 1 && Number(month.year) === today.getFullYear();
 
