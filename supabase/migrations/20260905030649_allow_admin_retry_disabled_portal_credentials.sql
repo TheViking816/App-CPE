@@ -134,7 +134,7 @@ begin
       ) then 'history' else 'snapshot' end into v_request_kind;
 
       -- This is an explicit admin retry. The lifecycle trigger clears the
-      -- credentials_error state; another rejection will disable it again.
+      -- credentials_error state so the saved password can be tried again.
       update public.app_cpe_portal_auto_sync set enabled = true, updated_at = now() where chapa = v_chapa;
 
       v_job := private.app_cpe_queue_portal_sync_job(
