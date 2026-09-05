@@ -18,6 +18,7 @@ import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.
 import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
 import { assignmentsFromCurrentJournals } from "./portal-current-assignments.js";
 import { normalizePortalPart } from "../src/portalRowIdentity.js";
+import { containsAllSavedPortalRows } from "./portal-collection-completeness.js";
 import {
   buildRequestedDoubles,
   cleanMessageBodyText,
@@ -561,7 +562,7 @@ export function parsePrimas(html = "") {
 
 const protectedCollectionKeys = ["rows", "months", "history", "rules"];
 
-export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false } = {}) {
+export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false, rowsAreComplete = null } = {}) {
   if (allowCollectionShrink) return false;
   const period = (label) => String(label || "").trim().toLocaleLowerCase("es");
   const nextMonth = period(value?.monthLabel);
@@ -570,11 +571,14 @@ export function wouldEraseStoredCollection(value, fallback, { allowCollectionShr
   const matchingHistory = differentMonth
     ? fallback?.history?.find((entry) => period(entry?.monthLabel) === nextMonth)
     : null;
-  return protectedCollectionKeys.some((key) => (
-    Array.isArray(key === "rows" && differentMonth ? matchingHistory?.rows : fallback?.[key])
-    && (key === "rows" && differentMonth ? matchingHistory.rows : fallback[key]).length > 0
-    && (!Array.isArray(value?.[key]) || value[key].length < (key === "rows" && differentMonth ? matchingHistory.rows : fallback[key]).length)
-  ));
+  return protectedCollectionKeys.some((key) => {
+    const saved = key === "rows" && differentMonth ? matchingHistory?.rows : fallback?.[key];
+    if (!Array.isArray(saved) || saved.length < 1) return false;
+    const next = value?.[key];
+    if (!Array.isArray(next)) return true;
+    if (key === "rows" && rowsAreComplete) return !rowsAreComplete(next, saved);
+    return next.length < saved.length;
+  });
 }
 
 async function writeStatus(status) {
@@ -2493,7 +2497,11 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
   )) + 1;
   if (parsedCurrentMonth > 0 && currentResult?.recognized
     && jornalesPeriodMatches(currentResult?.monthLabel, parsedCurrentMonth, year)
-    && (currentResult.rows || []).length >= (historyByMonth.get(periodKey(year, parsedCurrentMonth))?.rows?.length || 0)) {
+    && containsAllSavedPortalRows(
+      currentResult.rows || [],
+      historyByMonth.get(periodKey(year, parsedCurrentMonth))?.rows || [],
+      { premiumOnly: true }
+    )) {
     loadedMonth = parsedCurrentMonth;
     historyByMonth.set(periodKey(year, parsedCurrentMonth), {
       year,
@@ -2523,7 +2531,7 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
     try {
       const period = await readPrimasPeriod(page.context(), selectorUrl, month, periodYear);
       const saved = historyByMonth.get(periodKey(periodYear, month));
-      if (saved?.rows?.length > period.rows.length) {
+      if (!containsAllSavedPortalRows(period.rows, saved?.rows || [], { premiumOnly: true })) {
         throw new Error("Lectura parcial de primas; se conserva el periodo anterior.");
       }
       historyByMonth.set(periodKey(periodYear, month), period);
@@ -2889,7 +2897,8 @@ async function main() {
       },
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
-      hasJournalData
+      hasJournalData,
+      { rowsAreComplete: (nextRows, savedRows) => containsAllSavedPortalRows(nextRows, savedRows) }
     );
     if (!jornalesUpdatedThisRun || !hasJournalData(jornales)) {
       throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");

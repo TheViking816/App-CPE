@@ -18,7 +18,7 @@ const slRefreshSource = await readFile(
 
 test("la captura conserva una coleccion anterior si la nueva seccion llega vacia", () => {
   assert.match(syncSource, /protectedCollectionKeys/);
-  assert.match(syncSource, /value\[key\]\.length </);
+  assert.match(syncSource, /next\.length < saved\.length/);
   assert.match(syncSource, /!wouldEraseStoredCollection\(value, fallback, options\)/);
   assert.match(syncSource, /lista SL[\s\S]*allowCollectionShrink: true/);
 });
