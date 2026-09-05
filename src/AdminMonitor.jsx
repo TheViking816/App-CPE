@@ -331,9 +331,9 @@ export default function AdminMonitor({ session }) {
                   ? ` · ${workerControl.pcStatus === "executing" ? "Procesando pendientes" : "Preparado"}`
                   : workerControl?.lastSeenAt ? ` · Última conexión ${formatDateTime(workerControl.lastSeenAt)}` : " · Aún no se ha conectado el agente"}
               </span>
-              <button type="button" onClick={runPendingWorker} disabled={startingWorker || ["queued", "claimed"].includes(workerControl?.pendingCommandStatus)}>
+              <button type="button" onClick={runPendingWorker} disabled={startingWorker}>
                 <Play size={17} />
-                {startingWorker ? "Enviando…" : workerControl?.pendingCommandStatus === "queued" ? "Pendientes esperando al PC" : workerControl?.pendingCommandStatus === "claimed" ? "Procesando pendientes" : "Ejecutar pendientes en el PC"}
+                {startingWorker ? "Enviando…" : "Ejecutar pendientes en el PC"}
               </button>
               <button type="button" onClick={runCurrentMonthWorker} disabled={startingCurrentMonthWorker || ["queued", "claimed"].includes(workerControl?.currentMonthCommandStatus)}>
                 <RefreshCw size={17} />
