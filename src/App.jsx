@@ -1802,6 +1802,19 @@ function PortalConnectCallout({ compact = false, onConnect }) {
   );
 }
 
+function PortalCredentialsRejectedCallout({ onChangePassword }) {
+  return (
+    <section className="portal-credentials-rejected" role="alert">
+      <CircleAlert size={25} />
+      <div>
+        <strong>Revisa tu contraseña del Portal CPE</strong>
+        <span>El portal oficial ha rechazado la contraseña guardada. Cámbiala para verificarla y reactivar tus actualizaciones.</span>
+      </div>
+      <button type="button" onClick={onChangePassword}>Cambiar contraseña</button>
+    </section>
+  );
+}
+
 function HomeInitialLoading() {
   return (
     <section className="page-panel home-dashboard home-initial-loading" aria-busy="true" aria-live="polite">
@@ -1828,6 +1841,7 @@ function HomePanel({
   currentTime,
   portalSnapshot,
   portalConnected,
+  portalCredentialsRejected,
   notice,
   activeSpecialty,
   availableSpecialties,
@@ -1856,7 +1870,7 @@ function HomePanel({
         {!hasPortalData && <span className="home-demo-badge">Vista previa · faltan datos del portal</span>}
       </header>
 
-      {portalConnected === false && <PortalConnectCallout onConnect={onLoadPortal} />}
+      {portalConnected === false && !portalCredentialsRejected && <PortalConnectCallout onConnect={onLoadPortal} />}
 
       {showForumIntro && (
         <button className="home-forum-callout" type="button" onClick={() => onNavigate("foro")}>
@@ -1948,11 +1962,11 @@ function OperationalStatusPanel({ user, doors, doorConfig, chaperoSnapshot, chap
   );
 }
 
-function ContractingPanel({ snapshot, currentTime, portalConnected, onLoadPortal }) {
+function ContractingPanel({ snapshot, currentTime, portalConnected, portalCredentialsRejected, onLoadPortal }) {
   return (
     <section className="page-panel personal-route-panel">
       <div className="section-heading"><p>Próximos días</p><h1>Mi contratación</h1></div>
-      {portalConnected === false && <PortalConnectCallout compact onConnect={onLoadPortal} />}
+      {portalConnected === false && !portalCredentialsRejected && <PortalConnectCallout compact onConnect={onLoadPortal} />}
       <CurrentAssignments snapshot={snapshot} currentTime={currentTime} onLoadPortal={onLoadPortal} />
       <UpcomingDoubles snapshot={snapshot} currentTime={currentTime} />
     </section>
@@ -3416,6 +3430,14 @@ function PortalPanel({
       .then(async (status) => {
         if (cancelled) return;
         setPortalSyncStatus(status?.syncStatus || "active");
+        if (status?.syncStatus === "credentials_error") {
+          setAutoSyncEnabled(true);
+          setError("");
+          setSecurityKeyOnly(false);
+          setShowCredentials(true);
+          onConnectionChange?.(false);
+          return;
+        }
         if (status?.enabled) {
           setAutoSyncEnabled(true);
           if (session.portalActivationStatus === "pending" && !initialSnapshot) setShowCredentials(credentialsOnly);
@@ -4158,6 +4180,7 @@ export function App() {
   const [chaperoSnapshot, setChaperoSnapshot] = useState(null);
   const [portalSnapshot, setPortalSnapshot] = useState(null);
   const [portalConnected, setPortalConnected] = useState(null);
+  const [portalSyncStatus, setPortalSyncStatus] = useState("active");
   const [doorConfigLoadedFor, setDoorConfigLoadedFor] = useState("");
   const [portalSnapshotLoadedFor, setPortalSnapshotLoadedFor] = useState("");
   const [portalConnectionLoadedFor, setPortalConnectionLoadedFor] = useState("");
@@ -4485,12 +4508,12 @@ export function App() {
     if (!session?.token) {
       setPortalSnapshot(null);
       setPortalConnected(null);
+      setPortalSyncStatus("active");
       return undefined;
     }
     if (session.portalActivationStatus === "pending") {
       setPortalSnapshot(null);
       setPortalConnected(null);
-      return undefined;
     }
     let cancelled = false;
     let pollTimer = null;
@@ -4537,7 +4560,11 @@ export function App() {
 
     getPortalAutoSyncStatus({ token: session.token })
       .then((status) => {
-        if (!cancelled) setPortalConnected(Boolean(status?.enabled || localCredentials?.portalPassword));
+        if (!cancelled) {
+          const syncStatus = status?.syncStatus || "active";
+          setPortalSyncStatus(syncStatus);
+          setPortalConnected(syncStatus === "credentials_error" ? false : Boolean(status?.enabled || localCredentials?.portalPassword));
+        }
       })
       .catch(() => {
         if (!cancelled && localCredentials?.portalPassword) setPortalConnected(true);
@@ -4674,6 +4701,9 @@ export function App() {
         onNotificationsOpen={() => navigateToTab("novedades")}
       />
       <main className={`content${activeTab === "foro" ? " content-forum" : ""}`}>
+        {portalSyncStatus === "credentials_error" && activeTab !== "portal" && (
+          <PortalCredentialsRejectedCallout onChangePassword={connectPortal} />
+        )}
         {activeTab === "inicio" && (
           homeInitialLoading
             ? <HomeInitialLoading />
@@ -4684,6 +4714,7 @@ export function App() {
                 currentTime={currentTime}
                 portalSnapshot={portalSnapshot}
                 portalConnected={portalConnected}
+                portalCredentialsRejected={portalSyncStatus === "credentials_error"}
                 notice={notice}
                 activeSpecialty={activeSpecialty}
                 activeSpecialtyId={activeSpecialtyId}
@@ -4695,7 +4726,7 @@ export function App() {
                 displayName={session.displayName}
               />
         )}
-        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} onLoadPortal={connectPortal} />}
+        {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} portalCredentialsRejected={portalSyncStatus === "credentials_error"} onLoadPortal={connectPortal} />}
         {activeTab === "sueldometro" && <PortalPanel view="salary" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "descansos" && <PortalPanel view="rests" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
         {activeTab === "excepciones" && <PortalPanel view="exceptions" initialSnapshot={portalSnapshot} session={session} onSnapshotChange={setPortalSnapshot} onSessionChange={setSession} onConnectionChange={setPortalConnected} />}
