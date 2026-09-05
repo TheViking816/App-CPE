@@ -117,7 +117,7 @@ test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () 
 });
 
 test("cada tanda recarga y valida Cloudflare antes de abrir perfiles de usuarios", () => {
-  assert.match(batchRunnerSource, /WarmupSeconds = 45/);
+  assert.match(batchRunnerSource, /WarmupSeconds = 20/);
   assert.match(batchRunnerSource, /start-cloudflare-gateway\.ps1/);
   assert.match(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
   assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
@@ -141,6 +141,8 @@ test("el worker reclama la cola antes de validar y el acceso prepara Chrome para
   assert.match(pendingShortcutSource, /run-pending-sync\.ps1/);
   assert.match(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
   assert.match(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.match(pendingRunnerSource, /WarmupSeconds = 20/);
+  assert.match(pendingRunnerSource, /-WarmupSeconds \$WarmupSeconds/);
   assert.match(pendingRunnerSource, /run-cloudflare-gateway-batch\.ps1/);
   assert.match(pendingRunnerSource, /-Drain/);
   assert.doesNotMatch(pendingShortcutSource, /queue-all-portal-syncs/);
