@@ -2358,7 +2358,11 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
           freshDetail = await readAssignmentDetailViaContractings(page, item);
         }
       } else {
-        freshDetail = await readAssignmentDetailViaMenu(page, item);
+        freshDetail = await readAssignmentDetailViaPortal(page, item);
+        if (!freshDetail?.recognized
+          || String(freshDetail?.parte || "") !== String(item.parte || "")) {
+          freshDetail = await readAssignmentDetailViaMenu(page, item);
+        }
       }
       console.log(`Parte ${item.parte}: detalle donde-voy=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
       if (freshDetail.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
