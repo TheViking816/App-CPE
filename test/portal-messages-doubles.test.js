@@ -6,6 +6,7 @@ import {
   currentMadridMonth,
   extractAddedMessageText,
   isCompleteRequestedDoublesWindow,
+  isAuthoritativeEmptyDoublesResult,
   limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
@@ -149,4 +150,17 @@ test("only a fully queried doubles window is authoritative", () => {
   assert.equal(isCompleteRequestedDoublesWindow(complete), true);
   assert.equal(isCompleteRequestedDoublesWindow({ ...complete, complete: false }), false);
   assert.equal(isCompleteRequestedDoublesWindow({ ...complete, queriedDates: dates.slice(0, -1) }), false);
+});
+
+test("a doubles matrix with no selectable cells is still a completed result", () => {
+  assert.equal(isAuthoritativeEmptyDoublesResult(`
+    SOLICITAR DOBLES POR ESPECIALIDAD
+    JORNADA 02/08 08/14 14/20 20/02
+    No hay casillas disponibles para este día
+  `), true);
+  assert.equal(isAuthoritativeEmptyDoublesResult(`
+    SOLICITAR DOBLES POR ESPECIALIDAD
+    Fecha 05/09/2026
+    Solicitar
+  `), false);
 });

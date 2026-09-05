@@ -24,6 +24,7 @@ import {
   cleanMessageBodyText,
   extractAddedMessageText,
   isCompleteRequestedDoublesWindow,
+  isAuthoritativeEmptyDoublesResult,
   limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
@@ -2066,18 +2067,27 @@ async function extractCheckedDoubles(frame, date) {
   return buildRequestedDoubles(date, selections);
 }
 
-async function waitForDoublesResult(frame, date, timeoutMs = 15000) {
+async function waitForDoublesResult(page, originalFrame, date, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
+  let emptyResultSeenAt = 0;
   while (Date.now() < deadline) {
-    if (frame.isDetached()) break;
-    const matrixSize = await frame.locator('input[type="checkbox"]').count().catch(() => 0);
-    if (matrixSize > 0) {
-      // The selector page has no checkboxes. Seeing the matrix proves that the
-      // portal finished the query for this date, even when none are checked.
-      await frame.waitForTimeout(250);
-      return matrixSize;
+    const frames = [...new Set([originalFrame, ...page.frames()])];
+    for (const frame of frames) {
+      if (!frame || frame.isDetached()) continue;
+      const matrixSize = await frame.locator('input[type="checkbox"]').count().catch(() => 0);
+      if (matrixSize > 0) {
+        await frame.waitForTimeout(250);
+        return frame;
+      }
+      const pageText = await frame.locator("body").innerText().catch(() => "");
+      if (isAuthoritativeEmptyDoublesResult(pageText)) {
+        if (!emptyResultSeenAt) emptyResultSeenAt = Date.now();
+        // Give a result matrix time to populate before accepting a genuinely
+        // empty day. This avoids mistaking an intermediate paint for zero rows.
+        if (Date.now() - emptyResultSeenAt >= 1000) return frame;
+      }
     }
-    await frame.waitForTimeout(150);
+    await page.waitForTimeout(150);
   }
   throw new Error(`El portal no termino de cargar los dobles del ${date}.`);
 }
@@ -2103,10 +2113,10 @@ async function collectRequestedDoubles(page) {
       frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => null),
       submit.click({ timeout: 10000 })
     ]);
-    await waitForDoublesResult(frame, date);
-    rows.push(...await extractCheckedDoubles(frame, date));
+    const resultFrame = await waitForDoublesResult(page, frame, date);
+    rows.push(...await extractCheckedDoubles(resultFrame, date));
     queriedDates.push(date);
-    await frame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
+    await resultFrame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
     selector = await findDoublesSelector(page);
     if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
   }

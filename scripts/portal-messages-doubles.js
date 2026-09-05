@@ -206,6 +206,15 @@ export function isCompleteRequestedDoublesWindow(value) {
   );
 }
 
+export function isAuthoritativeEmptyDoublesResult(pageText = "") {
+  const text = cleanText(pageText);
+  const isDoublesPage = /solicitar\s+dobles\s+por\s+especialidad/i.test(text);
+  const hasResultMatrix = /\bjornada\b/i.test(text)
+    && /(?:02|08|14|20)\s*\/\s*(?:02|08|14|20)/.test(text);
+  const hasEmptyResult = /(?:no\s+(?:hay|existen)|sin)\s+[^.]{0,80}(?:dobles|especialidades)/i.test(text);
+  return isDoublesPage && (hasResultMatrix || hasEmptyResult);
+}
+
 export function limitRecentPortalRows(rows = [], limit = 5) {
   return Array.isArray(rows) ? rows.slice(0, Math.max(0, limit)) : [];
 }

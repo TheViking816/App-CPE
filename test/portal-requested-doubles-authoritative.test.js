@@ -13,7 +13,8 @@ test("only a completely queried rolling doubles window may replace cached rows",
     syncSource,
     /dobles solicitados[\s\S]*isCompleteRequestedDoublesWindow,[\s\S]*allowCollectionShrink: true/
   );
-  assert.match(syncSource, /waitForDoublesResult\(frame, date\)/);
+  assert.match(syncSource, /waitForDoublesResult\(page, frame, date\)/);
+  assert.match(syncSource, /const resultFrame = await waitForDoublesResult/);
 });
 
 test("Supabase stores recognized requested doubles as the authoritative rolling window", () => {
