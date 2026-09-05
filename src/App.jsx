@@ -3330,7 +3330,7 @@ function PortalPanel({
   const [activationEmail, setActivationEmail] = useState(session.email || "");
   const [savedCredentials, setSavedCredentials] = useState(initialCredentials);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(Boolean(initialCredentials));
-  const [portalSyncStatus, setPortalSyncStatus] = useState("active");
+  const [portalSyncStatus, setPortalSyncStatus] = useState(null);
   const [reactivatingPortal, setReactivatingPortal] = useState(false);
   const [syncingPortal, setSyncingPortal] = useState(Boolean(initialActiveSync));
   const [portalJob, setPortalJob] = useState(initialActiveSync || null);
@@ -3354,7 +3354,7 @@ function PortalPanel({
     if (pendingActivation) {
       setSnapshot(null);
       onSnapshotChange?.(null);
-      if (credentialsOnly || !autoSyncEnabled) setShowCredentials(true);
+      if (credentialsOnly) setShowCredentials(true);
       setLoading(false);
       return;
     }
@@ -3363,7 +3363,7 @@ function PortalPanel({
       setSnapshot(data || null);
       onSnapshotChange?.(data || null);
       const rejectedCredentials = hasRejectedPortalCredentials(data);
-      setShowCredentials(credentialsOnly || !data?.payload || rejectedCredentials);
+      setShowCredentials(credentialsOnly || (!data?.payload && !rejectedCredentials));
       if (rejectedCredentials) {
         setError("");
         setAutoSyncEnabled(false);
@@ -3434,7 +3434,7 @@ function PortalPanel({
           setAutoSyncEnabled(true);
           setError("");
           setSecurityKeyOnly(false);
-          setShowCredentials(true);
+          setShowCredentials(credentialsOnly || Boolean(openCredentialsOnLoad));
           onConnectionChange?.(false);
           return;
         }
@@ -3533,7 +3533,7 @@ function PortalPanel({
           const rejectedCredentials = hasRejectedPortalCredentials(job.message);
           setPortalMessage("");
           setSyncingPortal(false);
-          setShowCredentials(credentialsOnly || rejectedCredentials);
+          setShowCredentials(credentialsOnly);
           if (rejectedCredentials) {
             setError("");
             setAutoSyncEnabled(false);
@@ -3671,7 +3671,16 @@ function PortalPanel({
         <h1>{panelCopy.title}</h1>
       </div>
 
-      {!credentialsOnly && session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot?.payload && !showCredentials && (
+      {!credentialsOnly && portalSyncStatus === "credentials_error" && !showCredentials && (
+        <PortalCredentialsRejectedCallout onChangePassword={() => {
+          setError("");
+          setSecurityKeyOnly(false);
+          setShowCredentials(true);
+          window.requestAnimationFrame(() => credentialsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+        }} />
+      )}
+
+      {!credentialsOnly && portalSyncStatus === "active" && session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot?.payload && !showCredentials && (
         <section className="portal-empty-state portal-activation-pending" aria-live="polite">
           <Clock3 size={28} />
           <strong>Cuenta pendiente de activación</strong>
