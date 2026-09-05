@@ -17,6 +17,10 @@ const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT ||
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
 const workerDrain = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_DRAIN || "");
+const jobMaxRuntimeMs = Math.max(
+  2 * 60 * 1000,
+  Number(process.env.CPE_PORTAL_JOB_MAX_RUNTIME_MS || 15 * 60 * 1000)
+);
 // Cloudflare injects challenge-platform/cf-chl script references into normal
 // authorized pages too. Only visible challenge-page signals should invalidate
 // an otherwise valid portal session.
@@ -47,6 +51,7 @@ async function request(path, options = {}) {
 }
 
 async function claimNextBatch() {
+  await recoverStaleRunningJobs();
   await failQueuedJobsWithoutCredentials();
   const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&requested_at=lte.${encodeURIComponent(new Date().toISOString())}&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
@@ -63,6 +68,18 @@ async function claimNextBatch() {
     })
   });
   return claimed || [];
+}
+
+async function recoverStaleRunningJobs() {
+  const cutoff = new Date(Date.now() - jobMaxRuntimeMs).toISOString();
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.running&portal_password=not.is.null&started_at=lt.${encodeURIComponent(cutoff)}`);
+  if (!jobs?.length) return;
+
+  await requeueRunningJobs(
+    jobs,
+    "Reanudada automaticamente: la ejecucion anterior dejo de responder"
+  );
+  console.warn(`[portal-worker] Recuperados ${jobs.length} trabajos bloqueados en running.`);
 }
 
 async function nextDelayedJobWaitMs() {
@@ -239,17 +256,16 @@ function runJob(job, slot, clearanceCookies = []) {
           : (profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {}))
       }
     });
-    child.on("error", async (error) => {
-      console.error(`[portal-worker:${slot}] No se pudo iniciar ${job.id}:`, error);
-      await failRunningJob(job.id, "No se pudo iniciar el proceso de lectura").catch((failure) => {
-        console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
-      });
-      resolve();
-    });
-    child.on("exit", async (code) => {
+    let settled = false;
+    let timeout;
+
+    const finish = async (code, failureMessage = "") => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
       console.log(`[portal-worker:${slot}] ${job.id} finalizo con codigo ${code}`);
-      if (code !== 0) {
-        await failRunningJob(job.id, `El proceso de lectura termino con codigo ${code}`).catch((failure) => {
+      if (failureMessage || code !== 0) {
+        await failRunningJob(job.id, failureMessage || `El proceso de lectura termino con codigo ${code}`).catch((failure) => {
           console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
         });
         await scheduleAutomaticRetry(job).catch((failure) => {
@@ -257,8 +273,31 @@ function runJob(job, slot, clearanceCookies = []) {
         });
       }
       resolve();
+    };
+
+    timeout = setTimeout(() => {
+      terminateChildTree(child);
+      void finish(null, `La lectura supero ${Math.round(jobMaxRuntimeMs / 60000)} minutos y se cerro para evitar un bloqueo`);
+    }, jobMaxRuntimeMs);
+
+    child.once("error", (error) => {
+      console.error(`[portal-worker:${slot}] No se pudo iniciar ${job.id}:`, error);
+      void finish(null, "No se pudo iniciar el proceso de lectura");
     });
+    child.once("exit", (code) => { void finish(code); });
   });
+}
+
+function terminateChildTree(child) {
+  if (!child?.pid || child.exitCode !== null) return;
+  if (process.platform === "win32") {
+    spawn("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+      windowsHide: true
+    }).once("error", () => { child.kill(); });
+    return;
+  }
+  child.kill("SIGKILL");
 }
 
 async function scheduleAutomaticRetry(job) {
