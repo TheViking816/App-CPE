@@ -6,10 +6,14 @@ export function isPremiumCredentialNotice(message) {
 export function syncOutcome(sync) {
   const notices = [...(sync?.notices || []), ...(sync?.warnings || [])];
   const errors = sync?.errors || [];
+  const completedPartial = Boolean(sync?.partial) && Number(sync?.freshSections) > 0 && !sync?.inProgress;
+  const details = [...new Set([...notices, ...errors, ...(sync?.error ? [sync.error] : [])])];
   return {
-    failed: !sync || Boolean(sync.inProgress) || Boolean(sync.failed) || errors.length > 0,
+    failed: !sync || Boolean(sync.inProgress) || (!completedPartial && (Boolean(sync.failed) || errors.length > 0)),
     errorMessage: errors.join(" ") || sync?.error || "La sincronizacion no ha finalizado.",
-    message: notices.length ? "Portal sincronizado con avisos: " + notices.join(" ") : "Portal sincronizado"
+    message: completedPartial
+      ? "Lectura parcial completada: " + (details.join(" ") || "Se conservan las secciones anteriores no actualizadas.")
+      : details.length ? "Portal sincronizado con avisos: " + details.join(" ") : "Portal sincronizado"
   };
 }
 
