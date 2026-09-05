@@ -2220,7 +2220,7 @@ async function collectAssignmentsViaMenu(page) {
     (parsed) => parsed.rows?.length || 0,
     8000
   );
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
   throw new Error("No se pudo leer la contratacion actual. Se conservaran los ultimos datos disponibles.");
 }
 
@@ -2232,7 +2232,7 @@ async function collectAssignmentsViaContractings(page) {
     (parsed) => parsed.rows?.length || 0,
     10000
   );
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
 
   for (const frame of page.frames()) {
     const textResult = parseAssignmentsFromText(await frame.locator("body").innerText().catch(() => ""));
@@ -2318,7 +2318,7 @@ async function collectAssignmentsViaContractings(page) {
       10000
     );
   }
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
   throw new Error("La vista actual de Jornadas contratadas no devolvio ninguna contratacion.");
 }
 
@@ -2331,7 +2331,7 @@ async function collectVacacionesViaMenu(page) {
     (parsed) => parsed.rows?.length || 0,
     8000
   );
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
   throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
 }
 
@@ -2404,7 +2404,7 @@ async function collectVacaciones(page) {
       (parsed) => parsed.rows?.length || 0,
       8000
     );
-    if (result.recognized && result.rows?.length) return result;
+    if (result.recognized && Array.isArray(result.rows)) return result;
   } catch {
     // The menu fallback handles portal-side route changes.
   }
@@ -2963,7 +2963,8 @@ async function main() {
       () => collectVacaciones(page),
       existingSnapshot?.payload?.vacaciones,
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
-      hasVacationData
+      hasVacationData,
+      { allowCollectionShrink: true }
     );
     await publishProgress("vacaciones", vacaciones, "Vacaciones cargadas");
     const nominas = portalRequestKind === "history"

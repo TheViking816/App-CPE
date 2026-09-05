@@ -13,10 +13,12 @@ test("aviso de clave no oculta un fallo real en otra seccion", () => {
   assert.equal(syncOutcome({partial:true,warnings:["La clave de seguridad de primas es incorrecta."],errors:["descansos: timeout"]}).failed,true);
 });
 test("72710: siete secciones cargadas y avisos de conservacion no son failed", () => {
-  assert.equal(syncOutcome({inProgress:false,partial:true,freshSections:7,warnings:[
+  const result = syncOutcome({inProgress:false,partial:true,freshSections:7,warnings:[
     "contratacion actual no se pudo actualizar. No se pudo leer la contratacion actual.",
     "vacaciones no devolvio datos; se conserva la ultima lectura disponible."
-  ],errors:[]}).failed,false);
+  ],errors:[]});
+  assert.equal(result.failed,false);
+  assert.equal(result.message,"Portal sincronizado");
 });
 test("errores de transporte y cargas fallidas siguen siendo errores", () => {
   for (const message of ["Timeout 30000ms","HTTP 503","El portal no termino de cargar los dobles","El calendario no incluye el mes actual y el siguiente."]) {
