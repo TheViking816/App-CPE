@@ -114,28 +114,6 @@ function parseWorkers(value = "") {
   return workers;
 }
 
-function specialtySignature(specialty = {}) {
-  const workerCodes = (specialty.workers || [])
-    .map((worker) => normalizeCell(worker?.code).toUpperCase())
-    .filter(Boolean)
-    .sort();
-  return [
-    normalizeCell(specialty.name).toLocaleUpperCase("es"),
-    Number(specialty.requested || 0),
-    Number(specialty.bolsa || 0),
-    workerCodes.join(",")
-  ].join("|");
-}
-
-export function uniqueAssignmentSpecialties(specialties = []) {
-  const unique = new Map();
-  for (const specialty of Array.isArray(specialties) ? specialties : []) {
-    const signature = specialtySignature(specialty);
-    if (!unique.has(signature)) unique.set(signature, specialty);
-  }
-  return [...unique.values()];
-}
-
 export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
   const detail = {};
   const specialties = [];
@@ -191,7 +169,7 @@ export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
 
   const recognized = Boolean(detail.parte && specialties.length)
     || /centro\s+portuario\s+de\s+empleo/i.test(pageText) && specialties.length > 0;
-  return { recognized, ...detail, specialties: uniqueAssignmentSpecialties(specialties) };
+  return { recognized, ...detail, specialties };
 }
 
 export function parseAssignmentDetailFromText(pageText = "") {
@@ -235,11 +213,11 @@ export function parseAssignmentDetailFromText(pageText = "") {
 
   const recognized = Boolean(detail.parte && specialties.length)
     || teamIndex >= 0 && specialties.length > 0;
-  return { recognized, ...detail, specialties: uniqueAssignmentSpecialties(specialties) };
+  return { recognized, ...detail, specialties };
 }
 
 export function assignmentDetailScore(detail = {}) {
-  const specialties = uniqueAssignmentSpecialties(detail.specialties);
+  const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
   const namedWorkers = specialties.reduce((total, specialty) => (
     total + (specialty.workers || []).filter((worker) => normalizeCell(worker?.name)).length
   ), 0);
@@ -284,7 +262,7 @@ export function parseAssignmentsFromText(pageText = "") {
 }
 
 export function isAssignmentDetailComplete(detail = {}) {
-  const specialties = uniqueAssignmentSpecialties(detail.specialties);
+  const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
   return Boolean(detail.recognized && specialties.length) && specialties.every((specialty) => (
     (specialty.workers?.length || 0) + Number(specialty.bolsa || 0) >= Number(specialty.requested || 0)
   ));
