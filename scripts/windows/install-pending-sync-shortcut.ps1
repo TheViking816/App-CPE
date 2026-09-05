@@ -12,7 +12,7 @@ if (-not (Test-Path -LiteralPath $runnerScript)) { throw "No existe el flujo de 
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "powershell.exe"
-$shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $runnerScript + '" -RepositoryPath "' + $RepositoryPath + '" -GatewayPort ' + $GatewayPort + ' -BatchSize 10 -WarmupSeconds 45'
+$shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $runnerScript + '" -RepositoryPath "' + $RepositoryPath + '" -GatewayPort ' + $GatewayPort + ' -BatchSize 10 -WarmupSeconds 20'
 $shortcut.WorkingDirectory = $RepositoryPath
 $shortcut.Description = "Prepara Chrome y procesa solamente las sincronizaciones que ya estan en cola"
 $shortcut.Save()
