@@ -39,4 +39,5 @@ test("la aplicación avisa del rechazo y abre el formulario para cambiar la cont
   assert.match(app, /portalSyncStatus === "credentials_error" && activeTab !== "portal"/);
   assert.match(app, /setShowCredentials\(true\)/);
   assert.match(app, /portalSyncStatus === "active" && session\.portalActivationStatus === "pending"/);
+  assert.equal((app.match(/<PortalCredentialsRejectedCallout /g) || []).length, 1);
 });

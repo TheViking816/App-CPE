@@ -3671,15 +3671,6 @@ function PortalPanel({
         <h1>{panelCopy.title}</h1>
       </div>
 
-      {!credentialsOnly && portalSyncStatus === "credentials_error" && !showCredentials && (
-        <PortalCredentialsRejectedCallout onChangePassword={() => {
-          setError("");
-          setSecurityKeyOnly(false);
-          setShowCredentials(true);
-          window.requestAnimationFrame(() => credentialsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
-        }} />
-      )}
-
       {!credentialsOnly && portalSyncStatus === "active" && session.portalActivationStatus === "pending" && autoSyncEnabled && !snapshot?.payload && !showCredentials && (
         <section className="portal-empty-state portal-activation-pending" aria-live="polite">
           <Clock3 size={28} />
