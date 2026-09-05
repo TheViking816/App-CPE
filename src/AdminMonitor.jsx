@@ -360,7 +360,9 @@ export default function AdminMonitor({ session }) {
                 <tbody>
                   {filteredPortalUsers.map((user) => {
                     const selectable = canSelectPortalUser(user);
-                    const state = user.jobStatus || (user.hasCredentials ? "sin trabajo" : "sin claves");
+                    const state = user.syncStatus === "credentials_error"
+                      ? "clave incorrecta"
+                      : user.jobStatus || (user.hasCredentials ? "sin trabajo" : "sin claves");
                     return (
                       <tr key={user.chapa} className={selectedChapas.has(user.chapa) ? "is-selected" : ""}>
                         <td><input type="checkbox" checked={selectedChapas.has(user.chapa)} disabled={!selectable} onChange={() => togglePortalUser(user.chapa)} aria-label={`Seleccionar chapa ${user.chapa}`} /></td>
@@ -368,7 +370,9 @@ export default function AdminMonitor({ session }) {
                         <td><span className={`monitor-job-state is-${user.syncStatus === "paused_inactive" ? "paused" : user.activationStatus}`}>{user.syncStatus === "paused_inactive" ? "En pausa" : user.activationStatus === "pending" ? "Pendiente" : "Activa"}</span>{user.syncStatus === "paused_inactive" && <small className="monitor-sync-email">Sin uso desde {formatDateTime(user.lastAppSeenAt)}</small>}</td>
                         <td><span className={`monitor-job-state is-${String(state).replace(/\s/g, "-")}`}>{state === "queued" ? "En cola" : state === "running" ? "Ejecutando" : state === "failed" ? "Fallida" : state === "completed" ? "Completada" : state}</span></td>
                         <td>{formatDateTime(user.requestedAt || user.lastSuccessAt)}</td>
-                        <td className="monitor-sync-detail">{!user.hasPremiumHistory ? "Sin histórico de primas · usa Carga inicial completa" : user.jobMessage || (!user.hasCredentials ? "Debe configurar el acceso" : user.hasSecurityKey ? `${user.premiumHistoryMonths || 0} meses de primas guardados` : "Sin clave de nóminas")}</td>
+                        <td className="monitor-sync-detail">{user.syncStatus === "credentials_error" && user.hasCredentials
+                          ? "Contraseña guardada, pero rechazada por el portal · puedes reintentar o el usuario debe corregirla"
+                          : !user.hasPremiumHistory ? "Sin histórico de primas · usa Carga inicial completa" : user.jobMessage || (!user.hasCredentials ? "Debe configurar el acceso" : user.hasSecurityKey ? `${user.premiumHistoryMonths || 0} meses de primas guardados` : "Sin clave de nóminas")}</td>
                       </tr>
                     );
                   })}
