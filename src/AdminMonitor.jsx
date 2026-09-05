@@ -132,7 +132,7 @@ export default function AdminMonitor({ session }) {
       return true;
     });
   }, [portalFilter, portalQuery, portalUsers]);
-  const canSelectPortalUser = (user) => user.hasCredentials && user.syncStatus !== "paused_inactive" && !["queued", "running"].includes(user.jobStatus);
+  const canSelectPortalUser = (user) => user.hasCredentials && !["paused_inactive", "credentials_error"].includes(user.syncStatus) && !["queued", "running"].includes(user.jobStatus);
   const selectableFilteredChapas = filteredPortalUsers.filter(canSelectPortalUser).map((user) => user.chapa);
   const allFilteredSelected = selectableFilteredChapas.length > 0 && selectableFilteredChapas.every((chapa) => selectedChapas.has(chapa));
 
