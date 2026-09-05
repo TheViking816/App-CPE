@@ -2,6 +2,7 @@ import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, us
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import { selectPremiumRowsForMonth } from "./portal-premium-period.js";
 import { hasSalaryData } from "./portal-salary-state.js";
+import { needsPortalSecurityKey } from "./portalSecurityNotice.js";
 import { calendarDays, calendarMonths } from "./portal-calendar.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
@@ -2594,7 +2595,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const exceptions = payload?.excepciones || null;
   const nominas = payload?.nominas || null;
   const hasNominas = Boolean(nominas?.recognized && !nominas?.locked && (nominas?.rows || []).length > 0);
-  const needsSecurityKey = Boolean(payload?.primas?.locked || payload?.nominas?.locked);
+  const needsSecurityKey = needsPortalSecurityKey(payload);
   const [selectedPeriod, setSelectedPeriod] = useState(() => (
     new Date().getDate() <= 15 ? "first" : "second"
   ));
@@ -2914,10 +2915,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         </section>
       )}
 
-      {payload?.sync?.partial && !payload?.sync?.inProgress && !payload?.sync?.failed && needsSecurityKey && (
+      {needsSecurityKey && (
         <button className="portal-sync-warning portal-security-prompt" type="button" onClick={onRequestSecurityKey}>
           <CircleAlert size={20} />
-          <div><strong>Introduce tu clave de seguridad para cargar primas y nóminas</strong></div>
+          <div><strong>Introduce o corrige tu clave de seguridad para cargar primas y nóminas</strong></div>
           <ChevronRight size={19} />
         </button>
       )}
