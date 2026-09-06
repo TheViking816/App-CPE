@@ -118,6 +118,7 @@ import { findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialtie
 import { hashForTab, tabFromHash } from "./navigation.js";
 import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
+import { initialIrpfRate } from "./irpfRate.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const MONTH_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -2613,8 +2614,8 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [selectedPeriod, setSelectedPeriod] = useState(() => (
     new Date().getDate() <= 15 ? "first" : "second"
   ));
-  const [irpfRate, setIrpfRate] = useState(0);
-  const [savedIrpfRate, setSavedIrpfRate] = useState(0);
+  const [irpfRate, setIrpfRate] = useState(() => initialIrpfRate(session?.irpfRate, snapshot?.chapa));
+  const [savedIrpfRate, setSavedIrpfRate] = useState(() => initialIrpfRate(session?.irpfRate, snapshot?.chapa));
   const [savingIrpf, setSavingIrpf] = useState(false);
   const [irpfMessage, setIrpfMessage] = useState("");
   const [irpfError, setIrpfError] = useState(false);
@@ -2654,17 +2655,12 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   }, []);
 
   useEffect(() => {
-    const remoteRate = Number.parseFloat(session?.irpfRate);
-    const localRate = irpfStorageKey
-      ? Number.parseFloat(localStorage.getItem(irpfStorageKey) || "")
-      : Number.NaN;
-    const nextRate = Number.isFinite(remoteRate) ? remoteRate : localRate;
-    const normalizedRate = Number.isFinite(nextRate) ? Math.min(Math.max(nextRate, 0), 60) : 0;
+    const normalizedRate = initialIrpfRate(session?.irpfRate, snapshot?.chapa);
     setIrpfRate(normalizedRate);
     setSavedIrpfRate(normalizedRate);
     setIrpfMessage("");
     setIrpfError(false);
-  }, [irpfStorageKey, session?.irpfRate]);
+  }, [irpfStorageKey, session?.irpfRate, snapshot?.chapa]);
 
   useEffect(() => {
     let active = true;
