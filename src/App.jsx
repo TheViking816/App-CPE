@@ -2732,7 +2732,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       setSavingIrpf(false);
     }
   };
-  const vacationPayrollEntries = useMemo(() => buildVacationPayrollEntries(descansos), [descansos]);
+  const vacationPayrollEntries = useMemo(
+    () => buildVacationPayrollEntries([vacaciones, descansos]),
+    [vacaciones, descansos]
+  );
   const enrichedJornales = useMemo(() => [
     ...enrichJornales(
       jornales,

@@ -339,51 +339,82 @@ function getMonthKey(monthLabel = "") {
   return `${year}-${pad(month)}`;
 }
 
-export function buildVacationPayrollEntries(descansos = null, amount = VACATION_DAY_RATE) {
+function parseVacationDate(value) {
+  const normalized = String(value || "").trim();
+  const dayFirst = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const yearFirst = normalized.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+  if (!dayFirst && !yearFirst) return null;
+  const year = Number(dayFirst?.[3] || yearFirst?.[1]);
+  const month = Number(dayFirst?.[2] || yearFirst?.[2]);
+  const day = Number(dayFirst?.[1] || yearFirst?.[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) return null;
+  return date;
+}
+
+export function buildVacationPayrollEntries(vacationSources = null, amount = VACATION_DAY_RATE) {
   const seenDates = new Set();
   const entries = [];
 
-  for (const monthData of descansos?.months || []) {
-    const numericTitle = String(monthData?.title || "").match(/(\d{1,2})\s*\/\s*(\d{4})/);
-    const month = Number(monthData?.month || numericTitle?.[1]);
-    const year = Number(monthData?.year || numericTitle?.[2]);
-    if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) continue;
+  const addVacationDay = (date) => {
+    const dateKey = toYmd(date);
+    if (seenDates.has(dateKey)) return;
+    seenDates.add(dateKey);
 
-    for (const dayData of monthData?.days || []) {
-      if (String(dayData?.code || "").trim().toUpperCase() !== "VA") continue;
-      const day = Number(dayData?.day);
-      if (!Number.isInteger(day) || day < 1 || day > 31) continue;
-      const date = `${year}-${pad(month)}-${pad(day)}`;
-      if (seenDates.has(date)) continue;
-      seenDates.add(date);
+    entries.push({
+      jornal: `VA-${dateKey}`,
+      parte: "",
+      dia: pad(date.getDate()),
+      tipo: "VA",
+      jornada: "VACACIONES",
+      especialidad: "VACACIONES",
+      empresa: "",
+      buque: "",
+      operacion: "Día de vacaciones",
+      isVacation: true,
+      payroll: {
+        conceptType: "VACATION",
+        date: dateKey,
+        shift: "VA",
+        group: "",
+        operationType: "VACACIONES",
+        rateKey: "VACACIONES",
+        base: Number(amount),
+        complement: 0,
+        prima: null,
+        primaPending: false,
+        relayHourEligible: false,
+        relayHour: 0,
+        total: Number(amount)
+      }
+    });
+  };
 
-      entries.push({
-        jornal: `VA-${date}`,
-        parte: "",
-        dia: pad(day),
-        tipo: "VA",
-        jornada: "VACACIONES",
-        especialidad: "VACACIONES",
-        empresa: "",
-        buque: "",
-        operacion: "Día de vacaciones",
-        isVacation: true,
-        payroll: {
-          conceptType: "VACATION",
-          date,
-          shift: "VA",
-          group: "",
-          operationType: "VACACIONES",
-          rateKey: "VACACIONES",
-          base: Number(amount),
-          complement: 0,
-          prima: null,
-          primaPending: false,
-          relayHourEligible: false,
-          relayHour: 0,
-          total: Number(amount)
-        }
-      });
+  const sources = Array.isArray(vacationSources) ? vacationSources : [vacationSources];
+  for (const source of sources.filter(Boolean)) {
+    for (const period of source?.rows || []) {
+      const start = parseVacationDate(period?.inicio);
+      const end = parseVacationDate(period?.fin);
+      if (!start || !end || end < start) continue;
+      const cursor = new Date(start);
+      for (let elapsed = 0; cursor <= end && elapsed < 370; elapsed += 1) {
+        addVacationDay(cursor);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    for (const monthData of source?.months || []) {
+      const numericTitle = String(monthData?.title || "").match(/(\d{1,2})\s*\/\s*(\d{4})/);
+      const month = Number(monthData?.month || numericTitle?.[1]);
+      const year = Number(monthData?.year || numericTitle?.[2]);
+      if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) continue;
+
+      for (const dayData of monthData?.days || []) {
+        if (String(dayData?.code || "").trim().toUpperCase() !== "VA") continue;
+        const day = Number(dayData?.day);
+        if (!Number.isInteger(day) || day < 1 || day > 31) continue;
+        addVacationDay(new Date(year, month - 1, day));
+      }
     }
   }
 
