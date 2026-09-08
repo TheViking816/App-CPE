@@ -84,8 +84,59 @@ function canonicalRests(section) {
   return (section?.months || []).map((month) => ({
     year: Number(month?.year) || null,
     month: Number(month?.month) || null,
-    days: (month?.days || []).map((day) => ({ day: Number(day?.day), code: clean(day?.code), jle: clean(day?.jle) })).sort((a, b) => a.day - b.day)
+    days: (month?.days || []).map((day) => ({ day: Number(day?.day), code: clean(day?.code).toLocaleUpperCase("es-ES"), jle: clean(day?.jle) })).sort((a, b) => a.day - b.day)
   })).sort((a, b) => (a.year - b.year) || (a.month - b.month));
+}
+
+function restMonthKey(month) {
+  return `${month?.year || ""}-${String(month?.month || "").padStart(2, "0")}`;
+}
+
+function restDayState(day) {
+  return { code: clean(day?.code), jle: clean(day?.jle) };
+}
+
+function restChanges(previousMonths, nextMonths) {
+  const previousByMonth = new Map(previousMonths.map((month) => [restMonthKey(month), month]));
+  const nextByMonth = new Map(nextMonths.map((month) => [restMonthKey(month), month]));
+  const changes = [];
+
+  for (const [monthKey, previousMonth] of previousByMonth) {
+    const nextMonth = nextByMonth.get(monthKey);
+    if (!nextMonth) continue;
+    const previousDays = new Map((previousMonth.days || []).map((day) => [Number(day.day), restDayState(day)]));
+    const nextDays = new Map((nextMonth.days || []).map((day) => [Number(day.day), restDayState(day)]));
+    const days = [...new Set([...previousDays.keys(), ...nextDays.keys()])].filter(Boolean).sort((a, b) => a - b);
+
+    for (const day of days) {
+      const before = previousDays.get(day) || { code: "", jle: "" };
+      const after = nextDays.get(day) || { code: "", jle: "" };
+      if (before.code === after.code && before.jle === after.jle) continue;
+      changes.push({
+        date: `${previousMonth.year}-${String(previousMonth.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+        day,
+        month: previousMonth.month,
+        year: previousMonth.year,
+        before,
+        after
+      });
+    }
+  }
+  return changes;
+}
+
+function restChangeLabel(change) {
+  const date = `${String(change.day).padStart(2, "0")} ${MONTHS[Number(change.month) - 1] || ""}`.trim();
+  if (change.before.code !== change.after.code) {
+    return `${date}: ${change.before.code || "sin asignar"} → ${change.after.code || "sin asignar"}`;
+  }
+  return `${date}: ${change.after.code || "día"} · JLE ${change.before.jle || "—"} → ${change.after.jle || "—"}`;
+}
+
+function restChangesBody(changes, limit = 3) {
+  const visible = changes.slice(0, limit).map(restChangeLabel);
+  const remaining = changes.length - visible.length;
+  return `${visible.join(" · ")}${remaining > 0 ? ` · +${remaining} cambios más` : ""}`;
 }
 
 function canonicalVacations(section) {
@@ -147,8 +198,16 @@ export function buildPortalNotifications(previousPayload, nextPayload, { now = n
 
   const oldRests = canonicalRests(previousPayload?.descansos);
   const newRests = canonicalRests(nextPayload?.descansos);
-  if (oldRests.length && newRests.length && hash(oldRests) !== hash(newRests)) {
-    result.push(notification("rests_changed", "Descansos modificados", "Ha cambiado tu calendario de descansos", "rests-calendar", "descansos", { before: hash(oldRests), after: hash(newRests) }));
+  const changedRestDays = restChanges(oldRests, newRests);
+  if (oldRests.length && newRests.length && changedRestDays.length) {
+    result.push(notification(
+      "rests_changed",
+      "Descansos modificados",
+      restChangesBody(changedRestDays),
+      "rests-calendar",
+      "descansos",
+      { before: hash(oldRests), after: hash(newRests), changeCount: changedRestDays.length, changes: changedRestDays }
+    ));
   }
 
   const oldVacations = canonicalVacations(previousPayload?.vacaciones);

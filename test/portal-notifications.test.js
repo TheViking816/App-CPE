@@ -33,6 +33,33 @@ test("detecta solo los siete tipos permitidos e impide duplicados conceptuales",
     "rests_changed", "vacations_changed", "exceptions_changed"
   ]));
   assert.equal(rows.every((row) => row.changeHash.length === 64), true);
+  const rests = rows.find((row) => row.eventType === "rests_changed");
+  assert.equal(rests.body, "30 agosto: DS → SL");
+  assert.equal(rests.metadata.changeCount, 1);
+  assert.equal(rests.metadata.changes[0].date, "2026-08-30");
+});
+
+test("resume hasta tres cambios de descanso y conserva el detalle completo", () => {
+  const previous = structuredClone(base);
+  const next = structuredClone(base);
+  previous.descansos.months[0].days = [1, 2, 3, 4, 5].map((day) => ({ day, code: "SL" }));
+  next.descansos.months[0].days = [1, 2, 3, 4, 5].map((day) => ({ day, code: "DS" }));
+
+  const rest = buildPortalNotifications(previous, next).find((row) => row.eventType === "rests_changed");
+  assert.equal(rest.body, "01 agosto: SL → DS · 02 agosto: SL → DS · 03 agosto: SL → DS · +2 cambios más");
+  assert.equal(rest.metadata.changeCount, 5);
+  assert.equal(rest.metadata.changes.length, 5);
+});
+
+test("el avance normal de la ventana mensual no se presenta como cambio de descansos", () => {
+  const september = { year: 2026, month: 9, days: [{ day: 9, code: "DS" }] };
+  const previous = structuredClone(base);
+  const next = structuredClone(base);
+  previous.descansos.months = [{ year: 2026, month: 8, days: [{ day: 30, code: "SL" }] }, september];
+  next.descansos.months = [structuredClone(september), { year: 2026, month: 10, days: [{ day: 1, code: "DS" }] }];
+
+  const rows = buildPortalNotifications(previous, next);
+  assert.equal(rows.some((row) => row.eventType === "rests_changed"), false);
 });
 
 test("no convierte la carga de meses históricos en nuevos jornales", () => {

@@ -10,7 +10,7 @@ const isolationMigration = fs.readFileSync(new URL("../supabase/migrations/20260
 const pendingQueueMigration = fs.readFileSync(new URL("../supabase/migrations/20260818132500_queue_pending_portal_activations.sql", import.meta.url), "utf8");
 const atomicFirstSyncMigration = fs.readFileSync(new URL("../supabase/migrations/20260822053803_make_first_portal_sync_atomic_and_visible.sql", import.meta.url), "utf8");
 const rejectedCredentialsEmailMigration = fs.readFileSync(new URL("../supabase/migrations/20260822054449_email_user_on_rejected_portal_credentials.sql", import.meta.url), "utf8");
-const deduplicatedRejectedCredentialsEmailMigration = fs.readFileSync(new URL("../supabase/migrations/20260902010155_deduplicate_rejected_credentials_email.sql", import.meta.url), "utf8");
+const deduplicatedRejectedCredentialsEmailMigration = fs.readFileSync(new URL("../supabase/migrations/20260902010956_deduplicate_rejected_credentials_email.sql", import.meta.url), "utf8");
 const currentUserMigration = fs.readFileSync(new URL("../supabase/migrations/20260818133000_refresh_current_app_cpe_user.sql", import.meta.url), "utf8");
 
 test("el registro pide correo y la primera conexión queda pendiente sin lanzar una lectura", () => {
