@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeGeneralBoardJourney } from "./general-board-merge.js";
 import { generalBoardPortalDates } from "./general-board-dates.js";
+import { parseResponsiveBoardData } from "./general-board-responsive.js";
 
 const PORTAL_URL = "https://portal.cpevalencia.com/#User";
 let portalUser = String(process.env.CPE_PORTAL_USER || "").trim();
@@ -176,12 +177,97 @@ async function openContracting(page) {
   await child.click();
   const deadline = Date.now() + 20000;
   while (Date.now() < deadline) {
-    for (const frame of page.frames().filter((item) => /SelDatAsig\.asp/i.test(item.url()))) {
-      if (await frame.locator('input[type="radio"]:visible').count().catch(() => 0)) return frame;
+    for (const frame of page.frames()) {
+      if (/SelDatAsig\.asp/i.test(frame.url())
+        && await frame.locator('input[type="radio"]:visible').count().catch(() => 0)) {
+        return { frame, mode: "legacy" };
+      }
+      if (/jornada-contratada/i.test(frame.url())
+        && await frame.getByRole("group", { name: /Jornadas del dia/i }).count().catch(() => 0)) {
+        return { frame, mode: "responsive" };
+      }
     }
     await page.waitForTimeout(150);
   }
   throw new Error("No se cargo el selector del tablon general.");
+}
+
+async function readResponsiveBoard(frame) {
+  const raw = await frame.locator("body").evaluate((body) => {
+    const tidy = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const title = [...body.querySelectorAll("div")]
+      .map((node) => tidy(node.textContent))
+      .find((text) => /^D[IÍ]A:\s*\d{2}\/\d{2}\/\d{4}\s*-\s*JORNADA/i.test(text) && text.length < 100) || "";
+    const cards = [...body.querySelectorAll("div.card.overflow-hidden")].map((card) => {
+      const table = card.querySelector("table");
+      if (!table || !/Especialidad/i.test(table.querySelector("thead")?.innerText || "")) return null;
+      const header = card.firstElementChild;
+      const headerValues = header ? [...header.children].map((node) => tidy(node.textContent)) : [];
+      const metadata = {};
+      const metadataRow = header?.nextElementSibling;
+      for (const wrapper of metadataRow ? [...metadataRow.children] : []) {
+        const values = [...wrapper.children].map((node) => tidy(node.textContent));
+        if (values.length > 1) metadata[values[0].toLowerCase()] = values.slice(1).join(" ");
+      }
+      return {
+        parte: headerValues[1] || "",
+        buque: headerValues[2] || "--",
+        tipo: headerValues.slice(3).join(" "),
+        empresa: metadata.empresa || "",
+        operacion: metadata.operacion || metadata["operación"] || "",
+        muelle: metadata.muelle || "",
+        observaciones: metadata.observaciones || "",
+        especialidades: [...table.querySelectorAll("tbody tr")].map((row) => {
+          const cells = [...row.cells].map((cell) => tidy(cell.innerText));
+          return { nombre: cells[0], solicitudes: cells[1], ceros: cells[2] };
+        })
+      };
+    }).filter(Boolean);
+    return { title, cards };
+  });
+  return parseResponsiveBoardData(raw);
+}
+
+async function selectResponsiveDate(frame, targetDate) {
+  const input = frame.locator('input.flatpickr-input').first();
+  await input.waitFor({ state: "visible", timeout: 20000 });
+  await input.evaluate((node, date) => {
+    if (!node._flatpickr) throw new Error("El calendario nuevo no ha terminado de cargar.");
+    node._flatpickr.setDate(date, true, "d/m/Y");
+  }, targetDate);
+  await frame.waitForTimeout(250);
+}
+
+async function waitForResponsiveJourney(frame, targetDate, journey, timeout = 12000) {
+  const expected = normalizeJourney(journey);
+  const deadline = Date.now() + timeout;
+  do {
+    const parsed = await readResponsiveBoard(frame);
+    if (parsed.fecha === targetDate && parsed.jornada === expected) return parsed;
+    await frame.waitForTimeout(150);
+  } while (Date.now() < deadline);
+  return null;
+}
+
+async function collectResponsiveDate(frame, targetDate) {
+  await selectResponsiveDate(frame, targetDate);
+  const group = frame.getByRole("group", { name: /Jornadas del dia/i });
+  const labels = (await group.getByRole("button").allTextContents())
+    .map((value) => repairPortalText(value))
+    .filter((value) => /\d{2}\s*A\s*\d{2}/i.test(value));
+  const journeys = [];
+  for (const label of labels) {
+    const button = group.getByRole("button", { name: exactTextPattern(label) });
+    await button.click({ timeout: 10000 });
+    const parsed = await waitForResponsiveJourney(frame, targetDate, label);
+    if (!parsed?.bloques?.length) continue;
+    const existing = journeys.find((item) => item.fecha === parsed.fecha && item.jornada === parsed.jornada);
+    if (existing) {
+      existing.fuentes = [...new Set([...existing.fuentes, ...parsed.fuentes])];
+      existing.bloques = mergeBlocks(existing.bloques, parsed.bloques);
+    } else journeys.push(parsed);
+  }
+  return journeys;
 }
 
 async function readTables(frame) {
@@ -277,11 +363,16 @@ async function main() {
     if (clearanceCookies.length) await context.addCookies(clearanceCookies);
     await context.addInitScript(() => Object.defineProperty(navigator, "webdriver", { get: () => undefined }));
     await login(page);
-    const frame = await openContracting(page);
+    const contracting = await openContracting(page);
     const dates = generalBoardPortalDates();
     const journeys = [];
     for (const portalDate of dates.portalDates) {
-      journeys.push(...await collectDate(frame, portalDate).catch(() => []));
+      journeys.push(...await (contracting.mode === "responsive"
+        ? collectResponsiveDate(contracting.frame, portalDate)
+        : collectDate(contracting.frame, portalDate)).catch((error) => {
+          console.warn(`No se pudo leer el tablón del ${portalDate}: ${error instanceof Error ? error.message : error}`);
+          return [];
+        }));
     }
     if (!journeys.length) throw new Error("El portal no devolvio ninguna jornada del tablon general.");
 
