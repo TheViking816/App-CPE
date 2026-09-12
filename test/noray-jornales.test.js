@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   mergeNorayJornales,
   mergeNorayLiquidations,
+  norayHistoryWindow,
   norayObservation,
   norayPremium,
   normalizeNorayDate,
@@ -143,4 +144,11 @@ test("builds a bounded historical month window", () => {
     { year: 2025, month: 11 }
   ]);
   assert.equal(previousMonths(100).length, 24);
+});
+
+test("uses twelve months only for an initial load and two for routine updates", () => {
+  assert.equal(norayHistoryWindow("", false), 12);
+  assert.equal(norayHistoryWindow("", true), 2);
+  assert.equal(norayHistoryWindow("12", true), 12);
+  assert.equal(norayHistoryWindow("1", false), 1);
 });

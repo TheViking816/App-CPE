@@ -2,6 +2,7 @@ param(
   [ValidateRange(1, 6)][int]$BatchSize = 1,
   [ValidateRange(1024, 65535)][int]$Port = 9223,
   [ValidateRange(5, 120)][int]$WarmupSeconds = 20,
+  [switch]$FullHistory,
   [string]$RepositoryPath = ""
 )
 
@@ -30,6 +31,13 @@ try {
   $env:CPE_PORTAL_HEADLESS = "false"
   $env:CPE_PORTAL_BROWSER_CHANNEL = "chrome"
   $env:CPE_BOLSA_SCAN_BATCH_SIZE = [string]$BatchSize
+  if ($FullHistory) {
+    $env:CPE_BOLSA_JORNALES_MONTHS = "12"
+    Write-Host "Modo historico completo: se revisaran 12 meses por usuario." -ForegroundColor Cyan
+  } else {
+    $env:CPE_BOLSA_JORNALES_MONTHS = $null
+    Write-Host "Modo automatico: 12 meses en la primera carga y 2 meses en las siguientes." -ForegroundColor Cyan
+  }
   Set-Location -LiteralPath $RepositoryPath
   & node "scripts/bolsa-name-scan-worker.js" --queue-all
   exit $LASTEXITCODE
@@ -39,5 +47,6 @@ try {
   $env:CPE_PORTAL_HEADLESS = $null
   $env:CPE_PORTAL_BROWSER_CHANNEL = $null
   $env:CPE_BOLSA_SCAN_BATCH_SIZE = $null
+  $env:CPE_BOLSA_JORNALES_MONTHS = $null
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPointer)
 }

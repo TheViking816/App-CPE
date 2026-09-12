@@ -150,3 +150,9 @@ export function previousMonths(count, now = new Date()) {
   }
   return months;
 }
+
+export function norayHistoryWindow(configuredValue, hasExistingObservations) {
+  const configured = String(configuredValue ?? "").trim();
+  if (configured) return Math.max(1, Math.min(24, Number(configured) || 2));
+  return hasExistingObservations ? 2 : 12;
+}

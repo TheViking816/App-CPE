@@ -9,6 +9,7 @@ import {
 import {
   mergeNorayJornales,
   mergeNorayLiquidations,
+  norayHistoryWindow,
   norayObservation,
   previousMonths,
   sanitizeNorayPartDetail
@@ -23,7 +24,7 @@ const jobId = String(process.env.CPE_BOLSA_SCAN_JOB_ID || "").trim();
 const portalUser = String(process.env.CPE_PORTAL_USER || "").replace(/\D/g, "").slice(-5);
 const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || "");
 const portalSecurityKey = String(process.env.CPE_PORTAL_SECURITY_KEY || "");
-const norayHistoryMonths = Math.max(1, Math.min(24, Number(process.env.CPE_BOLSA_JORNALES_MONTHS || 12)));
+const configuredNorayHistoryMonths = String(process.env.CPE_BOLSA_JORNALES_MONTHS || "").trim();
 const clearanceCookies = (() => {
   try {
     const value = JSON.parse(process.env.CPE_PORTAL_CLEARANCE_COOKIES || "[]");
@@ -49,6 +50,16 @@ function request(pathname, options = {}) {
 
 function cleanText(value = "") {
   return String(value).replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+}
+
+async function resolveNorayHistoryMonths() {
+  if (configuredNorayHistoryMonths) {
+    return norayHistoryWindow(configuredNorayHistoryMonths, false);
+  }
+  const existing = await request(
+    `/rest/v1/app_cpe_noray_jornal_observations?select=source_chapa&source_chapa=eq.${encodeURIComponent(portalUser)}&limit=1`
+  );
+  return norayHistoryWindow("", Array.isArray(existing) && existing.length > 0);
 }
 
 function validBolsaWorker(worker) {
@@ -288,12 +299,12 @@ async function mapWithConcurrency(values, concurrency, mapper) {
   return result;
 }
 
-async function collectNorayHistory(page) {
+async function collectNorayHistory(page, historyMonths) {
   const auth = await waitForNorayJornales(page);
   const premiumsVerified = await verifyNorayPremiumAccess(auth.frame, auth.localToken);
   const observedAt = new Date().toISOString();
   const monthRows = [];
-  for (const period of previousMonths(norayHistoryMonths)) {
+  for (const period of previousMonths(historyMonths)) {
     const rows = await readNorayMonth(auth.frame, auth, period.year, period.month, premiumsVerified);
     monthRows.push({ ...period, rows });
   }
@@ -583,12 +594,14 @@ async function main() {
   let partPage = null;
   try {
     await login(page);
+    const historyMonths = await resolveNorayHistoryMonths();
+    console.log(`[bolsa-scan:${portalUser}] Jornales Noray: ${historyMonths} meses (${configuredNorayHistoryMonths ? "forzado" : historyMonths === 12 ? "carga inicial" : "actualizacion normal"}).`);
     let noray = {
       observations: [], workers: [], partsScanned: 0, premiumsFound: 0,
       premiumsVerified: false, warning: ""
     };
     try {
-      noray = { ...noray, ...(await collectNorayHistory(page)) };
+      noray = { ...noray, ...(await collectNorayHistory(page, historyMonths)) };
       await saveNorayObservations(noray.observations);
     } catch (error) {
       noray.warning = error instanceof Error ? error.message : String(error);
@@ -631,6 +644,7 @@ async function main() {
       partsScanned: totalParts,
       norayObservations: noray.observations.length,
       premiumsFound: noray.premiumsFound,
+      historyMonths,
       namesFound: workers.length,
       ...saved
     })}`);
