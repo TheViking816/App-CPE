@@ -114,7 +114,9 @@ export function sanitizeNorayPartDetail(detail, fallback = {}) {
 
 export function norayObservation(jornal, detail, context) {
   const parte = String(positiveInteger(jornal?.parte) || "");
-  const fecha = normalizeNorayDate(jornal?.fecha, context.year, context.month);
+  // The live Jornales API identifies the day with `dia`; older captured
+  // responses used `fecha`. Accept both so a valid live row is not discarded.
+  const fecha = normalizeNorayDate(jornal?.fecha ?? jornal?.dia, context.year, context.month);
   const jornada = cleanText(jornal?.jornada);
   const jornadaKey = normalizeNorayShift(jornada);
   if (!parte || !fecha || !jornadaKey) return null;

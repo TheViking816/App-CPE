@@ -90,6 +90,28 @@ test("builds an observation only after exact date part and shift matching", () =
   assert.equal(locked.premium_amount, null);
 });
 
+test("builds live Jornales observations when the API returns dia instead of fecha", () => {
+  const observed = norayObservation({
+    parte: 24943,
+    anyo: 2026,
+    dia: 1,
+    jornada: "DE 02 A 08 H.",
+    especialidad: "CONDUCTOR 1a",
+    liquidacion: { produccion_cpe: 95.4, en_historico: true }
+  }, null, {
+    sourceChapa: "72683",
+    registro: 1234,
+    year: 2026,
+    month: 9,
+    premiumsVerified: true,
+    observedAt: "2026-09-12T06:00:00.000Z"
+  });
+
+  assert.equal(observed.fecha, "2026-09-01");
+  assert.equal(observed.jornada_key, "0208");
+  assert.equal(observed.premium_amount, 95.4);
+});
+
 test("builds a bounded historical month window", () => {
   assert.deepEqual(previousMonths(3, new Date("2026-01-15T00:00:00Z")), [
     { year: 2026, month: 1 },
