@@ -47,6 +47,62 @@ test("lee la contratacion responsive aunque el portal no publique una tabla HTML
   });
 });
 
+test("lee la nueva tarjeta de Donde voy con etiquetas y valores en la misma linea", () => {
+  const result = parseAssignmentsFromText(`
+    DONDE VOY - ORDEN DE SERVICIO
+    12/09/26 02/08h
+    PARTE 26177 --
+    FECHA 12/09/2026
+    JORNADA DE 02 A 08 H.
+    ESPECIALIDAD TRASTAINERS RTT
+    TIPO TUR
+    EMPRESA CSP IBERIAN VALENCIA TERMINAL
+    MUELLE PRINCIPE FELIPE
+    OPERACIÓN TRASTAINERS
+  `);
+
+  assert.equal(result.recognized, true);
+  assert.deepEqual(result.rows, [{
+    parte: "26177",
+    fecha: "12/09/2026",
+    jornada: "DE 02 A 08 H.",
+    especialidad: "TRASTAINERS RTT",
+    tipo: "TUR",
+    empresa: "CSP IBERIAN VALENCIA TERMINAL",
+    muelle: "PRINCIPE FELIPE",
+    operacion: "TRASTAINERS"
+  }]);
+});
+
+test("lee las etiquetas pegadas al valor que entrega el nuevo iframe de Noray", () => {
+  const result = parseAssignmentsFromText(`
+    12/09/26
+    02/08h
+    PARTE
+    26159
+    MACARENA B
+    FECHA12/09/2026
+    JORNADADE 02 A 08 H.
+    ESPECIALIDADESPECIALISTA
+    TIPOTUR
+    EMPRESACSP IBERIAN VALENCIA TERMINAL
+    MUELLEPRINCIPE FELIPE
+    OPERACIÓNCONT. C/SPREADER AUT
+  `);
+
+  assert.equal(result.rows.length, 1);
+  assert.deepEqual(result.rows[0], {
+    parte: "26159",
+    fecha: "12/09/2026",
+    jornada: "DE 02 A 08 H.",
+    especialidad: "ESPECIALISTA",
+    tipo: "TUR",
+    empresa: "CSP IBERIAN VALENCIA TERMINAL",
+    muelle: "PRINCIPE FELIPE",
+    operacion: "CONT. C/SPREADER AUT"
+  });
+});
+
 test("no acepta como completo un parte cuyos nombres siguen cargando", () => {
   const early = parseAssignmentDetailFromTables(detailTable("12345 - ANA 23456 - LUIS"));
   assert.equal(early.specialties[0].unnamed, 3);

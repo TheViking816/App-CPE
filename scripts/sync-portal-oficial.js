@@ -37,6 +37,7 @@ const rootDir = path.resolve(__dirname, "..");
 const privateDataDir = path.join(rootDir, "data", "portal-oficial");
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 const PORTAL_URL = "https://portal.cpevalencia.com/#User";
+const WHERE_AM_I_FRAME_PATTERN = /DondeVoy\.asp|norayweb\.cpevalencia\.com\/donde-voy/i;
 const STATUS_PATH = path.join(privateDataDir, "portal-sync-status.json");
 
 const portalUser = normalizeChapa(process.env.CPE_PORTAL_USER || process.env.CPE_USER);
@@ -408,6 +409,12 @@ function parseAssignments(html = "") {
 
 function parseAssignmentDetail(html = "") {
   return parseAssignmentDetailFromTables([parseRowsFromTable(html)], textFromHtml(html));
+}
+
+function bestAssignmentDetail(rows, pageText) {
+  const fromTable = parseAssignmentDetailFromTables([rows], pageText);
+  const fromText = parseAssignmentDetailFromText(pageText);
+  return assignmentDetailScore(fromText) > assignmentDetailScore(fromTable) ? fromText : fromTable;
 }
 
 function parseVacaciones(html = "") {
@@ -836,11 +843,11 @@ async function readAssignmentDetailViaDesktopWhereAmI(sourcePage, assignment) {
         [...row.cells].map((cell) => cell.innerText || "")
       ))).catch(() => []);
       const pageText = await frame.locator("body").innerText().catch(() => "");
-      if (!diagnosticLogged && /DondeVoy\.asp/i.test(frame.url()) && rows.length) {
+      if (!diagnosticLogged && WHERE_AM_I_FRAME_PATTERN.test(frame.url()) && rows.length) {
         diagnosticLogged = true;
         console.log(`[parte-dom-rows] ${JSON.stringify(rows.slice(0, 80))}`);
       }
-      const parsed = parseAssignmentDetailFromTables([rows], pageText);
+      const parsed = bestAssignmentDetail(rows, pageText);
       const score = assignmentDetailScore(parsed);
       if (score > bestScore) {
         best = parsed;
@@ -859,7 +866,9 @@ async function readAssignmentDetailViaDesktopWhereAmI(sourcePage, assignment) {
 async function readAssignmentDetailViaMenu(page, assignment) {
   await openPortalHash(page, "User");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
-  const listFrame = await waitForFrame(page, /DondeVoy\.asp/i, 12000);
+  const listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 12000);
+  await expandWhereAmIAssignment(listFrame, assignment);
+  await page.waitForTimeout(350);
   const part = String(assignment.parte || "").trim();
   const partCandidates = listFrame.locator("a, button, [role=button], [onclick], td, span")
     .filter({ hasText: part });
@@ -869,7 +878,8 @@ async function readAssignmentDetailViaMenu(page, assignment) {
   for (let index = 0; index < count; index += 1) {
     const candidate = partCandidates.nth(index);
     const text = cleanText(await candidate.innerText().catch(() => ""));
-    if (text !== part || !await candidate.isVisible().catch(() => false)) continue;
+    const normalizedCandidatePart = text.replace(/\s+--.*$/, "").trim();
+    if (normalizedCandidatePart !== part || !await candidate.isVisible().catch(() => false)) continue;
     clickedTarget = await candidate.evaluate((node) => {
       const actionable = node.matches("a, button, [role=button], [onclick]") ? node : null
         || node.querySelector?.("a, button, [role=button], [onclick]")
@@ -888,6 +898,18 @@ async function readAssignmentDetailViaMenu(page, assignment) {
     clicked = Boolean(clickedTarget?.clicked);
     if (clicked) break;
   }
+  if (!clicked) {
+    const exactCandidates = listFrame.getByText(part, { exact: true });
+    const exactCount = Math.min(await exactCandidates.count().catch(() => 0), 20);
+    for (let index = 0; index < exactCount; index += 1) {
+      const candidate = exactCandidates.nth(index);
+      if (!await candidate.isVisible().catch(() => false)) continue;
+      clicked = await candidate.click({ noWaitAfter: true }).then(() => true).catch(async () => (
+        candidate.evaluate((node) => { node.click(); return true; }).catch(() => false)
+      ));
+      if (clicked) break;
+    }
+  }
   if (!clicked) throw new Error(`No se pudo abrir el parte ${part} desde ¿Dónde voy?.`);
   await page.waitForTimeout(1000);
   const deadline = Date.now() + 20000;
@@ -903,7 +925,7 @@ async function readAssignmentDetailViaMenu(page, assignment) {
           [...row.cells].map((cell) => cell.innerText || "")
         ))).catch(() => []);
         const pageText = await frame.locator("body").innerText().catch(() => "");
-        const parsed = parseAssignmentDetailFromTables([rows], pageText);
+        const parsed = bestAssignmentDetail(rows, pageText);
         if (String(parsed.parte || "") !== part) continue;
         const score = assignmentDetailScore(parsed);
         if (score > bestScore) {
@@ -2223,13 +2245,84 @@ async function collectPayrolls(page) {
   throw new Error("No se pudo leer la lista de Nómina electrónica.");
 }
 
+async function expandWhereAmISections(frame) {
+  const headerPattern = /^\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}\s*\/\s*\d{1,2}\s*h\s*$/i;
+  const candidates = frame.locator(
+    'button, [role="button"], [onclick], summary, [data-bs-toggle="collapse"], .accordion-header, .accordion-button'
+  );
+  const count = Math.min(await candidates.count().catch(() => 0), 80);
+  let expanded = 0;
+  for (let index = 0; index < count; index += 1) {
+    const candidate = candidates.nth(index);
+    if (!await candidate.isVisible().catch(() => false)) continue;
+    const text = cleanText(await candidate.innerText().catch(() => ""));
+    if (!headerPattern.test(text)) continue;
+    const ariaExpanded = await candidate.getAttribute("aria-expanded").catch(() => null);
+    const className = await candidate.getAttribute("class").catch(() => "") || "";
+    if (ariaExpanded === "true" || /\bshow\b/.test(className) && !/\bcollapsed\b/.test(className)) continue;
+    await candidate.click({ noWaitAfter: true }).catch(async () => {
+      await candidate.evaluate((node) => node.click()).catch(() => null);
+    });
+    expanded += 1;
+    await frame.waitForTimeout(250);
+  }
+  return expanded;
+}
+
+async function expandWhereAmIAssignment(frame, assignment) {
+  const dateMatch = cleanText(assignment?.fecha).match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  const shiftMatch = cleanText(assignment?.jornada).match(/(\d{1,2})\s*(?:A|-|–|\/)\s*(\d{1,2})/i);
+  const shortDate = dateMatch
+    ? `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}/${dateMatch[3].slice(-2)}`
+    : "";
+  const compactShift = shiftMatch
+    ? `${shiftMatch[1].padStart(2, "0")}/${shiftMatch[2].padStart(2, "0")}h`
+    : "";
+  if (!shortDate || !compactShift) return false;
+  const candidates = frame.locator(
+    'button, [role="button"], [onclick], summary, [data-bs-toggle="collapse"], .accordion-header, .accordion-button'
+  );
+  const count = Math.min(await candidates.count().catch(() => 0), 80);
+  for (let index = 0; index < count; index += 1) {
+    const candidate = candidates.nth(index);
+    if (!await candidate.isVisible().catch(() => false)) continue;
+    const text = cleanText(await candidate.innerText().catch(() => ""));
+    if (!text.includes(shortDate) || !text.replace(/\s+/g, "").includes(compactShift)) continue;
+    if (await candidate.getAttribute("aria-expanded").catch(() => null) !== "true") {
+      await candidate.click({ noWaitAfter: true }).catch(async () => {
+        await candidate.evaluate((node) => node.click()).catch(() => null);
+      });
+      await frame.waitForTimeout(350);
+    }
+    return true;
+  }
+  return false;
+}
+
 async function collectAssignmentsViaMenu(page) {
   await assignmentNavigationState(page, "menu-before");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
   await assignmentNavigationState(page, "menu-after-click");
+  const listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 12000);
+  const initialText = await listFrame.locator("body").innerText().catch(() => "");
+  const hasCollapsedCards = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}\s*\/\s*\d{1,2}\s*h\b/i.test(initialText);
+  if (hasCollapsedCards) {
+    const expanded = await expandWhereAmISections(listFrame);
+    if (expanded) console.log(`Donde voy: ${expanded} jornada(s) desplegadas para leer sus partes.`);
+    const deadline = Date.now() + 8000;
+    let best = { recognized: true, rows: [] };
+    while (Date.now() < deadline) {
+      const pageText = await listFrame.locator("body").innerText().catch(() => "");
+      const parsed = parseAssignmentsFromText(pageText);
+      if ((parsed.rows?.length || 0) > (best.rows?.length || 0)) best = parsed;
+      if (best.rows.length > 0) return best;
+      await page.waitForTimeout(200);
+    }
+    throw new Error("La nueva vista de Donde voy mostraba jornadas, pero no se pudo leer ningun parte.");
+  }
   const result = await waitForParsedFrame(
     page,
-    /DondeVoy\.asp/i,
+    WHERE_AM_I_FRAME_PATTERN,
     parseAssignments,
     (parsed) => parsed.rows?.length || 0,
     8000

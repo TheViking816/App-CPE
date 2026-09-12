@@ -26,6 +26,17 @@ test("los partes derivados de jornales reciben una pagina navegable", () => {
   assert.doesNotMatch(source, /completeAssignmentsFromJournals\(page\.context\(\), asignaciones, jornales\)/);
 });
 
+test("el enlace del parte nuevo admite el sufijo visual de buque pendiente", () => {
+  assert.match(source, /text\.replace\(\/\\s\+--\.\*\$\/, ""\)\.trim\(\)/);
+});
+
+test("abre primero el acordeon exacto de fecha y jornada antes de pulsar el parte", () => {
+  assert.match(source, /async function expandWhereAmIAssignment/);
+  assert.match(source, /await expandWhereAmIAssignment\(listFrame, assignment\)/);
+  assert.match(source, /shortDate/);
+  assert.match(source, /compactShift/);
+});
+
 test("contratacion y vacaciones reconocidas pueden estar vacias sin hacer parcial la lectura", () => {
   const assignmentsMenu = source.match(/async function collectAssignmentsViaMenu[\s\S]*?async function collectAssignmentsViaContractings/)?.[0] || "";
   const vacations = source.match(/async function collectVacacionesViaMenu[\s\S]*?async function enrichAssignmentsWithDetails/)?.[0] || "";

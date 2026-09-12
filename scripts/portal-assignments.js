@@ -12,6 +12,20 @@ const LABELS = [
   ["observaciones", /^observaciones:?$/i]
 ];
 
+const INLINE_LABELS = [
+  ["parte", /^parte:?\s*(.+)$/i],
+  ["fecha", /^fecha:?\s*(.+)$/i],
+  ["jornada", /^jornada:?\s*((?:de\s+)?\d{1,2}\s*(?:a|-|–|\/)\s*\d{1,2}\s*h?\.?)$/i],
+  ["especialidad", /^especialidad:?\s*(.+)$/i],
+  ["tipo", /^tipo:?\s*(.+)$/i],
+  ["empresa", /^empresa:?\s*(.+)$/i],
+  ["muelle", /^muelle:?\s*(.+)$/i],
+  ["buque", /^buque:?\s*(.+)$/i],
+  ["operacion", /^operaci[oó]n:?\s*(.+)$/iu],
+  ["mercancia", /^mercanc.*a:?\s*(.+)$/i],
+  ["observaciones", /^observaciones:?\s*(.+)$/i]
+];
+
 const WINDOWS_1252_BYTES = new Map([
   ["€", 0x80], ["‚", 0x82], ["ƒ", 0x83], ["„", 0x84], ["…", 0x85],
   ["†", 0x86], ["‡", 0x87], ["ˆ", 0x88], ["‰", 0x89], ["Š", 0x8a],
@@ -44,6 +58,19 @@ function normalizeCell(value) {
 function findLabel(value) {
   const normalized = normalizeCell(value);
   return LABELS.find(([, pattern]) => pattern.test(normalized))?.[0] || "";
+}
+
+function findInlineField(value) {
+  const normalized = normalizeCell(value);
+  for (const [field, pattern] of INLINE_LABELS) {
+    const match = normalized.match(pattern);
+    if (!match) continue;
+    let fieldValue = normalizeCell(match[1]).replace(/^[-:]+\s*/, "").trim();
+    if (field === "parte") fieldValue = fieldValue.replace(/\s+--.*$/, "").trim();
+    if (/^(?:--?|sin\s+datos?)$/i.test(fieldValue)) fieldValue = "";
+    return { field, value: fieldValue };
+  }
+  return null;
 }
 
 export function parseAssignmentsFromTables(tables = [], pageText = "") {
@@ -91,6 +118,8 @@ const DETAIL_FIELDS = [
   ["parte", /^parte:?$/i],
   ["fecha", /^fecha:?$/i],
   ["jornada", /^jornada:?$/i],
+  ["especialidad", /^especialidad:?$/i],
+  ["tipo", /^tipo:?$/i],
   ["empresa", /^empresa:?$/i],
   ["buque", /^buque:?$/i],
   ["muelle", /^muelle:?$/i],
@@ -179,24 +208,87 @@ export function parseAssignmentDetailFromText(pageText = "") {
     .filter(Boolean);
   const detail = {};
 
-  for (let index = 0; index < lines.length - 1; index += 1) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const inline = findInlineField(lines[index]);
+    if (inline && !detail[inline.field]) {
+      detail[inline.field] = inline.value;
+      continue;
+    }
     const field = DETAIL_FIELDS.find(([, pattern]) => pattern.test(lines[index]))?.[0];
     if (!field || detail[field]) continue;
-    detail[field] = lines[index + 1];
+    detail[field] = lines[index + 1] || "";
   }
 
   const specialties = [];
   const teamIndex = lines.findIndex((line) => /equipo\s+del\s+parte/i.test(line));
-  const start = teamIndex >= 0 ? teamIndex + 1 : 0;
+  const modalIndexes = lines
+    .map((line, index) => (/^parte\s+([A-Z0-9-]+)$/i.test(line) ? index : -1))
+    .filter((index) => index >= 0);
+  const modalIndex = modalIndexes.at(-1) ?? -1;
+  if (modalIndex >= 0) {
+    const modalPart = lines[modalIndex].match(/^parte\s+([A-Z0-9-]+)$/i)?.[1] || "";
+    detail.parte = modalPart;
+    const cardIndex = lines
+      .slice(0, modalIndex)
+      .map((line, index) => ({ index, inline: findInlineField(line) }))
+      .filter((item) => item.inline?.field === "parte" && item.inline.value === modalPart)
+      .at(-1)?.index ?? -1;
+    if (cardIndex >= 0) {
+      for (let index = cardIndex; index < modalIndex; index += 1) {
+        const inline = findInlineField(lines[index]);
+        if (index > cardIndex && inline?.field === "parte") break;
+        if (inline) detail[inline.field] = inline.value;
+      }
+    }
+  }
+  const start = teamIndex >= 0 ? teamIndex + 1 : modalIndex >= 0 ? modalIndex + 1 : 0;
   let current = null;
+  let currentHasDeclaredCount = false;
 
   for (let index = start; index < lines.length; index += 1) {
     const line = lines[index];
     const next = lines[index + 1] || "";
+    if (modalIndex >= 0) {
+      const heading = line.match(/^(.+?)\s*\((\d{1,2})\)$/);
+      if (heading && Number(heading[2]) > 0) {
+        current = {
+          name: normalizeCell(heading[1]),
+          requested: Number(heading[2]),
+          workers: [],
+          bolsa: 0,
+          unnamed: Number(heading[2])
+        };
+        currentHasDeclaredCount = true;
+        specialties.push(current);
+        continue;
+      }
+      const worker = line.match(/^([A-Z]?\d{5})(?:\s+(?:TUR|BOLSA|BOL))?(?:\s+(.*))?$/i);
+      if (worker && worker[1] !== "00000") {
+        if (!current) {
+          current = {
+            name: detail.especialidad || "EQUIPO",
+            requested: 0,
+            workers: [],
+            bolsa: 0,
+            unnamed: 0
+          };
+          currentHasDeclaredCount = false;
+          specialties.push(current);
+        }
+        const code = worker[1];
+        if (!current.workers.some((item) => item.code.toUpperCase() === code.toUpperCase())) {
+          current.workers.push({ code, name: normalizeCell(worker[2] || "") });
+          if (!currentHasDeclaredCount) current.requested = current.workers.length;
+          current.unnamed = Math.max(current.requested - current.workers.length, 0);
+        }
+        continue;
+      }
+    }
     if (!/^\d+$/.test(line) && /^\d+$/.test(next)) {
       const requested = Number(next);
       if (requested > 0 && requested < 100) {
         current = { name: line, requested, workers: [], bolsa: 0, unnamed: requested };
+        currentHasDeclaredCount = true;
         specialties.push(current);
         index += 1;
         continue;
@@ -212,7 +304,7 @@ export function parseAssignmentDetailFromText(pageText = "") {
   }
 
   const recognized = Boolean(detail.parte && specialties.length)
-    || teamIndex >= 0 && specialties.length > 0;
+    || (teamIndex >= 0 || modalIndex >= 0) && specialties.length > 0;
   return { recognized, ...detail, specialties };
 }
 
@@ -242,11 +334,17 @@ export function parseAssignmentsFromText(pageText = "") {
     assignment = {};
   };
 
-  for (let index = 0; index < lines.length - 1; index += 1) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const inline = findInlineField(lines[index]);
+    if (inline) {
+      if (inline.field === "parte" && assignment.parte) saveAssignment();
+      if (inline.value && !assignment[inline.field]) assignment[inline.field] = inline.value;
+      continue;
+    }
     const key = findLabel(lines[index]);
     if (!key) continue;
     if (key === "parte" && assignment.parte) saveAssignment();
-    const value = lines[index + 1];
+    const value = lines[index + 1] || "";
     if (value && !findLabel(value) && !assignment[key]) assignment[key] = value;
   }
   saveAssignment();
