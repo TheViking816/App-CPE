@@ -121,6 +121,9 @@ export function norayObservation(jornal, detail, context) {
   const jornadaKey = normalizeNorayShift(jornada);
   if (!parte || !fecha || !jornadaKey) return null;
   const premium = context.premiumsVerified ? norayPremium(jornal?.liquidacion) : null;
+  const partDetail = detail?.recognized === true && Array.isArray(detail?.specialties)
+    ? detail
+    : sanitizeNorayPartDetail(detail, jornal);
   return {
     source_chapa: context.sourceChapa,
     source_registro: context.registro,
@@ -133,7 +136,7 @@ export function norayObservation(jornal, detail, context) {
     source_role: cleanText(jornal?.especialidad),
     premium_amount: premium?.amount ?? null,
     premium_status: premium?.status ?? null,
-    part_detail: sanitizeNorayPartDetail(detail, jornal) || {},
+    part_detail: partDetail || {},
     observed_at: context.observedAt
   };
 }
