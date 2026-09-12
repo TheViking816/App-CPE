@@ -7,6 +7,7 @@ const job = await readFile(new URL("../scripts/bolsa-name-scan-job.js", import.m
 const migration = await readFile(new URL("../supabase/migrations/20260830085922_bolsa_name_scan_worker.sql", import.meta.url), "utf8");
 const chapaConstraintMigration = await readFile(new URL("../supabase/migrations/20260831154215_allow_all_valid_chapas_in_bolsa_name_scan.sql", import.meta.url), "utf8");
 const portalWorker = await readFile(new URL("../scripts/portal-sync-worker.js", import.meta.url), "utf8");
+const launcher = await readFile(new URL("../scripts/windows/run-bolsa-name-scan.ps1", import.meta.url), "utf8");
 
 test("el rastreador de nombres usa una cola independiente", () => {
   assert.match(migration, /app_cpe_bolsa_name_scan_jobs/);
@@ -41,4 +42,12 @@ test("el resumen final imprime nombres nuevos y nombres mejorados", () => {
 test("las credenciales se borran al cerrar cada trabajo", () => {
   assert.match(migration, /portal_password = null/);
   assert.match(migration, /security_key = null/);
+});
+
+test("el historico completo solo se fuerza de forma explicita", () => {
+  assert.match(job, /resolveNorayHistoryMonths/);
+  assert.match(job, /configuredNorayHistoryMonths/);
+  assert.match(job, /app_cpe_noray_jornal_observations\?select=source_chapa/);
+  assert.match(launcher, /\[switch\]\$FullHistory/);
+  assert.match(launcher, /CPE_BOLSA_JORNALES_MONTHS = "12"/);
 });
