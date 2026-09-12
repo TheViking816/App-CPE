@@ -6,6 +6,13 @@ import {
   parseAssignmentDetailFromTables,
   parseAssignmentsFromTables
 } from "./portal-assignments.js";
+import {
+  mergeNorayJornales,
+  mergeNorayLiquidations,
+  norayObservation,
+  previousMonths,
+  sanitizeNorayPartDetail
+} from "./noray-jornales.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const PORTAL_ROOT = "https://portal.cpevalencia.com/#User";
@@ -15,6 +22,8 @@ const serviceRole = resolveSupabaseAdminKey();
 const jobId = String(process.env.CPE_BOLSA_SCAN_JOB_ID || "").trim();
 const portalUser = String(process.env.CPE_PORTAL_USER || "").replace(/\D/g, "").slice(-5);
 const portalPassword = String(process.env.CPE_PORTAL_PASSWORD || "");
+const portalSecurityKey = String(process.env.CPE_PORTAL_SECURITY_KEY || "");
+const norayHistoryMonths = Math.max(1, Math.min(24, Number(process.env.CPE_BOLSA_JORNALES_MONTHS || 12)));
 const clearanceCookies = (() => {
   try {
     const value = JSON.parse(process.env.CPE_PORTAL_CLEARANCE_COOKIES || "[]");
@@ -143,6 +152,206 @@ async function login(page) {
   await form.frame.getByRole("button", { name: /Iniciar sesi/i }).first().click();
   state = await waitForState(page, ["authenticated", "challenge"], 30000);
   if (state !== "authenticated") throw new Error(state === "challenge" ? "Cloudflare bloqueo el acceso" : "El portal no confirmo la sesion");
+}
+
+async function waitForNorayJornales(page) {
+  await page.goto("https://portal.cpevalencia.com/#User,ViewNoray,3", {
+    waitUntil: "domcontentloaded",
+    timeout: 45000
+  });
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    const frame = page.frames().find((candidate) => {
+      try {
+        const url = new URL(candidate.url());
+        return url.hostname === "norayweb.cpevalencia.com" && url.pathname.includes("jornales");
+      } catch {
+        return false;
+      }
+    });
+    if (frame) {
+      const auth = await frame.evaluate(async () => {
+        const query = new URLSearchParams(window.location.search.replace(/&amp;/g, "&"));
+        const registro = Number(query.get("rec"));
+        const username = query.get("usr");
+        const password = query.get("pwd");
+        if (!(registro > 0) || !username || !password) return null;
+        try {
+          const response = await fetch("/api/v1/auth/validar-acceso", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ usr: username, rec: registro, pwd: password })
+          });
+          if (!response.ok) return null;
+          const data = await response.json();
+          return {
+            registro,
+            localToken: data.local_access_token || null,
+            intranetToken: data.intranet_access_token || null,
+            intranetAvailable: data.intranet_available
+          };
+        } catch {
+          return null;
+        }
+      }).catch(() => null);
+      if (auth?.intranetAvailable === false) {
+        throw new Error("Noray no tiene acceso a la intranet en este momento");
+      }
+      if (auth?.registro > 0 && auth.localToken && auth.intranetToken && auth.intranetAvailable !== false) {
+        return { frame, ...auth };
+      }
+    }
+    await page.waitForTimeout(250);
+  }
+  throw new Error("La nueva pantalla Jornales no quedo disponible");
+}
+
+async function norayApi(frame, pathname, { token, method = "GET", body } = {}) {
+  const result = await frame.evaluate(async ({ url, authToken, requestMethod, requestBody }) => {
+    const response = await fetch(url, {
+      method: requestMethod,
+      headers: {
+        "Content-Type": "application/json",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      },
+      body: requestBody === undefined ? undefined : JSON.stringify(requestBody)
+    });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    return { ok: response.ok, status: response.status, data };
+  }, { url: pathname, authToken: token, requestMethod: method, requestBody: body });
+  if (!result.ok) {
+    const detail = cleanText(result.data?.detail || result.data?.message || "");
+    const error = new Error(`Noray HTTP ${result.status}${detail ? `: ${detail}` : ""}`);
+    error.status = result.status;
+    throw error;
+  }
+  return result.data;
+}
+
+async function verifyNorayPremiumAccess(frame, localToken) {
+  if (!portalSecurityKey) return false;
+  try {
+    const result = await norayApi(frame, "/api/v1/security-pass/verify", {
+      token: localToken,
+      method: "POST",
+      body: { security_pass: portalSecurityKey }
+    });
+    return result?.success === true && Boolean(result?.local_access_token);
+  } catch (error) {
+    if (error?.status === 422 || error?.status === 429) return false;
+    throw error;
+  }
+}
+
+async function readNorayMonth(frame, auth, year, month, premiumsVerified) {
+  const base = await norayApi(
+    frame,
+    `/api/v1/jornales/${auth.registro}/${year}/${month}?incluir_en_curso=false`,
+    { token: auth.intranetToken }
+  );
+  let vigente = null;
+  try {
+    vigente = await norayApi(frame, `/api/v1/jornales-vigentes/${auth.registro}/${year}/${month}`, {
+      token: auth.localToken
+    });
+  } catch (error) {
+    if (![403, 404].includes(error?.status)) throw error;
+  }
+  let rows = mergeNorayJornales(base?.jornales, vigente?.jornales);
+  if (premiumsVerified && year >= 2024) {
+    try {
+      const current = await norayApi(
+        frame,
+        `/api/v1/jornales/${auth.registro}/${year}/${month}/liquidacion-en-curso`,
+        { token: auth.intranetToken }
+      );
+      rows = mergeNorayLiquidations(rows, current?.liquidaciones, year);
+    } catch (error) {
+      if (![403, 404].includes(error?.status)) throw error;
+    }
+  }
+  return rows;
+}
+
+async function mapWithConcurrency(values, concurrency, mapper) {
+  const result = new Array(values.length);
+  let cursor = 0;
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+    while (cursor < values.length) {
+      const index = cursor;
+      cursor += 1;
+      result[index] = await mapper(values[index], index);
+    }
+  }));
+  return result;
+}
+
+async function collectNorayHistory(page) {
+  const auth = await waitForNorayJornales(page);
+  const premiumsVerified = await verifyNorayPremiumAccess(auth.frame, auth.localToken);
+  const observedAt = new Date().toISOString();
+  const monthRows = [];
+  for (const period of previousMonths(norayHistoryMonths)) {
+    const rows = await readNorayMonth(auth.frame, auth, period.year, period.month, premiumsVerified);
+    monthRows.push({ ...period, rows });
+  }
+
+  const partKeys = new Map();
+  for (const period of monthRows) {
+    for (const jornal of period.rows) {
+      const parte = String(Number.parseInt(jornal?.parte, 10) || "");
+      const year = Number.parseInt(jornal?.anyo, 10) || period.year;
+      if (parte) partKeys.set(`${year}:${parte}`, { year, parte, fallback: jornal });
+    }
+  }
+  const details = new Map();
+  await mapWithConcurrency([...partKeys.entries()], 4, async ([key, part]) => {
+    try {
+      const raw = await norayApi(auth.frame, `/api/v1/partes/${part.year}/${part.parte}`, {
+        token: auth.intranetToken
+      });
+      const detail = sanitizeNorayPartDetail(raw, part.fallback);
+      if (detail) details.set(key, detail);
+    } catch (error) {
+      if (![403, 404].includes(error?.status)) throw error;
+    }
+  });
+
+  const observations = [];
+  const workers = new Map();
+  for (const period of monthRows) {
+    for (const jornal of period.rows) {
+      const year = Number.parseInt(jornal?.anyo, 10) || period.year;
+      const parte = String(Number.parseInt(jornal?.parte, 10) || "");
+      const detail = details.get(`${year}:${parte}`) || null;
+      const observation = norayObservation(jornal, detail, {
+        sourceChapa: portalUser,
+        registro: auth.registro,
+        year: period.year,
+        month: period.month,
+        premiumsVerified,
+        observedAt
+      });
+      if (observation) observations.push(observation);
+      for (const specialty of detail?.specialties || []) {
+        for (const candidate of specialty.workers || []) {
+          const worker = validBolsaWorker(candidate);
+          if (!worker) continue;
+          const previous = workers.get(worker.chapa);
+          if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
+        }
+      }
+    }
+  }
+  return {
+    observations,
+    workers: [...workers.values()],
+    partsScanned: details.size,
+    premiumsFound: observations.filter((row) => row.premium_amount !== null).length,
+    premiumsVerified
+  };
 }
 
 async function openContractings(page) {
@@ -290,6 +499,46 @@ async function saveWorkers(found) {
   return { newWorkers, updatedWorkers };
 }
 
+async function saveNorayObservations(observations) {
+  const groups = new Map();
+  const now = new Date().toISOString();
+  for (const observation of observations) {
+    const hasDetail = Array.isArray(observation?.part_detail?.specialties)
+      && observation.part_detail.specialties.length > 0;
+    const hasPremium = observation?.premium_amount !== null && observation?.premium_status;
+    const row = {
+      source_chapa: observation.source_chapa,
+      source_registro: observation.source_registro,
+      year: observation.year,
+      month: observation.month,
+      fecha: observation.fecha,
+      parte: observation.parte,
+      jornada: observation.jornada,
+      jornada_key: observation.jornada_key,
+      source_role: observation.source_role,
+      observed_at: observation.observed_at,
+      updated_at: now,
+      ...(hasDetail ? { part_detail: observation.part_detail } : {}),
+      ...(hasPremium ? {
+        premium_amount: observation.premium_amount,
+        premium_status: observation.premium_status
+      } : {})
+    };
+    const groupKey = `${hasDetail}:${hasPremium}`;
+    groups.set(groupKey, [...(groups.get(groupKey) || []), row]);
+  }
+  for (const rows of groups.values()) {
+    for (let index = 0; index < rows.length; index += 200) {
+      await request("/rest/v1/app_cpe_noray_jornal_observations?on_conflict=source_chapa,fecha,parte,jornada_key", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,missing=default,return=minimal" },
+        body: JSON.stringify(rows.slice(index, index + 200))
+      });
+    }
+  }
+  return observations.length;
+}
+
 async function finish(ok, message, metrics = {}) {
   return request("/rest/v1/rpc/app_cpe_finish_bolsa_name_scan_job", {
     method: "POST",
@@ -334,6 +583,17 @@ async function main() {
   let partPage = null;
   try {
     await login(page);
+    let noray = {
+      observations: [], workers: [], partsScanned: 0, premiumsFound: 0,
+      premiumsVerified: false, warning: ""
+    };
+    try {
+      noray = { ...noray, ...(await collectNorayHistory(page)) };
+      await saveNorayObservations(noray.observations);
+    } catch (error) {
+      noray.warning = error instanceof Error ? error.message : String(error);
+      console.warn(`[bolsa-scan:${portalUser}] Jornales nuevo no disponible: ${noray.warning}`);
+    }
     const parts = await listAllParts(page);
     partPage = await context.newPage();
     await partPage.setViewportSize({ width: 412, height: 915 });
@@ -342,7 +602,7 @@ async function main() {
       "Sec-CH-UA-Mobile": "?1",
       "Sec-CH-UA-Platform": '"Android"'
     });
-    const found = new Map();
+    const found = new Map(noray.workers.map((worker) => [worker.chapa, worker]));
     for (const assignment of parts) {
       const detail = await readPart(partPage, assignment);
       for (const specialty of detail.specialties || []) {
@@ -356,12 +616,24 @@ async function main() {
     }
     const workers = [...found.values()].sort((a, b) => a.chapa.localeCompare(b.chapa));
     const saved = await saveWorkers(workers);
-    await finish(true, `Leidos ${parts.length} partes; ${saved.newWorkers.length} nombres nuevos y ${saved.updatedWorkers.length} mejorados`, {
-      partsScanned: parts.length,
+    const totalParts = parts.length + noray.partsScanned;
+    const premiumMessage = noray.premiumsVerified
+      ? `${noray.premiumsFound} primas oficiales observadas`
+      : "primas omitidas porque la clave de seguridad no se valido";
+    const warningMessage = noray.warning ? `; Jornales nuevo: ${noray.warning}` : "";
+    await finish(true, `Leidos ${totalParts} partes; ${saved.newWorkers.length} nombres nuevos, ${saved.updatedWorkers.length} mejorados y ${premiumMessage}${warningMessage}`, {
+      partsScanned: totalParts,
       namesFound: workers.length,
       ...saved
     });
-    console.log(`SCAN_RESULT ${JSON.stringify({ chapa: portalUser, partsScanned: parts.length, namesFound: workers.length, ...saved })}`);
+    console.log(`SCAN_RESULT ${JSON.stringify({
+      chapa: portalUser,
+      partsScanned: totalParts,
+      norayObservations: noray.observations.length,
+      premiumsFound: noray.premiumsFound,
+      namesFound: workers.length,
+      ...saved
+    })}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await finish(false, message).catch(() => {});
