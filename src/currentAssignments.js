@@ -31,6 +31,26 @@ function mergeAssignmentRows(previous, incoming) {
     .map((field) => [field, incoming[field] === "" || incoming[field] == null ? previous[field] : incoming[field]]));
 }
 
+function sameAssignmentContext(left, right) {
+  if (String(left?.fecha || "") !== String(right?.fecha || "")
+    || normalizeShift(left?.jornada) !== normalizeShift(right?.jornada)) return false;
+  return ["especialidad", "empresa", "buque", "operacion"].every((field) => {
+    const leftValue = String(left?.[field] || "").trim().toLocaleUpperCase("es");
+    const rightValue = String(right?.[field] || "").trim().toLocaleUpperCase("es");
+    return !leftValue || !rightValue || leftValue === rightValue;
+  });
+}
+
+function mergePreferResolvedPart(previous, incoming) {
+  const merged = mergeAssignmentRows(previous, incoming);
+  const previousIsProvisional = canonicalPortalPart(previous) === "CA";
+  const incomingIsProvisional = canonicalPortalPart(incoming) === "CA";
+  if (!previousIsProvisional && incomingIsProvisional) {
+    return { ...merged, parte: previous.parte, ...(previous.detail ? { detail: previous.detail } : {}) };
+  }
+  return merged;
+}
+
 export function currentAssignmentsFromSnapshot(snapshot, currentTime = Date.now()) {
   const now = new Date(currentTime);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -50,17 +70,23 @@ export function currentAssignmentsFromSnapshot(snapshot, currentTime = Date.now(
     })
     .filter(Boolean);
 
-  const unique = new Map();
+  const unique = [];
   // Jornales is a reliable fallback when the legacy "Donde voy" page fails.
   // Assignments is applied last so its full part detail always wins.
   [...journalAssignments, ...assignments].forEach((item) => {
     const date = parseDate(item.fecha);
     if (!date || date < today) return;
     const itemKey = assignmentKey(item);
-    unique.set(itemKey, mergeAssignmentRows(unique.get(itemKey), item));
+    const matchingIndex = unique.findIndex((saved) => (
+      assignmentKey(saved) === itemKey
+      || (sameAssignmentContext(saved, item)
+        && (canonicalPortalPart(saved) === "CA" || canonicalPortalPart(item) === "CA"))
+    ));
+    if (matchingIndex < 0) unique.push(item);
+    else unique[matchingIndex] = mergePreferResolvedPart(unique[matchingIndex], item);
   });
 
-  return [...unique.values()].map(normalizeReservePortalRow).sort((left, right) => (
+  return unique.map(normalizeReservePortalRow).sort((left, right) => (
     parseDate(left.fecha) - parseDate(right.fecha)
     || normalizeShift(left.jornada).localeCompare(normalizeShift(right.jornada))
   ));

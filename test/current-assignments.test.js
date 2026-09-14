@@ -33,6 +33,28 @@ test("el parte completo gana al jornal basico cuando ambos coinciden", () => {
   assert.equal(result[0].detail, detail);
 });
 
+test("el parte resuelto sustituye al C/A provisional de la misma anticipada", () => {
+  const detail = { recognized: true, parte: "26394", specialties: [{ name: "TRASTAINERS RTT", requested: 10 }] };
+  const common = {
+    jornada: "DE 14 A 20 H.",
+    especialidad: "TRASTAINERS RTT",
+    empresa: "CSP IBERIAN VALENCIA TERMINAL",
+    buque: "RTTS",
+    operacion: "CONT. C/SPREADER AUT"
+  };
+  const snapshot = {
+    payload: {
+      asignaciones: { rows: [{ ...common, fecha: "14/09/2026", parte: "26394", detail }] },
+      jornales: { monthLabel: "Septiembre de 2026", rows: [{ ...common, dia: "14", parte: "C/A" }] }
+    }
+  };
+
+  const result = currentAssignmentsFromSnapshot(snapshot, new Date(2026, 8, 14, 9));
+  assert.equal(result.length, 1);
+  assert.equal(result[0].parte, "26394");
+  assert.equal(result[0].detail, detail);
+});
+
 test("Contratacion muestra una sola reserva de grupo III como clasificador", () => {
   const snapshot = {
     payload: {
