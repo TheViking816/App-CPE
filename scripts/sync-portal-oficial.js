@@ -1010,7 +1010,7 @@ async function readAssignmentDetailViaContractings(sourcePage, assignment) {
 }
 
 async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
-  await openPortalHash(sourcePage, "User");
+  await openPortalHash(sourcePage, "Home");
   await sourcePage.waitForTimeout(1200);
 
   const dateMatch = cleanText(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
