@@ -22,7 +22,10 @@ export function normalizeTurnoChapa(value) {
 }
 
 function cleanName(value) {
-  const name = String(value || "").replace(/\s+/g, " ").trim();
+  const name = String(value || "")
+    .replace(/^\s*(?:bsa|nbs)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return name.length >= 2 && !INVALID_NAMES.test(name) ? name : "";
 }
 

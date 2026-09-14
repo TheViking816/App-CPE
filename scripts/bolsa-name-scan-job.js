@@ -49,7 +49,11 @@ function request(pathname, options = {}) {
 }
 
 function cleanText(value = "") {
-  return String(value).replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+  return String(value)
+    .replace(/\u00a0/g, " ")
+    .replace(/^\s*(?:bsa|nbs)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function resolveNorayHistoryMonths() {
