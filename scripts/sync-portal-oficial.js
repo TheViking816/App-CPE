@@ -1021,37 +1021,29 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
       ]
     : [];
   let clicked = false;
-
-  for (const frame of sourcePage.frames()) {
-    const candidates = frame.locator("a, button, [role=button], [onclick], tr, td, div, span")
-      .filter({ hasText: /anticipada/i });
-    const count = Math.min(await candidates.count().catch(() => 0), 100);
-    const visible = [];
-    for (let index = 0; index < count; index += 1) {
-      const candidate = candidates.nth(index);
-      if (!await candidate.isVisible().catch(() => false)) continue;
-      const text = cleanText(await candidate.innerText().catch(() => ""));
-      if (!/anticipada/i.test(text) || text.length > 220) continue;
-      const normalizedText = text.replace(/\s+/g, "");
-      const hasExpectedDate = dateTokens.length === 0
-        || dateTokens.some((token) => normalizedText.includes(token.replace(/\s+/g, "")));
-      if (hasExpectedDate) visible.push({ candidate, length: text.length });
-    }
-    visible.sort((left, right) => left.length - right.length);
-    for (const item of visible) {
-      clicked = await item.candidate.evaluate((node) => {
-        const actionable = (node.matches("a, button, [role=button], [onclick]") ? node : null)
-          || node.querySelector?.("a, button, [role=button], [onclick]")
-          || node.closest("a, button, [role=button], [onclick]")
-          || node.parentElement?.closest("a, button, [role=button], [onclick], tr")
-          || null;
-        if (!actionable || actionable.tagName === "TR") return false;
-        actionable.click();
-        return true;
-      }).catch(() => false);
+  const cardDeadline = Date.now() + 12000;
+  while (!clicked && Date.now() < cardDeadline) {
+    for (const frame of sourcePage.frames()) {
+      const links = frame.locator("a, button, [role=button], [onclick]").filter({ hasText: /anticipada/i });
+      const count = Math.min(await links.count().catch(() => 0), 20);
+      for (let index = 0; index < count; index += 1) {
+        const link = links.nth(index);
+        if (!await link.isVisible().catch(() => false)) continue;
+        const contextText = cleanText(await link.evaluate((node) => (
+          node.closest("tr")?.innerText || node.parentElement?.parentElement?.innerText || node.innerText || ""
+        )).catch(() => ""));
+        const normalizedContext = contextText.replace(/\s+/g, "");
+        const hasExpectedDate = dateTokens.length === 0
+          || dateTokens.some((token) => normalizedContext.includes(token.replace(/\s+/g, "")));
+        if (!hasExpectedDate) continue;
+        clicked = await link.click({ noWaitAfter: true }).then(() => true).catch(async () => (
+          link.evaluate((node) => { node.click(); return true; }).catch(() => false)
+        ));
+        if (clicked) break;
+      }
       if (clicked) break;
     }
-    if (clicked) break;
+    if (!clicked) await sourcePage.waitForTimeout(250);
   }
   if (!clicked) throw new Error("No se encontro la tarjeta de contratacion anticipada en la portada.");
 
