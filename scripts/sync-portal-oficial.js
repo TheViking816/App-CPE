@@ -2447,14 +2447,26 @@ async function collectVacacionesViaMenu(page) {
 }
 
 async function enrichAssignmentsWithDetails(page, result, previousResult) {
+  const assignmentIdentity = (item) => [
+    cleanText(item?.fecha),
+    cleanText(item?.jornada).replace(/\s+/g, ""),
+    cleanText(item?.empresa),
+    cleanText(item?.buque),
+    cleanText(item?.especialidad)
+  ].join("|");
   const previousByPart = new Map((previousResult?.rows || [])
     .filter((item) => item.parte && item.detail?.recognized)
     .map((item) => [String(item.parte), item.detail]));
+  const previousByAssignment = new Map((previousResult?.rows || [])
+    .filter((item) => item.detail?.recognized)
+    .map((item) => [assignmentIdentity(item), item.detail]));
   const rows = [...(result?.rows || [])];
   console.log(`Completando el equipo de ${rows.length} parte(s) desde Jornadas contratadas...`);
   for (let index = 0; index < rows.length; index += 1) {
     const item = rows[index];
-    let detail = previousByPart.get(String(item.parte)) || null;
+    let detail = previousByPart.get(String(item.parte))
+      || previousByAssignment.get(assignmentIdentity(item))
+      || null;
     try {
       let freshDetail;
       if (normalizePortalPart(item.parte) === "CA") {
