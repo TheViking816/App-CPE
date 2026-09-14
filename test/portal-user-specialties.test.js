@@ -38,7 +38,14 @@ test("TU se guarda como especialidad y TP como polivalencia", () => {
 test("lee nombre y apellidos desde la cabecera del portal", () => {
   assert.deepEqual(
     parsePortalIdentity("63179 - CARBONELL BERNAT, JORGE  Finalizar sesión", "63179"),
-    { chapa: "63179", name: "JORGE CARBONELL BERNAT", recognized: true }
+    { chapa: "63179", name: "JORGE CARBONELL BERNAT", givenName: "JORGE", recognized: true }
+  );
+});
+
+test("conserva los nombres de pila compuestos de la cabecera del portal", () => {
+  assert.deepEqual(
+    parsePortalIdentity("72614 - ESCRICH ARIÑO, MARIA PILAR  Finalizar sesión", "72614"),
+    { chapa: "72614", name: "MARIA PILAR ESCRICH ARIÑO", givenName: "MARIA PILAR", recognized: true }
   );
 });
 

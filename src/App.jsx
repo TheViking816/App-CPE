@@ -1767,20 +1767,38 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, o
   );
 }
 
+function greetingName(value) {
+  const name = String(value || "").trim().replace(/\s+/g, " ");
+  if (!name) return "";
+  if (name === name.toLocaleUpperCase("es")) {
+    return name
+      .split(" ")
+      .map((part) => part.charAt(0).toLocaleUpperCase("es") + part.slice(1).toLocaleLowerCase("es"))
+      .join(" ");
+  }
+  return name;
+}
+
 function portalFirstName(snapshot) {
-  const fullName = String(snapshot?.payload?.descansos?.worker?.name || "").trim();
-  if (!fullName) return "";
-  const [firstName] = fullName.split(/\s+/);
-  return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLocaleLowerCase("es");
+  const worker = snapshot?.payload?.descansos?.worker;
+  const givenName = String(worker?.givenName || "").trim();
+  if (givenName) return greetingName(givenName);
+  const [firstName] = String(worker?.name || "").trim().split(/\s+/);
+  return greetingName(firstName);
 }
 
 function preferredFirstName(displayName, snapshot) {
-  const firstName = String(displayName || "").trim().split(/\s+/)[0];
-  if (!firstName) return portalFirstName(snapshot);
-  if (firstName === firstName.toLocaleUpperCase("es")) {
-    return firstName.charAt(0).toLocaleUpperCase("es") + firstName.slice(1).toLocaleLowerCase("es");
+  const visibleName = String(displayName || "").trim().replace(/\s+/g, " ");
+  if (!visibleName) return portalFirstName(snapshot);
+
+  const worker = snapshot?.payload?.descansos?.worker;
+  const officialName = String(worker?.name || "").trim().replace(/\s+/g, " ");
+  const officialGivenName = String(worker?.givenName || "").trim().replace(/\s+/g, " ");
+  if (officialGivenName && officialName.localeCompare(visibleName, "es", { sensitivity: "base" }) === 0) {
+    return greetingName(officialGivenName);
   }
-  return firstName;
+
+  return greetingName(visibleName);
 }
 
 function hasRejectedPortalCredentials(snapshotOrMessage) {

@@ -211,10 +211,13 @@ function normalizePortalPersonName(value = "") {
 
 export function parsePortalIdentity(value = "", expectedChapa = portalUser) {
   const chapa = String(expectedChapa || "").replace(/\D/g, "").slice(-5);
-  if (!chapa) return { chapa: "", name: "", recognized: false };
+  if (!chapa) return { chapa: "", name: "", givenName: "", recognized: false };
   const match = cleanText(value).match(new RegExp(`\\b${chapa}\\b\\s*-\\s*([^|\\n]{3,100}?)(?=\\s+(?:Finalizar\\s+sesi[oó]n|Consultas|Solicitudes)\\b|$)`, "i"));
-  const name = normalizePortalPersonName(match?.[1] || "");
-  return { chapa, name, recognized: Boolean(name) };
+  const rawName = cleanText(match?.[1] || "");
+  const comma = rawName.match(/^([^,]{2,}),\s*(.{2,})$/);
+  const name = normalizePortalPersonName(rawName);
+  const givenName = cleanText(comma?.[2] || "");
+  return { chapa, name, givenName, recognized: Boolean(name) };
 }
 
 export function parseUserSpecialties(html = "") {
@@ -3069,11 +3072,12 @@ async function main() {
       { worker: { chapa: portalUser, name: "", group: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
       hasMonths
     );
-    if (portalIdentity.recognized && !cleanText(descansos?.worker?.name)) {
+    if (portalIdentity.recognized) {
       descansos.worker = {
         ...(descansos.worker || {}),
         chapa: portalIdentity.chapa,
-        name: portalIdentity.name
+        name: cleanText(descansos?.worker?.name) || portalIdentity.name,
+        givenName: portalIdentity.givenName
       };
     }
     await publishProgress("descansos", descansos, "Descansos cargados");
