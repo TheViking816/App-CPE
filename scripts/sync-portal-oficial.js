@@ -1013,16 +1013,7 @@ async function readAssignmentDetailViaContractings(sourcePage, assignment) {
 }
 
 async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
-  await openPortalHash(sourcePage, "User");
-  const anticipatedControl = await findVisibleMatchAcrossFrames(
-    sourcePage,
-    "a, button, [role=button], [onclick], td, span",
-    "ANT",
-    5000
-  );
-  if (!anticipatedControl) throw new Error("No se encontro la pestaña ANT de contrataciones anticipadas.");
-  await anticipatedControl.click({ force: true, noWaitAfter: true });
-  await sourcePage.waitForTimeout(1200);
+  await openPortalHash(sourcePage, "User,Request,,,");
 
   const dateMatch = cleanText(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   const dateTokens = dateMatch
@@ -1031,6 +1022,23 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
         `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}`
       ]
     : [];
+  for (const frame of sourcePage.frames()) {
+    const links = frame.locator('a[href*="parte="]').filter({ hasText: /anticipada/i });
+    const count = Math.min(await links.count().catch(() => 0), 20);
+    for (let index = 0; index < count; index += 1) {
+      const link = links.nth(index);
+      if (!await link.isVisible().catch(() => false)) continue;
+      const contextText = cleanText(await link.evaluate((node) => (
+        node.closest("tr")?.innerText || node.closest("table")?.innerText || ""
+      )).catch(() => ""));
+      const normalizedContext = contextText.replace(/\s+/g, "");
+      if (dateTokens.length > 0
+        && !dateTokens.some((token) => normalizedContext.includes(token.replace(/\s+/g, "")))) continue;
+      const href = await link.getAttribute("href");
+      const resolvedPart = String(href || "").match(/[?&]parte=(\d+)/i)?.[1];
+      if (resolvedPart) return readAssignmentDetailViaPortal(sourcePage, { ...assignment, parte: resolvedPart });
+    }
+  }
   let clicked = false;
   const cardDeadline = Date.now() + 12000;
   while (!clicked && Date.now() < cardDeadline) {
@@ -1078,10 +1086,12 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
         }
       }
     }
-    if (best.recognized && Date.now() - lastImprovementAt >= 2500) return best;
+    if (best.recognized && /^\d+$/.test(String(best.parte || "")) && Date.now() - lastImprovementAt >= 2500) return best;
     await sourcePage.waitForTimeout(200);
   }
-  if (!best.recognized) throw new Error("La tarjeta anticipada se pulso, pero no abrio el detalle del parte.");
+  if (!best.recognized || !/^\d+$/.test(String(best.parte || ""))) {
+    throw new Error("La tarjeta anticipada se pulso, pero no abrio el detalle del parte.");
+  }
   return best;
 }
 
@@ -1574,7 +1584,7 @@ async function collectUserSpecialties(page) {
 }
 
 async function openPortalHash(page, hash) {
-  await login(page);
+  if (!authenticatedForPortalUser) await login(page);
   const target = `https://portal.cpevalencia.com/#${hash}`;
   await page.goto(target, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForTimeout(1200);
@@ -2464,9 +2474,14 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
     .filter((item) => item.detail?.recognized)
     .map((item) => [assignmentIdentity(item), item.detail]));
   const rows = [...(result?.rows || [])];
+  const processingOrder = rows
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => (
+      Number(normalizePortalPart(right.item.parte) === "CA")
+      - Number(normalizePortalPart(left.item.parte) === "CA")
+    ));
   console.log(`Completando el equipo de ${rows.length} parte(s) desde Jornadas contratadas...`);
-  for (let index = 0; index < rows.length; index += 1) {
-    const item = rows[index];
+  for (const { item, index } of processingOrder) {
     let detail = previousByPart.get(String(item.parte))
       || previousByAssignment.get(assignmentIdentity(item))
       || null;
