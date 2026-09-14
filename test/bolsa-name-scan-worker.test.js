@@ -28,6 +28,11 @@ test("el lector abre Jornadas contratadas y solo conserva chapas 80xxx", () => {
   assert.match(job, /PERSONAL DE BOLSA/);
 });
 
+test("el lector abre la ruta actual de Jornales y Primas", () => {
+  assert.match(job, /User,ViewNoray,2/);
+  assert.doesNotMatch(job, /User,ViewNoray,3/);
+});
+
 test("el nombre oficial del parte sustituye siempre al alias de PortalEstibaVLC", () => {
   assert.match(job, /previous\.source === "portalestibavlc"/);
   assert.match(job, /source: "app_cpe"/);

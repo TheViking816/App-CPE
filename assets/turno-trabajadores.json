@@ -1,0 +1,7812 @@
+[
+  {
+    "chapa": "24001",
+    "nombre": "VICENTE NAVARRO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24002",
+    "nombre": "VICENTE CORACHAN LUIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24003",
+    "nombre": "JAVIER VAYA BAYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24004",
+    "nombre": "DAVID CARBONELL MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24005",
+    "nombre": "JOSE ALMENAR GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24006",
+    "nombre": "JOSE FRANCISCO FERNANDEZ GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24007",
+    "nombre": "LEOPOLDO JOSE AGUIRRE TARAZONA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24008",
+    "nombre": "DIEGO ALVAREZ FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24009",
+    "nombre": "EVA MARIA VAYA BAYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24010",
+    "nombre": "TOMAS BERMUDEZ RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24011",
+    "nombre": "FRANCISCO CHICHELL LIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24012",
+    "nombre": "DAVID NACHER TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24013",
+    "nombre": "OSCAR NACHER TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24014",
+    "nombre": "ALBERTO ALEJ. LACUEVA RAYERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24015",
+    "nombre": "MANUEL ANTONIO EIRAS SOLER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24016",
+    "nombre": "RAMON GIMENO CALABUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24017",
+    "nombre": "DAVID HERRERO GUEROLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24018",
+    "nombre": "FCO. JAVIER MARTINEZ GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24019",
+    "nombre": "VICENTE ZANON NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24020",
+    "nombre": "CARLOS SANCHIS MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24021",
+    "nombre": "CARLOS CARRETERO PLASENCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24022",
+    "nombre": "OSCAR SEGARRA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24023",
+    "nombre": "ENRIQUE RAMON PABLO SOTO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24024",
+    "nombre": "ROBERTO MAÑEZ BLANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24025",
+    "nombre": "JUAN MIGUEL ORIENT RAFET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24026",
+    "nombre": "JOSE JULIO DIAZ PARRAGA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24028",
+    "nombre": "JOSE VICENTE JUAN SANCHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24029",
+    "nombre": "PEDRO RICARDO ANDRES MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24030",
+    "nombre": "ENRIQUE MONTALT IBAÑEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24031",
+    "nombre": "JAVIER VILLAGRASA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24032",
+    "nombre": "FRANCISCO VTE. ARBIOL CHIRIVELLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24033",
+    "nombre": "JOSE LUIS ALAMAR RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24036",
+    "nombre": "RAUL MERCADER GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24037",
+    "nombre": "JUAN FRANCISCO ENGUIX PERIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24038",
+    "nombre": "JOSE ENRIQUE COLOMER BARBA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24039",
+    "nombre": "JOSE FIDEL VICENTE GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24040",
+    "nombre": "OSCAR LLORCA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24041",
+    "nombre": "CARMEN MIRALLES GUAITA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24042",
+    "nombre": "ALBERTO LLORCA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24043",
+    "nombre": "JOSE BAÑO GUERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24044",
+    "nombre": "OSCAR MARTINEZ GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24045",
+    "nombre": "SERGIO CHINER ROZALEN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24046",
+    "nombre": "JAIME JOSE CALABUIG CARLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24047",
+    "nombre": "JORDI BESES SANTAMARIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24049",
+    "nombre": "ENRIQUE MORATAL PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24050",
+    "nombre": "DAVID GARCIA AROCA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24051",
+    "nombre": "JOSE TRAMOYERES MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24052",
+    "nombre": "RAUL GARRIGA BONET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24053",
+    "nombre": "DAVID CASES RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24054",
+    "nombre": "JOSE LUIS CASES RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24055",
+    "nombre": "FRANCISCO JOSE SOLER FALCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24056",
+    "nombre": "JOSE ZANON NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24057",
+    "nombre": "JOSE PARDO RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24058",
+    "nombre": "JUAN FRANCISCO CALLEJON BELLTALL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24059",
+    "nombre": "NESTOR PARDO RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24060",
+    "nombre": "PEDRO BUENO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24061",
+    "nombre": "MANUEL MARTI CALVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24062",
+    "nombre": "JAVIER RIOS SALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24063",
+    "nombre": "JAIME RAMIREZ TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24064",
+    "nombre": "RAFAEL VAL MENGUAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24065",
+    "nombre": "DOMINGO MENGUAL PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24066",
+    "nombre": "FRANCISCO J CASES ASENSIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24067",
+    "nombre": "ALEJANDRO MARTIN GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24068",
+    "nombre": "MIGUEL ANGEL FORTEA APARICIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24069",
+    "nombre": "EVA MASCAROS GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24070",
+    "nombre": "RAQUEL ANGEL MAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24071",
+    "nombre": "JOSE MANUEL BAILACH DE JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24072",
+    "nombre": "JAVIER GARCIA MATEOS COMPANY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24073",
+    "nombre": "JORGE RIOS SALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24074",
+    "nombre": "MANUEL FRANCISCO RIOS SALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24075",
+    "nombre": "RAFAEL EGEA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24076",
+    "nombre": "JORGE FORT CERVERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24077",
+    "nombre": "VICTOR MANUEL GARCIA MONREAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24078",
+    "nombre": "JOSE ALFREDO RIOS GREGORI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24079",
+    "nombre": "JULIO GONZALEZ GUILLEN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24080",
+    "nombre": "ANTONIO REQUENA RIERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24081",
+    "nombre": "JUAN VICENTE MOLEDO PEIRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24082",
+    "nombre": "DAVID CLIMENT BONET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24083",
+    "nombre": "JOSE JORGE GARCIA FAERNA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24084",
+    "nombre": "HECTOR SANTIAGO GARCIA FAERNA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24085",
+    "nombre": "VICTOR DANIEL VALERO VERGARA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24086",
+    "nombre": "FRANCISCO ESTEVE LACOMBA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24087",
+    "nombre": "MIGUEL VALERO ANGEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24088",
+    "nombre": "JUAN MANUEL NAVARRO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24090",
+    "nombre": "DAVID ELEUTERIO RIBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24092",
+    "nombre": "NOELIA RODRIGUEZ VERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24094",
+    "nombre": "DANIEL RODRIGUEZ VERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24095",
+    "nombre": "VICENTE JAVIER MAURI BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24096",
+    "nombre": "VICENTE MARTINEZ SANZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24097",
+    "nombre": "JUAN CARLOS PEREZ MARTIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24098",
+    "nombre": "LUIS MIGUEL SANTIAGO PEREA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24100",
+    "nombre": "DAVID CIFRE MARTIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24101",
+    "nombre": "JAVIER VICENTE TATAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24102",
+    "nombre": "JUAN JOSE CENTELLES ANGEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24103",
+    "nombre": "MIGUEL MOLINER ABELLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24106",
+    "nombre": "JOSE LUIS NAVARRO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24107",
+    "nombre": "BORJA MANUEL MEDRANO RIBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24109",
+    "nombre": "JOSE ERNESTO HERNANDEZ BENACHES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24110",
+    "nombre": "EMILIO DE JUAN SANCHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24115",
+    "nombre": "JOSE MIGUEL AGUILAR SANCHIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24119",
+    "nombre": "JOSE DOMINGO SANZ SERRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24120",
+    "nombre": "ARTURO DAROCHA MANRIQUE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24121",
+    "nombre": "RAFAEL VICTOR ALAGARDA RIBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24122",
+    "nombre": "JOSE ANTONIO LUZZY PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24123",
+    "nombre": "ALEJANDRO VAYA BAYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24124",
+    "nombre": "MIGUEL ANGEL PALLARDO DEL RIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24125",
+    "nombre": "FERNANDO CONSTANTI VAYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24128",
+    "nombre": "JAIME MATEOS COLLADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24129",
+    "nombre": "ESTHER LAZARO GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24132",
+    "nombre": "VICTOR ROYO AGUSTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24133",
+    "nombre": "CARLOS MURIA ROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24134",
+    "nombre": "JOSE ANTONIO IRANZO GIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24135",
+    "nombre": "ANTONIO MORENO PECO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24136",
+    "nombre": "ANTONIO CUENCA ONCINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24137",
+    "nombre": "JUAN JOSE FERNANDEZ SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24138",
+    "nombre": "ANTONIO CATALA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24140",
+    "nombre": "RAUL TORRIJO RIOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24141",
+    "nombre": "JAIME DASI GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24142",
+    "nombre": "JOSE FRANCISCO CRUZ RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24143",
+    "nombre": "JULIO VICENTE CRUZ RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24144",
+    "nombre": "JOSE LUIS RODRIGO ORTEGA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24145",
+    "nombre": "FRANCISCO RAMON LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24146",
+    "nombre": "JOSE JAVIER BELENGUER MARTORELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24148",
+    "nombre": "JUAN JOSE ZAMORANO MALLOLS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24149",
+    "nombre": "JUAN ANTONIO GILABERT LEIVA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24150",
+    "nombre": "RICARDO RIDAURA ARNAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24151",
+    "nombre": "ENRIQUE MONTOLIU GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24152",
+    "nombre": "RAIMON MONTORO CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24153",
+    "nombre": "FIDEL BELTRAN QUILES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24154",
+    "nombre": "DAVID PAULO FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24156",
+    "nombre": "HECTOR GIMENO BELENGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24157",
+    "nombre": "GEMMA CATALA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24158",
+    "nombre": "JOSE ANTONIO SOLER TEBAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24159",
+    "nombre": "RAFAEL SOLIS OLMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24160",
+    "nombre": "SANTIAGO SILVESTRE BARRACHINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24161",
+    "nombre": "CARLOS MORENO VIDAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24162",
+    "nombre": "DANIEL FCO. MORENO VIDAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24163",
+    "nombre": "ISRAEL SENENT BERNAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24164",
+    "nombre": "JUAN PABLO FERRER FRECHINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24165",
+    "nombre": "MARCIAL LUNA ADELANTADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24166",
+    "nombre": "FACUNDO ESTORS GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24167",
+    "nombre": "MATEO SOLERA ROCA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24168",
+    "nombre": "JOSE PEREZ SOLIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24169",
+    "nombre": "ROSA MARIA GOMEZ FELIX",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24170",
+    "nombre": "FLORENCIO IZQUIERDO MICO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24171",
+    "nombre": "JUAN ANTONIO ESTORS SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24172",
+    "nombre": "JOSE DANIEL SIMO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24173",
+    "nombre": "JORGE VTE. ORTEGA ARRUE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24174",
+    "nombre": "JOSE MARIA FORTEA APARICIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24175",
+    "nombre": "DANIEL BONILLA MONTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24176",
+    "nombre": "FCO. JAVIER TATAY GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24177",
+    "nombre": "JOAQUIN FERRI PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24178",
+    "nombre": "JOSE ANGEL MARTINEZ SANCHIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24179",
+    "nombre": "FRANCISCO JOSE IRANZO BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24180",
+    "nombre": "VICENTE NAVARRO IRANZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24181",
+    "nombre": "JOSE DAVID DE LA CONCEPCION GIRBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24182",
+    "nombre": "JOSE ALBERTO CUENCA BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24183",
+    "nombre": "JORDI SORIANO ARAZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24184",
+    "nombre": "FRANCISCO NAVARRO FUENTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24185",
+    "nombre": "FRANCISCO JAV. GALARZA JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24186",
+    "nombre": "JUAN JOSE GARCIA CHISVERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24187",
+    "nombre": "LUIS SANCHEZ VANACLOIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24188",
+    "nombre": "MIGUEL MARTINEZ SANCHIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24189",
+    "nombre": "DANIEL LINARES LINARES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24190",
+    "nombre": "EDUARDO BAIXAULI PENELLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24191",
+    "nombre": "SERGIO LUZZY PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24192",
+    "nombre": "VICENTE GOZALVEZ HIGON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24193",
+    "nombre": "JOSE LLACER ALVAREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24194",
+    "nombre": "ENRIQUE JAVIER GUILLEN DIAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24195",
+    "nombre": "HUGO VICTOR LOPEZ JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24197",
+    "nombre": "TOMAS GOMEZ GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24198",
+    "nombre": "JOSE JUAN MEDINA CANTIZANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24199",
+    "nombre": "JORGE FORNAS DURAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24200",
+    "nombre": "FRANCISCO JOSE FERRANDIS LUZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24201",
+    "nombre": "GUILLERMO FERNANDEZ GAYETE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24202",
+    "nombre": "SALVADOR DOLZ SENENT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24204",
+    "nombre": "JORDI GARCIA MALLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24206",
+    "nombre": "JORGE LUZZY PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24207",
+    "nombre": "VICENTE RODRIGO ORTEGA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24208",
+    "nombre": "MIGUEL FERRER DE LOS SANTOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24209",
+    "nombre": "ISAAC SALAZAR ALBERTO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24210",
+    "nombre": "ANTONIO JARA MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24211",
+    "nombre": "DANIEL UBIETO DIAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24212",
+    "nombre": "DAVID TORTOSA GONGORA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24213",
+    "nombre": "AGUSTIN MARTIN ZARAGOZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24214",
+    "nombre": "ADAN DAVID GALLART DE FUENTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24215",
+    "nombre": "RAMON MARTI BODI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24216",
+    "nombre": "JUAN MANUEL MONTESINOS RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24217",
+    "nombre": "JAVIER VALMAÑA GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24218",
+    "nombre": "GERMAN PRADO VALLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24219",
+    "nombre": "MANUEL SANCHEZ DE CUTANDA MARTIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24220",
+    "nombre": "ALEJANDRO R VICENTE GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24221",
+    "nombre": "VICENTE BALLESTER PERALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24222",
+    "nombre": "PABLO JESUS ESTADES GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24223",
+    "nombre": "JOSE FRANCISCO MONTALBA MONTAÑANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24224",
+    "nombre": "JUAN CARLOS SEGUI SIMARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24225",
+    "nombre": "FRANCISCO J MASIA MADRID",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24226",
+    "nombre": "MIGUEL ANGEL CAMPOS GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24227",
+    "nombre": "LUIS TREJO BARRADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24228",
+    "nombre": "JOSE LUIS NAVARRO ESTEVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24229",
+    "nombre": "ROBERT PAUL MC CARTHY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24230",
+    "nombre": "JOSE ALBERTO CLEMENTE HUESO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24231",
+    "nombre": "FRANCISCO J CALVO SAEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24232",
+    "nombre": "FCO JAVIER ALEIXANDRE GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24233",
+    "nombre": "ABRAHAM ANT. GALLART DE FUENTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24234",
+    "nombre": "CARLOS GARCIA RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24235",
+    "nombre": "CARLOS GARCIA MONREAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24236",
+    "nombre": "EDUARDO IGLESIAS ALBENTOSA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24237",
+    "nombre": "PABLO VEINTIMILLA TEODORO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24238",
+    "nombre": "JUAN ANTONIO VILLAGRASA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24239",
+    "nombre": "JUAN FRANCISCO PEIRO MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24240",
+    "nombre": "ANTONIO GONZALEZ MARI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24241",
+    "nombre": "JUAN GUILLERMO GUAZA SMITH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24245",
+    "nombre": "IVAN CARLOS ALAMAR BOLEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24246",
+    "nombre": "RAMON VILLAR VICO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24247",
+    "nombre": "HUMBERTO NACHER BAÑON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24248",
+    "nombre": "MIGUEL ANGEL PIQUER MONTESINOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24255",
+    "nombre": "VICENTE PUCHADES SORIANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24256",
+    "nombre": "SALVADOR PUCHADES SORIANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "24257",
+    "nombre": "ANGEL PERDIGUER AGUILO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "30237",
+    "nombre": "MIGUEL SANZ NAVARRETE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "30973",
+    "nombre": "MANUEL MUÑOZ FLORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63055",
+    "nombre": "GREGORIO SEQUI ATIENZAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63056",
+    "nombre": "PALMIRO DE AMO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63057",
+    "nombre": "JAVIER RAMIREZ TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63058",
+    "nombre": "ALEJANDRO FERRER NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63059",
+    "nombre": "ALMA MURIA CARRASCOSA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63061",
+    "nombre": "OSCAR TEJERO FURIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63065",
+    "nombre": "JOSE ENRIQUE VERDEGUER PELEGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63066",
+    "nombre": "SERGIO GUILLEM TEBAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63067",
+    "nombre": "MARIO REGAÑA BASTIDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63068",
+    "nombre": "FCO. JAVIER HUET GRONDONA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63069",
+    "nombre": "LAURA PALAU AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63070",
+    "nombre": "NURIA CARABAL MANZANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63071",
+    "nombre": "MARIA JOSE CARABAL MANZANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63073",
+    "nombre": "JORGE MOLEDO PEIRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63074",
+    "nombre": "MARIA TRENCO LAHIGUERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63075",
+    "nombre": "Mª ANGELES MESTRE NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63076",
+    "nombre": "LUIS CAMPOS NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63077",
+    "nombre": "OSCAR VELASCO NIETO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63079",
+    "nombre": "JESUS ROYO ELIAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63080",
+    "nombre": "AMPARO SAN RAMON DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63082",
+    "nombre": "VICENTE OLMOS CASTELLAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63083",
+    "nombre": "JOSE MANUEL SANZ RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63084",
+    "nombre": "SERGIO CUBERO SANTAMARIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63085",
+    "nombre": "ANTONIO CUELLAR ORTEGA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63086",
+    "nombre": "JOSE JAVIER RIERA TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63087",
+    "nombre": "MARIA SONIA REQUENA RIERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63088",
+    "nombre": "MARTA QUEROL TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63089",
+    "nombre": "JOSE AURELIO LUCIA NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63090",
+    "nombre": "AGUSTIN MORES ANDRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63091",
+    "nombre": "JOAQUIN FCO. LLAGO SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63092",
+    "nombre": "ENRIQUE SEVILLA SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63093",
+    "nombre": "JOSE ALBERTO SUAREZ ROZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63094",
+    "nombre": "FRANCISCO GIMENO SABATER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63095",
+    "nombre": "VICENTE DAS GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63096",
+    "nombre": "VICENTE JAVIER BELENGUER BELLVER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63097",
+    "nombre": "MARIA JOSE SERRA MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63098",
+    "nombre": "MARIA GARCIA BOHIGAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63099",
+    "nombre": "JOSE LUIS CLEMENTE CORTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63100",
+    "nombre": "JOSE ANGEL ZAZO ALABAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63101",
+    "nombre": "VICENTE LUIS TAMARIT GASCON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63103",
+    "nombre": "AMADEO MORENO MOLLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63104",
+    "nombre": "MIGUEL ANGEL MARTINEZ GALVAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63105",
+    "nombre": "CESAR CATALA ROMA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63106",
+    "nombre": "ALFREDO ESPARZA GINER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63107",
+    "nombre": "ALEJANDRO COMECHE GALLEGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63108",
+    "nombre": "JORGE LOPEZ ESCRIBANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63109",
+    "nombre": "IGNACIO CAMARENA FERRER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63110",
+    "nombre": "JAVIER FERNANDO CAMARENA FERRER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63111",
+    "nombre": "MIGUEL ANGEL SANCHEZ SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63112",
+    "nombre": "JORGE ELIAS QUEROL GUERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63113",
+    "nombre": "JOSE FRANCISCO QUEROL GUERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63114",
+    "nombre": "IGNACIO HUESO ZARANDIETA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63115",
+    "nombre": "JOSE ALBERTO VIDAL MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63116",
+    "nombre": "PABLO MARTINEZ GIRBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63117",
+    "nombre": "ALEJANDRO RIDAURA ARNAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63118",
+    "nombre": "RUBEN ALABAU DIAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63119",
+    "nombre": "ISRAEL IRANZO BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63120",
+    "nombre": "MANUEL LA RODA ADRIAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63121",
+    "nombre": "ROBERTO TALAYA PIQUERAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63122",
+    "nombre": "ANTONIO DEVIS NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63123",
+    "nombre": "JEAN BAPTISTE CHANET .",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63124",
+    "nombre": "SERGI CASES RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63125",
+    "nombre": "CARLOS RAMON LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63126",
+    "nombre": "EVARIST ALONSO DASI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63127",
+    "nombre": "JUAN GARCIA FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63128",
+    "nombre": "GERMAN MARTINEZ MONZONIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63129",
+    "nombre": "VICTOR JOSE CASTELLO GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63130",
+    "nombre": "FERNANDO GIMENO ALAGARDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63131",
+    "nombre": "JUAN DIEGO COLLADO LAFUENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63132",
+    "nombre": "ANGEL PEDRAJAS RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63133",
+    "nombre": "ANA DOLORES RIOS GREGORI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63134",
+    "nombre": "JOSE PALAU AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63135",
+    "nombre": "VERONICA PARDO ESTEVEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63136",
+    "nombre": "RAMON BORDERIA PALLARES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63137",
+    "nombre": "DAVID BUENO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63138",
+    "nombre": "PASCUAL PLA IBAÑEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63139",
+    "nombre": "CARLOS MEDINA CHORNET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63140",
+    "nombre": "JUAN MANUEL VERA PICO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63141",
+    "nombre": "ESTHER AGUADO PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63142",
+    "nombre": "DANIEL MENGUAL PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63143",
+    "nombre": "VICTOR BALLESTER PERALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63145",
+    "nombre": "JOSE RAMON LIZONDO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63146",
+    "nombre": "ANTONIO MORALES SALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63149",
+    "nombre": "JESUS JAVIER ESCRIBANO SANTIAGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63150",
+    "nombre": "JOSE DOMINGO CARREÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63151",
+    "nombre": "JOSE LUIS BOLEA SEÑORIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63153",
+    "nombre": "EVA MARIA CASTILLEJO VICTORIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63154",
+    "nombre": "CONCEPCION MORATAL PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63155",
+    "nombre": "PABLO QUEROL GUERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63156",
+    "nombre": "SALVADOR TAMARIT MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63158",
+    "nombre": "PEDRO JULIAN HERRERO GUEROLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63159",
+    "nombre": "ROBERTO CLEMENTE DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63160",
+    "nombre": "JUAN LUIS FONT MARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63162",
+    "nombre": "JUAN MIGUEL JIMENEZ BRAVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63163",
+    "nombre": "ESTEBAN AMADO LATORRE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63164",
+    "nombre": "JUAN JOSE DEL RIO ESTEPA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63165",
+    "nombre": "JUAN ANTONIO MONRABAL QUILIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63171",
+    "nombre": "SOLEDAD MURIA ROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63172",
+    "nombre": "MARIA CRISTINA PALLARDO DEL RIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63173",
+    "nombre": "MARIA DOLORES VICO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63174",
+    "nombre": "ROCIO VICO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63175",
+    "nombre": "JOSE ALBERT LAPLAZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63176",
+    "nombre": "CARLOS BERMUDEZ ALAGARDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63178",
+    "nombre": "SOFIA TORRIJOS MONTOLIU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63179",
+    "nombre": "JORGE CARBONELL BERNAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63180",
+    "nombre": "ISMAEL REQUENA HERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63184",
+    "nombre": "DAVID JOSE MEDINA FUENTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63186",
+    "nombre": "FRANCISCO JOSE ROMAN DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63191",
+    "nombre": "DAVID MARIN GUILLEN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63192",
+    "nombre": "ANA MARIA ESTORS FERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63193",
+    "nombre": "JAVIER JOSE FILLOL IBAÑEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63194",
+    "nombre": "ANA BELEN FERRER BARBENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63195",
+    "nombre": "RAQUEL GIMENO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63202",
+    "nombre": "SONIA MENA CAUDET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63204",
+    "nombre": "JUAN MANUEL DE MIGUEL ASENSIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63205",
+    "nombre": "MARIA AMPARO DE JUAN SANCHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63206",
+    "nombre": "NEKANE GIMENO BELENGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63207",
+    "nombre": "CARINA MENA CAUDET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63210",
+    "nombre": "RAQUEL MONZONIS COVES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63212",
+    "nombre": "MARIA LUISA ALEIXANDRE GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63213",
+    "nombre": "OSCAR APARISI PACHA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63217",
+    "nombre": "OLGA ESTEVE PARRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63221",
+    "nombre": "RAQUEL TIMONERO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63222",
+    "nombre": "ALBERTO JOSE FERNANDEZ CORELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63224",
+    "nombre": "ESTER ESTEVE PARRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63226",
+    "nombre": "RUTH PIERNAS CARBONELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63227",
+    "nombre": "FRANCISCA MONRABAL OLMEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63228",
+    "nombre": "ESTHER CARBONELL MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63229",
+    "nombre": "RAQUEL RAYO SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63230",
+    "nombre": "JUAN JOSE RIBES IÑIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63235",
+    "nombre": "JOSE LUIS VIVO NACHER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63238",
+    "nombre": "CRISTINA GARCIA MALLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63240",
+    "nombre": "SUSANA VALLS RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63241",
+    "nombre": "MARIA SANDRA VALLS RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63242",
+    "nombre": "VICENTA CERVERA LEBRON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63249",
+    "nombre": "MARCOS SANCHEZ SIGNES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63250",
+    "nombre": "CRISTINA MARTINEZ ZAMORANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63251",
+    "nombre": "ANTONIO VILAR CARMONA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63253",
+    "nombre": "GABRIEL ALFREDO ROMERO ROMERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63254",
+    "nombre": "MANUEL DOMINGUEZ TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63255",
+    "nombre": "VICENTE RAFAEL ANDRES BRIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63256",
+    "nombre": "ANTONIO FERNANDEZ GUAITA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63257",
+    "nombre": "FERNANDO JOSE SORIANO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63258",
+    "nombre": "CARLOS SORIANO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63268",
+    "nombre": "CHRISTIAN J. GARCIA BLANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63269",
+    "nombre": "SALVADOR MORENO GOZALVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63270",
+    "nombre": "HUGO ALEJANDRO GALLART MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63271",
+    "nombre": "RUTH GARCIA BOHIGAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63273",
+    "nombre": "SALVADOR JOSE LLETI GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63275",
+    "nombre": "SILVIA CARMEN BURGUERA MONTAÑES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63276",
+    "nombre": "ROSA MARIA BESES SANTAMARIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63278",
+    "nombre": "JOSE MANUEL BESES MIGUEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63291",
+    "nombre": "SERGIO VILLAR TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63292",
+    "nombre": "VANESA MONTALBA COMPANY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63294",
+    "nombre": "MANUEL PERIS OLLER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63299",
+    "nombre": "AITOR MARTINEZ OQUENDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63300",
+    "nombre": "ALBERTO VTE. VALERO DOMINGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63301",
+    "nombre": "JORGE MARTINEZ DE NOVA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63303",
+    "nombre": "ADORACION E. CUBELLS PARREÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63304",
+    "nombre": "NURIA PILAR CUBELLS PARREÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63305",
+    "nombre": "JUAN CARLOS ALBERT LAPLAZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63307",
+    "nombre": "JOSE TRILLES FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63308",
+    "nombre": "GLORIA LUNA ADELANTADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63309",
+    "nombre": "ALEJANDRO LUNA ADELANTADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63310",
+    "nombre": "JOSE ANTONIO DIAZ CAMPOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63311",
+    "nombre": "MARIA DEL MAR VICENTE PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63312",
+    "nombre": "ESTHER SANZ SERRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63313",
+    "nombre": "MYRIAM GALLART MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63315",
+    "nombre": "ANA ROSALEN AGUILAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63316",
+    "nombre": "EDUARDO ANDRES RODA ASTOLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63318",
+    "nombre": "CARLOS MASCAROS MOYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63319",
+    "nombre": "ANGELA GALLART MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63320",
+    "nombre": "PABLO MASCAROS IRANZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63321",
+    "nombre": "JOSE MANUEL GALLART MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63322",
+    "nombre": "BEGOÑA MONTESINOS BLAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63331",
+    "nombre": "SERGIO PIQUER MONTESINOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63334",
+    "nombre": "JUAN CARLOS BAU GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63335",
+    "nombre": "LORENA SORIANO DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63336",
+    "nombre": "RICARDO ATANASIO JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63337",
+    "nombre": "RAQUEL SORIANO DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63338",
+    "nombre": "JORGE DASI GALLEGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63339",
+    "nombre": "ANTONIO BAUS AUCEJO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63341",
+    "nombre": "SANDRA PABLO AMORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63342",
+    "nombre": "EUGENIO LUCENA SEOANE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63343",
+    "nombre": "JOSE ALBERTO VALERO FOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63344",
+    "nombre": "JOSE RAUL LLORIA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63345",
+    "nombre": "ALBERTO MARTI SIMON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63346",
+    "nombre": "MIGUEL RAMON GARCIA AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63347",
+    "nombre": "NAYARA TOMAS MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63349",
+    "nombre": "PALOMA ROMAN DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63350",
+    "nombre": "FRANCISCO JOSE GOMEZ TATAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63357",
+    "nombre": "FRANCISCO LOPEZ LLORCA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63369",
+    "nombre": "JORGE ORTEGA LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63370",
+    "nombre": "JOSE TUDON CATALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63373",
+    "nombre": "Mª REYES NAVARRO IRANZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63374",
+    "nombre": "SERGIO PACHA SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "63375",
+    "nombre": "JORGE SERENA SOBRINO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71003",
+    "nombre": "OSCAR ROCAFULL RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71004",
+    "nombre": "SHEILA SANJUAN CAPILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71005",
+    "nombre": "CAROLINA SANZ HUESO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71006",
+    "nombre": "JUAN JOSE BALLESTER LATORRE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71007",
+    "nombre": "DIMAS BALLESTER FINK",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71009",
+    "nombre": "ALFREDO JOSE CERDAN GAVARA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71010",
+    "nombre": "RUBEN LOPEZ SIMO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71011",
+    "nombre": "JOSE BALDOMERO CRUZANS RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71012",
+    "nombre": "JUAN RAMON PIZA BIXQUERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71013",
+    "nombre": "DANIEL JIMENEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71014",
+    "nombre": "DIEGO MARQUEZ RIERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71015",
+    "nombre": "LAURA MARCO FABIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71017",
+    "nombre": "JAVIER JOSE PEREZ NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71018",
+    "nombre": "MARCOS ALEIXANDRE MURIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71019",
+    "nombre": "LUIS FERNANDO PEDRERO MARCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71021",
+    "nombre": "MARIA AMPARO CATALA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71022",
+    "nombre": "SALVADOR ALEPUZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71023",
+    "nombre": "VICENTE ARNAU MOTOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71026",
+    "nombre": "SALVADOR ROIG ADELANTADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71027",
+    "nombre": "JUAN CARLOS MOLINA MINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71028",
+    "nombre": "JULIAN LOPEZ DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71030",
+    "nombre": "AGUSTIN ESTELLES MORA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71031",
+    "nombre": "SARA CALABUIG CARLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71032",
+    "nombre": "ISIDRO SILVESTRE BARRACHINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71033",
+    "nombre": "JORGE SANCHEZ CASABAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71034",
+    "nombre": "JUAN CARLOS LACEN NAVAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71035",
+    "nombre": "ROBERTO TATAY QUILIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71037",
+    "nombre": "PAU SORIANO ARAZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71038",
+    "nombre": "ANTONIO ENRIQUE MONRABAL ROSALEN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71039",
+    "nombre": "MARTIN BURGUERA PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71040",
+    "nombre": "ANTONIO PEREZ MELIAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71041",
+    "nombre": "JOSE VICENTE PASCUAL LLOSA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71042",
+    "nombre": "JOSE LUIS CERVERA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71043",
+    "nombre": "VERONICA BAÑO GUERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71045",
+    "nombre": "JAUME SANCHEZ CALABUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71046",
+    "nombre": "ADRIAN VERDEGUER PELEGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71048",
+    "nombre": "DAVID DE RAMON TORTAJADA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71049",
+    "nombre": "FCO.JOSE MARTINEZ SAINZ PARDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71050",
+    "nombre": "SARA CRUZ BERENGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71051",
+    "nombre": "JOSE MARES MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71052",
+    "nombre": "JESUS MARIA UREÑA MONTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71053",
+    "nombre": "JOSE MIGUEL PANIAGUA ANTON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71054",
+    "nombre": "JUAN ANTONIO SALVADOR GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71055",
+    "nombre": "ANDRES VILLAGRASA PRADAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71056",
+    "nombre": "RAMON ESCRIBANO MOLINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71057",
+    "nombre": "GLORIA LLAGARIA LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71058",
+    "nombre": "JORGE FONFRIA BARBERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71060",
+    "nombre": "ROBERTO CONSTANTI VAYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71061",
+    "nombre": "MARIA TERESA GABARDA PAREDES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71062",
+    "nombre": "SUSANA SALVADOR FERRANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71066",
+    "nombre": "RAUL RIDAURA RUBIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71068",
+    "nombre": "RUBEN YUSTE REAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71071",
+    "nombre": "JOSE ANTONIO COLA VIANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71073",
+    "nombre": "FCO.JOSE MONTAÑO LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71074",
+    "nombre": "ANA MARIA GARCIA RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71075",
+    "nombre": "JUAN RUBEN PASTOR GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71078",
+    "nombre": "VICENTE MANUEL SUESTA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71079",
+    "nombre": "FRANCISCO GARCIA MONZON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71081",
+    "nombre": "FRANCISCO PASTOR MARI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71082",
+    "nombre": "JOSE MANUEL PAREDES BRAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71083",
+    "nombre": "IGNACIO BLANCO LLORET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71085",
+    "nombre": "JAVIER FERRER RAMIREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71086",
+    "nombre": "JULIAN JOSE CALDERON SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71087",
+    "nombre": "VICENTE JOSE HERNANDEZ SORLI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71089",
+    "nombre": "DAVID BAÑO LA RODA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71091",
+    "nombre": "JOSE ANTONIO MARTINEZ RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71092",
+    "nombre": "JORGE MARTINEZ BENEDITO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71093",
+    "nombre": "FILIBERTO LAFUENTE MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71095",
+    "nombre": "MIGUEL ANGEL ESTADES GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71097",
+    "nombre": "VERONICA BONET RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71098",
+    "nombre": "JAVIER MARZAL MIQUEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71100",
+    "nombre": "CRISTIAN BALAGUER LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71101",
+    "nombre": "HUGO LAZARO PELERIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71102",
+    "nombre": "PEDRO FERNANDEZ GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71103",
+    "nombre": "VICENTE CHULIA OLIVER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71104",
+    "nombre": "JAVIER HERRAIZ NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71106",
+    "nombre": "FRANCISCO CHORNET QUINTANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71108",
+    "nombre": "ENCARNACION MUÑOZ COSTA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71109",
+    "nombre": "MATILDE TERESA LAZARO ALVAREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71112",
+    "nombre": "RAQUEL ALCAINA ESCAMILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71114",
+    "nombre": "CARLOS JAVIER MARTI TRILLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71119",
+    "nombre": "JUAN ANTONIO HERVAS SANTAMARIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71121",
+    "nombre": "ESTHER ESTIVALIS PALAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71122",
+    "nombre": "ENRIQUE BALLESTER COSTA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71123",
+    "nombre": "JESUS HERNANDEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71128",
+    "nombre": "VICENTE LIÑANA COLL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71129",
+    "nombre": "JAVIER CASES ASENSIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71130",
+    "nombre": "ANA ISABEL TIMONERO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71131",
+    "nombre": "MARIA VICTORIA GIRBES SANCHIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71132",
+    "nombre": "MANUEL VICENTE MARTINEZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71133",
+    "nombre": "ANTONIO ATIENZAR JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71134",
+    "nombre": "ANDRES PEREZ AMIEVA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71135",
+    "nombre": "PABLO MARTINEZ SANZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71136",
+    "nombre": "MARCELINO MARTI SANZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71137",
+    "nombre": "JOSE MARIA BAÑON SIERRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71139",
+    "nombre": "FELIPE ALAMAR LLORET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71140",
+    "nombre": "JUAN JOSE HERRAIZ ALCAHUD",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71142",
+    "nombre": "ANTONIO MOCHOLI AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71143",
+    "nombre": "MIGUEL ANGEL MARIN FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71147",
+    "nombre": "SARA MONTOLIU MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71149",
+    "nombre": "JOSE RAFAEL RAMOS SANCHIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71152",
+    "nombre": "DIEGO CARMONA JUSTICIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71154",
+    "nombre": "MELCHOR NAVARRO PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71155",
+    "nombre": "ANA ESTHER CASTILLEJO VICTORIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71156",
+    "nombre": "JUAN MOLNER MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71159",
+    "nombre": "JOSE LUIS PANAL RAMIREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71161",
+    "nombre": "JOSE RAMON DASI TATAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71163",
+    "nombre": "VICENTE MADRID MATEU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71164",
+    "nombre": "SERGIO CANO TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71167",
+    "nombre": "GREGORIO GAVIDIA JOSA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71171",
+    "nombre": "RICARDO CUBELLS GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71172",
+    "nombre": "JOSE MIGUEL MORA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71176",
+    "nombre": "ALEJANDRO MIRALLES MARTIN GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71178",
+    "nombre": "JOSE LUIS IRANZO COBO DEL PRADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71181",
+    "nombre": "ANDRES PLANA VALERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71184",
+    "nombre": "ANTONIO DEL TORO IBAÑEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71185",
+    "nombre": "JUAN AGUILAR RAMON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71186",
+    "nombre": "MARIA LUISA MORATAL LACOMBA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71188",
+    "nombre": "LILIANA PALLARDO CAMBRONERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71189",
+    "nombre": "MANUEL VICENTE GALLEGO BONET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71191",
+    "nombre": "CARLOS PALOMARES MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71192",
+    "nombre": "JOSE MARIA TADEO MARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71194",
+    "nombre": "JOSE LUIS RODRIGUEZ CAPILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71196",
+    "nombre": "JOSE IGNACIO LLOPIS REDONDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71197",
+    "nombre": "SANDRA BALLESTER FINK",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71198",
+    "nombre": "ELENA SANCHEZ VANACLOIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71200",
+    "nombre": "MAXIMO LAZARO GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71201",
+    "nombre": "JOAQUIN SANTABIBIANA ALFONSO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71202",
+    "nombre": "AGUSTIN FERNANDEZ COS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71203",
+    "nombre": "JOSE GADEA AGEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71205",
+    "nombre": "MARIA DOLORES VALERO ZAHINOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71206",
+    "nombre": "TOMAS EMILIO PIERNAS CARBONELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71207",
+    "nombre": "SANTIAGO ANTONI CASANOVA VAYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71209",
+    "nombre": "DAVID DOMINGUEZ PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71214",
+    "nombre": "RAMON SOLAZ FABUEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71216",
+    "nombre": "SANDRA REQUENA CARCEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71217",
+    "nombre": "PABLO ROSALEN MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71219",
+    "nombre": "ANTONIO SIMARRO MASCUÑAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71220",
+    "nombre": "ALBERTO CAMPILLO RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71230",
+    "nombre": "ANTONIO MANUEL MARTINEZ LEON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71231",
+    "nombre": "ALBERTO PASTOR MOZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71232",
+    "nombre": "ENRIQUE NAVARRO PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71234",
+    "nombre": "ANA DESIREE BAÑO MORGADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71235",
+    "nombre": "LUIS ISRAEL ANTEQUERA LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71236",
+    "nombre": "ENRIQUE JUAN GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71237",
+    "nombre": "LOURDES GOMEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71238",
+    "nombre": "OSCAR ASENSIO SOLER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71239",
+    "nombre": "JORGE RODRIGO ORTEGA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71240",
+    "nombre": "ROBERTO ARNANDIS SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71241",
+    "nombre": "MARIA PILAR BELENGUER BARRERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71243",
+    "nombre": "MANUEL RUBIO MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71244",
+    "nombre": "ENRIQUE ANGEL FOSATI BURGALS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71245",
+    "nombre": "SERGIO TARIN GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71246",
+    "nombre": "BLAS RUBIO MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71247",
+    "nombre": "JAIME VILLARROEL BONET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71249",
+    "nombre": "RUBEN CALOMARDE INFANTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71253",
+    "nombre": "JORGE IVAN VILLALBA ARDIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71258",
+    "nombre": "MIGUEL ANGEL MAS MARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71259",
+    "nombre": "ELIAS MIGUEL MATAMALES HERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71260",
+    "nombre": "JOSE MARIA RODRIGO ALAGARDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71261",
+    "nombre": "RUBEN MARTINEZ MEGIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71263",
+    "nombre": "JOAQUIN PARDO MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71265",
+    "nombre": "DAVID DOLZ FUENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71268",
+    "nombre": "JOSE ANTONIO MARTINEZ SANZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71269",
+    "nombre": "MANUEL PARDO MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71270",
+    "nombre": "SONNICA FLORES GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71271",
+    "nombre": "JOSE LUIS SANJUAN BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71272",
+    "nombre": "EMILIO MODREGO RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71274",
+    "nombre": "SALVADOR PARDO GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71276",
+    "nombre": "FCO JAVIER GARCIA BERMEJO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71277",
+    "nombre": "DAVID LLACER SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71278",
+    "nombre": "SABRINA RUBIO MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71279",
+    "nombre": "DAVID VINAIXA HERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71282",
+    "nombre": "VICTOR GARCIA CHISVERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71283",
+    "nombre": "CARLOS SAN RAMON HERNANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71285",
+    "nombre": "JOSE MIGUEL PABLO DUASO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71286",
+    "nombre": "FRANCISCO LEAL ESTEVEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71288",
+    "nombre": "MARIA DEBORAH MESTRE RUCIAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71289",
+    "nombre": "ANGEL CHISBERT GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71290",
+    "nombre": "EVA MARIA ALAMAR ANTOÑANZAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71294",
+    "nombre": "JOSE PETIT ONCINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71295",
+    "nombre": "JOSE MIGUEL NAVARRO ARANDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71298",
+    "nombre": "ENRIQUE TUDON CATALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71300",
+    "nombre": "JOSE CARLOS GALINDO RICO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71302",
+    "nombre": "ANTONIO RAGA JORT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71303",
+    "nombre": "ANGEL VICENTE GUIÑON CANTERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71304",
+    "nombre": "JUAN JOSE PERIS GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71306",
+    "nombre": "SERGIO MANUEL ZAMORANO MALLOLS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71307",
+    "nombre": "JUAN FCO ESTOR MORA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71310",
+    "nombre": "FERNANDO LLADOSA TORTOSA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71311",
+    "nombre": "JULIO MARES MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71312",
+    "nombre": "FRANCISCO GARCIA CHISVERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71314",
+    "nombre": "VICENTE JAVIER PARDO CARPIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71315",
+    "nombre": "JESUS TOMAS PERPIÑA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71319",
+    "nombre": "JOSE ANTONIO CABALLERO PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71320",
+    "nombre": "JOAQUIN MOLINER CORTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71322",
+    "nombre": "JAVIER LOPEZ PEINADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71323",
+    "nombre": "CHRISTIAN BORRAS SANZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71325",
+    "nombre": "SILVIA MORENO GOZALVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71326",
+    "nombre": "JAVIER BERMUDEZ ALAGARDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71327",
+    "nombre": "FCO. JAVIER VILLANUEVA SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71329",
+    "nombre": "FCO. RAMON TARIN BURGALS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71330",
+    "nombre": "JOSE CUENCA MONTAÑANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71333",
+    "nombre": "LORENZO TRENCO LAHIGUERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71334",
+    "nombre": "JOSE FRANCISCO ALAMAR BOLEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71335",
+    "nombre": "JUAN CHICHELL ESTEVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71336",
+    "nombre": "LAURA MARTINEZ ROSALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71337",
+    "nombre": "JOSE ANTONIO BOLUDA GUTIERREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71338",
+    "nombre": "SERGIO LLEONART COLL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71339",
+    "nombre": "DAVID ALABAU ALAGARDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71340",
+    "nombre": "PEDRO VICENTE PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71343",
+    "nombre": "JOSE JAVIER CUENCA ONCINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71345",
+    "nombre": "FRANCISCO ESTEVE DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71346",
+    "nombre": "JOSE ANTONIO LLACER RIERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71348",
+    "nombre": "DANIEL JIMENEZ HURTADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71349",
+    "nombre": "ALEJANDRO MARTINEZ SEBASTIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71350",
+    "nombre": "PABLO GUALDA BLANCH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71352",
+    "nombre": "DAVID SANCHIS HIDALGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71353",
+    "nombre": "MIGUEL CANALS SENABRE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71354",
+    "nombre": "VANESSA MURIA PARRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71356",
+    "nombre": "RAUL GINES GONZALEZ CHOVER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71357",
+    "nombre": "EDGAR NOGUERA BRONCHAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71358",
+    "nombre": "JUAN ALAMAR ESTEBAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71359",
+    "nombre": "AARON KEVIN GARZANDO TERRAES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71361",
+    "nombre": "MIGUEL ALAGARDA SALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71362",
+    "nombre": "CARLOS MARTINEZ COLL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71363",
+    "nombre": "JUAN JOSE GARRIGA BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71365",
+    "nombre": "JOSE ALFONSO MARTINEZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71366",
+    "nombre": "JOSE ANTONIO VELA CASAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71367",
+    "nombre": "LUIS DAS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71368",
+    "nombre": "JUAN DAMIAN GANDIA MULLOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71371",
+    "nombre": "FCO. LUIS GARCIA ALMENDROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71372",
+    "nombre": "FRANCISCO LOPEZ RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71374",
+    "nombre": "ANTONIO ALARCON ROMERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71375",
+    "nombre": "ALEXIS LOPEZ JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71378",
+    "nombre": "ANGEL JOSE MUÑOZ LERIDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71381",
+    "nombre": "MIGUEL ANGEL BONILLA HUERTAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71382",
+    "nombre": "YOLANDA ALAMAR ESTEVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71383",
+    "nombre": "FEDERICO JOSE COLOM RAMS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71384",
+    "nombre": "ALEJANDRO VENANCIO IRANZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71385",
+    "nombre": "FCO. LUIS MONTOLIU SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71386",
+    "nombre": "JOAQUIN REL MARCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71387",
+    "nombre": "EMILIO BARRIEL ARNAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71388",
+    "nombre": "RAUL MENGUAL SANJUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71389",
+    "nombre": "VICTOR LLACER ALVAREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71391",
+    "nombre": "AGUSTIN AGUADO PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71395",
+    "nombre": "FCO JOSE DIAZ GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71396",
+    "nombre": "ALICIA SANCHEZ CALABUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71400",
+    "nombre": "JAVIER CATALA DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71401",
+    "nombre": "ADRIANO CAZORLA DIETA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71403",
+    "nombre": "FCO. JAVIER ROS NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71404",
+    "nombre": "ANTONIO VTE. BORDAS ARNAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71405",
+    "nombre": "JOSE LUIS PEREZ QUIÑONERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71406",
+    "nombre": "JOSE MIGUEL CLEMENTE IVARS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71407",
+    "nombre": "MIGUEL ANGEL NAVARRO CASTELLAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71409",
+    "nombre": "MARIA CRISTINA CIURANA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71410",
+    "nombre": "JESUS NATALIO ZANON DE LA PAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71411",
+    "nombre": "JUAN FRANCISCO FERRUS BLASCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71412",
+    "nombre": "AARON PIZA BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71413",
+    "nombre": "VICENTE NAVARRO CARVAJAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71414",
+    "nombre": "JESUS MANUEL BURGOS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71415",
+    "nombre": "JOSE MIRALLES GUAITA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71417",
+    "nombre": "MANUEL SIMON GARZANDO VISIEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71418",
+    "nombre": "JOSE VICENTE MURIA RENDON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71419",
+    "nombre": "AMPARO MARIA CASAUS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71420",
+    "nombre": "ANTONIO VICENTE MEDINA FUENTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71421",
+    "nombre": "IVAN PERIS VILLAGRASA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71422",
+    "nombre": "ANTONIO JOSE VIALA MADUEÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71428",
+    "nombre": "VICTOR EGEA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71429",
+    "nombre": "JOSE CERVERA LEBRON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71431",
+    "nombre": "ANA SIMON ADRIAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71432",
+    "nombre": "IVAN VENTURA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71434",
+    "nombre": "JUAN MANUEL ROMAN CARBALLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71435",
+    "nombre": "RICARDO NAVARRO AMORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71436",
+    "nombre": "RAFAEL CARRION ESTRELA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71438",
+    "nombre": "JESSICA MOLINA MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71439",
+    "nombre": "JOSE CASTELLO GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71440",
+    "nombre": "SERGIO ESTEVE CANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71441",
+    "nombre": "EDMUNDO GARCIA EGEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71442",
+    "nombre": "JORDI ISRAEL MATA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71444",
+    "nombre": "SALVADOR TADEO ESPI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71445",
+    "nombre": "FRANCISCO PRATS RETUERTO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71446",
+    "nombre": "JOSE RAMON GARCIA GUTIERREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71447",
+    "nombre": "ROBERTO FERRER NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71451",
+    "nombre": "JAVIER SELLES LAFUENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71452",
+    "nombre": "JOAQUIM ALEIXANDRE CONCHES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71453",
+    "nombre": "FEDERICO BENITO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71454",
+    "nombre": "JAVIER CISCAR MOLNER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71455",
+    "nombre": "MANUEL JAVIER SANCHIS DEVIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71458",
+    "nombre": "VICTOR LLACER SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71459",
+    "nombre": "DAVID LOPEZ LLORCA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71461",
+    "nombre": "JUAN LUIS BONET LARA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71464",
+    "nombre": "SALVADOR CHULIA ALBERICH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71465",
+    "nombre": "VICTOR ALAMAR TATAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71467",
+    "nombre": "JUAN VICENTE ALAMAR TATAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71468",
+    "nombre": "RAFAEL SELVI CIVERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71469",
+    "nombre": "VICENTE JAVIER LLOPIS CENTELLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71470",
+    "nombre": "JORGE GOMIS RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71471",
+    "nombre": "MARIA JOSE NAVARRO CALATAYUD",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71473",
+    "nombre": "JOSE LUIS CAMPS ESCRICH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71474",
+    "nombre": "LORENZO FORANO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71475",
+    "nombre": "Mª DEL CARMEN MURIA AURELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71476",
+    "nombre": "FRANCISCO JOSE MEDINA SALVADOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71477",
+    "nombre": "RAFAEL PEÑALVER PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71478",
+    "nombre": "MARTA SEDANO SIMARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71480",
+    "nombre": "MARIANO BELLVER GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71481",
+    "nombre": "DAVID VEINTIMILLA GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71482",
+    "nombre": "RAFAEL ATANASIO JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71483",
+    "nombre": "CELESTINO JOAQ. VERA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71484",
+    "nombre": "FELIX LOPEZ DONOSO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71485",
+    "nombre": "JOSE ANTONIO PACHECO PRADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71486",
+    "nombre": "VICTORIA NAVARRO FERRANDIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71487",
+    "nombre": "JOSE MANUEL ROSALEN SANCAYETANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71488",
+    "nombre": "JUAN TRONCHONI JURACO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71490",
+    "nombre": "VICENTE LLACER ALVAREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71492",
+    "nombre": "ANTONIO ESPINOSA MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71493",
+    "nombre": "ASUNCION GALARZA JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71494",
+    "nombre": "JAVIER CASES RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71495",
+    "nombre": "EDUARDO ESTORS GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71496",
+    "nombre": "ANTONIO NAVARRO AMORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71497",
+    "nombre": "ISRAEL SANCHEZ CALABUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71499",
+    "nombre": "MARIO GOMEZ-ALBO BOLADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71501",
+    "nombre": "GREGORIO SAHUQUILLO FRAILE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71503",
+    "nombre": "FRANCISCO JESUS PABLO DUASO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71504",
+    "nombre": "LUIS PIZA RAUSELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71506",
+    "nombre": "IVAN TORRIJO RIOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71508",
+    "nombre": "FRANCISCO CENTELLES FERRANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71510",
+    "nombre": "MANUEL MONTAÑO LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71511",
+    "nombre": "RAUL GONZALEZ GUILLEN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71512",
+    "nombre": "ENRIQUE GUSTAVO MENA QUEROL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71513",
+    "nombre": "FCO. JOSE VALERO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71514",
+    "nombre": "DANIEL MONTOLIO SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71516",
+    "nombre": "JOSE VICENTE MORATAL PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71517",
+    "nombre": "JOSE VICENTE LLORENS TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71518",
+    "nombre": "MARIA ANGELES MARES MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71519",
+    "nombre": "MARIA JOSE PASTOR MARI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71520",
+    "nombre": "ABEL VALERO BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71526",
+    "nombre": "DEOGRACIAS ALEGRE TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71527",
+    "nombre": "JUAN BAUTISTA GIMENO AYUSO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71528",
+    "nombre": "JOSE RAMON CARABAL HUIDOBRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71529",
+    "nombre": "SERGIO ALAGARDA RIBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71531",
+    "nombre": "VICENTE RIPOLL HERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71534",
+    "nombre": "JOSE VICENTE IBANCO MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71536",
+    "nombre": "LUIS MARCELO DUARTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71537",
+    "nombre": "JOSE LUIS FUERTES TERRASA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71538",
+    "nombre": "JOSE LUIS CARRETERO PLASENCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71539",
+    "nombre": "CONCEPCION POLO PALACIOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71540",
+    "nombre": "JAVIER ROIG ROMAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71541",
+    "nombre": "PEREGRIN ABIL ORPEGUI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71542",
+    "nombre": "DANIEL BORDERIA PALLARES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71543",
+    "nombre": "MARIA ISABEL MARES MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71544",
+    "nombre": "ANTONIO MARTINEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71548",
+    "nombre": "CARLOS CODOÑER MORANTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71549",
+    "nombre": "PABLO PEREZ SOLIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71550",
+    "nombre": "FRANCISCO JOSE LLEONART COLL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71551",
+    "nombre": "TONY CORTIJO ESTEVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71552",
+    "nombre": "JOAQUIN SUAY CUELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71553",
+    "nombre": "VICENTE GINER MASCAROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71554",
+    "nombre": "CARLOS JAVIER ARBIOL CHIRIVELLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71556",
+    "nombre": "JULIO JOSE VALERO ANGEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71557",
+    "nombre": "IGNACIO LORENTE DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71558",
+    "nombre": "DAVID MON HERMO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71559",
+    "nombre": "GUSTAVO MARTINEZ TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71560",
+    "nombre": "PERE MANUEL ORTIZ RUBIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71563",
+    "nombre": "JOSE MARIA TATAY QUILIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71565",
+    "nombre": "FRANCISCO JOSE PARDO MOLLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71566",
+    "nombre": "MIGUEL ANGEL DOMINGUEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71567",
+    "nombre": "M. PILAR MENA CASADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71568",
+    "nombre": "ALICIA GIL TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71569",
+    "nombre": "CRISTIAN MURIA MARCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71572",
+    "nombre": "RUBEN BALLESTER GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71574",
+    "nombre": "ANA SAN RAMON LIEBANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71575",
+    "nombre": "JAVIER CENDAN MORA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71577",
+    "nombre": "SERGIO SEGURA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71578",
+    "nombre": "JOSEP MONTORO CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71579",
+    "nombre": "PROSPERO SORIANO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71580",
+    "nombre": "FRANCISCO VTE. BENEDITO GUILLEM",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71581",
+    "nombre": "VICENTE ANTONIO TORAN GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71582",
+    "nombre": "JOSE LUIS NAVARRO DUVAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71585",
+    "nombre": "RAUL ZAHONERO SIMON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71587",
+    "nombre": "MARIA LUISA MARTINEZ BENEDITO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71588",
+    "nombre": "MIGUEL JUAN NAJAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71589",
+    "nombre": "VICENTE CARABAL CHICHELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71590",
+    "nombre": "SERGIO JUAN GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71591",
+    "nombre": "CARMEN MARCO FABIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71592",
+    "nombre": "FRANCISCO JOSE GIL ALCAYDE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71593",
+    "nombre": "SARA MARIA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71594",
+    "nombre": "DAVID ALEJANDRO ALAMAR ESTEBAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71597",
+    "nombre": "VICTOR PALOMARES MOMPO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71598",
+    "nombre": "JOSE VICENTE ORIENT RAFET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71599",
+    "nombre": "JOSE MIGUEL CHISBERT GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71600",
+    "nombre": "JOSE VICENTE MOCHOLI OLTRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71601",
+    "nombre": "VANESA BONET RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71603",
+    "nombre": "DOMINGO PEREZ JURADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71605",
+    "nombre": "VICTOR MONTORO CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71606",
+    "nombre": "JOSE LUIS SALVADOR ROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71607",
+    "nombre": "MANUEL PERDIGUER AGUILO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71608",
+    "nombre": "EUSEBIO MARTINEZ TORRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71610",
+    "nombre": "FRANCISCO JOSE ALACREU GANDIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71612",
+    "nombre": "DANIEL CORTES MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71613",
+    "nombre": "OSCAR ALBERTO ANDRES VAÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71614",
+    "nombre": "TOMAS MANUEL NAVARRETE LEBRATO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71616",
+    "nombre": "ANA MARIA GARCIA ALMENDROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71617",
+    "nombre": "FELIPE ORTEGA LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71619",
+    "nombre": "TOMAS SANTANO DELGADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71620",
+    "nombre": "JOSE ANTONIO ALIENA ROYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71621",
+    "nombre": "MIGUEL PIQUERAS CALURANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71622",
+    "nombre": "ISMAEL RUBIO PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71623",
+    "nombre": "LUCIANO CUBELLS PARREÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71625",
+    "nombre": "JAVIER SIMON ADRIAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71626",
+    "nombre": "MIGUEL ANGEL CORONAS PASTOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71628",
+    "nombre": "JAVIER GENOVES COLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71629",
+    "nombre": "FCO. JAVIER RAMOS VILLORA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71630",
+    "nombre": "DAVID PIZA PERIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71631",
+    "nombre": "RICARDO OLTRA BLANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71633",
+    "nombre": "JUAN JOSE CONSTANTI VAYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71634",
+    "nombre": "ALBERTO MIRAPEIX PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71635",
+    "nombre": "DANIEL NAVARRETE OLIVER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71636",
+    "nombre": "DIEGO CONSTANTI VAYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71638",
+    "nombre": "MIGUEL ANTONIO LINARES CUBELLS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71640",
+    "nombre": "SONIA LLEONART COLL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71643",
+    "nombre": "CRISTINA VICT MON HERMO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71645",
+    "nombre": "FCO. MANUEL MARTI SELFA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71646",
+    "nombre": "JOSE CORDOBA SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71647",
+    "nombre": "DELIA ROSA TOMAS MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71648",
+    "nombre": "JUAN JOSE DE HARO MEGIAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71651",
+    "nombre": "MARI CARMEN MIRAPEIX SENENT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71652",
+    "nombre": "LUISA LOPEZ PERIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71656",
+    "nombre": "JAVIER MIRAPEIX PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71657",
+    "nombre": "FRANCISCO RAMOS LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71658",
+    "nombre": "SERGIO DOLZ SENENT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71659",
+    "nombre": "DAVID MENGUAL SANJUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71660",
+    "nombre": "MONTSE MARTINEZ TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71663",
+    "nombre": "JOSE MANUEL SANZ CORRALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71665",
+    "nombre": "JULIAN RAMOS LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71666",
+    "nombre": "MIGUEL DUBON MONTALT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71671",
+    "nombre": "DIEGO PEDRO GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71673",
+    "nombre": "JORGE PIZA LLORIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71675",
+    "nombre": "ENRIQUE GARCIA RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71676",
+    "nombre": "FANCISCO J SANZ HUESO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71677",
+    "nombre": "JUAN ANTONIO RODRIGUEZ CHIQUILLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71678",
+    "nombre": "ENRIQUE RAMOS BELENGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71679",
+    "nombre": "ANTONIO FCO. SAURA DIAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71682",
+    "nombre": "SERGIO APARICIO TADEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71683",
+    "nombre": "SERGI COLOM RAMS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71685",
+    "nombre": "JAUME QUEROL TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71686",
+    "nombre": "MANUEL PABLO SOTO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71688",
+    "nombre": "ALVARO QUIJANO TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71689",
+    "nombre": "RAFAEL CARABAL QUESADA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71691",
+    "nombre": "RENE SERRA MARTIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71693",
+    "nombre": "PEDRO ANTONIO GUERRA SAEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71695",
+    "nombre": "JORGE JUAN ZAMORANO MALLOLS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71696",
+    "nombre": "MARTA SORIANO DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71699",
+    "nombre": "JUAN JOSE MON HERMO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71700",
+    "nombre": "SERGIO FERRER NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71701",
+    "nombre": "JOSE SALVADOR MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71703",
+    "nombre": "JOSE BLAY LLORENS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71704",
+    "nombre": "PEDRO JAVIER CASANOVA SESE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71705",
+    "nombre": "JAVIER HERVAS TEJEDOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71707",
+    "nombre": "DAVID SAURA DIAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71708",
+    "nombre": "JAVIER SILVESTRE DIAGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71710",
+    "nombre": "OSCAR BARONA FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71711",
+    "nombre": "RAMON NAVARRO SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71713",
+    "nombre": "JAVIER MANUEL MEDINA CANTIZANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71714",
+    "nombre": "SILVIA SORIANO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71715",
+    "nombre": "FRANCISCO JOSE GILVA MAÑAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71716",
+    "nombre": "JOSE MANUEL TATAY CHISBERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71717",
+    "nombre": "CARLOS MARTI BODI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71718",
+    "nombre": "JAVIER ESTORS GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71719",
+    "nombre": "JOSE RAMON TRILLES GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71720",
+    "nombre": "CARLOS RAMOS BERMUDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71721",
+    "nombre": "JUAN CARLOS PONS MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71725",
+    "nombre": "ENRIQUE JOSE CAÑADA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71726",
+    "nombre": "DOLORES AVIÑO SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71727",
+    "nombre": "FRANCISCO JOSE SANCHEZ DEL TORO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71728",
+    "nombre": "OSCAR MARTINEZ TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71730",
+    "nombre": "SALVADOR JOSE MARTORELL ARNAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71732",
+    "nombre": "JOSE MANUEL ZAMORANO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71734",
+    "nombre": "JOSE LUIS PABLO FABADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71735",
+    "nombre": "PABLO GADEA AGEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71737",
+    "nombre": "FCO JAVIER MONTOLIU SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71739",
+    "nombre": "ALBERTO RIERA CHAUME",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71742",
+    "nombre": "SERGIO BAÑO LA RODA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71743",
+    "nombre": "VANESSA PIZA BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71744",
+    "nombre": "JOSE VICENTE MENA GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71745",
+    "nombre": "MIGUEL ANGEL RODRIGUEZ ARANGUREN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71747",
+    "nombre": "ROBERTO ESTERO MOLINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71748",
+    "nombre": "JAVIER PAMBLANCO LANCE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71749",
+    "nombre": "VICENT BELENGUER PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71750",
+    "nombre": "BORJA MANZANO RIBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71751",
+    "nombre": "DAVID DASI NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71752",
+    "nombre": "SALVADOR ESTEVE VISIEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71753",
+    "nombre": "JAVIER PRATS IRANZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71754",
+    "nombre": "JUAN VICENTE CANTIZANO FERRANDIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71755",
+    "nombre": "FCO JAVIER VIDAL DOBLAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71757",
+    "nombre": "ALEJANDRO DANIE HOLST .",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71758",
+    "nombre": "CARLOS JOSE ROSALEN AGUILAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71759",
+    "nombre": "JUAN CARLOS VERA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71760",
+    "nombre": "ANDRES RIVERA CUEVAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71761",
+    "nombre": "CARLOS SANCHEZ CABALLERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71762",
+    "nombre": "JUAN PABLO GONZALEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71763",
+    "nombre": "JUAN RIERA LAGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71765",
+    "nombre": "DANIEL MONRABAL JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71766",
+    "nombre": "ANTONIO LOPEZ GRACIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71767",
+    "nombre": "TAMARA SAN JUAN CAPILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71769",
+    "nombre": "CARLA PALAU CLIMENT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71770",
+    "nombre": "EDUARDO BAÑO MORGADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71771",
+    "nombre": "ANTONIO FERNANDEZ ROYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71772",
+    "nombre": "LUIS ANTONIO GIMENO LEYBA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71773",
+    "nombre": "FELIX GARCIA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71775",
+    "nombre": "MAXIMO PEYDRO LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71776",
+    "nombre": "OSCAR LOPEZ MAÑEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71777",
+    "nombre": "RAUL TEJERO FURIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71778",
+    "nombre": "JOSE FERMIN RIOS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71779",
+    "nombre": "MARIA CARMEN SALVADOR FERRANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71782",
+    "nombre": "RUBEN NAVARRO GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71784",
+    "nombre": "MARIA DELCARMEN MURIA RENDON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71785",
+    "nombre": "JORGE RIERA TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71787",
+    "nombre": "JOSE RAMON CUBELLS PARREÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71788",
+    "nombre": "ANTONIO CISTER GRADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71789",
+    "nombre": "RAMON BAYARRI MANZANARES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71792",
+    "nombre": "MATIAS LLOPIS CENTELLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71796",
+    "nombre": "VICENTE PEREZ ALBERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71798",
+    "nombre": "JOSE TATAY AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71801",
+    "nombre": "RAUL CARDONA SALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71803",
+    "nombre": "ROBERTO FONT MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71805",
+    "nombre": "ANTONIO BLANCH FRIAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71806",
+    "nombre": "FRANCISCO RIBES PARDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71807",
+    "nombre": "GUILLERMO GARCIA PALAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71812",
+    "nombre": "PEDRO JOSE CERVERA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71813",
+    "nombre": "VICENTE GARCIA MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71814",
+    "nombre": "ANTONIO RODRIGUEZ SANZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71815",
+    "nombre": "RAUL PEREZ PERETE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71819",
+    "nombre": "ALEJANDRO ALCAINA CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71821",
+    "nombre": "SONIA MARCH MAICAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71822",
+    "nombre": "Mª CARMEN MARES GIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71826",
+    "nombre": "LUCIA SALVADOR MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71827",
+    "nombre": "JOSE ANTONIO CUENCA MOYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71829",
+    "nombre": "JUAN RUEDA ESCRIBANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71830",
+    "nombre": "JOAQUIN GARCIA LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71833",
+    "nombre": "FCO. JAVIER SAN RAMON DOLZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71835",
+    "nombre": "TEODORO OLIVAS SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71836",
+    "nombre": "FRANCISCO IVAN SAN RAMON HERNANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71837",
+    "nombre": "FRANCISCO CIVERA ALEGRE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71838",
+    "nombre": "EMILIO JOSE SANFELIX GARRIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71840",
+    "nombre": "MANUEL GARCIA FOGEDA ALONSO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71841",
+    "nombre": "VICENTE NAVARRO SALVADOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71842",
+    "nombre": "SERGIO DE JORGE NOGALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71843",
+    "nombre": "GLORIA BESES CALVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71844",
+    "nombre": "RAUL CAMPOS GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71846",
+    "nombre": "DAVID LINARES LINARES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71847",
+    "nombre": "NIEVES RIERA ALBERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71848",
+    "nombre": "EMILIO VALCANERAS ASUNCION",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71850",
+    "nombre": "MARIA VANESSA ROIG ROMAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71851",
+    "nombre": "MATEO CARBONERAS GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71853",
+    "nombre": "SORAYA SANCHIZ CASTILLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71854",
+    "nombre": "JORGE SANTISTEBAN YAGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71856",
+    "nombre": "ANDRES MOLINER BALDERAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71858",
+    "nombre": "FCO. JAVIER PELEGUER CORTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71859",
+    "nombre": "ALEJANDRO MONFORT POLIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71861",
+    "nombre": "MIGUEL EUFEMIO NAVARRO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71862",
+    "nombre": "MIGUEL ANGEL PARDINES RUEDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71865",
+    "nombre": "JOSE RAMON BELENGUER CATALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71867",
+    "nombre": "LORENZO DARDER BARBERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71868",
+    "nombre": "JOSE ANGEL MARTINEZ GIRBES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71871",
+    "nombre": "ARMANDO PEREZ PERETE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71874",
+    "nombre": "MARINA CHISBERT GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71875",
+    "nombre": "VICENTE GRAU MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71876",
+    "nombre": "ISAAC MUÑOZ GASENT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71879",
+    "nombre": "PEDRO VICENTE MARTINEZ BENEDITO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71880",
+    "nombre": "JOSE RAMON BELENGUER BARRERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71881",
+    "nombre": "VICENTE JAVIER SOBRINO MARQUES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71882",
+    "nombre": "JOSE MANUEL ROIG LOZANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71883",
+    "nombre": "SALVADOR CAMPOS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71884",
+    "nombre": "CELIA GIMENO BESES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71885",
+    "nombre": "SILVIA JARQUE LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71887",
+    "nombre": "RAUL BALLESTER BUENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71889",
+    "nombre": "MANUEL SEDEÑO LEON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71890",
+    "nombre": "ADRIAN PEREZ CERVERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71891",
+    "nombre": "MARIA JOSE VERDEGUER TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71893",
+    "nombre": "IVAN PALLARDO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71895",
+    "nombre": "ANGEL RIPOLL HERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71897",
+    "nombre": "VICENTE BELENGUER MARTORELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71898",
+    "nombre": "RAUL GENOVES MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71902",
+    "nombre": "ENRIQUE JAVIER BAÑULS ALVAREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71903",
+    "nombre": "VICENTE FCO. SOLIS OLMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71904",
+    "nombre": "JUAN JOSE MIRAPEIX TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71905",
+    "nombre": "RAFAEL CLAUR CASTILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71906",
+    "nombre": "ENRIQUE NAVARRETE NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71909",
+    "nombre": "VIRGILIO BELLIDO DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71910",
+    "nombre": "IGNACIO PEDRO FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71911",
+    "nombre": "RAQUEL MARTINEZ ZAMORANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71912",
+    "nombre": "ANTONIO JOSE GARCIA MONZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71913",
+    "nombre": "ANTONIO VERDEGUER TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71914",
+    "nombre": "VICTOR RAMON DEVIS NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71918",
+    "nombre": "ANA MONZONIS COVES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71920",
+    "nombre": "VANESSA MONRABAL ORTIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71922",
+    "nombre": "CARMINA ROIG MIGUEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71923",
+    "nombre": "MARIA CRUZ ESTORS SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71924",
+    "nombre": "RUBEN SANJUAN CAPILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71925",
+    "nombre": "JOSE LUIS BALLESTER RESECO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71926",
+    "nombre": "JUAN JESUS MIGUEL ESCAMILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71927",
+    "nombre": "REBECA BAÑO LA RODA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71928",
+    "nombre": "FERNANDO DE JORGE MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71929",
+    "nombre": "JUAN SAN BENITO LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71930",
+    "nombre": "RICARDO ORTEGA LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71931",
+    "nombre": "FELIPE AMADOR LATORRE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71932",
+    "nombre": "LUÍS ALBERT BERCET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71933",
+    "nombre": "JOSE CRUZ SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71934",
+    "nombre": "MANUEL SANCHEZ SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71939",
+    "nombre": "JORGE VICENTE CERVERO BROTONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71940",
+    "nombre": "JOSE MANUEL HUIDOBRO ESPI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71942",
+    "nombre": "BRUNO RODRIGUEZ MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71944",
+    "nombre": "ANTONIO BAÑO IZQUIERDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71945",
+    "nombre": "VICTOR MAGAN HERRERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71946",
+    "nombre": "JOSE LUIS GIMENO BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71947",
+    "nombre": "RAFAEL PALOMERO GALVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71948",
+    "nombre": "JUAN ENRIQUE PRATS IRANZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71950",
+    "nombre": "FRANCISCO JOSE GALLART BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71951",
+    "nombre": "GERMAN MONTESINOS RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71952",
+    "nombre": "TOMAS CATALA MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71953",
+    "nombre": "DAVID MANUEL HERNANDEZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71954",
+    "nombre": "MIGUEL ANGEL DASI GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71955",
+    "nombre": "JUAN CARLOS HERRERA CARRASCOSA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71956",
+    "nombre": "GERMAN LEIVA NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71958",
+    "nombre": "JUAN CARLOS ORDUÑA GALLUR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71959",
+    "nombre": "LAURA LACOMBA BURGOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71963",
+    "nombre": "RAQUEL RUBIO PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71964",
+    "nombre": "EVA MARIA JIMENEZ MATAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71967",
+    "nombre": "MARIA AMPARO SANZ NAVARRETE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71970",
+    "nombre": "MARIA JOSE COSTA GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71972",
+    "nombre": "RAFAEL DIONISIO ARNAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71973",
+    "nombre": "JUAN CARLOS PARDO ESTEBAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71974",
+    "nombre": "JOSE FCO MARTI COSME",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71979",
+    "nombre": "ANTONIO RIOS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71980",
+    "nombre": "DAVID MORIANO PANADERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71981",
+    "nombre": "RAUL MARTINEZ GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71983",
+    "nombre": "MATIAS RUIZ CISCAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71984",
+    "nombre": "DESAMPARADOS MONRABAL OLMEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71986",
+    "nombre": "FELIX BAEZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71987",
+    "nombre": "ANDRES AGUDO AYLLON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71988",
+    "nombre": "JOSEPH PERIS GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71989",
+    "nombre": "SERGIO SALVADOR GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71990",
+    "nombre": "CARLOS MIRAPEIX PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71991",
+    "nombre": "JOSEFA ALAMAR ANTOÑANZAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71993",
+    "nombre": "JUAN ANTONIO TADEO ESPI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71996",
+    "nombre": "LAURA FERRER FRECHINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "71997",
+    "nombre": "VICENTE BLANCH GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72001",
+    "nombre": "FRANCISCO CERVERA CASTILLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72002",
+    "nombre": "RAFAEL BELTRAN CANOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72003",
+    "nombre": "VICENTE GABARDA ESCRIBANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72004",
+    "nombre": "FCO JAVIER COSCOLLA TORMO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72005",
+    "nombre": "IVAN VILA PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72006",
+    "nombre": "JUAN FRANCISCO SALDAÑA GRADOLI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72007",
+    "nombre": "NATALIA VICENTE PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72008",
+    "nombre": "SARA MEDINA CORTINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72009",
+    "nombre": "PAULO CESAR SAEZ MOLINS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72010",
+    "nombre": "DAVID SANCHEZ BUSO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72011",
+    "nombre": "PASCUAL SANTOTOMAS BARBERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72012",
+    "nombre": "MIGUEL ANGEL RODRIGUEZ FOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72013",
+    "nombre": "ADRIAN GARCIA SALCEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72014",
+    "nombre": "VICENTE PIZA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72015",
+    "nombre": "GUILLERMO SEGUI CATALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72016",
+    "nombre": "JORGE GABARDA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72017",
+    "nombre": "GENOVEVA PILES MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72018",
+    "nombre": "JUAN FERRANDIS FERRANDIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72020",
+    "nombre": "ALBERTO TRUJILLO JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72022",
+    "nombre": "JOSE RAMON ZANON LABIOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72023",
+    "nombre": "ALVARO ALCAINA CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72024",
+    "nombre": "BENJAMIN DASI GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72025",
+    "nombre": "VICENTE SANCHO PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72026",
+    "nombre": "SANDRA NAVARRO CALATAYUD",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72027",
+    "nombre": "GUILLERMO DE JUAN SANCHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72028",
+    "nombre": "OSCAR BENAJA CORTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72029",
+    "nombre": "HÉCTOR MARTINEZ ROMERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72030",
+    "nombre": "JOSE MANUEL APARISI PACHA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72031",
+    "nombre": "LUIS TAMARIT VICENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72032",
+    "nombre": "FERNANDO TRULL BLASCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72033",
+    "nombre": "EMILIO ESTARLIK SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72034",
+    "nombre": "CARLA CAMPOS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72035",
+    "nombre": "JAVIER LEON TRILLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72036",
+    "nombre": "JULIO DASI BORDES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72038",
+    "nombre": "MIGUEL AMIGO BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72039",
+    "nombre": "DAVID SANTISTEBAN YAGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72040",
+    "nombre": "FEDERICO CUSIDÓ LORENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72041",
+    "nombre": "MARCOS MARCOS LLEONART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72042",
+    "nombre": "DANIEL JESUS PINAR GALVEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72043",
+    "nombre": "RAFAEL CLEMENTE TORTAJADA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72044",
+    "nombre": "VICTOR MAS SANCHIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72045",
+    "nombre": "PATRICIA MARTINEZ MLYNIK",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72046",
+    "nombre": "JOAQUIN QUESADA VALERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72047",
+    "nombre": "SARA ISABEL GONZALVO TEJERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72048",
+    "nombre": "RAFAEL SARRION RIVERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72050",
+    "nombre": "JAVIER ADELANTADO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72051",
+    "nombre": "LUIS DAVID MURILLO VALERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72053",
+    "nombre": "CRISTINA MACHANCOSES LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72054",
+    "nombre": "JULIAN CHAPINAL BELLIDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72055",
+    "nombre": "ALIA MARTINEZ TABERNER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72056",
+    "nombre": "SANDRA MOYA MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72057",
+    "nombre": "RAFAEL FRANCISCO GILVA CERVERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72058",
+    "nombre": "JORGE JUAN GIL RIDAURA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72059",
+    "nombre": "MIGUEL ANGEL BESES SORIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72060",
+    "nombre": "JOSE GARCIA ESTORS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72061",
+    "nombre": "JOSE MIGUEL HERMO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72062",
+    "nombre": "JOSE FERNANDEZ NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72063",
+    "nombre": "GERMAN COSCOLLA PASCUAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72064",
+    "nombre": "PILAR TRONCHONI RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72065",
+    "nombre": "LAURA CLEMENTE MARCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72066",
+    "nombre": "LUIS DOMINGUEZ BELTRAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72068",
+    "nombre": "JOSE VICENTE LOPEZ RIERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72069",
+    "nombre": "VICTORIA TARREGA SEGRERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72070",
+    "nombre": "MIGUEL RODRIGUEZ FORTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72071",
+    "nombre": "JUAN MANUEL GONZALEZ SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72072",
+    "nombre": "MARIO VENTURA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72073",
+    "nombre": "MARIA FERNANDA CASADEMUNT ZABALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72075",
+    "nombre": "JOSE AZNAR NACHER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72076",
+    "nombre": "VICTOR VICENTE TORRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72077",
+    "nombre": "OSCAR ESTEVE COLAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72078",
+    "nombre": "VICTOR MANUEL LOPEZ GARRIGUES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72079",
+    "nombre": "JOSE LUIS HUNGRIA FUENTES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72080",
+    "nombre": "DAVID DOSIL MORATILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72081",
+    "nombre": "MIGUEL MENA BRUQUE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72082",
+    "nombre": "JUAN ANTONIO ESCRICH ARIÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72083",
+    "nombre": "VICENTE RODRIGUEZ VALERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72084",
+    "nombre": "NOELIA GIMENO PAREDES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72085",
+    "nombre": "JESSICA ACEBRON FERRER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72086",
+    "nombre": "ALEX GARCIA CAMPOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72087",
+    "nombre": "JORGE PAULO FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72088",
+    "nombre": "DAVID SOLIS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72091",
+    "nombre": "VICTOR SAN RAMON LIEBANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72092",
+    "nombre": "JORGE TORRES ROZALEN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72093",
+    "nombre": "ANGELA BLANCH FRIAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72094",
+    "nombre": "IGNACIO TOLEDO OLIVAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72095",
+    "nombre": "MARIA JOSE FERRANDIS LORENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72096",
+    "nombre": "RAQUEL PASTOR GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72097",
+    "nombre": "REBECA MURIA RENDON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72098",
+    "nombre": "TOMAS JESUS NAVARRETE MENOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72099",
+    "nombre": "MARIA ALCAINA ESCAMILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72100",
+    "nombre": "PEDRO FLORES LÓPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72101",
+    "nombre": "JESUS MARTINEZ LLEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72103",
+    "nombre": "ANA BELEN VICENT RUBIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72104",
+    "nombre": "JOSE LOPEZ RIUS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72106",
+    "nombre": "LIDIA MASCAROS GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72107",
+    "nombre": "REMEDIOS ESCOBAR SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72109",
+    "nombre": "SALVADOR RUBEN PIQUER GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72110",
+    "nombre": "VANESA MARTINEZ VENTURA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72111",
+    "nombre": "CRISTIAN VICENTE CARVAJAL CARDONA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72112",
+    "nombre": "MARCOS SOLIS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72114",
+    "nombre": "FRANCISCO JOSE MURIA PARRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72116",
+    "nombre": "FRANCISCO JOSE BELENGUER IBORRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72117",
+    "nombre": "ERIC FRANCISCO PABLO AMORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72118",
+    "nombre": "ADRIAN DARDER HIGON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72119",
+    "nombre": "VICENTE TOMÁS QUILIS REAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72120",
+    "nombre": "RUBEN RODRIGUEZ PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72122",
+    "nombre": "JOSE RAMON ALABAU ALAGARDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72124",
+    "nombre": "SARA PATRICIA RIPOLL HERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72125",
+    "nombre": "JOSE LUCENA BAUTISTA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72126",
+    "nombre": "JOSE FELIX MORATAL BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72127",
+    "nombre": "JOSE MIGUEL MARCO PLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72129",
+    "nombre": "ALEX COLLADO LAFUENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72131",
+    "nombre": "CARLOS MONTAÑO LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72132",
+    "nombre": "ALVARO TIMOTEO SORNI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72133",
+    "nombre": "AMPARO ESCOBAR SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72134",
+    "nombre": "DANIEL MOLINA ESTORS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72136",
+    "nombre": "IVAN ZAMORANO MALLOLS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72139",
+    "nombre": "GEMA FERRANDIS VILLALBA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72140",
+    "nombre": "SUSANA RAGA CAMACHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72141",
+    "nombre": "JOSE MANUEL DOLZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72142",
+    "nombre": "MARIA SONSOLES ANDRES BRIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72143",
+    "nombre": "SILVIA VICENT RUBIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72145",
+    "nombre": "SUSANA FERRER FRECHINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72146",
+    "nombre": "MIGUEL ANGEL VILLER IBANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72147",
+    "nombre": "CARMEN PEYDRO LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72148",
+    "nombre": "MARIA MILAGROS NAVARRO SUANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72149",
+    "nombre": "JUAN VICENTE FERRER PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72150",
+    "nombre": "DAVID GARCIA MONZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72151",
+    "nombre": "MIREIA NAVARRO SUANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72152",
+    "nombre": "DOMINGO ZUNZUNEGUI REQUENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72153",
+    "nombre": "JORDI JARA MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72154",
+    "nombre": "MIGUEL ANGEL RAGA CAMACHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72155",
+    "nombre": "RAUL FERRER NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72157",
+    "nombre": "ALICIA BALLESTER FINK",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72159",
+    "nombre": "ALVARO ZARAGOZA VALERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72160",
+    "nombre": "VICENTE ANTONIO SOLIS FONT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72161",
+    "nombre": "JOSE ANDRES COVES DURÁ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72162",
+    "nombre": "MARIA JOSE BARCELO SOLIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72163",
+    "nombre": "ANA MARIA BRAULIO GUILLEM",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72201",
+    "nombre": "SALVADOR PEREZ QUERALT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72202",
+    "nombre": "ERNESTO MARTINEZ BARBERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72203",
+    "nombre": "IVAN VAÑO CAVAZZINI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72204",
+    "nombre": "CARLOS FRANCISCO LLORET QUERALT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72205",
+    "nombre": "VICENTE JESUS TORRENTI BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72206",
+    "nombre": "JOSE LUIS CHECA RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72207",
+    "nombre": "JOSE RUIZ MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72208",
+    "nombre": "LUIS VICTOR MARTINEZ LLACER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72209",
+    "nombre": "JAVIER BARRES AGUILAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72211",
+    "nombre": "LUIS ENRIQUE SEGARRA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72212",
+    "nombre": "CAROLINA MARTI TRILLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72214",
+    "nombre": "EDUARDO POMER ARGUDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72215",
+    "nombre": "RUBEN MORENO MARCHUET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72218",
+    "nombre": "RAUL MONTESINOS JURADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72219",
+    "nombre": "JOSE MIGUEL VILCHEZ CARDONA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72220",
+    "nombre": "ANTONIO LAZARO MENA RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72221",
+    "nombre": "JOSE VICENTE OLMEDO NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72222",
+    "nombre": "MANUEL SALVADOR BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72223",
+    "nombre": "ANTONIO CUENCA PENALVA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72225",
+    "nombre": "ALBERTO ALONSO PUCHOL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72228",
+    "nombre": "MARI DEL CARMEN CUENCA BELENGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72229",
+    "nombre": "NARCISO LEBRON MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72230",
+    "nombre": "JUAN BAUTISTA PASCUAL VELASCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72231",
+    "nombre": "ARMANDO CABALLERO PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72232",
+    "nombre": "SERGIO MUÑOZ JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72233",
+    "nombre": "JUAN PEDRO LOBATO FERRER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72234",
+    "nombre": "FERNANDO MARIA CASAUS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72235",
+    "nombre": "RAFAEL MARTINEZ ESCUDERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72236",
+    "nombre": "MIGUEL LLORENS TARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72237",
+    "nombre": "VICTOR MIR CERCOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72238",
+    "nombre": "JOSE VICENTE AZNAR ASENSI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72239",
+    "nombre": "JOSE RAFAEL LAPASIO CASAMAYOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72240",
+    "nombre": "FRANCISCO COLA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72241",
+    "nombre": "MARIA DESAMPARADOS CASTELLO MOCHOLI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72242",
+    "nombre": "JOSE FRANCISCO BONO COLOMER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72244",
+    "nombre": "JOSE ANGEL LOZANO MONTAÑANA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72245",
+    "nombre": "MARIA DOLORES CLAUDIO MIRASIERRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72246",
+    "nombre": "GUILLERMO DIEZ TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72247",
+    "nombre": "MIGUEL ROCAFULL LARODA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72248",
+    "nombre": "JUAN MANUEL CAMPOS NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72249",
+    "nombre": "ANTONIO LATORRE BOLEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72250",
+    "nombre": "VICTOR JOSE BUENO DELTORO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72251",
+    "nombre": "CARLOS CUENCA MOYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72252",
+    "nombre": "ANTONIO IVARS RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72253",
+    "nombre": "ISRAEL TADEO SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72254",
+    "nombre": "RAMÓN LLORENS TARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72255",
+    "nombre": "MATIAS ROIG MIGUEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72256",
+    "nombre": "JUAN JOSE ALONSO LLORET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72257",
+    "nombre": "JOSE MIGUEL GALLEGO BONET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72258",
+    "nombre": "ANTONIO BLAT GIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72259",
+    "nombre": "ENRIQUE GREGORI GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72260",
+    "nombre": "MONICA GIMENO ESTEVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72261",
+    "nombre": "ESTEFANIA SANCHEZ TADEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72262",
+    "nombre": "ANGELES ALAPONT CELDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72263",
+    "nombre": "IVAN LLACER SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72264",
+    "nombre": "MARGARITA BARBERA SAN MIGUEL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72265",
+    "nombre": "ADRIANA RAGA CAMACHO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72266",
+    "nombre": "MIREIA SELVI CIVERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72267",
+    "nombre": "FRANCISCO JAVIER FERNANDEZ ROYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72268",
+    "nombre": "ROSA MARIA MARCH VALLEJO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72269",
+    "nombre": "SERGIO YAGO CASADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72270",
+    "nombre": "PASCUAL FERRER SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72272",
+    "nombre": "ADRIAN ASENSI MASCARELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72273",
+    "nombre": "EVA GIMENO ESTEVE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72274",
+    "nombre": "TERESA ANDRADE MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72275",
+    "nombre": "ANTONIO CUADROS JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72276",
+    "nombre": "VICENTE JAVIER MARTI CERDA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72277",
+    "nombre": "SALVADOR GOMEZ LLOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72278",
+    "nombre": "PASCUAL FRANCISCO ALONSO LLORET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72280",
+    "nombre": "FRANCISCO JAVIER ZARAGOZA NIEVES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72281",
+    "nombre": "FELIX BUSTOS MATEO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72282",
+    "nombre": "JOSE MANUEL GIMENO RODRIGO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72283",
+    "nombre": "RAUL PELEGRI PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72284",
+    "nombre": "JUAN NAVARRO LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72285",
+    "nombre": "ALFONSO SORIANO VERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72286",
+    "nombre": "VICENTE MIGUEL SANCHIS DEVIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72287",
+    "nombre": "JOSE ALBERTO COSTA MATAIX",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72288",
+    "nombre": "JUAN CARLOS MIRALLES TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72289",
+    "nombre": "JUAN FRANCISCO MONTALBA RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72290",
+    "nombre": "RAUL AVEDILLO CARRETERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72291",
+    "nombre": "GERMAN YESTE GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72292",
+    "nombre": "JORGE EMETERIO PEREZ APARICIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72293",
+    "nombre": "MANUEL GALAN MASCAROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72294",
+    "nombre": "MARIA ANGELES GALLART LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72295",
+    "nombre": "ANTONIO JOSE GIMENEZ BUENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72296",
+    "nombre": "ESTEFANÍA RUBIO COMPANY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72297",
+    "nombre": "JOSE MANUEL ROCHER TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72299",
+    "nombre": "JORGE ROMERO TRAMOYERES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72300",
+    "nombre": "FRANCISCO SANCHIS APARISI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72301",
+    "nombre": "ROCIO CUENCA DELGADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72302",
+    "nombre": "FRANCISCO MANUEL RODRIGO FARINOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72303",
+    "nombre": "MANUEL CARRASCOSA BENGOECHEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72304",
+    "nombre": "JOSE GOMEZ RODENAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72305",
+    "nombre": "JAVIER VALIENTE LLORET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72306",
+    "nombre": "MANUEL VILANOVA CHOVI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72307",
+    "nombre": "RAUL GARCIA ALEIXANDRE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72309",
+    "nombre": "ENRIQUE MARI FLORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72310",
+    "nombre": "JAVIER SALVADOR MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72311",
+    "nombre": "SALVADOR MADRID MATEU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72312",
+    "nombre": "JUAN FRANCISCO MUÑOZ PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72313",
+    "nombre": "M ISABEL BAIXAULI TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72314",
+    "nombre": "ANTONIO MENDEZ IZQUIERDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72315",
+    "nombre": "EDUARDO CASAÑA TEJEDOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72316",
+    "nombre": "CRISTOBAL GOMEZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72317",
+    "nombre": "RAUL MARIN GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72318",
+    "nombre": "JOSE MARIA CHISVERT PORTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72320",
+    "nombre": "RAFAEL CAMACHO VIDAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72321",
+    "nombre": "VLADIMIR ESTRELA PICO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72322",
+    "nombre": "MARIANO FERNANDEZ CUBERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72324",
+    "nombre": "RAFAEL ESTOPIÑA CALVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72325",
+    "nombre": "DANIEL CHISBERT GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72326",
+    "nombre": "CARLOS PEREZ ROCA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72327",
+    "nombre": "JUAN ANTONIO MARTINEZ BAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72328",
+    "nombre": "VERONICA LLACER PUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72329",
+    "nombre": "ANGEL ALEPUZ GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72330",
+    "nombre": "CARLOS SOLIS BLAZQUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72331",
+    "nombre": "VICENTE MANUEL LOPEZ EBRI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72332",
+    "nombre": "VICENTE AULLANA ESTRELA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72333",
+    "nombre": "DANIEL CAMACHO BARRERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72334",
+    "nombre": "GERMAN GARCIA SALA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72335",
+    "nombre": "FRANCISCO JAVIER CARRASCOSA SAURA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72337",
+    "nombre": "ALBERTO JOSE PASCUAL TAMARIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72338",
+    "nombre": "JOSE ANDRES MONTOLIU SERRANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72339",
+    "nombre": "JAVIER RIDAURA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72340",
+    "nombre": "RAFAEL RIOS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72342",
+    "nombre": "VICENTE CALVO AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72343",
+    "nombre": "DAVID SANJUAN GABINO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72344",
+    "nombre": "JUAN CARLOS IZQUIERDO MURILLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72345",
+    "nombre": "IGNACIO GIMENO BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72346",
+    "nombre": "RAQUEL MESAS RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72348",
+    "nombre": "JORGE SAN VALERO CARDONA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72350",
+    "nombre": "RUBEN BAIXAULI TORRES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72351",
+    "nombre": "AGUSTIN RAMIREZ TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72353",
+    "nombre": "VICENTE RAMON SERRA MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72354",
+    "nombre": "JOSE RAMON MONFORT BELENGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72355",
+    "nombre": "CARMEN GIMENO CALABUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72356",
+    "nombre": "GEMA BALLESTER COSTA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72358",
+    "nombre": "CARLOS GARCIA CHICHELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72500",
+    "nombre": "FERRAN SORIANO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72501",
+    "nombre": "ANTONIO ALBARRACIN DOMENECH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72502",
+    "nombre": "PABLO MURRIA PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72503",
+    "nombre": "ALVARO ALACREU RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72504",
+    "nombre": "SILVIA MONTORO CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72505",
+    "nombre": "JONATHAN BARRUECO FLORES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72506",
+    "nombre": "ALEJANDRO CARLOS GARCÍA FAERNA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72507",
+    "nombre": "FRANCISCO SOLER RIERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72508",
+    "nombre": "CAROLINA CANET ALBERICH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72509",
+    "nombre": "DAVID VAÑO CAVAZZINI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72510",
+    "nombre": "MANUEL ALEJANDRO LARIOS ROS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72511",
+    "nombre": "DOLORES MAIGUALIDA SOLER FALCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72512",
+    "nombre": "YAIZA PARDO MOLINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72513",
+    "nombre": "MARÍA PERIS CARABAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72514",
+    "nombre": "MARIA PARRALEJO CAÑADA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72515",
+    "nombre": "BEATRIZ ESCUDERO VERDEGUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72516",
+    "nombre": "MARCO GARCIA RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72517",
+    "nombre": "LORENZO JOSE VINAIXA GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72519",
+    "nombre": "ISABEL RAMOS PICAZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72520",
+    "nombre": "MIREIA AROA ALEIXANDRE MARTI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72521",
+    "nombre": "MARTA DAROCHA MORA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72522",
+    "nombre": "ALVARO GARRIGA GORDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72523",
+    "nombre": "LUIS FRANCISCO JIMENEZ TOLEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72524",
+    "nombre": "SARA DEL TORO MELIÁ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72525",
+    "nombre": "JUDITH ANGEL JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72526",
+    "nombre": "FRANCESC FOLGADO TOMÁS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72527",
+    "nombre": "NOEMI PEREZ PEÑALVA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72528",
+    "nombre": "MAYTE ESTADEZ PALOMEQUE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72529",
+    "nombre": "VICENTE AMORES PIZA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72531",
+    "nombre": "RAQUEL MUÑOZ RODRIGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72539",
+    "nombre": "DAVID LOPEZ GONZALEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72540",
+    "nombre": "MARCOS JOSE CIFRE MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72541",
+    "nombre": "MARCOS SANZ PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72542",
+    "nombre": "RUBÉN RODRIGUEZ FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72543",
+    "nombre": "JOSE DAVID MARTÍ ROMÁN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72544",
+    "nombre": "ANGEL NAVARRO LAGUNA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72545",
+    "nombre": "MARIA ESCRIBANO JARQUE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72546",
+    "nombre": "ALEXANDRE LIONEL VON HÖREN MEDINA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72547",
+    "nombre": "HECTOR RUBEN CISCAR LÓPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72548",
+    "nombre": "Mª VICTORIA COMPANY OCHOA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72549",
+    "nombre": "LUCIA RIERA MORALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72550",
+    "nombre": "RAQUEL GALLART APARICIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72551",
+    "nombre": "MANUEL MURIA MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72552",
+    "nombre": "JENNIFER BURGOS NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72553",
+    "nombre": "VICTOR MANUEL SANCHEZ CARRETERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72555",
+    "nombre": "RAMON CALVO SAEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72556",
+    "nombre": "SALVADOR BARBERÁ ROMANÍ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72557",
+    "nombre": "EUGENIO JOSÉ IBAÑEZ REVERT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72558",
+    "nombre": "JUAN PINÉS FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72559",
+    "nombre": "AURELIO GABARDA GARCÍA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72560",
+    "nombre": "JOSÉ CARLOS LILLO CAMINERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72561",
+    "nombre": "JAVIER BERMUDEZ BALLESTER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72562",
+    "nombre": "NOELIA GONZALEZ BENEDITO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72563",
+    "nombre": "PATRICIA DEL MAR ALAMAR BOLEA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72564",
+    "nombre": "VICENT BERENGUER NAVAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72565",
+    "nombre": "NEREA MONRABAL CANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72566",
+    "nombre": "PEDRO ANTONIO CERVERA CUEVAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72567",
+    "nombre": "DANIEL PEREZ VILLARROYA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72568",
+    "nombre": "RAUL MERCADER SOLER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72569",
+    "nombre": "ALEJANDRO PERIS CARABAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72570",
+    "nombre": "IVAN VALMAÑA DIAZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72571",
+    "nombre": "SALVADOR FERRER BAYARRI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72572",
+    "nombre": "CARLOS LLUCH BAUTISTA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72573",
+    "nombre": "HUGO CANO FRAILE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72574",
+    "nombre": "EDGAR VALMAÑA CATALÁN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72575",
+    "nombre": "GUILLERMO PILES MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72576",
+    "nombre": "RUBEN REPRESA PADIAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72577",
+    "nombre": "MIGUEL BAIXAULI MONFORT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72578",
+    "nombre": "CARLOS MOSSI MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72579",
+    "nombre": "CARLOS CUENCA DELGADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72580",
+    "nombre": "ALBERTO OLMEDO LOZANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72581",
+    "nombre": "JULIO CESAR VELA VAÑÓ-BORRAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72582",
+    "nombre": "FERNANDO ALAMAR PADILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72583",
+    "nombre": "JOSEP NAVARRO MIRALLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72584",
+    "nombre": "DIEGO MARTINEZ DAROCHA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72585",
+    "nombre": "AMPARO CENTELLES FERRANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72586",
+    "nombre": "JAVIER CANILLAS LLUCH",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72587",
+    "nombre": "RAFAEL BALAGUER DELGADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72588",
+    "nombre": "JORDI RODRIGUEZ ROIJALS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72589",
+    "nombre": "PABLO FERRER TOMAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72590",
+    "nombre": "ANDREA GIRBES SANCHIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72591",
+    "nombre": "ALEJANDRO MURIA PARRA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72592",
+    "nombre": "PAULA MARTINEZ LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72593",
+    "nombre": "ALEJANDRO BLAY SAN BENITO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72594",
+    "nombre": "CHRISTIAN CALDERON SAN BENITO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72595",
+    "nombre": "ÁLVARO CUELLAR BAU",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72596",
+    "nombre": "CRISTINA ORTEGA AZNAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72597",
+    "nombre": "MARTA CARBONELL BERNAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72598",
+    "nombre": "JOSE ANTONIO SOLER GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72599",
+    "nombre": "JOSE JAVIER REBOLLO LEAL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72600",
+    "nombre": "AITOR NAVARRO CASTELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72601",
+    "nombre": "ANDREA MUÑOZ MONTALVÁ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72602",
+    "nombre": "DANIEL DAVID MARTÍ ROMÁN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72603",
+    "nombre": "JAVIER PARDO BORDERIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72604",
+    "nombre": "BEATRIU MONTALVÁ MUÑOZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72605",
+    "nombre": "MARTA BLANCH PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72606",
+    "nombre": "NELO RODRIGUEZ FRUCTUOSO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72607",
+    "nombre": "PABLO ROMERO LLACER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72609",
+    "nombre": "FRANCISCO GUISADO DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72610",
+    "nombre": "SERGIO GOMEZ JUAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72611",
+    "nombre": "ISABEL SERRA MARTÍ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72612",
+    "nombre": "MANUEL CERDÁ VAÑÓ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72613",
+    "nombre": "CRISTINA FONT MARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72614",
+    "nombre": "MARIA PILAR ESCRICH ARIÑO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72615",
+    "nombre": "SARA HORNERO CALABUIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72616",
+    "nombre": "VICENTE BLANCH AGUILAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72617",
+    "nombre": "VANESA MONTOLIU MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72618",
+    "nombre": "MARCOS VINAIXA GALLART",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72619",
+    "nombre": "ALICIA DOLZ FUENTE",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72621",
+    "nombre": "ALEX GARCIA PEREZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72622",
+    "nombre": "LARA SAN RAMON GUIJARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72623",
+    "nombre": "Mª AURORA AQUINO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72624",
+    "nombre": "DANIEL SERRANO RAMOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72625",
+    "nombre": "LIDIA NAVARRO GOMEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72626",
+    "nombre": "RAQUEL IRANZO BLAT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72627",
+    "nombre": "JOSE ANTONIO CABALLERO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72628",
+    "nombre": "JOSE AURELIO PERIS ROIG",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72629",
+    "nombre": "CAMYLA ANDREA IÑIGUEZ ARIAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72630",
+    "nombre": "JESUS TERUEL DURA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72631",
+    "nombre": "SARA CUENCA BARCELO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72632",
+    "nombre": "LAURA BENAJA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72635",
+    "nombre": "VICENTE JOSE BALLESTER CARLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72636",
+    "nombre": "ROBERTO ABEL RICART DEL ALAMO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72640",
+    "nombre": "ASUNCION FONT ESPI",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72641",
+    "nombre": "ELENA MONTESINOS JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72642",
+    "nombre": "JUAN NAVARRO ESTRELA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72643",
+    "nombre": "DIANA AGUILAR MOR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72644",
+    "nombre": "AINOA MARTINEZ ALAMAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72645",
+    "nombre": "SERGIO JIMENEZ TOLEDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72646",
+    "nombre": "TAMARA FERNANDEZ PABLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72647",
+    "nombre": "CARLOS PICAZO ALCAHUD",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72648",
+    "nombre": "JULIO MENA GIMENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72649",
+    "nombre": "VICENTE PRIETO IBANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72650",
+    "nombre": "LAURA FERNANDEZ BENAVENT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72652",
+    "nombre": "CARLOS ROIG MILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72653",
+    "nombre": "VANESA TARJUELO GONZALVO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72654",
+    "nombre": "CRISTIAN LAZARO GALVEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72655",
+    "nombre": "JOSE LUIS LOZANO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72656",
+    "nombre": "DIEGO MONFORT MERA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72657",
+    "nombre": "ALEJANDRO SEVILLA TORTAJADA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72658",
+    "nombre": "JOAN SARRO SORIANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72659",
+    "nombre": "TANIA MURIA AURELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72660",
+    "nombre": "REBECA TRONCHONI RUIZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72661",
+    "nombre": "ANA QUEROL TOMÁS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72662",
+    "nombre": "HECTOR MORA CALLEJON",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72664",
+    "nombre": "TOMAS SANTANO POLIT",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72665",
+    "nombre": "JUAN VICENTE CARRION QUILIS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72666",
+    "nombre": "OMAR GARCIA MONZO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72667",
+    "nombre": "RAFAEL ALMENAR LAZARO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72668",
+    "nombre": "MANUEL LOPEZ IBANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72669",
+    "nombre": "SILVIA JARQUE GARZANDO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72670",
+    "nombre": "SANDRA ESPINOSA MENA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72671",
+    "nombre": "MARTA SILVESTRE ESTRELA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72672",
+    "nombre": "MARIA MESTRE NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72673",
+    "nombre": "NICOLÁS MARTINEZ MARES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72675",
+    "nombre": "PEDRO CIURANA ESCOBAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72676",
+    "nombre": "GREGORIO CABELLO HERRAEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72679",
+    "nombre": "MIGUEL FERRER MORELL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72680",
+    "nombre": "LUIS VALLS GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72681",
+    "nombre": "MARTA SANCHEZ CABALLERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72682",
+    "nombre": "ENRIQUE GODA GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72683",
+    "nombre": "ADRIAN LUJAN MARIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72685",
+    "nombre": "NEREA ARAQUE CORBALAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72686",
+    "nombre": "SERGIO MARTI BENEDICTO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72687",
+    "nombre": "MANUEL JIMENEZ BLASCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72688",
+    "nombre": "ESTER NAVARRO LAGUNA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72689",
+    "nombre": "ALVARO MUÑOZ SORIANO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72690",
+    "nombre": "HECTOR SOLIS MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72691",
+    "nombre": "ESTEBAN CORDELLAT MARTIN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72692",
+    "nombre": "ROBERTO GORRIZ BADENES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72695",
+    "nombre": "DANIEL CIFRE CORCOLES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72696",
+    "nombre": "ERIC MUÑOZ DOMINGUEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72697",
+    "nombre": "LUIS VILLALBA TELLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72698",
+    "nombre": "SAMUEL ESPAR GAÑET",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72699",
+    "nombre": "PATRICIA ARNAU MOTOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72700",
+    "nombre": "JULIAN MARTIN CASQUERO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72701",
+    "nombre": "Mª CARMEN RODRIGUEZ VERDEJO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72702",
+    "nombre": "SILVIA ANDREU MAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72703",
+    "nombre": "RAUL BALLESTER PRATS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72704",
+    "nombre": "ANTONIO MANUEL MONTESINOS BLAY",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72705",
+    "nombre": "YASMINA BAÑO GIL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72706",
+    "nombre": "JUAN BAUTISTA SARGUES LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72707",
+    "nombre": "SERGIO PINAZO MATA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72708",
+    "nombre": "Mª DOLORES CERVERA CASTILLO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72709",
+    "nombre": "SANDRA MENA CASADO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72710",
+    "nombre": "JORGE FONT GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72711",
+    "nombre": "ANGEL OLMOS LOPEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72712",
+    "nombre": "RAQUEL MONRABAL BLANCO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72713",
+    "nombre": "JOSE BELENGUER PONS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72714",
+    "nombre": "CLAUDIA ALAPONT LUJAN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72715",
+    "nombre": "CARMELO SANCHEZ BELLÓN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72716",
+    "nombre": "CARLOS LOPEZ NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72717",
+    "nombre": "CARMEN SOVEN LARIOS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72718",
+    "nombre": "JOSÉ PALLARES JIMENEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72719",
+    "nombre": "BENJAMIN SIMÓ HIERRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72720",
+    "nombre": "ADOLFO JOSE MALMAGRO GARCIA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72721",
+    "nombre": "MARTIN GOMEZ SALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72722",
+    "nombre": "VICTOR SORO MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72723",
+    "nombre": "JENIFER UBEDA MARTINEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72724",
+    "nombre": "JOSE LUIS GIL-TERRON LLULL",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72725",
+    "nombre": "CARLOS LUCENA GALÁN",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72726",
+    "nombre": "MIGUEL NACHER MORENO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72727",
+    "nombre": "JUAN JOSE SISTER VILAR",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72728",
+    "nombre": "TAMARA TATAY ARENAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72729",
+    "nombre": "ALBA ROSALEN LUZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72730",
+    "nombre": "VANESSA MIRAPEIX BAYO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72731",
+    "nombre": "MARTA GOMEZ PIQUER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72732",
+    "nombre": "ANTONIO TRILLES FERNANDEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72733",
+    "nombre": "RICARDO SANCHEZ FRIAS",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72736",
+    "nombre": "RUBEN BLAS PELAEZ POLONIO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72737",
+    "nombre": "RUBEN ALCACER NAVARRO",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72739",
+    "nombre": "SARA ALARCÓN GILVA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72740",
+    "nombre": "DAVID MORENO MORILLA",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72741",
+    "nombre": "Mª MERCED NAVARRO CALATAYUD",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72742",
+    "nombre": "BORJA TADEO SANCHEZ",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72743",
+    "nombre": "NESTOR FORT PORTALES",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "72744",
+    "nombre": "ALBA MUÑOZO FERRER",
+    "fuente": "app_cpe"
+  },
+  {
+    "chapa": "90606",
+    "nombre": "JOSE MANUEL ALAMAR LLAVATA",
+    "fuente": "app_cpe"
+  }
+]

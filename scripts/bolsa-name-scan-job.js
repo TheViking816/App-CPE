@@ -166,7 +166,7 @@ async function login(page) {
 }
 
 async function waitForNorayJornales(page) {
-  await page.goto("https://portal.cpevalencia.com/#User,ViewNoray,3", {
+  await page.goto("https://portal.cpevalencia.com/#User,ViewNoray,2", {
     waitUntil: "domcontentloaded",
     timeout: 45000
   });

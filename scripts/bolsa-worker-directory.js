@@ -6,6 +6,7 @@ const APP_CPE_URL = String(process.env.CPE_SUPABASE_URL || "https://wvwdiywtlbff
 const PORTAL_URL = "https://icszzxkdxatfytpmoviq.supabase.co";
 const PORTAL_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imljc3p6eGtkeGF0Znl0cG1vdmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2Mzk2NjUsImV4cCI6MjA3ODIxNTY2NX0.hmQWNB3sCyBh39gdNgQLjjlIvliwJje-OYf0kkPObVA";
 const ASSET_PATH = path.resolve("assets", "bolsa-trabajadores.json");
+const TURNO_ASSET_PATH = path.resolve("assets", "turno-trabajadores.json");
 const INVALID_NAMES = /^(?:PERSONAL DE BOLSA|SIN NOMBRE(?: PUBLICADO)?|CHAPA\s+\d+|CERO)$/i;
 
 export function normalizeBolsaChapa(value) {
@@ -13,6 +14,11 @@ export function normalizeBolsaChapa(value) {
   if (/^80[0-9]{3}$/.test(digits)) return digits;
   if (/^[0-9]{1,3}$/.test(digits)) return `80${digits.padStart(3, "0")}`;
   return "";
+}
+
+export function normalizeTurnoChapa(value) {
+  const digits = String(value || "").replace(/[^0-9]/g, "");
+  return /^\d{5}$/.test(digits) && !/^80\d{3}$/.test(digits) ? digits : "";
 }
 
 function cleanName(value) {
@@ -57,13 +63,44 @@ async function fetchAllPortalUsers() {
   return users;
 }
 
-async function readAsset() {
+async function readAsset(assetPath = ASSET_PATH) {
   try {
-    const parsed = JSON.parse(await fs.readFile(ASSET_PATH, "utf8"));
+    const parsed = JSON.parse(await fs.readFile(assetPath, "utf8"));
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
+}
+
+async function fetchAppCpeObservedWorkerNames(adminKey) {
+  const workers = new Map();
+  for (let offset = 0; ; offset += 250) {
+    const response = await fetch(`${APP_CPE_URL}/rest/v1/app_cpe_noray_jornal_observations?select=part_detail,observed_at&order=updated_at.desc&limit=250&offset=${offset}`, {
+      headers: supabaseAdminHeaders(adminKey)
+    });
+    if (!response.ok) throw new Error(`App CPE nombres de turno HTTP ${response.status}`);
+    const page = await response.json();
+    for (const observation of page) {
+      for (const specialty of observation?.part_detail?.specialties || []) {
+        for (const worker of specialty?.workers || []) {
+          const chapa = normalizeTurnoChapa(worker?.code || worker?.chapa);
+          const nombre = cleanName(worker?.name || worker?.nombre);
+          if (!chapa || !nombre) continue;
+          const previous = workers.get(chapa);
+          if (!previous || nameQuality(nombre) > nameQuality(previous.display_name)) {
+            workers.set(chapa, {
+              worker_code: chapa,
+              display_name: nombre,
+              observed_at: observation.observed_at,
+              source: "app_cpe"
+            });
+          }
+        }
+      }
+    }
+    if (page.length < 250) break;
+  }
+  return [...workers.values()];
 }
 
 async function readStored(adminKey) {
@@ -87,11 +124,13 @@ async function fetchAppCpeObservedNames(adminKey) {
 export async function syncBolsaWorkerDirectory() {
   const adminKey = resolveSupabaseAdminKey();
   if (!adminKey) throw new Error("Falta la clave de Supabase para actualizar el directorio de bolsa.");
-  const [portalUsers, appCpeObserved, stored, assetRows] = await Promise.all([
+  const [portalUsers, appCpeObserved, observedTurno, stored, assetRows, turnoAssetRows] = await Promise.all([
     fetchAllPortalUsers(),
     fetchAppCpeObservedNames(adminKey),
+    fetchAppCpeObservedWorkerNames(adminKey),
     readStored(adminKey),
-    readAsset()
+    readAsset(),
+    readAsset(TURNO_ASSET_PATH)
   ]);
   const directory = new Map();
 
@@ -142,9 +181,25 @@ export async function syncBolsaWorkerDirectory() {
     fuente: row.source
   }));
   await fs.writeFile(ASSET_PATH, `${JSON.stringify(asset, null, 2)}\n`, "utf8");
+  const turnoDirectory = new Map();
+  const rememberTurno = (row) => {
+    const chapa = normalizeTurnoChapa(row.worker_code || row.chapa);
+    const nombre = cleanName(row.display_name || row.nombre);
+    if (!chapa || !nombre) return;
+    const candidate = { chapa, nombre, fuente: row.source || row.fuente || "manual" };
+    const previous = turnoDirectory.get(chapa);
+    if (shouldReplaceBolsaName(previous, candidate)) turnoDirectory.set(chapa, candidate);
+  };
+  turnoAssetRows.forEach(rememberTurno);
+  portalUsers.forEach((row) => rememberTurno({ ...row, source: "portalestibavlc" }));
+  observedTurno.forEach(rememberTurno);
+  const turnoAsset = [...turnoDirectory.values()].sort((a, b) => Number(a.chapa) - Number(b.chapa));
+  await fs.writeFile(TURNO_ASSET_PATH, `${JSON.stringify(turnoAsset, null, 2)}\n`, "utf8");
   return {
     total: asset.length,
+    turnoTotal: turnoAsset.length,
     observedInAppCpe: appCpeObserved.filter((row) => normalizeBolsaChapa(row.worker_code)).length,
-    assetPath: ASSET_PATH
+    assetPath: ASSET_PATH,
+    turnoAssetPath: TURNO_ASSET_PATH
   };
 }

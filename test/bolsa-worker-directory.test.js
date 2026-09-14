@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeBolsaChapa, shouldReplaceBolsaName } from "../scripts/bolsa-worker-directory.js";
+import { normalizeBolsaChapa, normalizeTurnoChapa, shouldReplaceBolsaName } from "../scripts/bolsa-worker-directory.js";
 import { formatBolsaChapa } from "../src/generalBoard.js";
 
 test("normaliza una chapa del censo de bolsa con el prefijo 80", () => {
@@ -10,6 +10,12 @@ test("normaliza una chapa del censo de bolsa con el prefijo 80", () => {
   assert.equal(normalizeBolsaChapa("B80584"), "80584");
   assert.equal(normalizeBolsaChapa("C-80584"), "80584");
   assert.equal(normalizeBolsaChapa("72683"), "");
+});
+
+test("separa las chapas de turno de las chapas de bolsa", () => {
+  assert.equal(normalizeTurnoChapa("T72635"), "72635");
+  assert.equal(normalizeTurnoChapa("80123"), "");
+  assert.equal(normalizeTurnoChapa("123"), "");
 });
 
 test("an official part name replaces a shorter manually captured name", () => {

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient.js";
+import turnoWorkers from "../assets/turno-trabajadores.json" with { type: "json" };
 
 const PORTAL_SUPABASE_URL = "https://icszzxkdxatfytpmoviq.supabase.co";
 const PORTAL_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imljc3p6eGtkeGF0Znl0cG1vdmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2Mzk2NjUsImV4cCI6MjA3ODIxNTY2NX0.hmQWNB3sCyBh39gdNgQLjjlIvliwJje-OYf0kkPObVA";
@@ -15,6 +16,22 @@ const CONTRACTING_HOLIDAYS = new Set([
   "12/10/2027", "01/11/2027", "06/12/2027", "08/12/2027", "25/12/2027"
 ]);
 let boardSyncInFlight = null;
+const bundledWorkerNames = new Map(turnoWorkers.map((worker) => [String(worker.chapa), worker.nombre]));
+
+export async function fetchWorkerNames(codes = []) {
+  const requested = [...new Set(codes.map((code) => String(code || "").replace(/\D/g, "")).filter((code) => /^\d{5}$/.test(code)))];
+  const names = new Map(requested.filter((code) => bundledWorkerNames.has(code)).map((code) => [code, bundledWorkerNames.get(code)]));
+  const missing = requested.filter((code) => !names.has(code));
+  for (let index = 0; index < missing.length; index += 100) {
+    const { data, error } = await portalSupabase.from("usuarios").select("chapa,nombre").in("chapa", missing.slice(index, index + 100));
+    if (error) continue;
+    (data || []).forEach((worker) => {
+      const chapa = String(worker.chapa || "").replace(/\D/g, "");
+      if (chapa && worker.nombre) names.set(chapa, worker.nombre);
+    });
+  }
+  return names;
+}
 
 export const JOURNEY_ORDER = ["02-08", "08-14", "14-20", "18-00", "19-01", "20-02"];
 const SPECIALTY_ORDER = ["CAPATAZ", "SOBORDISTA", "CLASIFICADOR", "GRUAS", "CONDUCTOR 1A", "ESPECIALISTA"];

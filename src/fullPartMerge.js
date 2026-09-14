@@ -95,6 +95,23 @@ export function mergeFullPartSpecialties(detailSpecialties = [], bolsaRows = [])
   }));
 }
 
+export function fillMissingFullPartWorkerNames(specialties = [], names = new Map()) {
+  const directory = names instanceof Map
+    ? names
+    : new Map((Array.isArray(names) ? names : []).map((row) => [String(row.chapa || row.code || ""), row.nombre || row.name || ""]));
+  return (Array.isArray(specialties) ? specialties : []).map((specialty) => ({
+    ...specialty,
+    workers: (specialty.workers || []).map((worker) => {
+      const code = formatFullPartWorkerCode(worker?.code || worker?.chapa);
+      return {
+        ...worker,
+        code,
+        name: visibleWorkerName(worker?.name) || directory.get(code) || ""
+      };
+    })
+  }));
+}
+
 export function findPartBolsaWorkers(board, assignment) {
   const targetPart = String(assignment?.parte || "").trim();
   const targetDate = String(assignment?.fecha || "").trim();

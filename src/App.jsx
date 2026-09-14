@@ -112,9 +112,9 @@ import {
 } from "./supabaseClient.js";
 import GeneralBoard from "./GeneralBoard.jsx";
 import AdminMonitor from "./AdminMonitor.jsx";
-import { companyLogo, fetchGeneralBoard, shipImage } from "./generalBoard.js";
+import { companyLogo, fetchGeneralBoard, fetchWorkerNames, shipImage } from "./generalBoard.js";
 import { currentAssignmentsFromSnapshot } from "./currentAssignments.js";
-import { findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialties } from "./fullPartMerge.js";
+import { fillMissingFullPartWorkerNames, findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialties } from "./fullPartMerge.js";
 import { hashForTab, tabFromHash } from "./navigation.js";
 import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
@@ -914,11 +914,15 @@ function CurrentAssignments({ snapshot, currentTime, onLoadPortal }) {
     try {
       const board = await fetchGeneralBoard();
       const bolsaWorkers = findPartBolsaWorkers(board, item);
+      const mergedSpecialties = mergeFullPartSpecialties(item.detail?.specialties || [], bolsaWorkers);
+      const workerNames = await fetchWorkerNames(mergedSpecialties.flatMap((specialty) => (
+        specialty.workers || []
+      )).map((worker) => worker.code || worker.chapa));
       enriched = {
         ...item,
         detail: {
           ...(item.detail || {}),
-          specialties: mergeFullPartSpecialties(item.detail?.specialties || [], bolsaWorkers),
+          specialties: fillMissingFullPartWorkerNames(mergedSpecialties, workerNames),
         },
       };
     } catch {

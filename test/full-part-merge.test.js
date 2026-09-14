@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialties } from "../src/fullPartMerge.js";
+import { fillMissingFullPartWorkerNames, findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialties } from "../src/fullPartMerge.js";
 
 test("App CPE sustituye los ocho ceros del parte 24721 por la bolsa", () => {
   const fixed = Array.from({ length: 7 }, (_, index) => ({ code: `N72${680 + index}`, name: `Turno ${index + 1}` }));
@@ -42,4 +42,17 @@ test("formatea las chapas cortas de bolsa y conserva las chapas de turno", () =>
   assert.equal(formatFullPartWorkerCode("80 682"), "80 682");
   assert.equal(formatFullPartWorkerCode("80682"), "80682");
   assert.equal(formatFullPartWorkerCode("N72683"), "N72683");
+});
+
+test("completa el nombre de turno de una anticipada sin sustituir nombres publicados", () => {
+  const specialties = [{ name: "TRASTAINERS RTT", workers: [
+    { code: "72635", name: "" },
+    { code: "72614", name: "Nombre oficial del parte" }
+  ] }];
+  const result = fillMissingFullPartWorkerNames(specialties, new Map([
+    ["72635", "Trabajador del directorio"],
+    ["72614", "Nombre antiguo"]
+  ]));
+  assert.equal(result[0].workers[0].name, "Trabajador del directorio");
+  assert.equal(result[0].workers[1].name, "Nombre oficial del parte");
 });
