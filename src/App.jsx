@@ -114,6 +114,7 @@ import { findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialtie
 import { hashForTab, tabFromHash } from "./navigation.js";
 import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
+import { orderPayrollDocuments } from "./payrollDocumentOrder.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const MONTH_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -3233,7 +3234,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
             <p className="portal-secure-empty"><Lock size={18} /><span><strong>Clave de seguridad necesaria</strong><small>Configúrala en Mi portal y actualiza para consultar tus nóminas.</small></span></p>
           ) : (nominas.rows || []).length ? (
             <div className="portal-payroll-document-list">
-              {nominas.rows.map((payroll) => (
+              {orderPayrollDocuments(nominas.rows).map((payroll) => (
                 <button key={payroll.id} type="button" onClick={() => setSelectedPayroll(payroll)}>
                   <ReceiptText size={18} />
                   <span><strong>{payroll.type}</strong><small>Periodo {payroll.period}</small></span>
