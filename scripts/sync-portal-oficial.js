@@ -1024,7 +1024,7 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
   const cardDeadline = Date.now() + 12000;
   while (!clicked && Date.now() < cardDeadline) {
     for (const frame of sourcePage.frames()) {
-      const links = frame.locator("a, button, [role=button], [onclick]").filter({ hasText: /anticipada/i });
+      const links = frame.locator("a, button, [role=button], [onclick], td, span").filter({ hasText: /anticipada/i });
       const count = Math.min(await links.count().catch(() => 0), 20);
       for (let index = 0; index < count; index += 1) {
         const link = links.nth(index);
@@ -1036,7 +1036,7 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
         const hasExpectedDate = dateTokens.length === 0
           || dateTokens.some((token) => normalizedContext.includes(token.replace(/\s+/g, "")));
         if (!hasExpectedDate) continue;
-        clicked = await link.click({ noWaitAfter: true }).then(() => true).catch(async () => (
+        clicked = await link.click({ noWaitAfter: true, force: true }).then(() => true).catch(async () => (
           link.evaluate((node) => { node.click(); return true; }).catch(() => false)
         ));
         if (clicked) break;
