@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import {
   assignmentDetailScore,
+  applyAssignmentDetail,
   isAssignmentDetailComplete,
   parseAssignmentDetailFromTables,
   parseAssignmentDetailFromText,
@@ -1039,10 +1040,12 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
     visible.sort((left, right) => left.length - right.length);
     for (const item of visible) {
       clicked = await item.candidate.evaluate((node) => {
-        const actionable = node.closest("a, button, [role=button], [onclick]")
+        const actionable = (node.matches("a, button, [role=button], [onclick]") ? node : null)
           || node.querySelector?.("a, button, [role=button], [onclick]")
+          || node.closest("a, button, [role=button], [onclick]")
           || node.parentElement?.closest("a, button, [role=button], [onclick], tr")
-          || node;
+          || null;
+        if (!actionable || actionable.tagName === "TR") return false;
         actionable.click();
         return true;
       }).catch(() => false);
@@ -1063,7 +1066,7 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
           [...row.cells].map((cell) => cell.innerText || "")
         ))).catch(() => []);
         const pageText = await frame.locator("body").innerText().catch(() => "");
-        const parsed = parseAssignmentDetailFromTables([rows], pageText);
+        const parsed = bestAssignmentDetail(rows, pageText);
         const score = assignmentDetailScore(parsed);
         if (score > bestScore) {
           best = parsed;
@@ -1075,6 +1078,7 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
     if (best.recognized && Date.now() - lastImprovementAt >= 2500) return best;
     await sourcePage.waitForTimeout(200);
   }
+  if (!best.recognized) throw new Error("La tarjeta anticipada se pulso, pero no abrio el detalle del parte.");
   return best;
 }
 
@@ -2476,7 +2480,7 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
       console.log(`Parte ${item.parte}: no se pudo leer el detalle. ${error instanceof Error ? error.message : "Error desconocido"}`);
       // Keep the previous detail when the legacy portal fails to open a part.
     }
-    if (detail) rows[index] = { ...item, detail };
+    if (detail) rows[index] = applyAssignmentDetail(item, detail);
   }
 
   return { ...result, rows };

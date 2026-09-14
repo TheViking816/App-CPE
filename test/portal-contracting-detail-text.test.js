@@ -1,9 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  applyAssignmentDetail,
   assignmentDetailScore,
   parseAssignmentDetailFromText
 } from "../scripts/portal-assignments.js";
+
+test("sustituye el C/A provisional por el numero real al cargar el detalle", () => {
+  const assignment = { parte: "C/A", fecha: "14/09/2026", especialidad: "TRASTAINERS RTT" };
+  const detail = {
+    recognized: true,
+    parte: "26394",
+    muelle: "PRINCIPE FELIPE",
+    specialties: [{ name: "TRASTAINERS RTT", requested: 10, workers: [] }]
+  };
+
+  assert.deepEqual(applyAssignmentDetail(assignment, detail), {
+    ...assignment,
+    parte: "26394",
+    detail
+  });
+});
 
 test("lee el equipo responsive del parte con chapas y nombres publicados", () => {
   const detail = parseAssignmentDetailFromText(`

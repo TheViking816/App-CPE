@@ -365,3 +365,14 @@ export function isAssignmentDetailComplete(detail = {}) {
     (specialty.workers?.length || 0) + Number(specialty.bolsa || 0) >= Number(specialty.requested || 0)
   ));
 }
+
+export function applyAssignmentDetail(assignment = {}, detail = null) {
+  if (!detail?.recognized) return assignment;
+  const provisionalPart = String(assignment?.parte || "").replace(/[^A-Z0-9]/gi, "").toUpperCase() === "CA";
+  const resolvedPart = String(detail?.parte || "").trim();
+  return {
+    ...assignment,
+    ...(provisionalPart && /^\d+$/.test(resolvedPart) ? { parte: resolvedPart } : {}),
+    detail
+  };
+}
