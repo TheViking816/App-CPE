@@ -1010,7 +1010,15 @@ async function readAssignmentDetailViaContractings(sourcePage, assignment) {
 }
 
 async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
-  await openPortalHash(sourcePage, "Home");
+  await openPortalHash(sourcePage, "User");
+  const homeControl = await findVisibleMatchAcrossFrames(
+    sourcePage,
+    "a, button, [role=button], [onclick], td, span",
+    "Inicio",
+    5000
+  );
+  if (!homeControl) throw new Error("No se encontro el acceso Inicio de la portada.");
+  await homeControl.click({ force: true, noWaitAfter: true });
   await sourcePage.waitForTimeout(1200);
 
   const dateMatch = cleanText(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
