@@ -1794,7 +1794,11 @@ function preferredFirstName(displayName, snapshot) {
   const worker = snapshot?.payload?.descansos?.worker;
   const officialName = String(worker?.name || "").trim().replace(/\s+/g, " ");
   const officialGivenName = String(worker?.givenName || "").trim().replace(/\s+/g, " ");
-  if (officialGivenName && officialName.localeCompare(visibleName, "es", { sensitivity: "base" }) === 0) {
+  const matchesOfficialFullName = officialName.localeCompare(visibleName, "es", { sensitivity: "base" }) === 0;
+  const matchesFirstOfficialGivenName = officialGivenName
+    .split(" ")[0]
+    ?.localeCompare(visibleName, "es", { sensitivity: "base" }) === 0;
+  if (officialGivenName && (matchesOfficialFullName || matchesFirstOfficialGivenName)) {
     return greetingName(officialGivenName);
   }
 

@@ -7,6 +7,7 @@ const syncSource = await readFile(new URL("../scripts/sync-portal-oficial.js", i
 
 test("el saludo usa todos los nombres de pila separados por la coma del portal", () => {
   assert.match(appSource, /worker\?\.givenName/);
+  assert.match(appSource, /matchesFirstOfficialGivenName/);
   assert.match(appSource, /return greetingName\(officialGivenName\)/);
   assert.match(syncSource, /givenName: portalIdentity\.givenName/);
 });
