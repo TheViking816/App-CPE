@@ -49,7 +49,7 @@ function request(pathname, options = {}) {
 function cleanText(value = "") {
   return String(value)
     .replace(/\u00a0/g, " ")
-    .replace(/^\s*(?:bsa|nbs)\s+/i, "")
+    .replace(/^\s*(?:bsa|nbs|dbs)\s+/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -273,7 +273,7 @@ async function mapWithConcurrency(values, concurrency, mapper) {
 }
 
 async function readOpenedNorayPart(page, expectedPart) {
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + 4000;
   let best = { recognized: false, specialties: [] };
   let bestScore = 0;
   let lastImprovementAt = Date.now();
@@ -345,18 +345,20 @@ async function clickPreviousNorayMonth(frame) {
   return true;
 }
 
-async function collectNorayWorkersFromPartModals(page, frame, historyMonths) {
+async function collectNorayWorkersFromPartModals(page, frame, historyMonths, partsNeedingModal) {
   const workers = new Map();
   const scannedParts = new Set();
   let previousSignature = "";
   for (let monthIndex = 0; monthIndex < historyMonths; monthIndex += 1) {
     await page.waitForTimeout(700);
-    const parts = await visibleNorayPartNumbers(frame);
-    const signature = parts.map((item) => item.text).join(",");
+    const visibleParts = await visibleNorayPartNumbers(frame);
+    const parts = visibleParts.filter((part) => partsNeedingModal.has(part.text));
+    const signature = visibleParts.map((item) => item.text).join(",");
     if (!signature || (monthIndex > 0 && signature === previousSignature)) break;
     previousSignature = signature;
-    console.log(`[bolsa-scan:${portalUser}] Jornales mes ${monthIndex + 1}: ${parts.length} parte(s) visibles.`);
+    console.log(`[bolsa-scan:${portalUser}] Jornales mes ${monthIndex + 1}: ${visibleParts.length} parte(s), ${parts.length} requieren abrir el modal.`);
     for (const part of parts) {
+      console.log(`[bolsa-scan:${portalUser}] Abriendo parte ${part.text}...`);
       const controls = frame.locator('a:visible, button:visible, [role="button"]:visible, [onclick]:visible, td:visible, span:visible');
       const candidate = controls.nth(part.index);
       const currentText = cleanText(await candidate.innerText().catch(() => ""));
@@ -378,6 +380,7 @@ async function collectNorayWorkersFromPartModals(page, frame, historyMonths) {
         }
       }
       await closeNorayPartModal(page, frame, part.text);
+      console.log(`[bolsa-scan:${portalUser}] Parte ${part.text} revisado.`);
     }
     if (monthIndex + 1 >= historyMonths || !await clickPreviousNorayMonth(frame)) break;
     await page.waitForTimeout(700);
@@ -415,6 +418,9 @@ async function collectNorayHistory(page, historyMonths) {
       if (![403, 404].includes(error?.status)) throw error;
     }
   });
+  const partsNeedingModal = new Set([...partKeys.values()]
+    .filter((part) => !isAssignmentDetailComplete(details.get(`${part.year}:${part.parte}`)))
+    .map((part) => part.parte));
 
   const observations = [];
   const workers = new Map();
@@ -444,7 +450,12 @@ async function collectNorayHistory(page, historyMonths) {
   }
   let modalPartsScanned = 0;
   try {
-    const modalResult = await collectNorayWorkersFromPartModals(page, auth.frame, historyMonths);
+    const modalResult = partsNeedingModal.size
+      ? await collectNorayWorkersFromPartModals(page, auth.frame, historyMonths, partsNeedingModal)
+      : { workers: [], partsScanned: 0 };
+    if (!partsNeedingModal.size) {
+      console.log(`[bolsa-scan:${portalUser}] Todos los equipos llegaron completos por Jornales; no hace falta abrir modales.`);
+    }
     modalPartsScanned = modalResult.partsScanned;
     for (const worker of modalResult.workers) {
       const previous = workers.get(worker.chapa);
