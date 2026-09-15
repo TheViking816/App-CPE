@@ -2703,6 +2703,58 @@ async function upsertSupabase(snapshot) {
   if (!supabaseServiceRole) return;
   const table = portalSnapshotChannel ? "app_cpe_portal_preview_snapshots" : "app_cpe_portal_snapshots";
   const conflict = portalSnapshotChannel ? "channel,chapa" : "chapa";
+  const shouldReplaceMainSnapshot = !portalSnapshotChannel
+    && snapshot?.payload?.asignaciones?.recognized === true
+    && Array.isArray(snapshot.payload.asignaciones.rows);
+
+  // The production database can still have the legacy preservation trigger,
+  // which concatenates an authoritative assignment reading with the previous
+  // one. Replace the single snapshot row when assignments are complete so the
+  // portal's specialty and worker order is stored verbatim.
+  if (shouldReplaceMainSnapshot) {
+    const baseUrl = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}`;
+    const existingResponse = await fetch(
+      `${baseUrl}?select=id,chapa,source,payload,updated_at,created_at&chapa=eq.${encodeURIComponent(snapshot.chapa)}&limit=1`,
+      { headers: supabaseAdminHeaders(supabaseServiceRole) }
+    );
+    if (!existingResponse.ok) {
+      throw new Error(`Supabase lectura previa HTTP ${existingResponse.status}: ${await existingResponse.text()}`);
+    }
+    const existing = (await existingResponse.json())?.[0];
+    if (existing?.id) {
+      const deleteResponse = await fetch(`${baseUrl}?id=eq.${encodeURIComponent(existing.id)}`, {
+        method: "DELETE",
+        headers: supabaseAdminHeaders(supabaseServiceRole, { Prefer: "return=representation" })
+      });
+      if (!deleteResponse.ok) {
+        throw new Error(`Supabase reemplazo HTTP ${deleteResponse.status}: ${await deleteResponse.text()}`);
+      }
+      const replacement = {
+        ...existing,
+        chapa: snapshot.chapa,
+        source: snapshot.source,
+        payload: snapshot.payload,
+        updated_at: snapshot.updatedAt
+      };
+      const insertResponse = await fetch(baseUrl, {
+        method: "POST",
+        headers: supabaseAdminHeaders(supabaseServiceRole, {
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        }),
+        body: JSON.stringify(replacement)
+      });
+      if (!insertResponse.ok) {
+        await fetch(baseUrl, {
+          method: "POST",
+          headers: supabaseAdminHeaders(supabaseServiceRole, { "Content-Type": "application/json" }),
+          body: JSON.stringify(existing)
+        }).catch(() => {});
+        throw new Error(`Supabase insercion HTTP ${insertResponse.status}: ${await insertResponse.text()}`);
+      }
+      return;
+    }
+  }
   const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?on_conflict=${conflict}`, {
     method: "POST",
     headers: supabaseAdminHeaders(supabaseServiceRole, {
