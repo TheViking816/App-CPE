@@ -16,7 +16,10 @@ export function normalizeBolsaChapa(value) {
 }
 
 function cleanName(value) {
-  const name = String(value || "").replace(/\s+/g, " ").trim();
+  const name = String(value || "")
+    .replace(/^\s*(?:bsa|nbs)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return name.length >= 2 && !INVALID_NAMES.test(name) ? name : "";
 }
 
@@ -46,7 +49,7 @@ export function shouldReplaceBolsaName(previous, candidate) {
 async function fetchAllPortalUsers() {
   const users = [];
   for (let offset = 0; ; offset += 1000) {
-    const response = await fetch(`${PORTAL_URL}/rest/v1/usuarios?select=chapa,nombre&nombre=not.is.null&order=chapa.asc&limit=1000&offset=${offset}`, {
+    const response = await fetch(`${PORTAL_URL}/rest/v1/usuarios?select=chapa,nombre,activo&order=chapa.asc&limit=1000&offset=${offset}`, {
       headers: { apikey: PORTAL_ANON_KEY, authorization: `Bearer ${PORTAL_ANON_KEY}` }
     });
     if (!response.ok) throw new Error(`PortalEstibaVLC usuarios HTTP ${response.status}`);
@@ -55,6 +58,23 @@ async function fetchAllPortalUsers() {
     if (page.length < 1000) break;
   }
   return users;
+}
+
+export function currentBolsaCensusChapas(users = []) {
+  return new Set((Array.isArray(users) ? users : [])
+    .filter((row) => row?.activo !== false)
+    .map((row) => normalizeBolsaChapa(row?.chapa))
+    .filter(Boolean));
+}
+
+async function deleteStaleDirectoryRows(adminKey, chapas) {
+  if (!chapas.length) return;
+  const filter = encodeURIComponent(`in.(${chapas.join(",")})`);
+  const response = await fetch(`${APP_CPE_URL}/rest/v1/app_cpe_bolsa_worker_directory?bolsa_chapa=${filter}`, {
+    method: "DELETE",
+    headers: supabaseAdminHeaders(adminKey, { Prefer: "return=minimal" })
+  });
+  if (!response.ok) throw new Error(`App CPE borrado de chapas antiguas HTTP ${response.status}: ${await response.text()}`);
 }
 
 async function readAsset() {
@@ -93,13 +113,14 @@ export async function syncBolsaWorkerDirectory() {
     readStored(adminKey),
     readAsset()
   ]);
+  const currentCensus = currentBolsaCensusChapas(portalUsers);
   const directory = new Map();
 
   const remember = (row) => {
     const source = row.source || row.fuente || "manual";
     const bolsaChapa = normalizeBolsaChapa(row.bolsa_chapa || row.chapa);
     const displayName = cleanName(row.display_name || row.nombre);
-    if (!bolsaChapa || !displayName) return;
+    if (!bolsaChapa || !currentCensus.has(bolsaChapa) || !displayName) return;
     const previous = directory.get(bolsaChapa);
     if (shouldReplaceBolsaName(previous, row)) {
       directory.set(bolsaChapa, {
@@ -120,6 +141,11 @@ export async function syncBolsaWorkerDirectory() {
     source: "app_cpe",
     first_seen_at: row.observed_at
   }));
+
+  const staleChapas = stored
+    .map((row) => normalizeBolsaChapa(row.bolsa_chapa))
+    .filter((chapa) => chapa && !currentCensus.has(chapa));
+  await deleteStaleDirectoryRows(adminKey, staleChapas);
 
   const now = new Date().toISOString();
   const rows = [...directory.values()].sort((a, b) => Number(a.bolsa_chapa) - Number(b.bolsa_chapa));
@@ -144,7 +170,9 @@ export async function syncBolsaWorkerDirectory() {
   await fs.writeFile(ASSET_PATH, `${JSON.stringify(asset, null, 2)}\n`, "utf8");
   return {
     total: asset.length,
-    observedInAppCpe: appCpeObserved.filter((row) => normalizeBolsaChapa(row.worker_code)).length,
+    censusTotal: currentCensus.size,
+    removedAsStale: staleChapas.length,
+    observedInAppCpe: appCpeObserved.filter((row) => currentCensus.has(normalizeBolsaChapa(row.worker_code))).length,
     assetPath: ASSET_PATH
   };
 }
