@@ -418,7 +418,10 @@ function parseAssignmentDetail(html = "") {
 function bestAssignmentDetail(rows, pageText) {
   const fromTable = parseAssignmentDetailFromTables([rows], pageText);
   const fromText = parseAssignmentDetailFromText(pageText);
-  return assignmentDetailScore(fromText) > assignmentDetailScore(fromTable) ? fromText : fromTable;
+  // The current portal modal exposes the official vertical order in its text.
+  // The legacy table can contain the same workers in presentation/grid order,
+  // so the modal must win ties as well as strictly better readings.
+  return assignmentDetailScore(fromText) >= assignmentDetailScore(fromTable) ? fromText : fromTable;
 }
 
 function parseVacaciones(html = "") {
