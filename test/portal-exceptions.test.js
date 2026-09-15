@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseExceptions } from "../scripts/portal-exceptions.js";
+import { parseExceptions, preserveUsedExceptions } from "../scripts/portal-exceptions.js";
 
 test("lee la bolsa de excepciones y distingue las jornadas utilizadas", () => {
   const html = `
@@ -36,5 +36,37 @@ test("reconoce la sección aunque el trabajador todavía no tenga solicitudes", 
 test("no interpreta como lista vacía el título mostrado mientras carga el iframe", () => {
   const result = parseExceptions("<h1>Bolsa de Excepciones</h1>");
   assert.equal(result.recognized, false);
+  assert.deepEqual(result.rows, []);
+});
+
+test("una lectura parcial no reduce las excepciones utilizadas del mismo año", () => {
+  const usedRow = { chapa: "72683", date: "2026-08-17", shift: "DE 14 A 20 H.", requestedAt: "2026-08-05", status: "Aceptada", used: true };
+  const result = preserveUsedExceptions(
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 1, remaining: 14, rows: [usedRow] },
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [{ ...usedRow, used: false }] }
+  );
+  assert.equal(result.usedTotal, 1);
+  assert.equal(result.remaining, 14);
+  assert.equal(result.rows[0].used, true);
+});
+
+test("una lectura parcial conserva una excepción utilizada que omite la tabla", () => {
+  const usedRow = { chapa: "72683", date: "2026-08-17", shift: "DE 14 A 20 H.", requestedAt: "2026-08-05", status: "Aceptada", used: true };
+  const result = preserveUsedExceptions(
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 1, remaining: 14, rows: [usedRow] },
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [] }
+  );
+  assert.equal(result.usedTotal, 1);
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.rows[0].used, true);
+});
+
+test("las excepciones utilizadas sí se reinician al cambiar de año", () => {
+  const result = preserveUsedExceptions(
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 1, remaining: 14, rows: [{ chapa: "72683", used: true }] },
+    { recognized: true, year: 2027, maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [] }
+  );
+  assert.equal(result.usedTotal, 0);
+  assert.equal(result.remaining, 15);
   assert.deepEqual(result.rows, []);
 });

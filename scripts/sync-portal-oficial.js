@@ -14,7 +14,7 @@ import {
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 import { buildPortalNotifications } from "./portal-notifications.js";
-import { parseExceptions } from "./portal-exceptions.js";
+import { parseExceptions, preserveUsedExceptions } from "./portal-exceptions.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
 import { assignmentsFromCurrentJournals } from "./portal-current-assignments.js";
@@ -3096,13 +3096,17 @@ async function main() {
       };
     }
     await publishProgress("descansos", descansos, "Descansos cargados");
-    const excepciones = await readOptionalSection(
+    const excepcionesLeidas = await readOptionalSection(
       "bolsa de excepciones",
       () => collectExceptions(page),
       existingSnapshot?.payload?.excepciones,
       { recognized: false, year: new Date().getFullYear(), maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [], rules: [] },
       hasExceptionData,
       { allowCollectionShrink: true }
+    );
+    const excepciones = preserveUsedExceptions(
+      existingSnapshot?.payload?.excepciones,
+      excepcionesLeidas
     );
     await publishProgress("excepciones", excepciones, "Excepciones cargadas");
     const vacaciones = await readOptionalSection(

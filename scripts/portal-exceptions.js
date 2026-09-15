@@ -44,6 +44,41 @@ export const EXCEPTION_RULES = [
   "Se deben solicitar, modificar o eliminar con al menos dos días laborables de antelación desde que se publique la contratación."
 ];
 
+function exceptionRowKey(row = {}) {
+  return [row.chapa, row.date, row.shift, row.requestedAt].map((value) => cleanText(value)).join("|");
+}
+
+export function preserveUsedExceptions(existing, incoming) {
+  if (!incoming) return existing;
+  if (!existing || !incoming.recognized) return incoming;
+
+  const existingYear = Number(existing.year) || 0;
+  const incomingYear = Number(incoming.year) || 0;
+  if (existingYear && incomingYear && existingYear !== incomingYear) return incoming;
+
+  const previousUsed = new Map(
+    (Array.isArray(existing.rows) ? existing.rows : [])
+      .filter((row) => row?.used)
+      .map((row) => [exceptionRowKey(row), row])
+  );
+  const rows = (Array.isArray(incoming.rows) ? incoming.rows : []).map((row) => {
+    const key = exceptionRowKey(row);
+    const saved = previousUsed.get(key);
+    if (!saved) return row;
+    previousUsed.delete(key);
+    return { ...row, used: true };
+  });
+  rows.push(...previousUsed.values());
+
+  const maxAnnual = Math.max(1, Number(incoming.maxAnnual) || Number(existing.maxAnnual) || 15);
+  const usedTotal = Math.max(
+    Number(existing.usedTotal) || 0,
+    Number(incoming.usedTotal) || 0,
+    rows.filter((row) => row?.used).length
+  );
+  return { ...incoming, rows, usedTotal, remaining: Math.max(0, maxAnnual - usedTotal) };
+}
+
 export function parseExceptions(html = "") {
   const source = String(html || "");
   const pageText = cleanText(source);
