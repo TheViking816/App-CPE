@@ -3,8 +3,7 @@ import { chromium } from "playwright";
 import {
   assignmentDetailScore,
   isAssignmentDetailComplete,
-  parseAssignmentDetailFromTables,
-  parseAssignmentsFromTables
+  parseAssignmentDetailFromText
 } from "./portal-assignments.js";
 import {
   mergeNorayJornales,
@@ -17,7 +16,6 @@ import {
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 
 const PORTAL_ROOT = "https://portal.cpevalencia.com/#User";
-const MOBILE_USER_AGENT = "Mozilla/5.0 (Linux; Android 15; 24040RN64Y) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36";
 const supabaseUrl = String(process.env.CPE_SUPABASE_URL || "https://wvwdiywtlbffumshbboa.supabase.co").replace(/\/$/, "");
 const serviceRole = resolveSupabaseAdminKey();
 const jobId = String(process.env.CPE_BOLSA_SCAN_JOB_ID || "").trim();
@@ -72,35 +70,6 @@ function validBolsaWorker(worker) {
   if (!/^80\d{3}$/.test(code) || name.length < 2) return null;
   if (/^(?:CERO|PERSONAL DE BOLSA|SIN NOMBRE(?: PUBLICADO)?|CARGANDO)$/i.test(name)) return null;
   return { chapa: code, nombre: name };
-}
-
-function extractBolsaWorkersFromText(pageText = "") {
-  const found = new Map();
-  for (const rawLine of String(pageText).split(/\r?\n/)) {
-    const line = cleanText(rawLine);
-    const match = line.match(/^(80\d{3})\s+(.+)$/);
-    if (!match) continue;
-    const worker = validBolsaWorker({ code: match[1], name: match[2] });
-    if (worker) found.set(worker.chapa, worker);
-  }
-  return [...found.values()];
-}
-
-async function extractTables(page) {
-  const tables = [];
-  const texts = [];
-  for (const frame of page.frames()) {
-    texts.push(await frame.locator("body").innerText().catch(() => ""));
-    const frameTables = await frame.locator("table").evaluateAll((nodes) => nodes.map((table) => (
-      [...table.querySelectorAll("tr")].map((row) => (
-        [...row.querySelectorAll(":scope > th, :scope > td")]
-          .map((cell) => String(cell.textContent || "").replace(/\s+/g, " ").trim())
-          .filter(Boolean)
-      )).filter((row) => row.length)
-    ))).catch(() => []);
-    tables.push(...frameTables);
-  }
-  return { tables, pageText: texts.join("\n") };
 }
 
 async function portalState(page) {
@@ -303,6 +272,119 @@ async function mapWithConcurrency(values, concurrency, mapper) {
   return result;
 }
 
+async function readOpenedNorayPart(page, expectedPart) {
+  const deadline = Date.now() + 15000;
+  let best = { recognized: false, specialties: [] };
+  let bestScore = 0;
+  let lastImprovementAt = Date.now();
+  while (Date.now() < deadline) {
+    const texts = await Promise.all(page.frames().map((frame) => frame.locator("body").innerText().catch(() => "")));
+    const parsed = parseAssignmentDetailFromText(texts.join("\n"));
+    const score = assignmentDetailScore(parsed);
+    if (String(parsed.parte || "") === String(expectedPart) && score > bestScore) {
+      best = parsed;
+      bestScore = score;
+      lastImprovementAt = Date.now();
+    }
+    if (isAssignmentDetailComplete(best) && Date.now() - lastImprovementAt >= 600) return best;
+    await page.waitForTimeout(200);
+  }
+  return best;
+}
+
+async function closeNorayPartModal(page, frame, part) {
+  await page.keyboard.press("Escape").catch(() => {});
+  const closeSelectors = [
+    '[aria-label*="cerrar" i]:visible',
+    '[title*="cerrar" i]:visible',
+    'button:has(svg[class*="x" i]):visible',
+    '[role="dialog"] button:visible'
+  ];
+  let clicked = false;
+  for (const scope of [frame, page]) {
+    for (const selector of closeSelectors) {
+      const buttons = scope.locator(selector);
+      const count = Math.min(await buttons.count().catch(() => 0), 10);
+      for (let index = count - 1; index >= 0; index -= 1) {
+        const button = buttons.nth(index);
+        if (!await button.isVisible().catch(() => false)) continue;
+        await button.click({ force: true, timeout: 2000 }).catch(() => {});
+        clicked = true;
+        break;
+      }
+      if (clicked) break;
+    }
+    if (clicked) break;
+  }
+  await frame.getByText(new RegExp(`^Parte\\s+${part}$`, "i")).waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
+}
+
+async function visibleNorayPartNumbers(frame) {
+  const controls = frame.locator('a:visible, button:visible, [role="button"]:visible, [onclick]:visible, td:visible, span:visible');
+  const values = await controls.evaluateAll((nodes) => nodes.map((node, index) => ({
+    index,
+    text: String(node.textContent || "").replace(/\s+/g, " ").trim()
+  })).filter((item) => /^\d{5,6}$/.test(item.text))).catch(() => []);
+  return [...new Map(values.map((item) => [item.text, item])).values()];
+}
+
+async function clickPreviousNorayMonth(frame) {
+  const buttons = frame.locator('button:visible, [role="button"]:visible');
+  const metadata = await buttons.evaluateAll((nodes) => nodes.map((node, index) => ({
+    index,
+    label: [
+      node.textContent,
+      node.getAttribute("aria-label"),
+      node.getAttribute("title"),
+      node.innerHTML
+    ].filter(Boolean).join(" ")
+  }))).catch(() => []);
+  const previous = metadata.find((item) => /(?:mes\s+anterior|previous|prev|chevron-left|arrow-left)/i.test(item.label));
+  if (!previous) return false;
+  await buttons.nth(previous.index).click({ force: true, timeout: 5000 });
+  return true;
+}
+
+async function collectNorayWorkersFromPartModals(page, frame, historyMonths) {
+  const workers = new Map();
+  const scannedParts = new Set();
+  let previousSignature = "";
+  for (let monthIndex = 0; monthIndex < historyMonths; monthIndex += 1) {
+    await page.waitForTimeout(700);
+    const parts = await visibleNorayPartNumbers(frame);
+    const signature = parts.map((item) => item.text).join(",");
+    if (!signature || (monthIndex > 0 && signature === previousSignature)) break;
+    previousSignature = signature;
+    console.log(`[bolsa-scan:${portalUser}] Jornales mes ${monthIndex + 1}: ${parts.length} parte(s) visibles.`);
+    for (const part of parts) {
+      const controls = frame.locator('a:visible, button:visible, [role="button"]:visible, [onclick]:visible, td:visible, span:visible');
+      const candidate = controls.nth(part.index);
+      const currentText = cleanText(await candidate.innerText().catch(() => ""));
+      if (currentText !== part.text) continue;
+      const clicked = await candidate.click({ force: true, noWaitAfter: true, timeout: 5000 })
+        .then(() => true)
+        .catch(() => candidate.evaluate((node) => { node.click(); return true; }).catch(() => false));
+      if (!clicked) continue;
+      const detail = await readOpenedNorayPart(page, part.text);
+      if (detail.recognized && String(detail.parte || "") === part.text) {
+        scannedParts.add(part.text);
+        for (const specialty of detail.specialties || []) {
+          for (const candidateWorker of specialty.workers || []) {
+            const worker = validBolsaWorker(candidateWorker);
+            if (!worker) continue;
+            const previous = workers.get(worker.chapa);
+            if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
+          }
+        }
+      }
+      await closeNorayPartModal(page, frame, part.text);
+    }
+    if (monthIndex + 1 >= historyMonths || !await clickPreviousNorayMonth(frame)) break;
+    await page.waitForTimeout(700);
+  }
+  return { workers: [...workers.values()], partsScanned: scannedParts.size };
+}
+
 async function collectNorayHistory(page, historyMonths) {
   const auth = await waitForNorayJornales(page);
   const premiumsVerified = await verifyNorayPremiumAccess(auth.frame, auth.localToken);
@@ -360,114 +442,24 @@ async function collectNorayHistory(page, historyMonths) {
       }
     }
   }
+  let modalPartsScanned = 0;
+  try {
+    const modalResult = await collectNorayWorkersFromPartModals(page, auth.frame, historyMonths);
+    modalPartsScanned = modalResult.partsScanned;
+    for (const worker of modalResult.workers) {
+      const previous = workers.get(worker.chapa);
+      if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
+    }
+  } catch (error) {
+    console.warn(`[bolsa-scan:${portalUser}] No se pudieron recorrer los modales de Jornales: ${error instanceof Error ? error.message : String(error)}`);
+  }
   return {
     observations,
     workers: [...workers.values()],
-    partsScanned: details.size,
+    partsScanned: Math.max(details.size, modalPartsScanned),
     premiumsFound: observations.filter((row) => row.premium_amount !== null).length,
     premiumsVerified
   };
-}
-
-async function openContractings(page) {
-  await page.goto("https://portal.cpevalencia.com/#User,ViewContractings,,1", {
-    waitUntil: "domcontentloaded",
-    timeout: 45000
-  });
-  await page.waitForTimeout(1500);
-
-  const initial = await extractTables(page);
-  if (parseAssignmentsFromTables(initial.tables, initial.pageText).rows.length) return;
-  for (const frame of page.frames()) {
-    const card = frame.getByText(/Jornadas contratadas/i).first();
-    if (await card.isVisible().catch(() => false)) {
-      await card.click({ timeout: 10000 });
-      await page.waitForTimeout(1200);
-      return;
-    }
-  }
-}
-
-async function currentAssignmentParts(page) {
-  const { tables, pageText } = await extractTables(page);
-  const parsed = parseAssignmentsFromTables(tables, pageText);
-  const detailSnapshot = parseAssignmentDetailFromTables(tables, pageText);
-  const workersSnapshot = extractBolsaWorkersFromText(pageText);
-  const parts = new Map();
-  for (const row of parsed.rows || []) {
-    if (/^\d+$/.test(String(row.parte || ""))) parts.set(String(row.parte), row);
-  }
-  for (const frame of page.frames()) {
-    const hrefs = await frame.locator('a[href*="parte=" i]').evaluateAll((links) => links.map((link) => link.getAttribute("href") || link.href)).catch(() => []);
-    for (const href of hrefs) {
-      const parte = String(href).match(/[?&]parte=(\d+)/i)?.[1];
-      if (/^\d+$/.test(parte || "")) {
-        parts.set(parte, {
-          ...(parts.get(parte) || {}),
-          parte,
-          detailUrl: href,
-          detailSnapshot: detailSnapshot.recognized ? detailSnapshot : null,
-          workersSnapshot
-        });
-      }
-    }
-  }
-  return [...parts.values()];
-}
-
-async function findNextControl(page) {
-  for (const frame of page.frames()) {
-    const mobileRight = frame.locator('img[src*="mobile/right.gif" i]').first();
-    if (await mobileRight.isVisible().catch(() => false)) {
-      const parentButton = mobileRight.locator("xpath=ancestor::button[1]");
-      if (await parentButton.count()) return parentButton;
-    }
-    const candidates = frame.locator('button:visible, input[type="button"]:visible, input[type="image"]:visible, a:visible');
-    const metadata = await candidates.evaluateAll((nodes) => nodes.map((node) => ({
-      label: [node.textContent, node.getAttribute("value"), node.getAttribute("title"), node.getAttribute("alt"), node.getAttribute("aria-label"), node.getAttribute("src")].filter(Boolean).join(" "),
-      disabled: Boolean(node.disabled) || node.getAttribute("aria-disabled") === "true"
-    }))).catch(() => []);
-    const index = metadata.findIndex((item) => !item.disabled && /(?:siguiente|next|derecha|right|adelante|(?:^|\s)>\s*$)/i.test(item.label));
-    if (index >= 0) return candidates.nth(index);
-  }
-  return null;
-}
-
-async function listAllParts(page) {
-  await openContractings(page);
-  const parts = new Map();
-  let previousSignature = "";
-  for (let pageIndex = 0; pageIndex < 20; pageIndex += 1) {
-    await page.waitForTimeout(600);
-    const current = await currentAssignmentParts(page);
-    current.forEach((item) => parts.set(String(item.parte), item));
-    const signature = current.map((item) => item.parte).sort().join(",");
-    const next = await findNextControl(page);
-    if (!next || !signature || signature === previousSignature) break;
-    previousSignature = signature;
-    await next.click({ timeout: 8000 }).catch(() => {});
-  }
-  return [...parts.values()];
-}
-
-async function readPart(page, assignment) {
-  if (assignment.workersSnapshot) {
-    return { recognized: true, specialties: [{ name: "BOLSA", workers: assignment.workersSnapshot.map((worker) => ({ code: worker.chapa, name: worker.nombre })) }] };
-  }
-  if (assignment.detailSnapshot?.recognized) return assignment.detailSnapshot;
-  const year = String(assignment.fecha || "").match(/\b(20\d{2})\b/)?.[1] || String(new Date().getFullYear());
-  const url = assignment.detailUrl || `https://portal.cpevalencia.com/Noray/ParteA.asp?anyo=${year}&parte=${encodeURIComponent(assignment.parte)}`;
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-  const deadline = Date.now() + 18000;
-  let best = { recognized: false, specialties: [] };
-  while (Date.now() < deadline) {
-    const { tables, pageText } = await extractTables(page);
-    const parsed = parseAssignmentDetailFromTables(tables, pageText);
-    if (assignmentDetailScore(parsed) > assignmentDetailScore(best)) best = parsed;
-    if (isAssignmentDetailComplete(best)) break;
-    await page.waitForTimeout(300);
-  }
-  return best;
 }
 
 function isBetterName(current, candidate) {
@@ -595,7 +587,6 @@ async function main() {
     await context.addInitScript(() => Object.defineProperty(navigator, "webdriver", { get: () => undefined }));
   }
   const page = context.pages().find((candidate) => candidate.url().startsWith("https://portal.cpevalencia.com")) || await context.newPage();
-  let partPage = null;
   try {
     await login(page);
     const historyMonths = await resolveNorayHistoryMonths();
@@ -611,29 +602,10 @@ async function main() {
       noray.warning = error instanceof Error ? error.message : String(error);
       console.warn(`[bolsa-scan:${portalUser}] Jornales nuevo no disponible: ${noray.warning}`);
     }
-    const parts = await listAllParts(page);
-    partPage = await context.newPage();
-    await partPage.setViewportSize({ width: 412, height: 915 });
-    await partPage.setExtraHTTPHeaders({
-      "User-Agent": MOBILE_USER_AGENT,
-      "Sec-CH-UA-Mobile": "?1",
-      "Sec-CH-UA-Platform": '"Android"'
-    });
     const found = new Map(noray.workers.map((worker) => [worker.chapa, worker]));
-    for (const assignment of parts) {
-      const detail = await readPart(partPage, assignment);
-      for (const specialty of detail.specialties || []) {
-        for (const candidate of specialty.workers || []) {
-          const worker = validBolsaWorker(candidate);
-          if (!worker) continue;
-          const previous = found.get(worker.chapa);
-          if (!previous || worker.nombre.length > previous.nombre.length) found.set(worker.chapa, worker);
-        }
-      }
-    }
     const workers = [...found.values()].sort((a, b) => a.chapa.localeCompare(b.chapa));
     const saved = await saveWorkers(workers);
-    const totalParts = parts.length + noray.partsScanned;
+    const totalParts = noray.partsScanned;
     const premiumMessage = noray.premiumsVerified
       ? `${noray.premiumsFound} primas oficiales observadas`
       : "primas omitidas porque la clave de seguridad no se valido";
@@ -657,7 +629,6 @@ async function main() {
     await finish(false, message).catch(() => {});
     throw error;
   } finally {
-    await partPage?.close().catch(() => {});
     if (!useGatewayContext) await context.close();
   }
 }
