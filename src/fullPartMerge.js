@@ -51,27 +51,21 @@ function cleanWorker(worker) {
   };
 }
 
-function specialtySignature(specialty = {}) {
-  const workers = (Array.isArray(specialty.workers) ? specialty.workers : [])
-    .map((worker) => `${workerIdentity(worker?.code || worker?.chapa)}:${normalizeText(worker?.name)}`)
-    .join("|");
-  return [
-    positionIdentity(specialty.name).key,
-    Math.max(0, Number(specialty.requested || 0)),
-    Math.max(0, Number(specialty.bolsa || 0)),
-    Math.max(0, Number(specialty.unnamed || 0)),
-    workers,
-  ].join("::");
-}
+const OFFICIAL_SPECIALTY_ORDER = [
+  "CAPATAZ", "SOBORDISTA", "CLASIFICADOR", "GRUAS",
+  "TRASTAINERS RTT", "CONTAINER", "ESPECIALISTA", "CONDUCTOR_1A",
+];
 
 function canonicalDetailSpecialties(detailSpecialties = []) {
-  const seen = new Set();
-  const unique = (Array.isArray(detailSpecialties) ? detailSpecialties : []).filter((specialty) => {
-    const signature = specialtySignature(specialty);
-    if (seen.has(signature)) return false;
-    seen.add(signature);
-    return true;
+  const grouped = new Map();
+  (Array.isArray(detailSpecialties) ? detailSpecialties : []).forEach((specialty, sourceIndex) => {
+    const identity = positionIdentity(specialty?.name);
+    const workers = Array.isArray(specialty?.workers) ? specialty.workers : [];
+    const quality = workers.length * 1000 + workers.filter((worker) => normalizeText(worker?.name)).length;
+    const previous = grouped.get(identity.key);
+    if (!previous || quality > previous.quality) grouped.set(identity.key, { specialty, quality, sourceIndex });
   });
+  const unique = [...grouped.values()].map(({ specialty, sourceIndex }) => ({ ...specialty, sourceIndex }));
   const detailedTotal = unique
     .filter((specialty) => normalizeText(specialty?.name) !== "TRABAJADORES")
     .reduce((total, specialty) => total + Math.max(0, Number(specialty?.requested || 0)), 0);
@@ -81,7 +75,13 @@ function canonicalDetailSpecialties(detailSpecialties = []) {
     const workers = Array.isArray(specialty?.workers) ? specialty.workers : [];
     const requested = Math.max(0, Number(specialty?.requested || 0));
     return workers.length > 0 || detailedTotal === 0 || requested !== detailedTotal;
-  });
+  }).sort((left, right) => {
+    const leftIndex = OFFICIAL_SPECIALTY_ORDER.indexOf(positionIdentity(left.name).key);
+    const rightIndex = OFFICIAL_SPECIALTY_ORDER.indexOf(positionIdentity(right.name).key);
+    const leftRank = leftIndex < 0 ? OFFICIAL_SPECIALTY_ORDER.length : leftIndex;
+    const rightRank = rightIndex < 0 ? OFFICIAL_SPECIALTY_ORDER.length : rightIndex;
+    return leftRank - rightRank || left.sourceIndex - right.sourceIndex;
+  }).map(({ sourceIndex: _sourceIndex, ...specialty }) => specialty);
 }
 
 export function mergeFullPartSpecialties(detailSpecialties = [], bolsaRows = []) {
@@ -110,9 +110,9 @@ export function mergeFullPartSpecialties(detailSpecialties = [], bolsaRows = [])
     const workers = (Array.isArray(specialty?.workers) ? specialty.workers : []).map(cleanWorker);
     const placeholders = workers.filter(isZeroPlaceholder).length;
     const explicitBolsa = Math.max(0, Number(specialty?.bolsa || 0));
-    group.requested += Math.max(0, Number(specialty?.requested || 0));
-    group.bolsa += Math.max(placeholders, explicitBolsa);
-    group.unnamed += Math.max(0, Number(specialty?.unnamed || 0));
+    group.requested = Math.max(group.requested, Math.max(0, Number(specialty?.requested || 0)));
+    group.bolsa = Math.max(group.bolsa, placeholders, explicitBolsa);
+    group.unnamed = Math.max(group.unnamed, Math.max(0, Number(specialty?.unnamed || 0)));
     workers.filter((worker) => !isZeroPlaceholder(worker)).forEach((worker) => addWorker(group, worker));
   });
 

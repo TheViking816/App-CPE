@@ -84,3 +84,30 @@ test("elimina el total general y los bloques repetidos sin alterar el orden ofic
   assert.deepEqual(result.map((specialty) => specialty.name), ["GRUAS", "CONDUCTOR 1a"]);
   assert.deepEqual(result[0].workers.map((worker) => worker.code), ["71428", "71766", "71192", "71445", "71948"]);
 });
+
+test("usa el orden oficial de especialidades y nunca suma dos lecturas del mismo bloque", () => {
+  const specialty = (name, requested, codes) => ({
+    name,
+    requested,
+    workers: codes.map((code) => ({ code, name: `Trabajador ${code}` })),
+    bolsa: 0,
+    unnamed: 0,
+  });
+  const result = mergeFullPartSpecialties([
+    specialty("CONDUCTOR 1a", 2, ["72679", "72744"]),
+    specialty("GRUAS", 2, ["71445", "71948"]),
+    specialty("SOBORDISTA", 2, ["24011", "24016"]),
+    specialty("CAPATAZ", 2, ["24227", "24229"]),
+    specialty("GRUAS", 2, ["71948", "71445"]),
+    specialty("CLASIFICADOR", 1, ["63186"]),
+  ], []);
+
+  assert.deepEqual(result.map(({ name, requested }) => ({ name, requested })), [
+    { name: "CAPATAZ", requested: 2 },
+    { name: "SOBORDISTA", requested: 2 },
+    { name: "CLASIFICADOR", requested: 1 },
+    { name: "GRUAS", requested: 2 },
+    { name: "CONDUCTOR 1a", requested: 2 },
+  ]);
+  assert.deepEqual(result[3].workers.map((worker) => worker.code), ["71445", "71948"]);
+});

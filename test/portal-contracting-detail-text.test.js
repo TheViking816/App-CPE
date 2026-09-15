@@ -58,7 +58,7 @@ test("lee el equipo responsive del parte con chapas y nombres publicados", () =>
   assert.deepEqual(detail.specialties.map(({ name, requested }) => ({ name, requested })), [
     { name: "Capataz", requested: 1 },
     { name: "Especialista", requested: 6 },
-    { name: "Conductor 1a", requested: 2 }
+    { name: "CONDUCTOR 1a", requested: 2 }
   ]);
   assert.deepEqual(detail.specialties[1].workers, [
     { code: "80774", name: "Miguel" },
@@ -74,6 +74,26 @@ test("espera una version con mas nombres aunque tenga las mismas chapas", () => 
   const early = parseAssignmentDetailFromText(`EQUIPO DEL PARTE\nEspecialista\n2\n80774\n80424`);
   const settled = parseAssignmentDetailFromText(`EQUIPO DEL PARTE\nEspecialista\n2\n80774 MIGUEL MARTINEZ\n80424 ANA PEREZ`);
   assert.ok(assignmentDetailScore(settled) > assignmentDetailScore(early));
+});
+
+test("conserva el orden vertical publicado por el portal oficial", () => {
+  const detail = parseAssignmentDetailFromText(`
+    Parte 26593
+    CAPATAZ (2)
+    24227 TUR LUIS TREJO BARRADO
+    24229 TUR ROBERT PAUL MC CARTHY
+    SOBORDISTA (2)
+    24011 TUR FRANCISCO CHICHELL LIS
+    24016 TUR RAMON GIMENO CALABUIG
+    CONDUCTOR 1a (4)
+    72679 TUR MIGUEL FERRER MORELL
+    72744 TUR ALBA MUÑOZO FERRER
+    71812 TUR PEDRO JOSE CERVERA MARTINEZ
+    72700 TUR JULIAN MARTIN CASQUERO
+  `);
+
+  assert.deepEqual(detail.specialties.map(({ name }) => name), ["CAPATAZ", "SOBORDISTA", "CONDUCTOR 1a"]);
+  assert.deepEqual(detail.specialties[2].workers.map(({ code }) => code), ["72679", "72744", "71812", "72700"]);
 });
 
 test("lee el modal nuevo del parte y separa su especialidad principal y los refuerzos", () => {

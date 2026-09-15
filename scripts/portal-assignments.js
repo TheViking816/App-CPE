@@ -1,3 +1,5 @@
+import { mergeFullPartSpecialties } from "../src/fullPartMerge.js";
+
 const LABELS = [
   ["parte", /^parte:?$/i],
   ["fecha", /^fecha:?$/i],
@@ -198,7 +200,7 @@ export function parseAssignmentDetailFromTables(tables = [], pageText = "") {
 
   const recognized = Boolean(detail.parte && specialties.length)
     || /centro\s+portuario\s+de\s+empleo/i.test(pageText) && specialties.length > 0;
-  return { recognized, ...detail, specialties };
+  return { recognized, ...detail, specialties: mergeFullPartSpecialties(specialties, []) };
 }
 
 export function parseAssignmentDetailFromText(pageText = "") {
@@ -262,7 +264,7 @@ export function parseAssignmentDetailFromText(pageText = "") {
         specialties.push(current);
         continue;
       }
-      const worker = line.match(/^([A-Z]?\d{5})(?:\s+(?:TUR|BOLSA|BOL))?(?:\s+(.*))?$/i);
+      const worker = line.match(/^([A-Z]?\d{5})(?:\s+(?:TUR|BOLSA|BOL|BSA|NBS))?(?:\s+(.*))?$/i);
       if (worker && worker[1] !== "00000") {
         if (!current) {
           current = {
@@ -305,11 +307,11 @@ export function parseAssignmentDetailFromText(pageText = "") {
 
   const recognized = Boolean(detail.parte && specialties.length)
     || (teamIndex >= 0 || modalIndex >= 0) && specialties.length > 0;
-  return { recognized, ...detail, specialties };
+  return { recognized, ...detail, specialties: mergeFullPartSpecialties(specialties, []) };
 }
 
 export function assignmentDetailScore(detail = {}) {
-  const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
+  const specialties = mergeFullPartSpecialties(detail.specialties || [], []);
   const namedWorkers = specialties.reduce((total, specialty) => (
     total + (specialty.workers || []).filter((worker) => normalizeCell(worker?.name)).length
   ), 0);

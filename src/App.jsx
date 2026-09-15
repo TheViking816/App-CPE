@@ -1163,7 +1163,6 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
                 <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
                 <div
                   className={useCompactCodeGrid ? "" : "is-official-order"}
-                  style={useCompactCodeGrid ? undefined : { "--assignment-worker-rows": Math.ceil(workers.length / 2) }}
                 >
                   {workers.map((worker) => {
                   const isCurrentWorker = normalizeChapa(worker.code) === normalizedCurrentChapa;
