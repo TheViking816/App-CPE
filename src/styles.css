@@ -5547,6 +5547,11 @@ select {
   padding: 5px 11px 9px;
 }
 
+.assignment-detail-workers > article > div.is-official-order {
+  grid-template-rows: repeat(var(--assignment-worker-rows), auto);
+  grid-auto-flow: column;
+}
+
 .assignment-detail-workers p {
   display: flex;
   min-width: 0;
@@ -5592,6 +5597,11 @@ select {
 @media (max-width: 620px) {
   .assignment-detail-workers > article > div {
     grid-template-columns: 1fr;
+  }
+
+  .assignment-detail-workers > article > div.is-official-order {
+    grid-template-rows: none;
+    grid-auto-flow: row;
   }
 
   .assignment-detail-workers p {

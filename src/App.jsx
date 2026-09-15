@@ -1075,7 +1075,8 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
   const logo = companyLogo(detail.empresa || assignment.empresa);
   const shipName = detail.buque || assignment.buque || "";
   const shipPhoto = shipImage(shipName);
-  const specialties = detail.specialties || [];
+  const [shipPhotoAvailable, setShipPhotoAvailable] = useState(Boolean(shipPhoto));
+  const specialties = mergeFullPartSpecialties(detail.specialties || [], []);
   const normalizedCurrentChapa = normalizeChapa(currentChapa);
 
   useEffect(() => {
@@ -1103,6 +1104,10 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
     };
   }, []);
 
+  useEffect(() => {
+    setShipPhotoAvailable(Boolean(shipPhoto));
+  }, [shipPhoto]);
+
   return (
     <div className="assignment-detail-overlay" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
@@ -1119,15 +1124,12 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
           <button type="button" onClick={onClose} title="Cerrar"><X size={21} /></button>
         </header>
 
-        {shipPhoto && (
+        {shipPhoto && shipPhotoAvailable && (
           <figure className="assignment-detail-ship">
             <img
               src={shipPhoto}
               alt={`Buque ${shipName}`}
-              onError={(event) => {
-                event.currentTarget.onerror = null;
-                event.currentTarget.src = "https://portal-estiba-vlc.vercel.app/assets/barcos/barco-generico.jpeg";
-              }}
+              onError={() => setShipPhotoAvailable(false)}
             />
             <figcaption><Ship size={17} /><strong>{shipName}</strong></figcaption>
           </figure>
@@ -1159,7 +1161,10 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
             return (
               <article key={specialty.name} className={useCompactCodeGrid ? "is-code-grid" : ""}>
                 <header><strong>{specialty.name}</strong><span>{specialty.requested}</span></header>
-                <div>
+                <div
+                  className={useCompactCodeGrid ? "" : "is-official-order"}
+                  style={useCompactCodeGrid ? undefined : { "--assignment-worker-rows": Math.ceil(workers.length / 2) }}
+                >
                   {workers.map((worker) => {
                   const isCurrentWorker = normalizeChapa(worker.code) === normalizedCurrentChapa;
                   return (

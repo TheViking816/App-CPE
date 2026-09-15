@@ -51,6 +51,39 @@ function cleanWorker(worker) {
   };
 }
 
+function specialtySignature(specialty = {}) {
+  const workers = (Array.isArray(specialty.workers) ? specialty.workers : [])
+    .map((worker) => `${workerIdentity(worker?.code || worker?.chapa)}:${normalizeText(worker?.name)}`)
+    .join("|");
+  return [
+    positionIdentity(specialty.name).key,
+    Math.max(0, Number(specialty.requested || 0)),
+    Math.max(0, Number(specialty.bolsa || 0)),
+    Math.max(0, Number(specialty.unnamed || 0)),
+    workers,
+  ].join("::");
+}
+
+function canonicalDetailSpecialties(detailSpecialties = []) {
+  const seen = new Set();
+  const unique = (Array.isArray(detailSpecialties) ? detailSpecialties : []).filter((specialty) => {
+    const signature = specialtySignature(specialty);
+    if (seen.has(signature)) return false;
+    seen.add(signature);
+    return true;
+  });
+  const detailedTotal = unique
+    .filter((specialty) => normalizeText(specialty?.name) !== "TRABAJADORES")
+    .reduce((total, specialty) => total + Math.max(0, Number(specialty?.requested || 0)), 0);
+
+  return unique.filter((specialty) => {
+    if (normalizeText(specialty?.name) !== "TRABAJADORES") return true;
+    const workers = Array.isArray(specialty?.workers) ? specialty.workers : [];
+    const requested = Math.max(0, Number(specialty?.requested || 0));
+    return workers.length > 0 || detailedTotal === 0 || requested !== detailedTotal;
+  });
+}
+
 export function mergeFullPartSpecialties(detailSpecialties = [], bolsaRows = []) {
   const groups = new Map();
   const knownWorkers = new Set();
@@ -72,7 +105,7 @@ export function mergeFullPartSpecialties(detailSpecialties = [], bolsaRows = [])
     return true;
   };
 
-  (Array.isArray(detailSpecialties) ? detailSpecialties : []).forEach((specialty) => {
+  canonicalDetailSpecialties(detailSpecialties).forEach((specialty) => {
     const group = ensureGroup(specialty?.name);
     const workers = (Array.isArray(specialty?.workers) ? specialty.workers : []).map(cleanWorker);
     const placeholders = workers.filter(isZeroPlaceholder).length;

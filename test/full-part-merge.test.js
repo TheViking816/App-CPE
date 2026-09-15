@@ -56,3 +56,31 @@ test("completa el nombre de turno de una anticipada sin sustituir nombres public
   assert.equal(result[0].workers[0].name, "Trabajador del directorio");
   assert.equal(result[0].workers[1].name, "Nombre oficial del parte");
 });
+
+test("elimina el total general y los bloques repetidos sin alterar el orden oficial", () => {
+  const gruas = {
+    name: "GRUAS",
+    requested: 5,
+    workers: ["71428", "71766", "71192", "71445", "71948"].map((code) => ({ code, name: `Trabajador ${code}` })),
+    bolsa: 0,
+    unnamed: 0,
+  };
+  const conductores = {
+    name: "CONDUCTOR 1a",
+    requested: 59,
+    workers: Array.from({ length: 59 }, (_, index) => ({ code: `72${String(index).padStart(3, "0")}`, name: `Conductor ${index + 1}` })),
+    bolsa: 0,
+    unnamed: 0,
+  };
+  const result = mergeFullPartSpecialties([
+    { name: "Trabajadores", requested: 64, workers: [], bolsa: 0, unnamed: 64 },
+    gruas,
+    structuredClone(gruas),
+    conductores,
+    structuredClone(conductores),
+  ], []);
+
+  assert.equal(result.reduce((total, specialty) => total + specialty.requested, 0), 64);
+  assert.deepEqual(result.map((specialty) => specialty.name), ["GRUAS", "CONDUCTOR 1a"]);
+  assert.deepEqual(result[0].workers.map((worker) => worker.code), ["71428", "71766", "71192", "71445", "71948"]);
+});
