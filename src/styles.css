@@ -55,17 +55,31 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  max-width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
   background:
     linear-gradient(135deg, rgba(8, 38, 75, 0.08), transparent 32%),
     linear-gradient(315deg, rgba(50, 199, 184, 0.14), transparent 38%),
     #eef5f8;
+}
+
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
 }
 
 :root[data-theme="dark"] body {
@@ -92,9 +106,11 @@ a {
 
 .mobile-app {
   width: min(100%, 520px);
+  max-width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 6% 25%, rgba(8, 38, 75, 0.08), transparent 24%),
     linear-gradient(180deg, #eff6f8 0%, #f7fafc 48%, #eef4f7 100%);
@@ -1032,19 +1048,22 @@ select {
 
 .bottom-nav {
   position: fixed;
-  left: 50%;
+  right: 0;
   bottom: 0;
+  left: 0;
   z-index: 40;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  width: min(100%, 520px);
+  width: 100%;
+  max-width: 520px;
   min-height: calc(68px + env(safe-area-inset-bottom));
+  margin-inline: auto;
   padding-bottom: env(safe-area-inset-bottom);
-  transform: translateX(-50%);
   border-top: 1px solid #e1e7ef;
   background: #fff;
   box-shadow: 0 -10px 24px rgba(7, 31, 63, 0.12);
   isolation: isolate;
+  touch-action: pan-y;
 }
 
 .bottom-nav button {
@@ -6806,9 +6825,12 @@ select {
 }
 
 @media (min-width: 760px) {
-  .mobile-app,
-  .bottom-nav {
+  .mobile-app {
     width: min(100%, 760px);
+  }
+
+  .bottom-nav {
+    max-width: 760px;
   }
 
   .content {
