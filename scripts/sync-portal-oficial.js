@@ -472,6 +472,7 @@ export function parseDescansos(html = "", now = new Date()) {
   };
 
   const monthsByKey = new Map();
+  const restCodePriority = { "": 0, SL: 1, DS: 2, FS: 2, VA: 3 };
   const ensureMonth = (year, month) => {
     const key = `${year}-${String(month).padStart(2, "0")}`;
     if (!monthsByKey.has(key)) {
@@ -498,7 +499,9 @@ export function parseDescansos(html = "", now = new Date()) {
     const code = String(match[4] || "").toUpperCase();
     const monthData = ensureMonth(year, month);
     const dayData = monthData.days[day - 1];
-    if (dayData) dayData.code = code;
+    if (dayData && (restCodePriority[code] || 0) >= (restCodePriority[dayData.code] || 0)) {
+      dayData.code = code;
+    }
   }
 
   const parsedMonths = [...monthsByKey.values()]

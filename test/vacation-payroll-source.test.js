@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   buildVacationPayrollEntries,
   summarizeAnnualPayroll,
   vacationPayrollEntriesForMonth
 } from "../src/payroll.js";
+
+const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
 
 test("contabiliza en el Sueldómetro los periodos de la sección Vacaciones", () => {
   const entries = buildVacationPayrollEntries({
@@ -39,4 +42,9 @@ test("el resumen anual suma el importe y el día VA al mes correspondiente", () 
 
   assert.equal(annual.months[0].vacationDays, 1);
   assert.equal(annual.months[0].total, entries[0].payroll.total);
+});
+
+test("Descansos recibe los VA confirmados aunque conserve un SL anterior", () => {
+  assert.match(appSource, /vacationDates\.has\(dateKey\) \? "VA" : \(item\.code \|\| ""\)/);
+  assert.match(appSource, /<PortalCalendarPreview descansos=\{descansos\} slRows=\{slRows\} vacationEntries=\{vacationPayrollEntries\} \/>/);
 });

@@ -2479,8 +2479,11 @@ function PortalExceptionsPreview({ exceptions }) {
   );
 }
 
-function PortalCalendarPreview({ descansos, slRows = [] }) {
+function PortalCalendarPreview({ descansos, slRows = [], vacationEntries = [] }) {
   const months = useMemo(() => calendarMonths(descansos?.months || []), [descansos?.months]);
+  const vacationDates = useMemo(() => new Set(
+    vacationEntries.map((item) => String(item?.payroll?.date || "")).filter(Boolean)
+  ), [vacationEntries]);
   const slPositionByDate = useMemo(() => {
     const positions = new Map();
     slRows.forEach((item) => {
@@ -2542,9 +2545,9 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
         ))}
         {days.map((item) => {
           const day = item.day;
-          const code = item.code || "";
           const date = new Date(Number(month.year), Number(month.month) - 1, day);
           const dateKey = `${month.year}-${String(month.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const code = vacationDates.has(dateKey) ? "VA" : (item.code || "");
           const slPosition = code.toUpperCase() === "SL" ? slPositionByDate.get(dateKey) : "";
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
@@ -3253,7 +3256,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "rests") && descansos && (
         <div ref={descansosRef} className="portal-scroll-anchor">
-          <PortalCalendarPreview descansos={descansos} slRows={slRows} />
+          <PortalCalendarPreview descansos={descansos} slRows={slRows} vacationEntries={vacationPayrollEntries} />
         </div>
       )}
 

@@ -26,6 +26,18 @@ test("al cambiar de agosto a septiembre publica septiembre y octubre", () => {
   assert.equal(hasCurrentRestMonthWindow(parsed, now), true);
 });
 
+test("VA prevalece sobre un SL duplicado para la misma fecha", () => {
+  const now = new Date("2026-09-16T10:00:00.000Z");
+  const parsed = parseDescansos([
+    restLink(2026, 9, 21, "VA"),
+    restLink(2026, 9, 21, "SL"),
+    restLink(2026, 10, 1, "DS")
+  ].join(""), now);
+
+  const september = parsed.months.find(({ year, month }) => year === 2026 && month === 9);
+  assert.equal(september.days.find(({ day }) => day === 21).code, "VA");
+});
+
 test("no acepta como completa una lectura antigua de agosto y septiembre", () => {
   const now = new Date("2026-09-02T00:30:00.000Z");
   const months = [
