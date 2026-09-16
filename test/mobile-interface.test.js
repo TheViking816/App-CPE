@@ -25,6 +25,15 @@ test("la navegacion movil respeta las zonas seguras y no es translucida", () => 
   assert.doesNotMatch(styles, /\.bottom-nav[\s\S]{0,500}?background: rgba\(255, 255, 255/);
 });
 
+test("la pagina no deriva lateralmente y la barra inferior queda anclada", () => {
+  assert.match(styles, /html[\s\S]*?overflow-x: hidden;/);
+  assert.match(styles, /body[\s\S]*?overflow-x: hidden;/);
+  assert.match(styles, /\.mobile-app[\s\S]*?overflow-x: clip;/);
+  assert.match(styles, /\.bottom-nav[\s\S]*?position: fixed;[\s\S]*?right: 0;[\s\S]*?bottom: 0;[\s\S]*?left: 0;/);
+  assert.match(styles, /\.bottom-nav[\s\S]*?max-width: 520px;[\s\S]*?margin-inline: auto;/);
+  assert.doesNotMatch(styles, /\.bottom-nav[\s\S]{0,500}?translateX/);
+});
+
 test("no muestra un falso aviso de lectura parcial cuando ya hay datos", () => {
   assert.doesNotMatch(appSource, /Lectura parcial del portal/);
   assert.doesNotMatch(appSource, /Algunas consultas no respondieron/);
