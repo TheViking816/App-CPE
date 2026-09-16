@@ -2639,7 +2639,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   }, [currentPayrollMonthLabel, jornales, payload?.jornales, payload?.primas]);
   const descansos = payload?.descansos || null;
   const hasDescansos = Array.isArray(descansos?.months) && descansos.months.length > 0;
-  const slRows = payload?.sl?.rows || [];
+  const allSlRows = payload?.sl?.rows || [];
+  const slRows = payload?.sl?.revision
+    ? allSlRows.filter((row) => row?.revision === payload.sl.revision)
+    : allSlRows;
   const vacaciones = payload?.vacaciones || null;
   const exceptions = payload?.excepciones || null;
   const nominas = payload?.nominas || null;

@@ -15,6 +15,14 @@ test("descansos abre primero la pagina directa y no depende del iframe GWT", () 
   assert.doesNotMatch(section, /openMenu\(page, "Solicitudes", "Solicitar Descansos", \/Prueba/);
 });
 
+test("Consulta SL abre primero MostrarSL directo y conserva el menú como respaldo", () => {
+  const section = source.match(/async function collectSl[\s\S]*?async function collectUserSpecialties/)?.[0] || "";
+  assert.match(section, /\/Noray\/MostrarSL\.asp/);
+  assert.ok(section.indexOf("directPage.goto") < section.indexOf("openMenu(page"));
+  assert.match(section, /openMenu\(page, "Consultas", "Consulta posicion SL", \/MostrarSL/);
+  assert.match(section, /markAuthoritativeSl/);
+});
+
 test("la contratacion anticipada se abre desde la tarjeta de portada", () => {
   assert.match(source, /async function readAssignmentDetailViaHomeCard/);
   assert.match(source, /normalizePortalPart\(item\.parte\) === "CA"/);

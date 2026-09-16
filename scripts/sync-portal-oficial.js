@@ -578,6 +578,20 @@ export function parsePrimas(html = "") {
   };
 }
 
+export function markAuthoritativeSl(value, observedAt = new Date().toISOString()) {
+  if (!value?.recognized || !Array.isArray(value.rows)) return value;
+  const revision = value.rows
+    .map((row) => `${cleanText(row?.fecha)}:${cleanText(row?.posicion)}`)
+    .sort()
+    .join("|") || `empty:${observedAt}`;
+  return {
+    ...value,
+    revision,
+    observedAt,
+    rows: value.rows.map((row) => ({ ...row, revision }))
+  };
+}
+
 const protectedCollectionKeys = ["rows", "months", "history", "rules"];
 
 export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false, rowsAreComplete = null } = {}) {
@@ -1561,8 +1575,33 @@ async function collectDescansos(page) {
 }
 
 async function collectSl(page) {
+  const directUrl = new URL("/Noray/MostrarSL.asp", PORTAL_URL);
+  directUrl.searchParams.set("mode", "GWT");
+  directUrl.searchParams.set("devType", "Desktop");
+  directUrl.searchParams.set("device", "Desktop");
+  directUrl.searchParams.set("browser", "Chrome");
+  directUrl.searchParams.set("os", "Windows");
+  directUrl.searchParams.set("rd", String(Date.now()));
+  const directPage = await page.context().newPage();
+  try {
+    await directPage.goto(directUrl.toString(), { waitUntil: "domcontentloaded", timeout: 30000 });
+    const directResult = await waitForParsedContent(
+      directPage,
+      parseSl,
+      (result) => result.recognized ? (result.rows?.length || 0) + 1 : 0,
+      12000,
+      (result) => result.recognized,
+      500
+    );
+    if (directResult.recognized) return markAuthoritativeSl(directResult);
+  } catch (error) {
+    console.warn(`La ruta directa de SL no respondio; se usara el menu. ${error instanceof Error ? error.message : ""}`);
+  } finally {
+    await directPage.close().catch(() => {});
+  }
+
   await openMenu(page, "Consultas", "Consulta posicion SL", /MostrarSL\.asp/i);
-  const parsed = await waitForParsedContent(
+  const menuResult = await waitForParsedContent(
     page,
     parseSl,
     (result) => result.recognized ? (result.rows?.length || 0) + 1 : 0,
@@ -1570,7 +1609,7 @@ async function collectSl(page) {
     (result) => result.recognized,
     500
   );
-  if (parsed.recognized) return parsed;
+  if (menuResult.recognized) return markAuthoritativeSl(menuResult);
   throw new Error("El portal no devolvio una tabla reconocible de Lista SL.");
 }
 
