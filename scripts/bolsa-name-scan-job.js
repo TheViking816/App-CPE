@@ -390,6 +390,7 @@ async function collectNorayWorkersFromPartModals(page, frame, historyMonths, par
         await closeNorayPartModal(page, frame, part);
         console.log(`[bolsa-scan:${portalUser}] Parte ${part} abierto y revisado.`);
       } else {
+        await closeNorayPartModal(page, frame, part);
         console.warn(`[bolsa-scan:${portalUser}] El numero ${part} estaba visible, pero no abrio el detalle.`);
       }
     }
@@ -474,7 +475,7 @@ async function collectNorayHistory(page, historyMonths) {
   return {
     observations,
     workers: [...workers.values()],
-    partsScanned: Math.max(details.size, modalPartsScanned),
+    partsScanned: modalPartsScanned,
     premiumsFound: observations.filter((row) => row.premium_amount !== null).length,
     premiumsVerified
   };

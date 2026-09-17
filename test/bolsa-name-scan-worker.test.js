@@ -26,6 +26,7 @@ test("el lector pulsa el numero de los dos partes recientes en Jornales y solo c
   assert.match(job, /recentCompletedNorayParts\(monthRows, 2\)/);
   assert.match(job, /getByText\(part, \{ exact: true \}\)/);
   assert.match(job, /openNorayPartFromVisibleNumber/);
+  assert.match(job, /partsScanned: modalPartsScanned/);
   assert.match(job, /\^80\\d\{3\}\$/);
   assert.match(job, /PERSONAL DE BOLSA/);
 });
