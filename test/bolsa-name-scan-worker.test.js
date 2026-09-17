@@ -21,19 +21,16 @@ test("la cola admite cualquier chapa valida de cinco cifras", () => {
   assert.doesNotMatch(chapaConstraintMigration, /\^7\[0-9\]/);
 });
 
-test("el lector pulsa el numero de los dos partes recientes en Jornales y solo conserva chapas 80xxx", () => {
+test("el lector abre dos partes recientes en Jornales, usa reservas inaccesibles y solo conserva chapas 80xxx", () => {
   assert.match(job, /User,ViewNoray,2/);
-  assert.match(job, /recentCompletedNorayParts\(monthRows, 2\)/);
+  assert.match(job, /recentCompletedNorayParts\(monthRows, 6\)/);
+  assert.match(job, /scannedParts\.size >= desiredCount/);
   assert.match(job, /getByText\(part, \{ exact: true \}\)/);
   assert.match(job, /openNorayPartFromVisibleNumber/);
-  assert.match(job, /partsScanned: modalPartsScanned/);
+  assert.match(job, /partsScanned: modalResult\.partsScanned/);
+  assert.match(job, /throw new Error\(`Solo se abrieron/);
   assert.match(job, /\^80\\d\{3\}\$/);
   assert.match(job, /PERSONAL DE BOLSA/);
-});
-
-test("el lector abre la ruta actual de Jornales y Primas", () => {
-  assert.match(job, /User,ViewNoray,2/);
-  assert.doesNotMatch(job, /User,ViewNoray,3/);
 });
 
 test("el nombre oficial del parte sustituye siempre al alias de PortalEstibaVLC", () => {
@@ -42,6 +39,8 @@ test("el nombre oficial del parte sustituye siempre al alias de PortalEstibaVLC"
 });
 
 test("el resumen final imprime nombres nuevos y nombres mejorados", () => {
+  assert.match(worker, /Nombres de bolsa encontrados en esta ejecucion/);
+  assert.match(worker, /foundWorkersThisRun/);
   assert.match(worker, /Chapas y nombres NUEVOS guardados/);
   assert.match(worker, /Nombres existentes MEJORADOS/);
   assert.match(worker, /new_workers,updated_workers/);

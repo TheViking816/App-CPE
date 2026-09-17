@@ -10,8 +10,10 @@ const args = new Set(process.argv.slice(2));
 const queueAll = args.has("--queue-all");
 const once = args.has("--once");
 const batchSize = Math.max(1, Math.min(6, Number(process.env.CPE_BOLSA_SCAN_BATCH_SIZE || 1)));
+const jobTimeoutMs = Math.max(60_000, Number(process.env.CPE_BOLSA_SCAN_JOB_TIMEOUT_MS || 240_000));
 const cdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "http://127.0.0.1:9223").trim();
 const claimedJobIds = [];
+const foundWorkersThisRun = new Map();
 
 function request(pathname, options = {}) {
   return fetch(`${supabaseUrl}${pathname}`, {
@@ -70,9 +72,11 @@ async function claimJobs() {
 
 function runJob(job, clearanceCookies) {
   return new Promise((resolve) => {
+    let output = "";
+    let timedOut = false;
     const child = spawn(process.execPath, ["scripts/bolsa-name-scan-job.js"], {
       cwd: process.cwd(),
-      stdio: "inherit",
+      stdio: ["inherit", "pipe", "pipe"],
       env: {
         ...process.env,
         CPE_BOLSA_SCAN_JOB_ID: job.id,
@@ -84,11 +88,36 @@ function runJob(job, clearanceCookies) {
         CPE_PORTAL_CLEARANCE_COOKIES: JSON.stringify(clearanceCookies)
       }
     });
-    child.once("error", (error) => {
-      console.error(`[bolsa-scan:${job.chapa}] No se pudo iniciar: ${error.message}`);
-      resolve(false);
+    child.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      output += text;
+      process.stdout.write(text);
     });
-    child.once("exit", (code) => resolve(code === 0));
+    child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      console.error(`[bolsa-scan:${job.chapa}] Tiempo agotado; se cierra el proceso aislado para continuar con la cola.`);
+      if (process.platform === "win32" && child.pid) {
+        spawn("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+          stdio: "ignore",
+          windowsHide: true
+        });
+      } else {
+        child.kill("SIGKILL");
+      }
+    }, jobTimeoutMs);
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      console.error(`[bolsa-scan:${job.chapa}] No se pudo iniciar: ${error.message}`);
+      resolve({ ok: false, foundWorkers: [] });
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timeout);
+      const matches = [...output.matchAll(/^SCAN_RESULT (.+)$/gm)];
+      let result = null;
+      try { result = matches.length ? JSON.parse(matches.at(-1)[1]) : null; } catch { result = null; }
+      resolve({ ok: code === 0 && !timedOut, foundWorkers: result?.foundWorkers || [] });
+    });
   });
 }
 
@@ -127,9 +156,12 @@ async function printSummary() {
   const parts = (rows || []).reduce((total, row) => total + Number(row.parts_scanned || 0), 0);
   const completed = (rows || []).filter((row) => row.status === "completed").length;
   const failed = (rows || []).filter((row) => row.status === "failed").length;
+  const foundWorkers = [...foundWorkersThisRun.values()].sort((a, b) => a.chapa.localeCompare(b.chapa));
 
   console.log("\n========== RESULTADO RASTREO BOLSA ==========");
   console.log(`Usuarios completados: ${completed} | Fallidos: ${failed} | Partes recorridos: ${parts}`);
+  console.log(`Nombres de bolsa encontrados en esta ejecucion: ${foundWorkers.length}`);
+  foundWorkers.forEach((worker) => console.log(`  ${worker.chapa}  ${worker.nombre}`));
   console.log(`Chapas y nombres NUEVOS guardados: ${newWorkers.length}`);
   newWorkers.forEach((worker) => console.log(`  ${worker.chapa}  ${worker.nombre}`));
   console.log(`Nombres existentes MEJORADOS: ${updatedWorkers.length}`);
@@ -156,8 +188,11 @@ async function main() {
     claimedJobIds.push(...jobs.map((job) => job.id));
     console.log(`[bolsa-scan] Procesando ${jobs.length} usuario(s).`);
     for (const job of jobs) {
-      const ok = await runJob(job, clearanceCookies);
-      if (!ok) await failUnfinished(job, "El proceso aislado termino antes de guardar el resultado").catch(() => {});
+      const result = await runJob(job, clearanceCookies);
+      for (const worker of result.foundWorkers) {
+        if (worker?.chapa && worker?.nombre) foundWorkersThisRun.set(worker.chapa, worker);
+      }
+      if (!result.ok) await failUnfinished(job, "El proceso aislado termino antes de guardar el resultado").catch(() => {});
     }
     if (once) break;
   } while (true);

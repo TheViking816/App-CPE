@@ -151,14 +151,25 @@ export function previousMonths(count, now = new Date()) {
   return months;
 }
 
-export function recentCompletedNorayParts(periods, limit = 2) {
+export function recentCompletedNorayParts(periods, limit = 2, now = new Date()) {
+  const madridParts = new Intl.DateTimeFormat("en", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+  const currentDate = ["year", "month", "day"]
+    .map((type) => madridParts.find((part) => part.type === type)?.value || "")
+    .join("-");
   const byPart = new Map();
   for (const period of Array.isArray(periods) ? periods : []) {
     for (const row of Array.isArray(period?.rows) ? period.rows : []) {
       const part = positiveInteger(row?.parte);
       const year = positiveInteger(row?.anyo) ?? positiveInteger(period?.year);
       const date = normalizeNorayDate(row?.fecha ?? row?.dia, period?.year, period?.month);
-      if (!part || !year || !date) continue;
+      // La vista incluye jornadas de hoy y futuras cuyos equipos todavía
+      // pueden cambiar. Solo los días anteriores cuentan como parte completo.
+      if (!part || !year || !date || date >= currentDate) continue;
       const key = `${year}:${part}`;
       const candidate = { year, parte: String(part), date, fallback: row };
       const previous = byPart.get(key);

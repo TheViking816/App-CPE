@@ -270,14 +270,15 @@ async function mapWithConcurrency(values, concurrency, mapper) {
   return result;
 }
 
-async function readOpenedNorayPart(page, expectedPart) {
-  const deadline = Date.now() + 4000;
+async function readOpenedNorayPart(page, frame, expectedPart) {
+  const deadline = Date.now() + 8000;
   let best = { recognized: false, specialties: [] };
   let bestScore = 0;
   let lastImprovementAt = Date.now();
   while (Date.now() < deadline) {
-    const texts = await Promise.all(page.frames().map((frame) => frame.locator("body").innerText().catch(() => "")));
-    const parsed = parseAssignmentDetailFromText(texts.join("\n"));
+    const frameText = await frame.locator("body").innerText().catch(() => "");
+    const pageText = await page.locator("body").innerText().catch(() => "");
+    const parsed = parseAssignmentDetailFromText(`${frameText}\n${pageText}`);
     const score = assignmentDetailScore(parsed);
     if (String(parsed.parte || "") === String(expectedPart) && score > bestScore) {
       best = parsed;
@@ -317,30 +318,29 @@ async function closeNorayPartModal(page, frame, part) {
   await frame.getByText(new RegExp(`^Parte\\s+${part}$`, "i")).waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
 }
 
-async function visibleNorayPartNumbers(frame) {
-  const controls = frame.locator('a:visible, button:visible, [role="button"]:visible, [onclick]:visible, td:visible, span:visible');
-  const values = await controls.evaluateAll((nodes) => nodes
-    .map((node) => String(node.textContent || "").replace(/\s+/g, " ").trim())
-    .filter((text) => /^\d{5,6}$/.test(text))).catch(() => []);
-  return [...new Set(values)];
-}
-
 async function openNorayPartFromVisibleNumber(page, frame, part) {
-  const candidates = frame.getByText(part, { exact: true });
-  const count = Math.min(await candidates.count().catch(() => 0), 12);
+  const exactText = frame.getByText(part, { exact: true });
+  const count = Math.min(await exactText.count().catch(() => 0), 20);
   for (let index = 0; index < count; index += 1) {
-    const candidate = candidates.nth(index);
+    const candidate = exactText.nth(index);
     if (!await candidate.isVisible().catch(() => false)) continue;
-    const clicked = await candidate.click({ force: true, noWaitAfter: true, timeout: 5000 })
-      .then(() => true)
-      .catch(() => candidate.evaluate((node) => {
-        const actionable = node.closest('a, button, [role="button"], [onclick]') || node;
-        actionable.click();
-        return true;
-      }).catch(() => false));
-    if (!clicked) continue;
-    const detail = await readOpenedNorayPart(page, part);
-    if (detail.recognized && String(detail.parte || "") === part) return detail;
+    await candidate.scrollIntoViewIfNeeded().catch(() => {});
+    const attempts = [
+      () => candidate.click({ force: true, noWaitAfter: true, timeout: 5000 }),
+      () => candidate.evaluate((node) => {
+        const actionable = node.closest('a, button, [role="button"], [onclick]')
+          || node.parentElement?.closest('a, button, [role="button"], [onclick]')
+          || node;
+        actionable.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+      })
+    ];
+    for (const click of attempts) {
+      const clicked = await click().then(() => true).catch(() => false);
+      if (!clicked) continue;
+      const detail = await readOpenedNorayPart(page, frame, part);
+      if (detail.recognized && String(detail.parte || "") === part) return detail;
+      await closeNorayPartModal(page, frame, part);
+    }
   }
   return null;
 }
@@ -362,23 +362,24 @@ async function clickPreviousNorayMonth(frame) {
   return true;
 }
 
-async function collectNorayWorkersFromPartModals(page, frame, historyMonths, partsNeedingModal) {
+async function collectNorayWorkersFromPartModals(page, frame, historyMonths, targetParts, desiredCount = 2) {
   const workers = new Map();
   const scannedParts = new Set();
-  let previousSignature = "";
+  const attemptedParts = new Set();
+  const periods = previousMonths(historyMonths);
   for (let monthIndex = 0; monthIndex < historyMonths; monthIndex += 1) {
     await page.waitForTimeout(700);
-    const visibleParts = await visibleNorayPartNumbers(frame);
-    const parts = visibleParts.filter((part) => partsNeedingModal.has(part));
-    const signature = visibleParts.join(",");
-    if (!signature || (monthIndex > 0 && signature === previousSignature)) break;
-    previousSignature = signature;
-    console.log(`[bolsa-scan:${portalUser}] Jornales mes ${monthIndex + 1}: ${visibleParts.length} parte(s), ${parts.length} requieren abrir el modal.`);
-    for (const part of parts) {
-      console.log(`[bolsa-scan:${portalUser}] Pulsando el numero de parte ${part}...`);
-      const detail = await openNorayPartFromVisibleNumber(page, frame, part);
+    const period = periods[monthIndex];
+    const periodPrefix = `${period.year}-${String(period.month).padStart(2, "0")}-`;
+    const parts = targetParts.filter((part) => part.date.startsWith(periodPrefix) && !scannedParts.has(part.parte));
+    console.log(`[bolsa-scan:${portalUser}] Jornales ${period.month}/${period.year}: ${parts.length} parte(s) objetivo.`);
+    for (const target of parts) {
+      if (scannedParts.size >= desiredCount) break;
+      attemptedParts.add(target.parte);
+      console.log(`[bolsa-scan:${portalUser}] Pulsando el numero de parte ${target.parte}...`);
+      const detail = await openNorayPartFromVisibleNumber(page, frame, target.parte);
       if (detail) {
-        scannedParts.add(part);
+        scannedParts.add(target.parte);
         for (const specialty of detail.specialties || []) {
           for (const candidateWorker of specialty.workers || []) {
             const worker = validBolsaWorker(candidateWorker);
@@ -387,18 +388,23 @@ async function collectNorayWorkersFromPartModals(page, frame, historyMonths, par
             if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
           }
         }
-        await closeNorayPartModal(page, frame, part);
-        console.log(`[bolsa-scan:${portalUser}] Parte ${part} abierto y revisado.`);
+        await closeNorayPartModal(page, frame, target.parte);
+        console.log(`[bolsa-scan:${portalUser}] Parte ${target.parte} abierto y revisado.`);
       } else {
-        await closeNorayPartModal(page, frame, part);
-        console.warn(`[bolsa-scan:${portalUser}] El numero ${part} estaba visible, pero no abrio el detalle.`);
+        await closeNorayPartModal(page, frame, target.parte);
+        console.warn(`[bolsa-scan:${portalUser}] El numero ${target.parte} no abrio un detalle reconocible.`);
       }
     }
-    if (scannedParts.size >= partsNeedingModal.size) break;
+    if (scannedParts.size >= desiredCount) break;
     if (monthIndex + 1 >= historyMonths || !await clickPreviousNorayMonth(frame)) break;
     await page.waitForTimeout(700);
   }
-  return { workers: [...workers.values()], partsScanned: scannedParts.size };
+  return {
+    workers: [...workers.values()],
+    openedParts: [...scannedParts],
+    attemptedParts: [...attemptedParts],
+    partsScanned: scannedParts.size
+  };
 }
 
 async function collectNorayHistory(page, historyMonths) {
@@ -411,9 +417,12 @@ async function collectNorayHistory(page, historyMonths) {
     monthRows.push({ ...period, rows });
   }
 
-  const recentParts = recentCompletedNorayParts(monthRows, 2);
+  // Conservamos candidatos de reserva: algunos partes antiguos aparecen en
+  // la API pero el portal ya no permite abrir su detalle. Seguimos en orden
+  // descendente hasta verificar visualmente dos partes realmente accesibles.
+  const recentParts = recentCompletedNorayParts(monthRows, 6);
   const partKeys = new Map(recentParts.map((part) => [`${part.year}:${part.parte}`, part]));
-  console.log(`[bolsa-scan:${portalUser}] Se revisaran solo los dos partes completos mas recientes: ${recentParts.map((part) => part.parte).join(", ") || "ninguno"}.`);
+  console.log(`[bolsa-scan:${portalUser}] Se intentaran los partes completos mas recientes hasta abrir dos: ${recentParts.map((part) => part.parte).join(", ") || "ninguno"}.`);
   const details = new Map();
   await mapWithConcurrency([...partKeys.entries()], 4, async ([key, part]) => {
     try {
@@ -428,7 +437,7 @@ async function collectNorayHistory(page, historyMonths) {
   });
   // Aunque la API aporte parte del equipo, el nombre oficial solo queda
   // confirmado al abrir el detalle desde el numero visible en Jornales.
-  const partsNeedingModal = new Set(recentParts.map((part) => part.parte));
+  const expectedParts = Math.min(2, recentParts.length);
 
   const observations = [];
   const workers = new Map();
@@ -446,36 +455,27 @@ async function collectNorayHistory(page, historyMonths) {
         observedAt
       });
       if (observation) observations.push(observation);
-      for (const specialty of detail?.specialties || []) {
-        for (const candidate of specialty.workers || []) {
-          const worker = validBolsaWorker(candidate);
-          if (!worker) continue;
-          const previous = workers.get(worker.chapa);
-          if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
-        }
-      }
     }
   }
-  let modalPartsScanned = 0;
-  try {
-    const modalResult = partsNeedingModal.size
-      ? await collectNorayWorkersFromPartModals(page, auth.frame, historyMonths, partsNeedingModal)
-      : { workers: [], partsScanned: 0 };
-    if (!partsNeedingModal.size) {
-      console.log(`[bolsa-scan:${portalUser}] Todos los equipos llegaron completos por Jornales; no hace falta abrir modales.`);
-    }
-    modalPartsScanned = modalResult.partsScanned;
-    for (const worker of modalResult.workers) {
-      const previous = workers.get(worker.chapa);
-      if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
-    }
-  } catch (error) {
-    console.warn(`[bolsa-scan:${portalUser}] No se pudieron recorrer los modales de Jornales: ${error instanceof Error ? error.message : String(error)}`);
+  const modalResult = expectedParts
+    ? await collectNorayWorkersFromPartModals(page, auth.frame, historyMonths, recentParts, expectedParts)
+    : { workers: [], openedParts: [], attemptedParts: [], partsScanned: 0 };
+  if (!expectedParts) {
+    console.log(`[bolsa-scan:${portalUser}] No hay partes finalizados en los dos ultimos meses.`);
+  }
+  for (const worker of modalResult.workers) {
+    const previous = workers.get(worker.chapa);
+    if (!previous || worker.nombre.length > previous.nombre.length) workers.set(worker.chapa, worker);
+  }
+  if (modalResult.partsScanned !== expectedParts) {
+    throw new Error(`Solo se abrieron ${modalResult.partsScanned} de ${expectedParts} partes objetivo; intentados ${modalResult.attemptedParts.join(", ") || "ninguno"}`);
   }
   return {
     observations,
     workers: [...workers.values()],
-    partsScanned: modalPartsScanned,
+    partsScanned: modalResult.partsScanned,
+    expectedParts,
+    openedParts: modalResult.openedParts,
     premiumsFound: observations.filter((row) => row.premium_amount !== null).length,
     premiumsVerified
   };
@@ -614,13 +614,8 @@ async function main() {
       observations: [], workers: [], partsScanned: 0, premiumsFound: 0,
       premiumsVerified: false, warning: ""
     };
-    try {
-      noray = { ...noray, ...(await collectNorayHistory(page, historyMonths)) };
-      await saveNorayObservations(noray.observations);
-    } catch (error) {
-      noray.warning = error instanceof Error ? error.message : String(error);
-      console.warn(`[bolsa-scan:${portalUser}] Jornales nuevo no disponible: ${noray.warning}`);
-    }
+    noray = { ...noray, ...(await collectNorayHistory(page, historyMonths)) };
+    await saveNorayObservations(noray.observations);
     const found = new Map(noray.workers.map((worker) => [worker.chapa, worker]));
     const workers = [...found.values()].sort((a, b) => a.chapa.localeCompare(b.chapa));
     const saved = await saveWorkers(workers);
@@ -628,8 +623,7 @@ async function main() {
     const premiumMessage = noray.premiumsVerified
       ? `${noray.premiumsFound} primas oficiales observadas`
       : "primas omitidas porque la clave de seguridad no se valido";
-    const warningMessage = noray.warning ? `; Jornales nuevo: ${noray.warning}` : "";
-    await finish(true, `Leidos ${totalParts} partes; ${saved.newWorkers.length} nombres nuevos, ${saved.updatedWorkers.length} mejorados y ${premiumMessage}${warningMessage}`, {
+    await finish(true, `Abiertos ${totalParts} de ${noray.expectedParts} partes objetivo; ${workers.length} nombres encontrados, ${saved.newWorkers.length} nuevos, ${saved.updatedWorkers.length} mejorados y ${premiumMessage}`, {
       partsScanned: totalParts,
       namesFound: workers.length,
       ...saved
@@ -641,6 +635,9 @@ async function main() {
       premiumsFound: noray.premiumsFound,
       historyMonths,
       namesFound: workers.length,
+      expectedParts: noray.expectedParts,
+      openedParts: noray.openedParts,
+      foundWorkers: workers,
       ...saved
     })}`);
   } catch (error) {
@@ -653,9 +650,11 @@ async function main() {
 }
 
 main().then(
-  () => process.exit(0),
+  () => setTimeout(() => process.exit(0), 250),
   (error) => {
     console.error(`[bolsa-scan:${portalUser}] ${error instanceof Error ? error.message : error}`);
-    process.exit(1);
+    // La conexion CDP compartida mantiene un socket abierto. Damos tiempo a
+    // vaciar la salida y las peticiones antes de terminar el proceso aislado.
+    setTimeout(() => process.exit(1), 250);
   }
 );

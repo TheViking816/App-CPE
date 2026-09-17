@@ -34,11 +34,28 @@ test("selects only the two most recent distinct completed parts", () => {
     { year: 2026, month: 8, rows: [{ parte: 25999, fecha: "20260831", anyo: 2026 }] }
   ];
   assert.deepEqual(
-    recentCompletedNorayParts(periods, 2).map(({ parte, date }) => ({ parte, date })),
+    recentCompletedNorayParts(periods, 2, new Date("2026-09-18T10:00:00Z"))
+      .map(({ parte, date }) => ({ parte, date })),
     [
       { parte: "26310", date: "2026-09-17" },
       { parte: "26300", date: "2026-09-16" }
     ]
+  );
+});
+
+test("excludes today and future journals because their teams are not complete yet", () => {
+  const periods = [{
+    year: 2026,
+    month: 9,
+    rows: [
+      { parte: 26827, dia: 18, anyo: 2026 },
+      { parte: 26713, dia: 17, anyo: 2026 },
+      { parte: 26593, dia: 16, anyo: 2026 }
+    ]
+  }];
+  assert.deepEqual(
+    recentCompletedNorayParts(periods, 2, new Date("2026-09-18T00:30:00+02:00")).map((item) => item.parte),
+    ["26713", "26593"]
   );
 });
 
