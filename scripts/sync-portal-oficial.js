@@ -2019,8 +2019,8 @@ async function collectPayrollDocumentFiles(page, rows, documentId) {
 }
 
 async function collectExceptions(page) {
-  const readCurrentScreen = async () => {
-    const deadline = Date.now() + 12000;
+  const readCurrentScreen = async (timeout = 12000) => {
+    const deadline = Date.now() + timeout;
     let bestResult = parseExceptions("");
     let bestScore = 0;
     let recognizedAt = 0;
@@ -2047,7 +2047,11 @@ async function collectExceptions(page) {
 
   try {
     await openPortalHash(page, "User,ViewNoray,17");
-    const directResult = await readCurrentScreen();
+    // ViewNoray 17 sigue siendo Bolsa de Excepciones, pero el portal puede
+    // dejar el panel vacio al abrir el hash directamente. Detectarlo pronto
+    // evita esperar doce segundos antes de usar el menu, que si fuerza la
+    // carga del contenido Noray.
+    const directResult = await readCurrentScreen(2500);
     if (directResult.recognized) return directResult;
   } catch {
     // The menu fallback covers portal route changes and older sessions.
@@ -2599,7 +2603,38 @@ async function collectVacaciones(page) {
 
 async function collectPrimas(page, previous = null) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
-  await openMenu(page, "Consultas", "Consulta de Primas Productividad");
+  // El portal sustituyo la antigua Consulta de Primas Productividad
+  // (ViewNoray 10) por Jornales y Primas (ViewNoray 2).
+  await openPortalHash(page, "User,ViewNoray,2");
+
+  const premiumRevealControl = await waitForFrameAndLocator(
+    page,
+    (frame) => frame.locator([
+      'button[title*="prima" i]:visible',
+      'button[aria-label*="prima" i]:visible',
+      '[role="button"][title*="prima" i]:visible',
+      '[role="button"][aria-label*="prima" i]:visible',
+      'button:has(svg[class*="eye" i]):visible',
+      'button:has(svg[data-lucide="eye"]):visible',
+      'button:has(svg[data-icon="eye"]):visible',
+      '[role="button"]:has(svg[class*="eye" i]):visible',
+      '[role="button"]:has(svg[data-lucide="eye"]):visible',
+      '[role="button"]:has(svg[data-icon="eye"]):visible',
+      'svg[class*="eye" i]:visible',
+      'svg[data-lucide="eye"]:visible',
+      'svg[data-icon="eye"]:visible',
+      'i[class*="eye" i]:visible',
+      'span[class*="eye" i]:visible',
+      'img[title*="prima" i]:visible',
+      'img[alt*="prima" i]:visible'
+    ].join(", ")),
+    8000
+  );
+
+  if (premiumRevealControl) {
+    await premiumRevealControl.locator.click({ noWaitAfter: true });
+  }
+
   const securityControl = await waitForFrameAndLocator(
     page,
     (frame) => frame.getByRole("button", { name: /Validar/i }),
