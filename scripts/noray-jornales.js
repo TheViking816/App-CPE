@@ -151,6 +151,27 @@ export function previousMonths(count, now = new Date()) {
   return months;
 }
 
+export function recentCompletedNorayParts(periods, limit = 2) {
+  const byPart = new Map();
+  for (const period of Array.isArray(periods) ? periods : []) {
+    for (const row of Array.isArray(period?.rows) ? period.rows : []) {
+      const part = positiveInteger(row?.parte);
+      const year = positiveInteger(row?.anyo) ?? positiveInteger(period?.year);
+      const date = normalizeNorayDate(row?.fecha ?? row?.dia, period?.year, period?.month);
+      if (!part || !year || !date) continue;
+      const key = `${year}:${part}`;
+      const candidate = { year, parte: String(part), date, fallback: row };
+      const previous = byPart.get(key);
+      if (!previous || candidate.date > previous.date) byPart.set(key, candidate);
+    }
+  }
+  const safeLimit = Math.max(1, Math.min(10, Number(limit) || 2));
+  return [...byPart.values()]
+    .sort((left, right) => right.date.localeCompare(left.date)
+      || Number(right.parte) - Number(left.parte))
+    .slice(0, safeLimit);
+}
+
 export function norayHistoryWindow(configuredValue, hasExistingObservations) {
   const configured = String(configuredValue ?? "").trim();
   if (configured) return Math.max(1, Math.min(24, Number(configured) || 2));

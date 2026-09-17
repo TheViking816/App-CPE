@@ -35,8 +35,8 @@ try {
     $env:CPE_BOLSA_JORNALES_MONTHS = "12"
     Write-Host "Modo historico completo: se revisaran 12 meses por usuario." -ForegroundColor Cyan
   } else {
-    $env:CPE_BOLSA_JORNALES_MONTHS = $null
-    Write-Host "Modo automatico: 12 meses en la primera carga y 2 meses en las siguientes." -ForegroundColor Cyan
+    $env:CPE_BOLSA_JORNALES_MONTHS = "2"
+    Write-Host "Modo rapido: se consultan 2 meses y se abren solo los 2 partes completos mas recientes por usuario." -ForegroundColor Cyan
   }
   Set-Location -LiteralPath $RepositoryPath
   & node "scripts/bolsa-name-scan-worker.js" --queue-all

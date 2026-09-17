@@ -9,6 +9,7 @@ import {
   normalizeNorayDate,
   normalizeNorayShift,
   previousMonths,
+  recentCompletedNorayParts,
   sanitizeNorayPartDetail
 } from "../scripts/noray-jornales.js";
 
@@ -17,6 +18,28 @@ test("normalizes Noray dates and shifts", () => {
   assert.equal(normalizeNorayDate("1/9/2026"), "2026-09-01");
   assert.equal(normalizeNorayDate("1", 2026, 9), "2026-09-01");
   assert.equal(normalizeNorayShift("DE 02 A 08 H."), "0208");
+});
+
+test("selects only the two most recent distinct completed parts", () => {
+  const periods = [
+    {
+      year: 2026,
+      month: 9,
+      rows: [
+        { parte: 26310, dia: 17, anyo: 2026 },
+        { parte: 26300, dia: 16, anyo: 2026 },
+        { parte: 26310, dia: 17, anyo: 2026 }
+      ]
+    },
+    { year: 2026, month: 8, rows: [{ parte: 25999, fecha: "20260831", anyo: 2026 }] }
+  ];
+  assert.deepEqual(
+    recentCompletedNorayParts(periods, 2).map(({ parte, date }) => ({ parte, date })),
+    [
+      { parte: "26310", date: "2026-09-17" },
+      { parte: "26300", date: "2026-09-16" }
+    ]
+  );
 });
 
 test("reads only positive official productivity and preserves provisional state", () => {

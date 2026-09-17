@@ -21,9 +21,11 @@ test("la cola admite cualquier chapa valida de cinco cifras", () => {
   assert.doesNotMatch(chapaConstraintMigration, /\^7\[0-9\]/);
 });
 
-test("el lector abre Jornadas contratadas y solo conserva chapas 80xxx", () => {
-  assert.match(job, /User,ViewContractings,,1/);
-  assert.match(job, /ParteA\.asp/);
+test("el lector pulsa el numero de los dos partes recientes en Jornales y solo conserva chapas 80xxx", () => {
+  assert.match(job, /User,ViewNoray,2/);
+  assert.match(job, /recentCompletedNorayParts\(monthRows, 2\)/);
+  assert.match(job, /getByText\(part, \{ exact: true \}\)/);
+  assert.match(job, /openNorayPartFromVisibleNumber/);
   assert.match(job, /\^80\\d\{3\}\$/);
   assert.match(job, /PERSONAL DE BOLSA/);
 });
@@ -49,10 +51,11 @@ test("las credenciales se borran al cerrar cada trabajo", () => {
   assert.match(migration, /security_key = null/);
 });
 
-test("el historico completo solo se fuerza de forma explicita", () => {
+test("el modo normal consulta dos meses y el historico completo solo se fuerza de forma explicita", () => {
   assert.match(job, /resolveNorayHistoryMonths/);
   assert.match(job, /configuredNorayHistoryMonths/);
-  assert.match(job, /app_cpe_noray_jornal_observations\?select=source_chapa/);
+  assert.match(job, /return 2/);
   assert.match(launcher, /\[switch\]\$FullHistory/);
   assert.match(launcher, /CPE_BOLSA_JORNALES_MONTHS = "12"/);
+  assert.match(launcher, /CPE_BOLSA_JORNALES_MONTHS = "2"/);
 });
