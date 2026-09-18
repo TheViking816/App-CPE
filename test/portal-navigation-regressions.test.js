@@ -39,10 +39,14 @@ test("Bolsa de Excepciones conserva ViewNoray 17 sin esperar en un panel vacío"
   assert.match(section, /openMenu\(page, "Solicitudes", "Bolsa de Excepciones"\)/);
 });
 
-test("la contratacion anticipada se abre desde la tarjeta de portada", () => {
-  assert.match(source, /async function readAssignmentDetailViaHomeCard/);
+test("la contratacion anticipada se abre desde el enlace de Donde voy", () => {
+  const section = source.match(/async function readAnticipatedAssignmentDetailViaMenu[\s\S]*?async function readPortalAuthState/)?.[0] || "";
+  assert.match(section, /openMenu\(sourcePage, "Consultas", "¿Dónde voy\? - Orden Servicio"\)/);
+  assert.match(section, /expandWhereAmIAssignment\(listFrame, assignment\)/);
+  assert.match(section, /getByText\(\/\^\\s\*ANTICIPADA\\s\*\$\/i\)/);
+  assert.match(section, /closest\("a, button, \[role=button\], \[onclick\]"\)/);
   assert.match(source, /normalizePortalPart\(item\.parte\) === "CA"/);
-  assert.match(source, /freshDetail = await readAssignmentDetailViaHomeCard\(page, item\)/);
+  assert.match(source, /freshDetail = await readAnticipatedAssignmentDetailViaMenu\(page, item\)/);
 });
 
 test("los partes derivados de jornales reciben una pagina navegable", () => {

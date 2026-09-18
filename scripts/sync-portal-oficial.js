@@ -1032,59 +1032,31 @@ async function readAssignmentDetailViaContractings(sourcePage, assignment) {
   return best;
 }
 
-async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
-  await openPortalHash(sourcePage, "User,Request,,,");
+async function readAnticipatedAssignmentDetailViaMenu(sourcePage, assignment) {
+  await openPortalHash(sourcePage, "User");
+  await openMenu(sourcePage, "Consultas", "¿Dónde voy? - Orden Servicio");
+  const listFrame = await waitForFrame(sourcePage, WHERE_AM_I_FRAME_PATTERN, 12000);
+  if (!await expandWhereAmIAssignment(listFrame, assignment)) {
+    throw new Error(`No se encontro la jornada anticipada ${cleanText(assignment?.fecha)} ${cleanText(assignment?.jornada)}.`);
+  }
+  await sourcePage.waitForTimeout(350);
 
-  const dateMatch = cleanText(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  const dateTokens = dateMatch
-    ? [
-        `${Number(dateMatch[1])}/${dateMatch[2].padStart(2, "0")}`,
-        `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}`
-      ]
-    : [];
-  for (const frame of sourcePage.frames()) {
-    const links = frame.locator('a[href*="parte="]').filter({ hasText: /anticipada/i });
-    const count = Math.min(await links.count().catch(() => 0), 20);
-    for (let index = 0; index < count; index += 1) {
-      const link = links.nth(index);
-      if (!await link.isVisible().catch(() => false)) continue;
-      const contextText = cleanText(await link.evaluate((node) => (
-        node.closest("tr")?.innerText || node.closest("table")?.innerText || ""
-      )).catch(() => ""));
-      const normalizedContext = contextText.replace(/\s+/g, "");
-      if (dateTokens.length > 0
-        && !dateTokens.some((token) => normalizedContext.includes(token.replace(/\s+/g, "")))) continue;
-      const href = await link.getAttribute("href");
-      const resolvedPart = String(href || "").match(/[?&]parte=(\d+)/i)?.[1];
-      if (resolvedPart) return readAssignmentDetailViaPortal(sourcePage, { ...assignment, parte: resolvedPart });
-    }
-  }
+  const links = listFrame.getByText(/^\s*ANTICIPADA\s*$/i);
+  const count = Math.min(await links.count().catch(() => 0), 20);
   let clicked = false;
-  const cardDeadline = Date.now() + 12000;
-  while (!clicked && Date.now() < cardDeadline) {
-    for (const frame of sourcePage.frames()) {
-      const links = frame.locator("a, button, [role=button], [onclick], td, span").filter({ hasText: /anticipada/i });
-      const count = Math.min(await links.count().catch(() => 0), 20);
-      for (let index = 0; index < count; index += 1) {
-        const link = links.nth(index);
-        if (!await link.isVisible().catch(() => false)) continue;
-        const contextText = cleanText(await link.evaluate((node) => (
-          node.closest("tr")?.innerText || node.parentElement?.parentElement?.innerText || node.innerText || ""
-        )).catch(() => ""));
-        const normalizedContext = contextText.replace(/\s+/g, "");
-        const hasExpectedDate = dateTokens.length === 0
-          || dateTokens.some((token) => normalizedContext.includes(token.replace(/\s+/g, "")));
-        if (!hasExpectedDate) continue;
-        clicked = await link.click({ noWaitAfter: true, force: true }).then(() => true).catch(async () => (
-          link.evaluate((node) => { node.click(); return true; }).catch(() => false)
-        ));
-        if (clicked) break;
-      }
-      if (clicked) break;
-    }
-    if (!clicked) await sourcePage.waitForTimeout(250);
+  for (let index = 0; index < count; index += 1) {
+    const link = links.nth(index);
+    if (!await link.isVisible().catch(() => false)) continue;
+    clicked = await link.evaluate((node) => {
+      const actionable = node.closest("a, button, [role=button], [onclick]")
+        || node.parentElement?.closest("a, button, [role=button], [onclick]")
+        || node;
+      actionable.click();
+      return true;
+    }).catch(() => false);
+    if (clicked) break;
   }
-  if (!clicked) throw new Error("No se encontro la tarjeta de contratacion anticipada en la portada.");
+  if (!clicked) throw new Error("No se encontro el enlace ANTICIPADA dentro de la jornada desplegada.");
 
   const deadline = Date.now() + 20000;
   let best = { recognized: false, specialties: [] };
@@ -1106,11 +1078,11 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
         }
       }
     }
-    if (best.recognized && /^\d+$/.test(String(best.parte || "")) && Date.now() - lastImprovementAt >= 2500) return best;
+    if (best.recognized && normalizePortalPart(best.parte) === "CA" && Date.now() - lastImprovementAt >= 2500) return best;
     await sourcePage.waitForTimeout(200);
   }
-  if (!best.recognized || !/^\d+$/.test(String(best.parte || ""))) {
-    throw new Error("La tarjeta anticipada se pulso, pero no abrio el detalle del parte.");
+  if (!best.recognized || normalizePortalPart(best.parte) !== "CA") {
+    throw new Error("El enlace ANTICIPADA se pulso, pero no abrio un equipo reconocible.");
   }
   return best;
 }
@@ -2538,9 +2510,9 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
       let freshDetail;
       if (normalizePortalPart(item.parte) === "CA") {
         try {
-          freshDetail = await readAssignmentDetailViaHomeCard(page, item);
-        } catch (homeCardError) {
-          console.log(`Parte ${item.parte}: la tarjeta de portada no respondio. ${homeCardError instanceof Error ? homeCardError.message : ""}`);
+          freshDetail = await readAnticipatedAssignmentDetailViaMenu(page, item);
+        } catch (anticipatedLinkError) {
+          console.log(`Parte ${item.parte}: no se pudo abrir desde Donde voy. ${anticipatedLinkError instanceof Error ? anticipatedLinkError.message : ""}`);
           freshDetail = await readAssignmentDetailViaContractings(page, item);
         }
       } else {

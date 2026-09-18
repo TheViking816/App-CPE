@@ -3,9 +3,31 @@ import assert from "node:assert/strict";
 import {
   assignmentDetailScore,
   isAssignmentDetailComplete,
+  parseAssignmentDetailFromText,
   parseAssignmentDetailFromTables,
   parseAssignmentsFromText
 } from "../scripts/portal-assignments.js";
+
+test("lee el modal de contratacion anticipada sin numero de parte", () => {
+  const parsed = parseAssignmentDetailFromText(`
+    Contratación anticipada
+    FECHA
+    20260919
+    JORNADA
+    DE 14 A 20 H.
+    Trabajadores (3)
+    TRASTAINERS RTT (3)
+    72505 TUR JONATHAN BARRUECO FLORES
+    72544 TUR ANGEL NAVARRO LAGUNA
+    72565 TUR NEREA MONRABAL CANO
+  `);
+
+  assert.equal(parsed.recognized, true);
+  assert.equal(parsed.parte, "C/A");
+  assert.equal(parsed.specialties.length, 1);
+  assert.equal(parsed.specialties[0].name, "TRASTAINERS RTT");
+  assert.deepEqual(parsed.specialties[0].workers.map((worker) => worker.code), ["72505", "72544", "72565"]);
+});
 
 const detailTable = (workers) => [[
   ["Parte:", "12345"],

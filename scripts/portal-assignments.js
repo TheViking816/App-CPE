@@ -226,9 +226,12 @@ export function parseAssignmentDetailFromText(pageText = "") {
   const modalIndexes = lines
     .map((line, index) => (/^parte\s+([A-Z0-9-]+)$/i.test(line) ? index : -1))
     .filter((index) => index >= 0);
-  const modalIndex = modalIndexes.at(-1) ?? -1;
+  const anticipatedModalIndex = lines.findIndex((line) => /^contrataci[oó]n\s+anticipada$/i.test(line));
+  const modalIndex = modalIndexes.at(-1) ?? anticipatedModalIndex;
   if (modalIndex >= 0) {
-    const modalPart = lines[modalIndex].match(/^parte\s+([A-Z0-9-]+)$/i)?.[1] || "";
+    const modalPart = anticipatedModalIndex === modalIndex
+      ? "C/A"
+      : lines[modalIndex].match(/^parte\s+([A-Z0-9-]+)$/i)?.[1] || "";
     detail.parte = modalPart;
     const cardIndex = lines
       .slice(0, modalIndex)
@@ -252,7 +255,7 @@ export function parseAssignmentDetailFromText(pageText = "") {
     const next = lines[index + 1] || "";
     if (modalIndex >= 0) {
       const heading = line.match(/^(.+?)\s*\((\d{1,2})\)$/);
-      if (heading && Number(heading[2]) > 0) {
+      if (heading && Number(heading[2]) > 0 && !/^trabajadores$/i.test(normalizeCell(heading[1]))) {
         current = {
           name: normalizeCell(heading[1]),
           requested: Number(heading[2]),
