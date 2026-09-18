@@ -120,6 +120,7 @@ import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
 import { initialIrpfRate } from "./irpfRate.js";
 import { orderPayrollDocuments } from "./payrollDocumentOrder.js";
+import { groupUpcomingDoubles, upcomingDoubleDayLabel } from "./upcomingDoubles.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const MONTH_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -1028,6 +1029,8 @@ function upcomingDoubleStart(request) {
 }
 
 function UpcomingDoubles({ snapshot, currentTime }) {
+  const [expandedDates, setExpandedDates] = useState(null);
+  const [showAllDates, setShowAllDates] = useState(false);
   const rows = useMemo(() => {
     const now = new Date(currentTime || Date.now());
     return (snapshot?.payload?.dobles?.rows || [])
@@ -1035,6 +1038,18 @@ function UpcomingDoubles({ snapshot, currentTime }) {
       .filter((request) => request.startsAt && request.startsAt > now)
       .sort((a, b) => a.startsAt - b.startsAt);
   }, [snapshot, currentTime]);
+  const groups = useMemo(() => groupUpcomingDoubles(rows), [rows]);
+  const visibleGroups = showAllDates ? groups : groups.slice(0, 3);
+  const defaultExpandedDate = groups[0]?.dateKey || "";
+  const openDates = expandedDates ?? (defaultExpandedDate ? [defaultExpandedDate] : []);
+  const toggleDate = (dateKey) => {
+    setExpandedDates((current) => {
+      const dates = current ?? (defaultExpandedDate ? [defaultExpandedDate] : []);
+      return dates.includes(dateKey)
+        ? dates.filter((value) => value !== dateKey)
+        : [...dates, dateKey];
+    });
+  };
 
   return (
     <section className={`upcoming-doubles-card${rows.length ? "" : " is-empty"}`}>
@@ -1045,17 +1060,44 @@ function UpcomingDoubles({ snapshot, currentTime }) {
       </header>
       {rows.length ? (
         <div className="portal-doubles-list">
-          {rows.map((request, index) => (
-            <article key={`${request.date}-${request.specialty}-${request.journey}-${index}`}>
-              <time><strong>{request.date.slice(0, 2)}</strong><small>{request.date.slice(3, 5)}</small></time>
-              <div>
-                <strong>{request.specialty}</strong>
-                <small>Jornada {request.journey}</small>
-                {request.holiday && <em className="portal-double-holiday">Festivo</em>}
-              </div>
-              <Check size={17} />
-            </article>
-          ))}
+          {visibleGroups.map((group) => {
+            const isOpen = openDates.includes(group.dateKey);
+            return (
+              <section className={`portal-double-day${isOpen ? " is-open" : ""}`} key={group.dateKey}>
+                <button
+                  className="portal-double-day-toggle"
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => toggleDate(group.dateKey)}
+                >
+                  <time><strong>{group.dateKey.slice(0, 2)}</strong><small>{MONTH_SHORT_ES[group.startsAt.getMonth()]}</small></time>
+                  <span className="portal-double-day-summary">
+                    <strong>{upcomingDoubleDayLabel(group.startsAt, currentTime)}</strong>
+                    <small>{group.requests.length} {group.requests.length === 1 ? "solicitud" : "solicitudes"}</small>
+                  </span>
+                  {group.holiday && <em className="portal-double-holiday">Festivo</em>}
+                  <ChevronDown className="portal-double-chevron" size={18} aria-hidden="true" />
+                </button>
+                <div className="portal-double-requests">
+                  {group.requests.map((request, index) => (
+                    <div className="portal-double-request" key={`${request.specialty}-${request.journey}-${index}`}>
+                      <strong>{request.specialty}</strong>
+                      <small>Jornada <b>{request.journey}</b></small>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+          {groups.length > 3 && (
+            <button
+              className="portal-doubles-show-all"
+              type="button"
+              onClick={() => setShowAllDates((current) => !current)}
+            >
+              {showAllDates ? "Mostrar solo los próximos días" : `Ver las ${rows.length} solicitudes`}
+            </button>
+          )}
         </div>
       ) : (
         <div className="portal-doubles-empty">

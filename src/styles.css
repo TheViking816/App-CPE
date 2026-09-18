@@ -4644,12 +4644,56 @@ select {
 .portal-inbox-list time { display: grid; justify-items: end; color: var(--navy); font-size: 10px; font-weight: 900; }
 .portal-inbox-list time small { font-size: 9px; }
 
-.portal-doubles-list { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-.portal-doubles-list article { grid-template-columns: 42px minmax(0, 1fr) 30px; }
-.portal-doubles-list time { display: grid; min-height: 42px; place-content: center; border-radius: 7px; background: var(--navy); color: #fff; text-align: center; }
-.portal-doubles-list time strong { color: #fff; font-size: 15px; }
-.portal-doubles-list time small { color: rgba(255,255,255,.75); font-size: 9px; }
-.portal-doubles-list article > svg { padding: 5px; border-radius: 50%; background: #dff7ee; color: #087f66; }
+.portal-doubles-list { grid-template-columns: minmax(0, 1fr); }
+.portal-double-day { overflow: hidden; border: 1px solid #e1e8ef; border-radius: 8px; background: #f8fafc; }
+.portal-double-day-toggle {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 44px minmax(0, 1fr) auto 22px;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.portal-double-day-toggle time { display: grid; min-height: 44px; place-content: center; border-radius: 7px; background: var(--navy); color: #fff; text-align: center; }
+.portal-double-day-toggle time strong { color: #fff; font-size: 15px; line-height: 1; }
+.portal-double-day-toggle time small { margin-top: 3px; color: rgba(255,255,255,.75); font-size: 9px; text-transform: uppercase; }
+.portal-double-day-toggle .portal-double-holiday { margin-top: 0; }
+.portal-double-day-summary { display: grid; min-width: 0; gap: 2px; }
+.portal-double-day-summary strong { color: var(--ink); font-size: 12px; font-weight: 900; }
+.portal-double-day-summary small { color: var(--muted); font-size: 10px; font-weight: 750; }
+.portal-double-chevron { color: var(--muted); transition: transform .18s ease; }
+.portal-double-day.is-open .portal-double-chevron { transform: rotate(180deg); }
+.portal-double-requests { display: none; padding: 0 9px 8px 62px; }
+.portal-double-day.is-open .portal-double-requests { display: grid; }
+.portal-double-request {
+  display: grid;
+  min-height: 38px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid #e1e8ef;
+}
+.portal-double-request strong { overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.portal-double-request small { overflow: visible; padding: 4px 7px; border-radius: 7px; background: #edf3f8; color: var(--muted); font-size: 9px; font-weight: 750; white-space: nowrap; }
+.portal-double-request small b { color: var(--ink); }
+.portal-doubles-show-all {
+  justify-self: center;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 0;
+  background: transparent;
+  color: #087f66;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
 
 .portal-doubles-empty {
   display: grid;
@@ -4742,7 +4786,7 @@ select {
 :root[data-theme="dark"] .portal-payroll-document-list strong { color: #f4f8fc; }
 :root[data-theme="dark"] .portal-personal-section header > b,
 :root[data-theme="dark"] .portal-inbox-list > button,
-:root[data-theme="dark"] .portal-doubles-list article,
+:root[data-theme="dark"] .portal-double-day,
 :root[data-theme="dark"] .portal-payroll-document-list > button,
 :root[data-theme="dark"] .portal-personal-empty { border-color: #29435d; background: #172d45; }
 :root[data-theme="dark"] .portal-inbox-list > button.is-unread { border-left-color: #50a9f0; background: #16324e; }
@@ -4766,6 +4810,9 @@ select {
 }
 :root[data-theme="dark"] .portal-doubles-list time strong { color: #ffffff; }
 :root[data-theme="dark"] .portal-doubles-list time small { color: #c7ddf4; }
+:root[data-theme="dark"] .portal-double-request { border-top-color: #29435d; }
+:root[data-theme="dark"] .portal-double-request small { background: #213a53; }
+:root[data-theme="dark"] .portal-doubles-show-all { color: #64d9bb; }
 
 .portal-message-detail {
   position: absolute;
