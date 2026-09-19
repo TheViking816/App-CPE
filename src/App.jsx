@@ -52,6 +52,7 @@ import {
   X
 } from "lucide-react";
 import {
+  applyLiveCensusSnapshots,
   classifyDistance,
   findByChapa,
   getDoorState,
@@ -76,6 +77,7 @@ import {
 import {
   deleteUserAccount,
   getLatestChaperoSnapshot,
+  getLatestCensusSnapshots,
   getLatestDoorSnapshot,
   getUserNotifications,
   getForumMessages,
@@ -4299,6 +4301,7 @@ function ContactFooter({ login = false }) {
 
 export function App() {
   const [session, setSession] = useState(getInitialSession);
+  const [censusVersion, setCensusVersion] = useState(0);
   const [theme, setTheme] = useState(getInitialTheme);
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [doorConfig, setDoorConfig] = useState(null);
@@ -4329,15 +4332,26 @@ export function App() {
   const availableSpecialties = useMemo(() => {
     const ids = getEffectiveSpecialtyIds(session);
     return ids.map(getSpecialty);
-  }, [session]);
+  }, [session, censusVersion]);
   const activeSpecialty = getSpecialty(activeSpecialtyId);
   const user = session ? findByChapa(session.chapa, activeSpecialty.id) : null;
   const displayUser = user || (session?.chapa ? { chapa: session.chapa, position: null, displayPosition: null } : null);
   const activeDoors = sanitizeDoors(doorConfig?.doors, activeSpecialty);
   const doors = useMemo(
     () => getDoorState(session?.chapa, activeDoors, activeSpecialty.id),
-    [session?.chapa, activeDoors, activeSpecialty.id]
+    [session?.chapa, activeDoors, activeSpecialty.id, censusVersion]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function refreshCensuses() {
+      const snapshots = await getLatestCensusSnapshots();
+      if (!cancelled && applyLiveCensusSnapshots(snapshots) > 0) setCensusVersion((version) => version + 1);
+    }
+    refreshCensuses();
+    const timer = window.setInterval(refreshCensuses, 15 * 60 * 1000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
   const chaperoWorker = useMemo(
     () => findChaperoWorker(chaperoSnapshot, session?.chapa),
     [chaperoSnapshot, session?.chapa]

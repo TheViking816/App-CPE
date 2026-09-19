@@ -369,6 +369,24 @@ export const specialties = [
 export const specialty = specialties[0];
 export const censo = specialty.censo;
 
+export function applyLiveCensusSnapshots(snapshots) {
+  let changed = 0;
+  for (const snapshot of snapshots || []) {
+    const index = specialties.findIndex((item) => item.id === snapshot?.id);
+    if (index < 0 || !Array.isArray(snapshot?.censo)) continue;
+    const current = specialties[index];
+    const chapas = snapshot.censo.map((value) => String(value));
+    if (snapshot.kind !== current.kind || chapas.length !== snapshot.expectedSize
+      || chapas.length < 1 || chapas.some((chapa) => !/^\d{5}$/.test(chapa))
+      || new Set(chapas).size !== chapas.length) continue;
+    if (current.censo.length === chapas.length
+      && current.censo.every((row, position) => row.chapa === chapas[position])) continue;
+    specialties[index] = { ...current, expectedSize: chapas.length, censo: portalCensoRows(chapas) };
+    changed += 1;
+  }
+  return changed;
+}
+
 export function getSpecialty(specialtyId) {
   return specialties.find((item) => item.id === specialtyId) || specialty;
 }

@@ -304,6 +304,19 @@ export async function getLatestDoorSnapshots(specialtyNames = []) {
     }));
 }
 
+export async function getLatestCensusSnapshots() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("app_cpe_door_snapshots")
+    .select("specialty, raw_columns, updated_at")
+    .like("specialty", "CENSO:%");
+  if (error) {
+    console.warn("No se pudieron leer los censos actualizados:", error.message);
+    return [];
+  }
+  return (data || []).map((row) => row.raw_columns).filter(Boolean);
+}
+
 export async function getLatestChaperoSnapshot() {
   if (!supabase) return null;
 
