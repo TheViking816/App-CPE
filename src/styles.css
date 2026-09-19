@@ -4667,6 +4667,7 @@ select {
 .portal-double-day-summary { display: grid; min-width: 0; gap: 2px; }
 .portal-double-day-summary strong { color: var(--ink); font-size: 12px; font-weight: 900; }
 .portal-double-day-summary small { color: var(--muted); font-size: 10px; font-weight: 750; }
+.portal-double-day-summary small em { color: #087f66; font-style: normal; font-weight: 900; }
 .portal-double-chevron { color: var(--muted); transition: transform .18s ease; }
 .portal-double-day.is-open .portal-double-chevron { transform: rotate(180deg); }
 .portal-double-requests { display: none; padding: 0 9px 8px 62px; }
@@ -4679,9 +4680,12 @@ select {
   gap: 8px;
   border-top: 1px solid #e1e8ef;
 }
+.portal-double-request.is-granted { margin: 0 -9px; padding: 0 9px; background: #e8faf4; }
 .portal-double-request strong { overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.portal-double-request-meta { display: grid; justify-items: end; gap: 3px; padding: 4px 0; }
 .portal-double-request small { overflow: visible; padding: 4px 7px; border-radius: 7px; background: #edf3f8; color: var(--muted); font-size: 9px; font-weight: 750; white-space: nowrap; }
 .portal-double-request small b { color: var(--ink); }
+.portal-double-request-meta em { display: flex; align-items: center; gap: 3px; color: #087f66; font-size: 9px; font-style: normal; font-weight: 950; text-transform: uppercase; }
 .portal-doubles-show-all {
   justify-self: center;
   min-height: 38px;
@@ -4812,6 +4816,9 @@ select {
 :root[data-theme="dark"] .portal-doubles-list time small { color: #c7ddf4; }
 :root[data-theme="dark"] .portal-double-request { border-top-color: #29435d; }
 :root[data-theme="dark"] .portal-double-request small { background: #213a53; }
+:root[data-theme="dark"] .portal-double-request.is-granted { background: #123d35; }
+:root[data-theme="dark"] .portal-double-day-summary small em,
+:root[data-theme="dark"] .portal-double-request-meta em { color: #64d9bb; }
 :root[data-theme="dark"] .portal-doubles-show-all { color: #64d9bb; }
 
 .portal-message-detail {

@@ -120,7 +120,7 @@ import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
 import { initialIrpfRate } from "./irpfRate.js";
 import { orderPayrollDocuments } from "./payrollDocumentOrder.js";
-import { groupUpcomingDoubles, upcomingDoubleDayLabel } from "./upcomingDoubles.js";
+import { groupUpcomingDoubles, markGrantedUpcomingDoubles, upcomingDoubleDayLabel } from "./upcomingDoubles.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const MONTH_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -1033,10 +1033,14 @@ function UpcomingDoubles({ snapshot, currentTime }) {
   const [showAllDates, setShowAllDates] = useState(false);
   const rows = useMemo(() => {
     const now = new Date(currentTime || Date.now());
-    return (snapshot?.payload?.dobles?.rows || [])
+    const requested = (snapshot?.payload?.dobles?.rows || [])
       .map((request) => ({ ...request, startsAt: upcomingDoubleStart(request) }))
       .filter((request) => request.startsAt && request.startsAt > now)
       .sort((a, b) => a.startsAt - b.startsAt);
+    return markGrantedUpcomingDoubles(
+      requested,
+      currentAssignmentsFromSnapshot(snapshot, currentTime)
+    );
   }, [snapshot, currentTime]);
   const groups = useMemo(() => groupUpcomingDoubles(rows), [rows]);
   const visibleGroups = showAllDates ? groups : groups.slice(0, 3);
@@ -1073,16 +1077,22 @@ function UpcomingDoubles({ snapshot, currentTime }) {
                   <time><strong>{group.dateKey.slice(0, 2)}</strong><small>{MONTH_SHORT_ES[group.startsAt.getMonth()]}</small></time>
                   <span className="portal-double-day-summary">
                     <strong>{upcomingDoubleDayLabel(group.startsAt, currentTime)}</strong>
-                    <small>{group.requests.length} {group.requests.length === 1 ? "solicitud" : "solicitudes"}</small>
+                    <small>
+                      {group.requests.length} {group.requests.length === 1 ? "solicitud" : "solicitudes"}
+                      {group.grantedCount > 0 && <em> · {group.grantedCount} {group.grantedCount === 1 ? "concedida" : "concedidas"}</em>}
+                    </small>
                   </span>
                   {group.holiday && <em className="portal-double-holiday">Festivo</em>}
                   <ChevronDown className="portal-double-chevron" size={18} aria-hidden="true" />
                 </button>
                 <div className="portal-double-requests">
                   {group.requests.map((request, index) => (
-                    <div className="portal-double-request" key={`${request.specialty}-${request.journey}-${index}`}>
+                    <div className={`portal-double-request${request.granted ? " is-granted" : ""}`} key={`${request.specialty}-${request.journey}-${index}`}>
                       <strong>{request.specialty}</strong>
-                      <small>Jornada <b>{request.journey}</b></small>
+                      <span className="portal-double-request-meta">
+                        <small>Jornada <b>{request.journey}</b></small>
+                        {request.granted && <em><Check size={12} aria-hidden="true" /> Concedido</em>}
+                      </span>
                     </div>
                   ))}
                 </div>
