@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import portalCensusCapture from "../src/censosPortalCurrent.js";
-import { findByChapa, specialties, validateSpecialtyCenso } from "../src/censo.js";
+import { findByChapa, getDoorState, specialties, validateSpecialtyCenso } from "../src/censo.js";
 
 const expected = {
   mafis: ["especialidad", 82],
@@ -38,5 +38,13 @@ test("Reserva G IV es contratación anticipada, no un censo seleccionable", () =
 test("Tomas figura en los censos donde aparece en el Chapero", () => {
   for (const id of ["mafis", "trastainers-rtt", "pol-capataz", "pol-sobordista", "pol-elevadoras", "pol-conductor-2a"]) {
     assert.ok(findByChapa("71206", id), `Falta Tomas en ${id}`);
+  }
+});
+
+test("una asignación TP sin chapa en el censo no inventa posición ni distancia", () => {
+  for (const id of ["pol-trincador", "pol-especialista"]) {
+    const item = specialties.find((specialty) => specialty.id === id);
+    assert.equal(findByChapa("71206", id), null);
+    assert.ok(getDoorState("71206", item.doors, id).every((door) => door.distance === null));
   }
 });

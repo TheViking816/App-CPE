@@ -1,11 +1,21 @@
 param(
-  [string]$RepositoryPath = ""
+  [string]$RepositoryPath = "",
+  [switch]$UpdateFromMain
 )
 
 $ErrorActionPreference = "Stop"
 if (-not $RepositoryPath) {
   $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
   $RepositoryPath = (Resolve-Path (Join-Path $scriptDirectory "..\.." )).Path
+}
+
+if ($UpdateFromMain) {
+  & git -C $RepositoryPath fetch origin main
+  if ($LASTEXITCODE -ne 0) { throw "No se pudo consultar main en GitHub. No se ejecutara codigo posiblemente desactualizado." }
+  & git -C $RepositoryPath merge --ff-only origin/main
+  if ($LASTEXITCODE -ne 0) { throw "No se pudo actualizar el checkout sin afectar cambios locales. No se ejecutara el worker." }
+  $revision = (& git -C $RepositoryPath rev-parse --short HEAD).Trim()
+  Write-Host "Codigo actualizado desde main: $revision" -ForegroundColor Green
 }
 
 $operationalScript = Join-Path $RepositoryPath "scripts\windows\run-operational-sync.ps1"

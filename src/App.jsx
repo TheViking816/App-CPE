@@ -508,6 +508,38 @@ function getSpecialtyLabel(item) {
   return item?.name?.replace(/^POL\.\s*/, "") || "";
 }
 
+function getSpecialtyTypeLabel(item) {
+  return getSpecialtyKind(item) === "polivalencia" ? "Polivalencia (TP)" : "Especialidad de turno (TU)";
+}
+
+function SpecialtySelectOptions({ items }) {
+  return [
+    { kind: "especialidad", group: "Especialidades de turno (TU)", prefix: "TU" },
+    { kind: "polivalencia", group: "Polivalencias (TP)", prefix: "TP" }
+  ].map(({ kind, group, prefix }) => {
+    const groupItems = items.filter((item) => getSpecialtyKind(item) === kind);
+    if (!groupItems.length) return null;
+    return (
+      <optgroup key={kind} label={group}>
+        {groupItems.map((item) => (
+          <option key={item.id} value={item.id}>{prefix} · {getSpecialtyLabel(item)}</option>
+        ))}
+      </optgroup>
+    );
+  });
+}
+
+function MissingCensusPosition({ user, chapa, activeSpecialty }) {
+  if (user?.position || !activeSpecialty.censo.length) return null;
+  return (
+    <p className="census-position-notice" role="status">
+      La chapa {chapa || user?.chapa || "seleccionada"} no figura en el censo guardado de {getSpecialtyLabel(activeSpecialty)}.
+      Aunque esta {getSpecialtyKind(activeSpecialty) === "polivalencia" ? "polivalencia" : "especialidad"} esté asignada a tu cuenta,
+      no podemos calcular tu posición ni la distancia a las puertas hasta confirmar un censo que te incluya.
+    </p>
+  );
+}
+
 function LoginPanel({ theme, onThemeToggle, onLogin }) {
   const [mode, setMode] = useState("login");
   const [chapa, setChapa] = useState("");
@@ -1985,11 +2017,10 @@ function HomePanel({
         <div className="home-section-heading has-select">
           <span><CalendarRange size={18} /> Tu posición frente a las puertas</span>
           <select aria-label="Especialidad" value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>
-            {availableSpecialties.map((item) => (
-              <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
-            ))}
+            <SpecialtySelectOptions items={availableSpecialties} />
           </select>
         </div>
+        <span className={`specialty-type-caption ${getSpecialtyKind(activeSpecialty)}`}>{getSpecialtyTypeLabel(activeSpecialty)}</span>
         <div className="home-door-summary">
           <div>
             <small>Tu posición</small>
@@ -1999,9 +2030,10 @@ function HomePanel({
           <div>
             <small>Puerta más cercana</small>
             <strong>{nearest?.distance === null || nearest?.distance === undefined ? "--" : formatDistance(nearest.distance)}</strong>
-            <em>{nearest?.label || "Sin datos"}</em>
+            <em>{!user?.position ? "Sin posición en este censo" : nearest?.label || "Puertas sin actualizar"}</em>
           </div>
         </div>
+        <MissingCensusPosition user={user} activeSpecialty={activeSpecialty} />
         <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
         <button className="home-inline-link" type="button" onClick={() => onNavigate("puertas")}>Ver detalle de puertas <ChevronRight size={17} /></button>
       </section>
@@ -2042,8 +2074,9 @@ function OperationalStatusPanel({ user, doors, doorConfig, chaperoSnapshot, chap
         </div>
         <div className="chapero-updated"><Clock3 size={14} /><span>{chaperoLoading ? "Cargando Chapero..." : `Actualizado: ${formatUpdatedAt(chaperoSnapshot?.updatedAt)}`}</span></div>
       </section>
-      <div className="specialty-select"><span>Especialidad</span><select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}>{availableSpecialties.map((item) => <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>)}</select></div>
+      <div className="specialty-select"><span>{getSpecialtyTypeLabel(activeSpecialty)}</span><select value={activeSpecialtyId} onChange={(event) => onSpecialtyChange(event.target.value)}><SpecialtySelectOptions items={availableSpecialties} /></select></div>
       <div className="home-summary"><div><p>Tu posición</p><h1>{user?.displayPosition || user?.position || "-"} / {activeSpecialty.censo.length}</h1><span>Chapa {user?.chapa || "-"}</span></div></div>
+      <MissingCensusPosition user={user} activeSpecialty={activeSpecialty} />
       {showRollOnAlert && <div className="rollon-alert"><div className="rollon-alert-icon"><CircleAlert size={20} /></div><div><span>Estiba cerca</span><strong>Puerta a {formatDistance(nearest.distance)}</strong><small>Si el doble se pone a las 18:00 o 19:00, la opción de salir de roll-on es alta.</small></div></div>}
       <DoorRingsGrid user={user} doors={doors} total={activeSpecialty.censo.length} />
     </section>
@@ -2213,6 +2246,7 @@ function DoorsTable({ title, doors, tone }) {
 }
 
 function DoorsPanel({
+  user,
   doors,
   doorConfig,
   activeSpecialty,
@@ -2226,22 +2260,21 @@ function DoorsPanel({
   return (
     <section className="page-panel">
       <div className="specialty-select doors-specialty-select">
-        <span>Especialidad</span>
+        <span>{getSpecialtyTypeLabel(activeSpecialty)}</span>
         <select
           aria-label="Seleccionar puertas por especialidad"
           value={activeSpecialtyId}
           onChange={(event) => onSpecialtyChange(event.target.value)}
         >
-          {availableSpecialties.map((item) => (
-            <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
-          ))}
+          <SpecialtySelectOptions items={availableSpecialties} />
         </select>
       </div>
       <div className="section-heading">
-        <p>Puertas de turno</p>
+        <p>{getSpecialtyKind(activeSpecialty) === "polivalencia" ? "Puertas de polivalencia" : "Puertas de turno"}</p>
         <h1>{getSpecialtyLabel(activeSpecialty)}</h1>
         <span>Censo: {activeSpecialty.censo.length}</span>
       </div>
+      <MissingCensusPosition user={user} activeSpecialty={activeSpecialty} />
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
       <DoorsTable title="Festivas" doors={festivoDoors} tone="fes" />
     </section>
@@ -2250,6 +2283,7 @@ function DoorsPanel({
 
 function CensoPanel({
   user,
+  chapa,
   doors,
   activeSpecialty,
   activeSpecialtyId,
@@ -2274,7 +2308,7 @@ function CensoPanel({
   return (
     <section className="page-panel censo-section">
       <div className="specialty-select censo-specialty-select">
-        <span>Especialidad</span>
+        <span>{getSpecialtyTypeLabel(activeSpecialty)}</span>
         <select
           aria-label="Seleccionar censo por especialidad"
           value={activeSpecialtyId}
@@ -2283,11 +2317,10 @@ function CensoPanel({
             onSpecialtyChange(event.target.value);
           }}
         >
-          {availableSpecialties.map((item) => (
-            <option key={item.id} value={item.id}>{getSpecialtyLabel(item)}</option>
-          ))}
+          <SpecialtySelectOptions items={availableSpecialties} />
         </select>
       </div>
+      <MissingCensusPosition user={user} chapa={chapa} activeSpecialty={activeSpecialty} />
       <div className="section-title-row">
         <div>
           <p>Censo: {activeSpecialty.censo.length}</p>
@@ -4843,6 +4876,7 @@ export function App() {
         )}
         {activeTab === "puertas" && (
           <DoorsPanel
+            user={displayUser}
             doors={doors}
             doorConfig={doorConfig}
             activeSpecialty={activeSpecialty}
@@ -4854,6 +4888,7 @@ export function App() {
         {activeTab === "censo" && (
           <CensoPanel
             user={user}
+            chapa={session.chapa}
             doors={doors}
             activeSpecialty={activeSpecialty}
             activeSpecialtyId={activeSpecialtyId}

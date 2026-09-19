@@ -16,7 +16,7 @@ $shortcutPath = Join-Path $desktop "App CPE - 3 Actualizar TODO (mes + chapero +
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "powershell.exe"
-$shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $runner + '" -RepositoryPath "' + $RepositoryPath + '"'
+$shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + $runner + '" -RepositoryPath "' + $RepositoryPath + '" -UpdateFromMain'
 $shortcut.WorkingDirectory = $RepositoryPath
 $shortcut.Description = "Actualiza mes actual de todos, Chapero, Puertas y Tablon General una sola vez"
 $shortcut.Save()
