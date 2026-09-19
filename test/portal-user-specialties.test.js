@@ -35,6 +35,29 @@ test("TU se guarda como especialidad y TP como polivalencia", () => {
   assert.deepEqual(parsed.ids, ["clasificador", "pol-conductor-1a"]);
 });
 
+test("lee las especialidades reales de Tomas por fila, separando TU y TP", () => {
+  const rows = [
+    [15, "MAFIS", "TU", "mafis"],
+    [29, "APOYO OPERACION", "TU", "apoyo-operacion"],
+    [22, "TRASTAINERS RTT", "TU", "trastainers-rtt"],
+    [19, "CONTAINER", "TU", "container"],
+    [41, "RESERVA G IV", "TP", null],
+    [1, "CAPATAZ", "TP", "pol-capataz"],
+    [23, "SOBORDISTA", "TP", "pol-sobordista"],
+    [20, "ELEVADORAS", "TP", "pol-elevadoras"],
+    [10, "TRINCADOR", "TP", "pol-trincador"],
+    [3, "ESPECIALISTA", "TP", "pol-especialista"],
+    [12, "CONDUCTOR 2a", "TP", "pol-conductor-2a"]
+  ];
+  const html = `<h2>Mis especialidades</h2><table><tr><th>Codigo</th><th>Nombre</th><th>Tipo</th></tr>${rows
+    .map(([code, name, type]) => `<tr><td>${code}</td><td>${name}</td><td>${type}</td></tr>`)
+    .join("")}</table>`;
+  const parsed = parseUserSpecialties(html);
+  assert.deepEqual(parsed.ids, rows.map((row) => row[3]).filter(Boolean));
+  assert.deepEqual(parsed.specialties, rows.slice(0, 4).map((row) => row[3]));
+  assert.deepEqual(parsed.polyvalences, rows.slice(4).map((row) => row[3]).filter(Boolean));
+});
+
 test("lee nombre y apellidos desde la cabecera del portal", () => {
   assert.deepEqual(
     parsePortalIdentity("63179 - CARBONELL BERNAT, JORGE  Finalizar sesión", "63179"),

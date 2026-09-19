@@ -54,8 +54,9 @@ try {
     if (state !== "empty") break;
   }
 
-  console.log(JSON.stringify({ ok: state !== "empty", state, status, location: page.url().split("?")[0] }));
+  console.log(JSON.stringify({ ok: state === "portal", state, status, location: page.url().split("?")[0] }));
   if (state === "empty") process.exitCode = 2;
+  if (state === "challenge") process.exitCode = 3;
 } finally {
   browser._connection.close();
 }

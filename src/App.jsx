@@ -491,9 +491,13 @@ function getEffectiveSpecialtyIds(session) {
   const override = getSpecialtyOverride(session.chapa);
   const detectedIds = getDetectedSpecialtyIdsForChapa(session.chapa);
   const savedIds = Array.isArray(session.specialties) ? session.specialties : [];
-  const baseIds = override || uniqueIds([...detectedIds, ...savedIds]);
-  const validIds = getValidSpecialtiesForChapa(session.chapa, baseIds);
-  return validIds.length ? validIds : (detectedIds[0] ? [detectedIds[0]] : [specialty.id]);
+  const knownIds = new Set(specialties.map((item) => item.id));
+  // Las asignaciones del portal son la fuente de verdad. Un censo aún sin
+  // actualizar no debe ocultar una especialidad real del usuario.
+  const portalIds = uniqueIds([...(override || []), ...savedIds])
+    .filter((id) => knownIds.has(id));
+  if (portalIds.length) return portalIds;
+  return detectedIds.length ? detectedIds : [specialty.id];
 }
 
 function getSpecialtyKind(item) {
@@ -4488,6 +4492,7 @@ export function App() {
           && nextSession.displayName === session.displayName
           && Boolean(nextSession.forumShowChapa) === Boolean(session.forumShowChapa)
           && Number(nextSession.irpfRate) === Number(session.irpfRate)
+          && JSON.stringify(nextSession.specialties || []) === JSON.stringify(session.specialties || [])
         ) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
         setSession(nextSession);
@@ -4515,10 +4520,10 @@ export function App() {
       if (snapshot) return snapshot;
 
       return {
-        source: "supabase",
+        source: "censo del portal",
         specialty: activeSpecialty.name,
         updatedAt: null,
-        doors: [],
+        doors: activeSpecialty.doors,
         rawColumns: {}
       };
     }

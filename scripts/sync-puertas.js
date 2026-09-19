@@ -54,10 +54,16 @@ async function upsertSupabaseSnapshot(parsed) {
 }
 
 const specialtyRows = [
+  { code: "15", name: "MAFIS", snapshotName: "MAFIS", mode: "turno" },
+  { code: "29", name: "APOYO OPERACION", snapshotName: "APOYO OPERACION", mode: "turno" },
   { code: "11", name: "CONDUCTOR 1a", snapshotName: "CONDUCTOR 1a", mode: "turno" },
   { code: "12", name: "CONDUCTOR 2a", snapshotName: "CONDUCTOR 2a", mode: "turno" },
   { code: "02", name: "CLASIFICADOR", snapshotName: "CLASIFICADOR", mode: "turno" },
   { code: "22", name: "TRASTAINERS RTT", snapshotName: "TRASTAINERS RTT", mode: "turno" },
+  { code: "19", name: "CONTAINER", snapshotName: "CONTAINER", mode: "turno" },
+  { code: "01", name: "CAPATAZ", snapshotName: "POL. CAPATAZ", mode: "polivalencia" },
+  { code: "23", name: "SOBORDISTA", snapshotName: "POL. SOBORDISTA", mode: "polivalencia" },
+  { code: "20", name: "ELEVADORAS", snapshotName: "POL. ELEVADORAS", mode: "polivalencia" },
   { code: "11", name: "CONDUCTOR 1a", snapshotName: "POL. CONDUCTOR 1a", mode: "polivalencia" },
   { code: "12", name: "CONDUCTOR 2a", snapshotName: "POL. CONDUCTOR 2a", mode: "polivalencia" },
   { code: "03", name: "ESPECIALISTA", snapshotName: "POL. ESPECIALISTA", mode: "polivalencia" },

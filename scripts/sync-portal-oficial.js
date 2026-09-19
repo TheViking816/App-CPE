@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
 import { isPremiumCredentialNotice, isExplicitSectionFailure } from "./portal-sync-outcome.js";
+import { readPortalSectionWithRetry } from "./portal-section-retry.js";
+import { hasAuthoritativeNoAssignments } from "./portal-assignment-empty.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -227,21 +229,52 @@ export function parseUserSpecialties(html = "") {
     && /\b(?:TU|TP)\b/.test(normalized);
   if (!recognized) return { recognized: false, specialties: [], polyvalences: [], ids: [] };
 
-  const taggedIds = [];
   const taggedDefinitions = [
+    ["mafis", null, /\bMAFIS\b/],
+    ["apoyo-operacion", null, /APOYO\s+OPERACION/],
     ["clasificador", "clasificador", /CLASIFICADOR/],
     ["conductor-1a", "pol-conductor-1a", /CONDUCTOR\s+1(?:A|ª)/],
     ["conductor-2a", "pol-conductor-2a", /CONDUCTOR\s+2(?:A|ª)/],
     ["trastainers-rtt", null, /TRASTAINERS?\s+RTT/],
+    ["container", null, /\bCONTAINERS?\b/],
+    [null, "pol-capataz", /\bCAPATAZ\b/],
+    [null, "pol-sobordista", /\bSOBORDISTA\b/],
+    [null, "pol-elevadoras", /\bELEVADORAS?\b/],
     [null, "pol-especialista", /ESPECIALISTA/],
     [null, "pol-trincador", /TRINCADOR(?:ES)?/],
     [null, "pol-trinca-coches", /TRINCA(?:\s+DE)?\s+COCHES/]
   ];
-  for (const [tuId, tpId, pattern] of taggedDefinitions) {
-    const match = normalized.match(new RegExp(`${pattern.source}[\\s|:;-]{0,30}\\b(TU|TP)\\b`, "i"));
-    const tag = match?.[1];
-    const id = tag === "TU" ? tuId : tag === "TP" ? tpId : null;
-    if (id) taggedIds.push(id);
+  const specialtyIdFor = (name, tag) => {
+    const normalizedName = cleanText(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const normalizedTag = cleanText(tag).toUpperCase();
+    for (const [tuId, tpId, pattern] of taggedDefinitions) {
+      if (!pattern.test(normalizedName)) continue;
+      return normalizedTag === "TU" ? tuId : normalizedTag === "TP" ? tpId : null;
+    }
+    return null;
+  };
+
+  // El portal actual muestra Codigo/Nombre/Tipo: cada TU o TP debe leerse
+  // junto al nombre de su propia fila, no del texto completo de la página.
+  const tableIds = [];
+  for (const cells of parseDetailedRowsFromTable(html)) {
+    const values = cells.map((cell) => cleanText(cell.value));
+    const tagIndex = values.findIndex((value) => /^(?:TU|TP)$/i.test(value));
+    if (tagIndex < 0) continue;
+    const name = values.slice(0, tagIndex).reverse().find((value) => /[A-ZÁÉÍÓÚÑ]/i.test(value) && !/^\d+$/.test(value));
+    const id = specialtyIdFor(name, values[tagIndex]);
+    if (id) tableIds.push(id);
+  }
+
+  const taggedIds = [...tableIds];
+  if (!tableIds.length) {
+    // Compatibilidad con el marcado antiguo, sin tabla.
+    for (const [tuId, tpId, pattern] of taggedDefinitions) {
+      const match = normalized.match(new RegExp(`${pattern.source}[\\s|:;-]{0,30}\\b(TU|TP)\\b`, "i"));
+      const tag = match?.[1];
+      const id = tag === "TU" ? tuId : tag === "TP" ? tpId : null;
+      if (id) taggedIds.push(id);
+    }
   }
 
   const taggedSpecialties = taggedIds.filter((id) => !id.startsWith("pol-"));
@@ -2343,6 +2376,14 @@ async function collectAssignmentsViaMenu(page) {
   await assignmentNavigationState(page, "menu-after-click");
   const listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 12000);
   const initialText = await listFrame.locator("body").innerText().catch(() => "");
+  if (hasAuthoritativeNoAssignments(initialText)) {
+    await page.waitForTimeout(800);
+    const confirmedText = await listFrame.locator("body").innerText().catch(() => "");
+    if (hasAuthoritativeNoAssignments(confirmedText)) {
+      console.log("Donde voy: el portal confirma cero asignaciones para este trabajador.");
+      return { recognized: true, rows: [] };
+    }
+  }
   const hasCollapsedCards = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}\s*\/\s*\d{1,2}\s*h\b/i.test(initialText);
   if (hasCollapsedCards) {
     const expanded = await expandWhereAmISections(listFrame);
@@ -2919,12 +2960,33 @@ async function openPortalBrowserSession() {
     };
   }
 
+  const preferencesPath = path.join(profileDir, "Default", "Preferences");
+  let preferences = {};
+  try {
+    preferences = JSON.parse(await fs.readFile(preferencesPath, "utf8"));
+  } catch {
+    preferences = {};
+  }
+  preferences.credentials_enable_service = false;
+  preferences.profile = {
+    ...(preferences.profile || {}),
+    password_manager_enabled: false,
+    password_manager_leak_detection: false
+  };
+  await fs.mkdir(path.dirname(preferencesPath), { recursive: true });
+  await fs.writeFile(preferencesPath, JSON.stringify(preferences), "utf8");
+
   const launchOptions = {
     headless,
     viewport: { width: 1500, height: 1100 },
     locale: "es-ES",
     timezoneId: "Europe/Madrid",
-    args: ["--disable-blink-features=AutomationControlled"]
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--disable-features=PasswordLeakDetection,LeakDetectionUnauthenticated",
+      "--disable-save-password-bubble",
+      "--disable-session-crashed-bubble"
+    ]
   };
   if (browserChannel && browserChannel !== "bundled") launchOptions.channel = browserChannel;
 
@@ -3033,19 +3095,28 @@ async function main() {
     let freshSections = 0;
     const readSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
       console.log(`Leyendo ${name}...`);
-      try {
-        const value = await reader();
-        if ((!isMeaningful || isMeaningful(value)) && !wouldEraseStoredCollection(value, fallback, options)) {
-          sectionErrors.push(...(value?.historyWarnings || []));
-          freshSections += 1;
-          console.log(`${name} actualizado.`);
-          return value;
+      const outcome = await readPortalSectionWithRetry(reader, {
+        isAcceptable: (value) => (
+          (!isMeaningful || isMeaningful(value))
+          && !wouldEraseStoredCollection(value, fallback, options)
+        ),
+        onRetry: async () => {
+          console.warn(`${name} quedo vacio o incompleto en el primer intento; se abre de nuevo.`);
+          await page.waitForTimeout(500);
         }
+      });
+      if (outcome.ok) {
+        sectionErrors.push(...(outcome.value?.historyWarnings || []));
+        freshSections += 1;
+        console.log(`${name} actualizado${outcome.attempts > 1 ? " en el segundo intento" : ""}.`);
+        return outcome.value;
+      }
+      if (!outcome.error) {
         const message = `${name} devolvio una respuesta incompleta; se conservan los datos anteriores.`;
         sectionWarnings.push(message);
         console.warn(message);
-      } catch (error) {
-        const message = `${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim();
+      } else {
+        const message = `${name} no se pudo actualizar; se conservan los datos anteriores. ${outcome.error instanceof Error ? outcome.error.message : ""}`.trim();
         sectionErrors.push(message);
         sectionWarnings.push(message);
         console.warn(message);
@@ -3054,23 +3125,34 @@ async function main() {
     };
     const readOptionalSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
       console.log(`Leyendo ${name}...`);
-      try {
-        const value = await reader();
+      const outcome = await readPortalSectionWithRetry(reader, {
+        isAcceptable: (value) => (
+          (value?.locked && !portalSecurityKey && /primas|nomina/.test(name))
+          || (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options))
+        ),
+        shouldRetry: (error) => !error || !isPremiumCredentialNotice(error instanceof Error ? error.message : error),
+        onRetry: async () => {
+          console.warn(`${name} quedo vacio o incompleto en el primer intento; se abre de nuevo.`);
+          await page.waitForTimeout(500);
+        }
+      });
+      if (outcome.ok) {
+        const value = outcome.value;
         if (value?.locked && !portalSecurityKey && /primas|nomina/.test(name)) {
           sectionNotices.push("Primas y nominas pendientes de introducir la clave de seguridad.");
           return isMeaningful(fallback) ? fallback : emptyValue;
         }
-        if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options)) {
-          sectionErrors.push(...(value?.historyWarnings || []));
-          freshSections += 1;
-          console.log(`${name} actualizado.`);
-          return value;
-        }
+        sectionErrors.push(...(value?.historyWarnings || []));
+        freshSections += 1;
+        console.log(`${name} actualizado${outcome.attempts > 1 ? " en el segundo intento" : ""}.`);
+        return value;
+      }
+      if (!outcome.error) {
         const message = `${name} no devolvio datos; se conserva la ultima lectura disponible.`;
         sectionWarnings.push(message);
         console.warn(message);
-      } catch (error) {
-        const message = `${name} no se pudo actualizar. ${error instanceof Error ? error.message : ""}`.trim();
+      } else {
+        const message = `${name} no se pudo actualizar. ${outcome.error instanceof Error ? outcome.error.message : ""}`.trim();
         if (isPremiumCredentialNotice(message)) {
           sectionNotices.push("Clave de primas incorrecta: primas y nominas pendientes de actualizar; se conservan los datos guardados.");
           console.warn(message);

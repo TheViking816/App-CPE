@@ -1,3 +1,5 @@
+import portalCensusCapture from "./censosPortalCurrent.js";
+
 const CENSO_RAW = `
 2699 2700 2701 2708 2702 2703 2704 2705 2707 2717 2712 2714 2719 2730 2720 2721 2722 2723 2725 2728 2729 2733 2739 2741 2743 2149 2140 2583 2640 2641 2742 2658 2718 2713 2737 2736
 2636 2615 1045 2624 2647 2649 2643 2644 2668 2655 2683 2711 2710 2724 2682 2605 2657 1568 2709 2685 2548 2585 2599 2597 2555 2550 2562 2563 2569 2627 2571 2500 2510 2586 2502
@@ -216,7 +218,7 @@ function parsePairCenso(raw) {
   return result;
 }
 
-export const specialties = [
+const legacySpecialties = [
   {
     id: "conductor-1a",
     name: "CONDUCTOR 1a",
@@ -337,6 +339,31 @@ export const specialties = [
       { key: "FES", label: "Diurna festiva", raw: 71246, dayType: "festivo", shift: "FES" }
     ]
   }
+];
+
+function portalCensoRows(chapas) {
+  return chapas.map((chapa, index) => ({
+    chapa,
+    sourceChapa: chapa,
+    sourcePosition: index + 1,
+    position: index + 1,
+    displayPosition: index + 1
+  }));
+}
+
+const portalSpecialties = portalCensusCapture.cards.map((item) => ({
+  id: item.id,
+  name: item.name,
+  kind: item.kind,
+  expectedSize: item.expectedSize,
+  censo: portalCensoRows(item.censo),
+  doors: item.doors
+}));
+const portalSpecialtiesById = new Map(portalSpecialties.map((item) => [item.id, item]));
+
+export const specialties = [
+  ...legacySpecialties.map((item) => portalSpecialtiesById.get(item.id) || item),
+  ...portalSpecialties.filter((item) => !legacySpecialties.some((legacy) => legacy.id === item.id))
 ];
 
 export const specialty = specialties[0];
