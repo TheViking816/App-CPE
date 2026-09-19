@@ -4646,6 +4646,9 @@ select {
 
 .portal-doubles-list { grid-template-columns: minmax(0, 1fr); }
 .portal-double-day { overflow: hidden; border: 1px solid #e1e8ef; border-radius: 8px; background: #f8fafc; }
+.portal-double-day.has-granted { border-color: #7bc8ad; box-shadow: inset 4px 0 0 #159574; }
+.portal-double-day.has-granted > .portal-double-day-toggle { background: linear-gradient(90deg, #e1f8ef 0%, #f8fafc 72%); }
+.portal-double-day.has-granted .portal-double-day-toggle time { background: #087f66; }
 .portal-double-day-toggle {
   display: grid;
   width: 100%;
@@ -4680,12 +4683,31 @@ select {
   gap: 8px;
   border-top: 1px solid #e1e8ef;
 }
-.portal-double-request.is-granted { margin: 0 -9px; padding: 0 9px; background: #e8faf4; }
+.portal-double-request.is-granted {
+  margin: 3px -9px 0;
+  padding: 3px 9px 3px 13px;
+  border-top-color: #9bd7c2;
+  background: linear-gradient(90deg, #c9f1e2 0%, #e8faf4 100%);
+  box-shadow: inset 4px 0 0 #159574;
+}
 .portal-double-request strong { overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .portal-double-request-meta { display: grid; justify-items: end; gap: 3px; padding: 4px 0; }
 .portal-double-request small { overflow: visible; padding: 4px 7px; border-radius: 7px; background: #edf3f8; color: var(--muted); font-size: 9px; font-weight: 750; white-space: nowrap; }
 .portal-double-request small b { color: var(--ink); }
-.portal-double-request-meta em { display: flex; align-items: center; gap: 3px; color: #087f66; font-size: 9px; font-style: normal; font-weight: 950; text-transform: uppercase; }
+.portal-double-request-meta em {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #087f66;
+  color: #fff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 950;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(8, 127, 102, .2);
+}
 .portal-doubles-show-all {
   justify-self: center;
   min-height: 38px;
@@ -4817,8 +4839,12 @@ select {
 :root[data-theme="dark"] .portal-double-request { border-top-color: #29435d; }
 :root[data-theme="dark"] .portal-double-request small { background: #213a53; }
 :root[data-theme="dark"] .portal-double-request.is-granted { background: #123d35; }
+:root[data-theme="dark"] .portal-double-day.has-granted { border-color: #3c9b7e; box-shadow: inset 4px 0 0 #64d9bb; }
+:root[data-theme="dark"] .portal-double-day.has-granted > .portal-double-day-toggle { background: linear-gradient(90deg, #123d35 0%, #172d45 72%); }
+:root[data-theme="dark"] .portal-double-day.has-granted .portal-double-day-toggle time { border-color: #64d9bb; background: #087f66; }
 :root[data-theme="dark"] .portal-double-day-summary small em,
 :root[data-theme="dark"] .portal-double-request-meta em { color: #64d9bb; }
+:root[data-theme="dark"] .portal-double-request-meta em { background: #64d9bb; color: #082c26; }
 :root[data-theme="dark"] .portal-doubles-show-all { color: #64d9bb; }
 
 .portal-message-detail {

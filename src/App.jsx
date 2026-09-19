@@ -1067,7 +1067,7 @@ function UpcomingDoubles({ snapshot, currentTime }) {
           {visibleGroups.map((group) => {
             const isOpen = openDates.includes(group.dateKey);
             return (
-              <section className={`portal-double-day${isOpen ? " is-open" : ""}`} key={group.dateKey}>
+              <section className={`portal-double-day${isOpen ? " is-open" : ""}${group.grantedCount ? " has-granted" : ""}`} key={group.dateKey}>
                 <button
                   className="portal-double-day-toggle"
                   type="button"
