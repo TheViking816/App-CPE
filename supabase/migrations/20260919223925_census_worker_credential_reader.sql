@@ -1,5 +1,9 @@
 -- Credencial de un solo usuario para el lector manual de censos. No crea
 -- trabajos de sincronización ni modifica las fechas del worker habitual.
+-- La función y sus permisos se publican juntos: nunca queda ejecutable
+-- temporalmente por PUBLIC entre CREATE y REVOKE.
+begin;
+
 create or replace function public.app_cpe_get_census_worker_credential(p_chapa text)
 returns jsonb
 language plpgsql
@@ -9,7 +13,7 @@ as $$
 declare
   v_password text;
 begin
-  if p_chapa !~ '^\d{5}$' then
+  if p_chapa !~ '^[0-9]{5}$' then
     raise exception 'Chapa no valida';
   end if;
 
@@ -28,3 +32,5 @@ $$;
 
 revoke all on function public.app_cpe_get_census_worker_credential(text) from public, anon, authenticated;
 grant execute on function public.app_cpe_get_census_worker_credential(text) to service_role;
+
+commit;
