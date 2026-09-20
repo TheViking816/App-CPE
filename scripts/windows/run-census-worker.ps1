@@ -14,14 +14,19 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 try {
   Set-Location -LiteralPath $RepositoryPath
   if ($UpdateFromMain) {
-    $changes = @(git status --porcelain)
-    if ($LASTEXITCODE -ne 0 -or $changes.Count -gt 0) {
-      throw "La copia local contiene cambios pendientes. No se actualiza automáticamente para no sobrescribirlos."
-    }
     & git fetch origin main
     if ($LASTEXITCODE -ne 0) { throw "No se pudo consultar main en GitHub." }
-    & git merge --ff-only origin/main
-    if ($LASTEXITCODE -ne 0) { throw "La copia local no pudo avanzar a main sin modificar cambios." }
+    $localCommit = (& git rev-parse HEAD).Trim()
+    $mainCommit = (& git rev-parse origin/main).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo comprobar la versión local." }
+    if ($localCommit -ne $mainCommit) {
+      $changes = @(git status --porcelain)
+      if ($LASTEXITCODE -ne 0 -or $changes.Count -gt 0) {
+        throw "Hay una versión nueva en main, pero la copia local contiene cambios pendientes. No se sobrescriben automáticamente."
+      }
+      & git merge --ff-only origin/main
+      if ($LASTEXITCODE -ne 0) { throw "La copia local no pudo avanzar a main sin modificar cambios." }
+    }
   }
 
   $secure = ConvertTo-SecureString (Get-Content -LiteralPath $secretPath -Raw).Trim()
