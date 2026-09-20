@@ -122,7 +122,7 @@ import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
 import { initialIrpfRate } from "./irpfRate.js";
 import { orderPayrollDocuments } from "./payrollDocumentOrder.js";
-import { groupUpcomingDoubles, markGrantedUpcomingDoubles, upcomingDoubleDayLabel } from "./upcomingDoubles.js";
+import { groupUpcomingDoubles, markContractedUpcomingDoubles, upcomingDoubleDayLabel } from "./upcomingDoubles.js";
 
 const STORAGE_KEY = "app-cpe-session";
 const MONTH_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -1075,7 +1075,7 @@ function UpcomingDoubles({ snapshot, currentTime }) {
       .map((request) => ({ ...request, startsAt: upcomingDoubleStart(request) }))
       .filter((request) => request.startsAt && request.startsAt > now)
       .sort((a, b) => a.startsAt - b.startsAt);
-    return markGrantedUpcomingDoubles(
+    return markContractedUpcomingDoubles(
       requested,
       currentAssignmentsFromSnapshot(snapshot, currentTime)
     );
@@ -1097,15 +1097,16 @@ function UpcomingDoubles({ snapshot, currentTime }) {
     <section className={`upcoming-doubles-card${rows.length ? "" : " is-empty"}`}>
       <header>
         <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
-        <div><small>Solicitudes activas</small><strong>Próximos dobles</strong></div>
+        <div><small>Próximas solicitudes</small><strong>Dobles solicitados</strong></div>
         <b>{rows.length}</b>
       </header>
+      {rows.length > 0 && <p className="portal-doubles-note">La contratación depende de la rueda de cada jornada.</p>}
       {rows.length ? (
         <div className="portal-doubles-list">
           {visibleGroups.map((group) => {
             const isOpen = openDates.includes(group.dateKey);
             return (
-              <section className={`portal-double-day${isOpen ? " is-open" : ""}${group.grantedCount ? " has-granted" : ""}`} key={group.dateKey}>
+              <section className={`portal-double-day${isOpen ? " is-open" : ""}`} key={group.dateKey}>
                 <button
                   className="portal-double-day-toggle"
                   type="button"
@@ -1117,7 +1118,7 @@ function UpcomingDoubles({ snapshot, currentTime }) {
                     <strong>{upcomingDoubleDayLabel(group.startsAt, currentTime)}</strong>
                     <small>
                       {group.requests.length} {group.requests.length === 1 ? "solicitud" : "solicitudes"}
-                      {group.grantedCount > 0 && <em> · {group.grantedCount} {group.grantedCount === 1 ? "concedida" : "concedidas"}</em>}
+                      {group.contractedCount > 0 && <em> · {group.contractedCount} {group.contractedCount === 1 ? "contratación" : "contrataciones"}</em>}
                     </small>
                   </span>
                   {group.holiday && <em className="portal-double-holiday">Festivo</em>}
@@ -1125,11 +1126,11 @@ function UpcomingDoubles({ snapshot, currentTime }) {
                 </button>
                 <div className="portal-double-requests">
                   {group.requests.map((request, index) => (
-                    <div className={`portal-double-request${request.granted ? " is-granted" : ""}`} key={`${request.specialty}-${request.journey}-${index}`}>
+                    <div className={`portal-double-request${request.contracted ? " is-contracted" : ""}`} key={`${request.specialty}-${request.journey}-${index}`}>
                       <strong>{request.specialty}</strong>
                       <span className="portal-double-request-meta">
                         <small>Jornada <b>{request.journey}</b></small>
-                        {request.granted && <em><Check size={12} aria-hidden="true" /> Concedido</em>}
+                        {request.contracted && <em><Check size={12} aria-hidden="true" /> Contratado</em>}
                       </span>
                     </div>
                   ))}

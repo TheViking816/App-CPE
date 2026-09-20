@@ -4399,10 +4399,10 @@ select {
   display: grid;
   gap: 10px;
   padding: 14px;
-  border: 1px solid #cfe9df;
+  border: 1px solid #dbe5ef;
   border-radius: 9px;
-  background: linear-gradient(145deg, #f8fffc, #eefaf6);
-  box-shadow: 0 7px 20px rgba(7, 90, 68, 0.07);
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(7, 31, 63, 0.06);
 }
 
 .upcoming-doubles-card > header {
@@ -4412,9 +4412,10 @@ select {
   gap: 10px;
 }
 .upcoming-doubles-card > header > div { display: grid; gap: 1px; }
-.upcoming-doubles-card > header small { color: #4d7b6d; font-size: 10px; font-weight: 850; text-transform: uppercase; }
+.upcoming-doubles-card > header small { color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; }
 .upcoming-doubles-card > header strong { color: var(--ink); font-size: 16px; font-weight: 950; }
-.upcoming-doubles-card > header > b { display: grid; min-width: 34px; min-height: 34px; place-items: center; border-radius: 8px; background: #dff7ee; color: #087f66; font-size: 13px; }
+.upcoming-doubles-card > header > b { display: grid; min-width: 34px; min-height: 34px; place-items: center; border-radius: 8px; background: #edf4fa; color: var(--navy); font-size: 13px; }
+.portal-doubles-note { margin: -2px 0 2px; color: var(--muted); font-size: 11px; line-height: 1.35; }
 
 .portal-personal-section > header {
   display: grid;
@@ -4466,7 +4467,7 @@ select {
 }
 
 .portal-personal-icon.is-inbox { background: #e9f2ff; color: #1769aa; }
-.portal-personal-icon.is-doubles { background: #e8faf4; color: #087f66; }
+.portal-personal-icon.is-doubles { background: #edf4fa; color: var(--navy); }
 .portal-personal-icon.is-payroll { background: #fff3df; color: #b25a00; }
 
 .portal-inbox-list,
@@ -4652,10 +4653,7 @@ select {
 .portal-inbox-list time small { font-size: 9px; }
 
 .portal-doubles-list { grid-template-columns: minmax(0, 1fr); }
-.portal-double-day { overflow: hidden; border: 1px solid #e1e8ef; border-radius: 8px; background: #f8fafc; }
-.portal-double-day.has-granted { border-color: #7bc8ad; box-shadow: inset 4px 0 0 #159574; }
-.portal-double-day.has-granted > .portal-double-day-toggle { background: linear-gradient(90deg, #e1f8ef 0%, #f8fafc 72%); }
-.portal-double-day.has-granted .portal-double-day-toggle time { background: #087f66; }
+.portal-double-day { overflow: hidden; border: 1px solid #dbe5ef; border-radius: 8px; background: #fff; }
 .portal-double-day-toggle {
   display: grid;
   width: 100%;
@@ -4677,7 +4675,7 @@ select {
 .portal-double-day-summary { display: grid; min-width: 0; gap: 2px; }
 .portal-double-day-summary strong { color: var(--ink); font-size: 12px; font-weight: 900; }
 .portal-double-day-summary small { color: var(--muted); font-size: 10px; font-weight: 750; }
-.portal-double-day-summary small em { color: #087f66; font-style: normal; font-weight: 900; }
+.portal-double-day-summary small em { color: var(--navy); font-style: normal; font-weight: 900; }
 .portal-double-chevron { color: var(--muted); transition: transform .18s ease; }
 .portal-double-day.is-open .portal-double-chevron { transform: rotate(180deg); }
 .portal-double-requests { display: none; padding: 0 9px 8px 62px; }
@@ -4690,13 +4688,7 @@ select {
   gap: 8px;
   border-top: 1px solid #e1e8ef;
 }
-.portal-double-request.is-granted {
-  margin: 3px -9px 0;
-  padding: 3px 9px 3px 13px;
-  border-top-color: #9bd7c2;
-  background: linear-gradient(90deg, #c9f1e2 0%, #e8faf4 100%);
-  box-shadow: inset 4px 0 0 #159574;
-}
+.portal-double-request.is-contracted { background: #f4f8fc; }
 .portal-double-request strong { overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .portal-double-request-meta { display: grid; justify-items: end; gap: 3px; padding: 4px 0; }
 .portal-double-request small { overflow: visible; padding: 4px 7px; border-radius: 7px; background: #edf3f8; color: var(--muted); font-size: 9px; font-weight: 750; white-space: nowrap; }
@@ -4707,13 +4699,13 @@ select {
   gap: 3px;
   padding: 4px 7px;
   border-radius: 999px;
-  background: #087f66;
-  color: #fff;
+  background: #e8f1fb;
+  color: var(--navy);
   font-size: 9px;
   font-style: normal;
   font-weight: 950;
   text-transform: uppercase;
-  box-shadow: 0 2px 6px rgba(8, 127, 102, .2);
+  box-shadow: none;
 }
 .portal-doubles-show-all {
   justify-self: center;
@@ -4721,7 +4713,7 @@ select {
   padding: 7px 12px;
   border: 0;
   background: transparent;
-  color: #087f66;
+  color: var(--navy);
   font: inherit;
   font-size: 11px;
   font-weight: 900;
@@ -4734,7 +4726,7 @@ select {
   align-items: center;
   gap: 10px;
   padding: 11px;
-  border: 1px dashed #afd2c6;
+  border: 1px dashed #bdcbd8;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.7);
 }
@@ -4742,8 +4734,8 @@ select {
 .portal-doubles-empty > svg {
   padding: 8px;
   border-radius: 8px;
-  background: #e1f5ee;
-  color: #087f66;
+  background: #edf4fa;
+  color: var(--navy);
 }
 
 .portal-doubles-empty > div {
@@ -4834,7 +4826,7 @@ select {
 :root[data-theme="dark"] .profile-privacy-toggle strong { color: #f4f8fc; }
 :root[data-theme="dark"] .password-change-form label,
 :root[data-theme="dark"] .password-change-success strong { color: #f4f8fc; }
-:root[data-theme="dark"] .upcoming-doubles-card { border-color: #235949; background: linear-gradient(145deg, #102b28, #102238); }
+:root[data-theme="dark"] .upcoming-doubles-card { border-color: #29435d; background: #102238; }
 :root[data-theme="dark"] .upcoming-doubles-card > header strong { color: #f4f8fc; }
 :root[data-theme="dark"] .portal-doubles-list time {
   border: 1px solid #31597f;
@@ -4845,14 +4837,11 @@ select {
 :root[data-theme="dark"] .portal-doubles-list time small { color: #c7ddf4; }
 :root[data-theme="dark"] .portal-double-request { border-top-color: #29435d; }
 :root[data-theme="dark"] .portal-double-request small { background: #213a53; }
-:root[data-theme="dark"] .portal-double-request.is-granted { background: #123d35; }
-:root[data-theme="dark"] .portal-double-day.has-granted { border-color: #3c9b7e; box-shadow: inset 4px 0 0 #64d9bb; }
-:root[data-theme="dark"] .portal-double-day.has-granted > .portal-double-day-toggle { background: linear-gradient(90deg, #123d35 0%, #172d45 72%); }
-:root[data-theme="dark"] .portal-double-day.has-granted .portal-double-day-toggle time { border-color: #64d9bb; background: #087f66; }
+:root[data-theme="dark"] .portal-double-request.is-contracted { background: #1a3654; }
 :root[data-theme="dark"] .portal-double-day-summary small em,
-:root[data-theme="dark"] .portal-double-request-meta em { color: #64d9bb; }
-:root[data-theme="dark"] .portal-double-request-meta em { background: #64d9bb; color: #082c26; }
-:root[data-theme="dark"] .portal-doubles-show-all { color: #64d9bb; }
+:root[data-theme="dark"] .portal-double-request-meta em { color: #c7ddf4; }
+:root[data-theme="dark"] .portal-double-request-meta em { background: #254568; }
+:root[data-theme="dark"] .portal-doubles-show-all { color: #c7ddf4; }
 
 .portal-message-detail {
   position: absolute;

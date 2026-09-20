@@ -12,7 +12,7 @@ export function groupUpcomingDoubles(rows = []) {
     requests,
     startsAt: requests[0].startsAt,
     holiday: requests.some((request) => request.holiday),
-    grantedCount: requests.filter((request) => request.granted).length
+    contractedCount: requests.filter((request) => request.contracted).length
   }));
 }
 
@@ -32,7 +32,7 @@ function normalizeDoubleSpecialty(value) {
     .toLocaleUpperCase("es");
 }
 
-export function markGrantedUpcomingDoubles(rows = [], assignments = []) {
+export function markContractedUpcomingDoubles(rows = [], assignments = []) {
   const requestedSlotCounts = rows.reduce((counts, request) => {
     const slot = `${String(request?.date || "").trim()}|${normalizeDoubleShift(request?.journey || request?.jornada)}`;
     counts.set(slot, (counts.get(slot) || 0) + 1);
@@ -52,8 +52,8 @@ export function markGrantedUpcomingDoubles(rows = [], assignments = []) {
     const requestSlot = `${date}|${shift}`;
     const sameSlot = assignmentSlots.filter((candidate) => candidate.date === date && candidate.shift === shift);
     const exact = sameSlot.find((candidate) => candidate.specialty && candidate.specialty === specialty);
-    const grantedBy = exact || (sameSlot.length === 1 && requestedSlotCounts.get(requestSlot) === 1 ? sameSlot[0] : null);
-    return grantedBy ? { ...request, granted: true, grantedAssignment: grantedBy.assignment } : request;
+    const contractedBy = exact || (sameSlot.length === 1 && requestedSlotCounts.get(requestSlot) === 1 ? sameSlot[0] : null);
+    return contractedBy ? { ...request, contracted: true, contractedAssignment: contractedBy.assignment } : request;
   });
 }
 
