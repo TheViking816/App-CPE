@@ -1100,7 +1100,6 @@ function UpcomingDoubles({ snapshot, currentTime }) {
         <div><small>Próximas solicitudes</small><strong>Dobles solicitados</strong></div>
         <b>{rows.length}</b>
       </header>
-      {rows.length > 0 && <p className="portal-doubles-note">La contratación depende de la rueda de cada jornada.</p>}
       {rows.length ? (
         <div className="portal-doubles-list">
           {visibleGroups.map((group) => {

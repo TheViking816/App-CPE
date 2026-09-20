@@ -4415,7 +4415,6 @@ select {
 .upcoming-doubles-card > header small { color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; }
 .upcoming-doubles-card > header strong { color: var(--ink); font-size: 16px; font-weight: 950; }
 .upcoming-doubles-card > header > b { display: grid; min-width: 34px; min-height: 34px; place-items: center; border-radius: 8px; background: #edf4fa; color: var(--navy); font-size: 13px; }
-.portal-doubles-note { margin: -2px 0 2px; color: var(--muted); font-size: 11px; line-height: 1.35; }
 
 .portal-personal-section > header {
   display: grid;
