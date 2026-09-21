@@ -898,15 +898,27 @@ async function readAssignmentDetailViaPortal(sourcePage, assignment) {
   detailUrl.searchParams.set("anyo", year);
   detailUrl.searchParams.set("parte", String(assignment.parte));
 
-  // BrowserContext.request comparte las cookies de la sesion del portal. Leer el
-  // HTML por HTTP evita sustituir la pestana principal por ParteA.asp y elimina
-  // el parpadeo/reapertura que se veia al cerrar despues otras pestanas auxiliares.
-  const response = await sourcePage.context().request.get(detailUrl.toString(), {
-    timeout: 8000,
-    failOnStatusCode: false
-  });
-  if (!response.ok()) return { recognized: false, specialties: [] };
-  return parseAssignmentDetail(await response.text());
+  // ParteA.asp depende del estado de navegacion de la sesion ASP y no responde
+  // igual a una peticion HTTP aislada. Se conserva como respaldo excepcional en
+  // una pestana temporal que siempre se cierra y nunca sustituye a la principal.
+  const directPage = await sourcePage.context().newPage();
+  try {
+    await directPage.goto(detailUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 8000
+    });
+    return await waitForParsedContent(
+      directPage,
+      parseAssignmentDetail,
+      assignmentDetailScore,
+      5000,
+      isAssignmentDetailComplete,
+      500
+    );
+  } finally {
+    await directPage.close({ runBeforeUnload: false }).catch(() => null);
+    await sourcePage.bringToFront().catch(() => null);
+  }
 }
 
 async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 6000) {
@@ -926,6 +938,24 @@ async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 60
         ))).catch(() => []);
         const pageText = await frame.locator("body").innerText().catch(() => "");
         let parsed = bestAssignmentDetail(rows, pageText);
+        const modalRoots = frame.locator([
+          '[role="dialog"]:visible',
+          '.modal:visible',
+          '[class*="modal"]:visible',
+          '[class*="dialog"]:visible'
+        ].join(", "));
+        const modalCount = Math.min(await modalRoots.count().catch(() => 0), 10);
+        for (let modalIndex = 0; modalIndex < modalCount; modalIndex += 1) {
+          const modalText = await modalRoots.nth(modalIndex).innerText().catch(() => "");
+          if (!modalText || !new RegExp(`\\b${escapedPart}\\b`).test(modalText)) continue;
+          // En el modal actual "Parte" y el numero pueden ser nodos separados.
+          // Anteponer una cabecera canonica permite leerlo sin esperar al enlace
+          // ASP heredado, manteniendo como fuente el propio Jornales y Primas.
+          const modalParsed = parseAssignmentDetailFromText(`Parte ${part}\n${modalText}`);
+          if (assignmentDetailScore(modalParsed) >= assignmentDetailScore(parsed)) {
+            parsed = { ...modalParsed, parte: part };
+          }
+        }
         // El modal React muestra el numero en su cabecera, pero durante algunos
         // renders no lo expone con la misma estructura que el parser antiguo.
         // La cabecera visible permite vincular con seguridad el equipo al parte.

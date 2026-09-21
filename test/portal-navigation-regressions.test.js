@@ -120,9 +120,13 @@ test("los próximos jornales abren el número de parte desde Jornales y Primas",
   assert.match(reader, /page\.close\(\{ runBeforeUnload: false \}\)/);
   assert.match(reader, /sourcePage\.bringToFront/);
   assert.match(exactDetailWait, /timeout = 6000/);
+  assert.match(exactDetailWait, /\[role="dialog"\]/);
+  assert.match(exactDetailWait, /parseAssignmentDetailFromText\(`Parte \$\{part\}\\n\$\{modalText\}`\)/);
   assert.match(exactDetailWait, /isAssignmentDetailComplete\(best\)/);
   assert.match(exactDetailWait, />= 700/);
-  assert.match(directReader, /context\(\)\.request\.get/);
+  assert.match(directReader, /context\(\)\.newPage/);
+  assert.match(directReader, /directPage\.close\(\{ runBeforeUnload: false \}\)/);
+  assert.match(directReader, /sourcePage\.bringToFront/);
   assert.doesNotMatch(directReader, /sourcePage\.goto\(detailUrl/);
   assert.match(completion, /source: "jornales-primas"/);
   assert.match(source, /Proximos jornales cargados desde Jornales y Primas/);
