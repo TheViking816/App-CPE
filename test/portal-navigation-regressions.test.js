@@ -42,6 +42,15 @@ test("primas usa Jornales y Primas y deja de abrir la ruta retirada", () => {
   assert.doesNotMatch(section, /openPortalHash\(page, "User,ViewNoray,10"\)/);
 });
 
+test("primas escribe y verifica la clave en el formulario de productividad", () => {
+  const section = source.match(/async function findPremiumSecurityInput\([\s\S]*?async function collectPrimas\(/)?.[0] || "";
+  assert.match(section, /ancestor::form/);
+  assert.match(section, /input\[type="password"\]/);
+  assert.match(section, /input\[placeholder\*="clave" i\]/);
+  assert.match(section, /writtenValue !== portalSecurityKey/);
+  assert.match(section, /No se pudo escribir la clave de seguridad/);
+});
+
 test("Bolsa de Excepciones conserva ViewNoray 17 sin esperar en un panel vacío", () => {
   const section = source.match(/async function collectExceptions[\s\S]*?async function getStoredPayrollDocumentIds/)?.[0] || "";
   assert.match(section, /openPortalHash\(page, "User,ViewNoray,17"\)/);

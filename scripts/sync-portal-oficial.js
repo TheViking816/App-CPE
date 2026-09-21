@@ -2689,6 +2689,61 @@ async function openJornalesPrimas(page) {
   throw new Error("Jornales y Primas permanecio en blanco tras repetir el clic y recargar el portal.");
 }
 
+async function findPremiumSecurityInput(frame, validateButton, timeout = 8000) {
+  const deadline = Date.now() + timeout;
+  const inputSelector = [
+    'input[type="password"]:visible',
+    'input[placeholder*="clave" i]:visible',
+    'input[aria-label*="clave" i]:visible',
+    'input[name*="clave" i]:visible',
+    'input[id*="clave" i]:visible',
+    'input[autocomplete="current-password"]:visible',
+    'input[inputmode="numeric"]:visible'
+  ].join(", ");
+
+  while (Date.now() < deadline) {
+    // Prefer the input belonging to the same form/dialog as Validar. The
+    // screen also contains visible date controls, so a generic first input
+    // can silently receive the security key instead of the modal.
+    const containers = [
+      validateButton.locator("xpath=ancestor::form[1]"),
+      validateButton.locator("xpath=ancestor::*[@role='dialog'][1]"),
+      validateButton.locator("xpath=ancestor::*[contains(@class, 'modal')][1]")
+    ];
+    for (const container of containers) {
+      const candidate = container.locator(inputSelector).first();
+      if (await candidate.isVisible().catch(() => false)) return candidate;
+    }
+
+    const preferred = frame.locator(inputSelector).first();
+    if (await preferred.isVisible().catch(() => false)) return preferred;
+
+    const fallback = frame.locator(
+      'input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([type="date"]):not([type="search"]):not([role="presentation"]):not([tabindex="-1"]):visible'
+    ).last();
+    if (await fallback.isVisible().catch(() => false)) return fallback;
+    await frame.page().waitForTimeout(200);
+  }
+  return null;
+}
+
+async function fillPremiumSecurityKey(securityInput) {
+  await securityInput.click();
+  await securityInput.fill(portalSecurityKey);
+  let writtenValue = await securityInput.inputValue().catch(() => "");
+
+  if (writtenValue !== portalSecurityKey) {
+    await securityInput.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+    await securityInput.pressSequentially(portalSecurityKey, { delay: 80 });
+    writtenValue = await securityInput.inputValue().catch(() => "");
+  }
+
+  if (writtenValue !== portalSecurityKey) {
+    throw new Error("No se pudo escribir la clave de seguridad en Jornales y Primas.");
+  }
+  console.log("Clave de seguridad escrita en Jornales y Primas.");
+}
+
 async function collectPrimas(page, previous = null) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
   // El portal sustituyo la antigua Consulta de Primas Productividad
@@ -2726,13 +2781,14 @@ async function collectPrimas(page, previous = null) {
     return collectPrimasHistory(page, { ...current, locked: false, recognized: true }, previous);
   }
 
-  const securityInput = securityControl.frame
-    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([role="presentation"]):not([tabindex="-1"]):visible')
-    .first();
-  await securityInput.click();
-  await securityInput.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
-  await securityInput.pressSequentially(portalSecurityKey, { delay: 80 });
-  await securityInput.press("Tab");
+  const securityInput = await findPremiumSecurityInput(
+    securityControl.frame,
+    securityControl.locator
+  );
+  if (!securityInput) {
+    throw new Error("No aparecio el campo de clave de seguridad de Jornales y Primas.");
+  }
+  await fillPremiumSecurityKey(securityInput);
   await securityControl.locator.click({ noWaitAfter: true });
 
   const invalidKey = await waitForFrameAndLocator(
