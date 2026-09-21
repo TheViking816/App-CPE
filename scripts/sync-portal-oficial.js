@@ -72,6 +72,8 @@ export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
 export const PORTAL_CURRENT_PERIOD_ATTEMPTS = 3;
 export const PORTAL_PERIOD_RETRY_DELAY_MS = 1500;
 export const PORTAL_ENTRY_TIMEOUT_MS = 90000;
+export const PORTAL_ENTRY_FIRST_WAIT_MS = 12000;
+export const PORTAL_ENTRY_RELOAD_WAIT_MS = 15000;
 export const PORTAL_PREMIUM_STABLE_MS = 1200;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
@@ -1201,6 +1203,30 @@ async function waitForPortalEntry(page, timeout = PORTAL_ENTRY_TIMEOUT_MS) {
   return state;
 }
 
+async function openPortalEntryWithRecovery(page) {
+  const navigate = async () => {
+    await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
+    await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
+  };
+
+  await navigate();
+  let state = await waitForPortalEntry(page, PORTAL_ENTRY_FIRST_WAIT_MS);
+  if (state !== "pending" && state !== "security_challenge") return state;
+
+  const reason = state === "security_challenge" ? "Cloudflare" : "una pantalla en blanco";
+  console.warn(`El portal mostro ${reason}; se recarga una unica vez antes de cerrar este perfil.`);
+  await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 10000 }).catch(() => {});
+  await navigate();
+  state = await waitForPortalEntry(page, PORTAL_ENTRY_RELOAD_WAIT_MS);
+  if (state === "security_challenge") {
+    throw new Error("Cloudflare siguio bloqueando el perfil despues de recargarlo; se cerrara y se reintentara mas tarde.");
+  }
+  if (state === "pending") {
+    throw new Error("El portal siguio mostrando una pantalla en blanco despues de recargarlo; se cerrara y se reintentara mas tarde.");
+  }
+  return state;
+}
+
 async function waitForPortalAuthState(page, timeout = 20000) {
   const deadline = Date.now() + timeout;
   let state = "pending";
@@ -1234,26 +1260,18 @@ async function logoutExistingPortalSession(page) {
 }
 
 async function login(page, attempt = 0) {
-  await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
-  await page.getByRole("button", { name: "Entendido" }).click({ timeout: 1500 }).catch(() => {});
-
-  let entryState = await waitForPortalEntry(page);
+  let entryState = await openPortalEntryWithRecovery(page);
   if (entryState === "authenticated") {
     if (authenticatedForPortalUser) return;
     const loggedOut = await logoutExistingPortalSession(page);
     if (!loggedOut) {
       throw new Error("No se pudo cerrar la sesion anterior del portal de forma segura.");
     }
-    await page.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 45000 });
     // A shared worker profile can still contain the session of the previous
     // chapa. The legacy GWT portal often takes considerably longer to rebuild
     // the login iframe after logging that user out. Wait for the new entry
     // state again instead of giving the iframe only the generic 10 seconds.
-    entryState = await waitForPortalEntry(page);
-  }
-  if (entryState === "security_challenge") {
-    if (attempt < 1) return login(page, attempt + 1);
-    throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
+    entryState = await openPortalEntryWithRecovery(page);
   }
 
   if (!portalUser || !portalPassword) {
@@ -3278,7 +3296,9 @@ async function openPortalBrowserSession() {
   preferences.profile = {
     ...(preferences.profile || {}),
     password_manager_enabled: false,
-    password_manager_leak_detection: false
+    password_manager_leak_detection: false,
+    exit_type: "Normal",
+    exited_cleanly: true
   };
   await fs.mkdir(path.dirname(preferencesPath), { recursive: true });
   await fs.writeFile(preferencesPath, JSON.stringify(preferences), "utf8");

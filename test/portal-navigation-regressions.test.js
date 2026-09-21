@@ -74,6 +74,18 @@ test("Bolsa de Excepciones usa primero el menú y conserva ViewNoray 17 como res
   assert.match(section, /se repite el clic del menu/);
 });
 
+test("Cloudflare o una portada en blanco solo se recargan una vez antes de cerrar el perfil", () => {
+  const recovery = source.match(/async function openPortalEntryWithRecovery[\s\S]*?async function waitForPortalAuthState/)?.[0] || "";
+  assert.match(source, /PORTAL_ENTRY_FIRST_WAIT_MS = 12000/);
+  assert.match(source, /PORTAL_ENTRY_RELOAD_WAIT_MS = 15000/);
+  assert.match(recovery, /page\.goto\("about:blank"/);
+  assert.match(recovery, /se recarga una unica vez/);
+  assert.match(recovery, /Cloudflare siguio bloqueando el perfil despues de recargarlo/);
+  assert.match(recovery, /pantalla en blanco despues de recargarlo/);
+  assert.match(source, /exit_type: "Normal"/);
+  assert.match(source, /exited_cleanly: true/);
+});
+
 test("la actualización rápida reutiliza Jornales y Primas y omite especialidades guardadas", () => {
   assert.match(source, /useCombinedCurrentScreen = fastMode && hasJournalData/);
   assert.match(source, /collectCurrentJornalesFromCombined/);
