@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  jornalesFromCombinedPrimas,
   parsePrimas,
   premiumMonthsToRead,
   wouldEraseStoredCollection
@@ -82,4 +83,21 @@ test("permite que el nuevo mes tenga menos primas que el anterior", () => {
     { monthLabel: "Agosto de 2026", rows: Array.from({ length: 24 }, (_, index) => ({ dia: String(index + 1) })) },
     { allowCollectionShrink: true }
   ), false);
+});
+
+test("reutiliza Jornales y Primas como jornales del mes actual sin borrar el histórico", () => {
+  const previous = {
+    recognized: true,
+    year: 2026,
+    monthLabel: "Agosto de 2026",
+    rows: [{ jornal: "1", parte: "23045", dia: "13" }],
+    history: [{ year: 2026, month: 8, monthLabel: "Agosto de 2026", rows: [{ jornal: "1", parte: "23045", dia: "13" }] }]
+  };
+  const current = parsePrimas(html.replaceAll("Agosto", "Septiembre"));
+  const jornales = jornalesFromCombinedPrimas(current, previous);
+
+  assert.equal(jornales.monthLabel, "Septiembre de 2026");
+  assert.equal(jornales.rows.length, 3);
+  assert.deepEqual(jornales.history.map((period) => period.month), [8, 9]);
+  assert.equal(jornales.history[0].rows[0].parte, "23045");
 });

@@ -25,8 +25,7 @@ if (-not (Test-Path -LiteralPath $clearanceCheckScript)) { throw "No existe la c
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $gatewayScript -Port $Port
 if ($LASTEXITCODE -ne 0) { throw "No se pudo abrir o recargar el gateway Chrome." }
 
-Write-Host "Chrome gateway abierto y recargado. Esperando $WarmupSeconds segundos para completar Cloudflare..." -ForegroundColor Yellow
-Start-Sleep -Seconds $WarmupSeconds
+Write-Host "Chrome gateway abierto y recargado. Comprobando Cloudflare sin espera fija..." -ForegroundColor Yellow
 
 $previousCdpEndpoint = $env:CPE_PORTAL_CDP_ENDPOINT
 $previousPoolSize = $env:CPE_CLOUDFLARE_POOL_SIZE
@@ -35,6 +34,8 @@ try {
   $env:CPE_PORTAL_CDP_ENDPOINT = $endpoint
   $env:CPE_CLOUDFLARE_POOL_SIZE = "1"
   Set-Location -LiteralPath $RepositoryPath
+  # El iniciador ya espera a que el portal quede autorizado. Esta segunda
+  # comprobacion valida la cookie exacta antes de reclamar ningun trabajo.
   & node $clearanceCheckScript
   $clearanceExitCode = $LASTEXITCODE
 } finally {

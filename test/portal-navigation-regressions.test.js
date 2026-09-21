@@ -27,8 +27,8 @@ test("primas usa Jornales y Primas y deja de abrir la ruta retirada", () => {
   const navigation = source.match(/function premiumRevealLocator\([\s\S]*?async function collectPrimas\(/)?.[0] || "";
   const section = source.match(/async function collectPrimas\([\s\S]*?async function collectPrimasHistory/)?.[0] || "";
   assert.match(section, /openJornalesPrimas\(page\)/);
-  assert.match(navigation, /openPortalHash\(page, "User,ViewNoray,2"\)/);
   assert.match(navigation, /openMenu\(page, "Consultas", "Jornales y Primas"\)/);
+  assert.doesNotMatch(navigation, /openPortalHash\(page, "User,ViewNoray,2"\)/);
   assert.match(navigation, /page\.reload\(\{ waitUntil: "domcontentloaded", timeout: 45000 \}\)/);
   assert.match(navigation, /permanecio en blanco tras repetir el clic y recargar el portal/);
   assert.match(navigation, /title\*="productividad"/);
@@ -53,7 +53,8 @@ test("primas escribe y verifica la clave en el formulario de productividad", () 
   assert.match(section, /No se pudo escribir la clave de seguridad/);
   assert.match(source, /El portal no habilito la verificacion de la clave/);
   assert.match(source, /unlockedStableSince/);
-  assert.match(source, /Date\.now\(\) - unlockedStableSince >= 3000/);
+  assert.match(source, /Date\.now\(\) - unlockedStableSince >= PORTAL_PREMIUM_STABLE_MS/);
+  assert.match(source, /PORTAL_PREMIUM_STABLE_MS = 1200/);
   assert.match(source, /quedo en blanco tras verificar; se vuelve a abrir la seccion/);
   assert.match(source, /retrySecurityControl/);
 });
@@ -64,11 +65,18 @@ test("el login no confunde otros campos de texto con el usuario", () => {
   assert.doesNotMatch(section, /input\[type="text"\]:visible/);
 });
 
-test("Bolsa de Excepciones conserva ViewNoray 17 sin esperar en un panel vacío", () => {
+test("Bolsa de Excepciones usa primero el menú y conserva ViewNoray 17 como respaldo", () => {
   const section = source.match(/async function collectExceptions[\s\S]*?async function getStoredPayrollDocumentIds/)?.[0] || "";
   assert.match(section, /openPortalHash\(page, "User,ViewNoray,17"\)/);
-  assert.match(section, /readCurrentScreen\(2500\)/);
   assert.match(section, /openMenu\(page, "Solicitudes", "Bolsa de Excepciones"\)/);
+  assert.ok(section.indexOf('openMenu(page, "Solicitudes", "Bolsa de Excepciones")') < section.indexOf('openPortalHash(page, "User,ViewNoray,17")'));
+});
+
+test("la actualización rápida reutiliza Jornales y Primas y omite especialidades guardadas", () => {
+  assert.match(source, /useCombinedCurrentScreen = fastMode && hasJournalData/);
+  assert.match(source, /collectCurrentJornalesFromCombined/);
+  assert.match(source, /fastMode && hasSavedSpecialties/);
+  assert.match(source, /se omite ViewNoray 3 en la actualizacion rapida/);
 });
 
 test("la contratacion anticipada se abre desde el enlace de Donde voy", () => {

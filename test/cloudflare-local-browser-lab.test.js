@@ -119,7 +119,7 @@ test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () 
 test("cada tanda recarga y valida Cloudflare antes de abrir perfiles de usuarios", () => {
   assert.match(batchRunnerSource, /WarmupSeconds = 20/);
   assert.match(batchRunnerSource, /start-cloudflare-gateway\.ps1/);
-  assert.match(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.doesNotMatch(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
   assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
   assert.match(batchRunnerSource, /CPE_CLOUDFLARE_POOL_SIZE = "1"/);
   assert.match(batchRunnerSource, /if \(\$clearanceExitCode -ne 0\)/);
@@ -142,8 +142,10 @@ test("el worker reclama la cola antes de validar y el acceso prepara Chrome para
   assert.ok(authorizationPosition > claimPosition);
   assert.match(pendingShortcutSource, /Actualizar pendientes App CPE\.lnk/);
   assert.match(pendingShortcutSource, /run-pending-sync\.ps1/);
-  assert.match(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
-  assert.match(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.doesNotMatch(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
+  assert.doesNotMatch(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.doesNotMatch(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
   assert.match(pendingRunnerSource, /WarmupSeconds = 20/);
   assert.match(pendingRunnerSource, /-WarmupSeconds \$WarmupSeconds/);
   assert.match(pendingRunnerSource, /run-cloudflare-gateway-batch\.ps1/);

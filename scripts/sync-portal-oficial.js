@@ -72,6 +72,7 @@ export const PORTAL_PERIOD_TIMEOUT_MS = 35000;
 export const PORTAL_CURRENT_PERIOD_ATTEMPTS = 3;
 export const PORTAL_PERIOD_RETRY_DELAY_MS = 1500;
 export const PORTAL_ENTRY_TIMEOUT_MS = 90000;
+export const PORTAL_PREMIUM_STABLE_MS = 1200;
 const portalDocumentId = String(process.env.CPE_PORTAL_DOCUMENT_ID || "").trim();
 let collectedPayrollDocuments = [];
 let authenticatedForPortalUser = false;
@@ -376,7 +377,7 @@ async function waitForParsedPrimasContent(page, timeout = 12000) {
         if (fingerprint !== unlockedFingerprint) {
           unlockedFingerprint = fingerprint;
           unlockedStableSince = Date.now();
-        } else if (Date.now() - unlockedStableSince >= 3000) {
+        } else if (Date.now() - unlockedStableSince >= PORTAL_PREMIUM_STABLE_MS) {
           return bestResult;
         }
       }
@@ -1306,7 +1307,9 @@ async function openMenu(page, group, text, framePattern) {
   if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
   await item.scrollIntoViewIfNeeded();
   await item.click({ timeout: 10000 });
-  await page.waitForTimeout(1200);
+  // Every reader below waits for its own authoritative marker. A long fixed
+  // pause here was paid on every screen even when Noray rendered immediately.
+  await page.waitForTimeout(400);
   if (framePattern) await waitForFrame(page, framePattern);
 }
 
@@ -1353,6 +1356,32 @@ function jornalesPeriodMatches(monthLabel, month, year) {
   const normalizedLabel = cleanText(monthLabel).toLocaleLowerCase("es");
   return normalizedLabel.includes(MONTH_NAMES_ES[month - 1].toLocaleLowerCase("es"))
     && normalizedLabel.includes(String(year));
+}
+
+export function jornalesFromCombinedPrimas(primas, previous = null) {
+  const monthLabel = cleanText(primas?.monthLabel);
+  const normalizedLabel = monthLabel.toLocaleLowerCase("es");
+  const month = MONTH_NAMES_ES.findIndex((monthName) => (
+    normalizedLabel.includes(monthName.toLocaleLowerCase("es"))
+  )) + 1;
+  const year = Number(normalizedLabel.match(/\b(20\d{2})\b/)?.[1]);
+  if (!primas?.recognized || !month || !year || !Array.isArray(primas?.rows)) return null;
+
+  const historyByPeriod = new Map((previous?.history || [])
+    .filter((period) => Number(period?.year) >= 2000 && Number(period?.month) >= 1 && Array.isArray(period?.rows))
+    .map((period) => [`${Number(period.year)}-${Number(period.month)}`, period]));
+  historyByPeriod.set(`${year}-${month}`, { year, month, monthLabel, rows: primas.rows });
+
+  return {
+    recognized: true,
+    year,
+    monthLabel,
+    rows: primas.rows,
+    history: [...historyByPeriod.values()].sort((left, right) => (
+      Number(left.year) - Number(right.year) || Number(left.month) - Number(right.month)
+    )),
+    historyWarnings: []
+  };
 }
 
 async function collectPortalIdentity(page) {
@@ -1648,17 +1677,29 @@ async function collectSl(page) {
 }
 
 async function collectUserSpecialties(page) {
+  const readCurrentScreen = async (timeout) => {
+    const deadline = Date.now() + timeout;
+    do {
+      for (const frame of page.frames()) {
+        const location = frame.url();
+        if (!/\.asp(?:[?#]|$)|especial/i.test(location)) continue;
+        const result = parseUserSpecialties(await frame.content().catch(() => ""));
+        if (result.recognized && result.ids.length > 0) return result;
+      }
+      await page.waitForTimeout(150);
+    } while (Date.now() < deadline);
+    return null;
+  };
+
+  // ViewNoray 3 often paints only the heading after the first navigation. A
+  // second menu click starts the iframe immediately, instead of waiting for
+  // the outer section retry twelve seconds later.
   await openMenu(page, "Consultas", "Mis especialidades");
-  const deadline = Date.now() + 12000;
-  do {
-    for (const frame of page.frames()) {
-      const location = frame.url();
-      if (!/\.asp(?:[?#]|$)|especial/i.test(location)) continue;
-      const result = parseUserSpecialties(await frame.content().catch(() => ""));
-      if (result.recognized && result.ids.length > 0) return result;
-    }
-    await page.waitForTimeout(200);
-  } while (Date.now() < deadline);
+  const firstResult = await readCurrentScreen(1800);
+  if (firstResult) return firstResult;
+  await openMenu(page, "Consultas", "Mis especialidades");
+  const retryResult = await readCurrentScreen(7000);
+  if (retryResult) return retryResult;
   throw new Error("El portal no devolvio las especialidades y polivalencias del usuario.");
 }
 
@@ -2080,20 +2121,19 @@ async function collectExceptions(page) {
   };
 
   try {
-    await openPortalHash(page, "User,ViewNoray,17");
-    // ViewNoray 17 sigue siendo Bolsa de Excepciones, pero el portal puede
-    // dejar el panel vacio al abrir el hash directamente. Detectarlo pronto
-    // evita esperar doce segundos antes de usar el menu, que si fuerza la
-    // carga del contenido Noray.
-    const directResult = await readCurrentScreen(2500);
-    if (directResult.recognized) return directResult;
+    // The recording shows ViewNoray 17 consistently blank until the real menu
+    // item is clicked. Use that reliable route first and retain the hash only
+    // as a compatibility fallback for older portal sessions.
+    await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
+    const menuResult = await readCurrentScreen(8000);
+    if (menuResult.recognized) return menuResult;
   } catch {
-    // The menu fallback covers portal route changes and older sessions.
+    // The direct hash fallback below covers temporary menu failures.
   }
 
-  await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
-  const menuResult = await readCurrentScreen();
-  if (menuResult.recognized) return menuResult;
+  await openPortalHash(page, "User,ViewNoray,17");
+  const directResult = await readCurrentScreen(4000);
+  if (directResult.recognized) return directResult;
   throw new Error("No se pudo leer la Bolsa de Excepciones. Se conservaran los ultimos datos disponibles.");
 }
 
@@ -2215,7 +2255,6 @@ async function waitForDoublesResult(page, originalFrame, date, timeoutMs = 15000
 }
 
 async function collectRequestedDoubles(page) {
-  await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
   let selector = await findDoublesSelector(page);
   if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
@@ -2708,25 +2747,60 @@ async function waitForJornalesPrimasScreen(page, timeout = 8000) {
 }
 
 async function openJornalesPrimas(page) {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    if (attempt === 1) {
-      await openPortalHash(page, "User,ViewNoray,2");
-    } else {
-      if (attempt === 3) {
-        console.warn("Jornales y Primas sigue en blanco; recargando el portal antes del ultimo intento.");
-        await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
-        await page.waitForTimeout(1200);
-      } else {
-        console.warn("Jornales y Primas aparecio en blanco; repitiendo el clic desde el menu.");
-      }
-      await openMenu(page, "Consultas", "Jornales y Primas");
-    }
+  if (/User,ViewNoray,2/i.test(page.url())) {
+    const currentScreen = await waitForJornalesPrimasScreen(page, 700);
+    if (currentScreen) return currentScreen;
+  }
 
-    const screen = await waitForJornalesPrimasScreen(page);
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    if (attempt === 3) {
+      console.warn("Jornales y Primas sigue en blanco; recargando el portal antes del ultimo intento.");
+      await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
+      await page.waitForTimeout(600);
+    } else if (attempt === 2) {
+      console.warn("Jornales y Primas aparecio en blanco; repitiendo el clic desde el menu.");
+    }
+    // The direct ViewNoray 2 hash leaves the content area blank in the live
+    // portal. Clicking the real menu item is both faster and deterministic.
+    await openMenu(page, "Consultas", "Jornales y Primas");
+
+    const screen = await waitForJornalesPrimasScreen(page, attempt === 1 ? 3000 : 6000);
     if (screen) return screen;
   }
 
   throw new Error("Jornales y Primas permanecio en blanco tras repetir el clic y recargar el portal.");
+}
+
+async function waitForCombinedJornales(page, timeout = 5000) {
+  const deadline = Date.now() + timeout;
+  let bestResult = null;
+  let fingerprint = "";
+  let stableSince = 0;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      const parsed = parsePrimas(await contentWithComputedProductionColors(frame));
+      if (!parsed.recognized || !cleanText(parsed.monthLabel) || !(parsed.rows || []).some((row) => row.jornal)) continue;
+      const nextFingerprint = parsed.rows.map((row) => [row.jornal, row.parte, row.dia, row.jornada].join(":")).join("|");
+      bestResult = parsed;
+      if (nextFingerprint !== fingerprint) {
+        fingerprint = nextFingerprint;
+        stableSince = Date.now();
+      } else if (Date.now() - stableSince >= 600) {
+        return bestResult;
+      }
+    }
+    await page.waitForTimeout(150);
+  }
+  return bestResult;
+}
+
+async function collectCurrentJornalesFromCombined(page, previous = null) {
+  await openJornalesPrimas(page);
+  const combined = await waitForCombinedJornales(page);
+  const jornales = jornalesFromCombinedPrimas(combined, previous);
+  if (!jornales) throw new Error("Jornales y Primas no devolvio los jornales del mes actual.");
+  console.log(`Jornales ${jornales.monthLabel}: ${jornales.rows.length} leidos junto con las primas.`);
+  return jornales;
 }
 
 async function findPremiumSecurityInput(frame, validateButton, timeout = 8000) {
@@ -3379,13 +3453,26 @@ async function main() {
       await upsertSupabase(latestProgressSnapshot);
     };
     await publishProgress("jornales", progressPayload.jornales || { monthLabel: "", rows: [] }, "Sesion iniciada; cargando jornales");
+    const useCombinedCurrentScreen = fastMode && hasJournalData(existingSnapshot?.payload?.jornales);
     let jornalesUpdatedThisRun = false;
     let jornales = await readSection(
       "jornales",
       async () => {
-        const value = await collectJornalesWithFreshSession(page, existingSnapshot?.payload?.jornales, {
-          currentOnly: fastMode
-        });
+        let value;
+        if (useCombinedCurrentScreen) {
+          try {
+            value = await collectCurrentJornalesFromCombined(page, existingSnapshot?.payload?.jornales);
+          } catch (error) {
+            console.warn(`No se pudo reutilizar Jornales y Primas (${error.message}); se usa el flujo completo de respaldo.`);
+            value = await collectJornalesWithFreshSession(page, existingSnapshot?.payload?.jornales, {
+              currentOnly: true
+            });
+          }
+        } else {
+          value = await collectJornalesWithFreshSession(page, existingSnapshot?.payload?.jornales, {
+            currentOnly: fastMode
+          });
+        }
         jornalesUpdatedThisRun = true;
         return value;
       },
@@ -3398,6 +3485,17 @@ async function main() {
       throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");
     }
     await publishProgress("jornales", jornales, hasJournalData(jornales) ? "Jornales cargados" : "Jornales no disponibles; continuando");
+    // In fast mode the combined screen is still open, so reveal its premiums
+    // now and reuse the same render instead of navigating to it a second time.
+    const primas = await readOptionalSection(
+      "primas",
+      () => collectPrimas(page, existingSnapshot?.payload?.primas),
+      existingSnapshot?.payload?.primas,
+      { locked: true, rows: [] },
+      hasPremiumData,
+      { allowCollectionShrink: true }
+    );
+    await publishProgress("primas", primas, "Primas cargadas");
     let asignaciones = await readOptionalSection(
       "contratacion actual",
       () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
@@ -3410,15 +3508,6 @@ async function main() {
     await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");
     jornales = mergeAssignmentsIntoPortalJornales(jornales, asignaciones);
     await publishProgress("jornales", jornales, "Jornales y contratacion consolidados");
-    const primas = await readOptionalSection(
-      "primas",
-      () => collectPrimas(page, existingSnapshot?.payload?.primas),
-      existingSnapshot?.payload?.primas,
-      { locked: true, rows: [] },
-      hasPremiumData,
-      { allowCollectionShrink: true }
-    );
-    await publishProgress("primas", primas, "Primas cargadas");
     const sl = await readSection(
       "lista SL",
       () => collectSl(page),
@@ -3428,15 +3517,26 @@ async function main() {
       { allowCollectionShrink: true }
     );
     await publishProgress("sl", sl, "Lista SL cargada");
-    const especialidades = await readOptionalSection(
-      "especialidades y polivalencias",
-      () => collectUserSpecialties(page),
-      existingSnapshot?.payload?.especialidades,
-      { recognized: false, specialties: [], polyvalences: [], ids: [] },
-      (value) => Boolean(value?.recognized && Array.isArray(value?.ids) && value.ids.length > 0),
-      { allowCollectionShrink: true }
+    const hasSavedSpecialties = Boolean(
+      existingSnapshot?.payload?.especialidades?.recognized
+      && Array.isArray(existingSnapshot.payload.especialidades.ids)
+      && existingSnapshot.payload.especialidades.ids.length > 0
     );
-    await publishProgress("especialidades", especialidades, "Especialidades y polivalencias cargadas");
+    const especialidades = fastMode && hasSavedSpecialties
+      ? existingSnapshot.payload.especialidades
+      : await readOptionalSection(
+          "especialidades y polivalencias",
+          () => collectUserSpecialties(page),
+          existingSnapshot?.payload?.especialidades,
+          { recognized: false, specialties: [], polyvalences: [], ids: [] },
+          (value) => Boolean(value?.recognized && Array.isArray(value?.ids) && value.ids.length > 0),
+          { allowCollectionShrink: true }
+        );
+    if (fastMode && hasSavedSpecialties) {
+      console.log("Especialidades ya guardadas; se omite ViewNoray 3 en la actualizacion rapida.");
+    } else {
+      await publishProgress("especialidades", especialidades, "Especialidades y polivalencias cargadas");
+    }
     const descansos = await readSection(
       "descansos",
       () => collectDescansos(page),
