@@ -1,7 +1,6 @@
 param(
   [ValidateRange(1, 32)][int]$BatchSize = 12,
   [ValidateRange(1024, 65535)][int]$Port = 9223,
-  [ValidateRange(5, 120)][int]$WarmupSeconds = 20,
   [string]$RepositoryPath = "",
   [switch]$Drain
 )

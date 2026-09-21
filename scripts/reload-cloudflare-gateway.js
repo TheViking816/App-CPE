@@ -33,6 +33,16 @@ try {
     return "empty";
   };
 
+  const waitForPortalState = async (timeout = 5000) => {
+    const deadline = Date.now() + timeout;
+    do {
+      const nextState = await readPortalState();
+      if (nextState !== "empty") return nextState;
+      await page.waitForTimeout(150);
+    } while (Date.now() < deadline);
+    return state;
+  };
+
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     // A browser reload can resubmit the POST used by the portal login. The
     // portal rejects that replay with HTTP 405, so force a fresh GET while
@@ -40,8 +50,7 @@ try {
     await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 15000 });
     const response = await page.goto(portalUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
     status = response?.status() || 0;
-    await page.waitForTimeout(5000);
-    state = await readPortalState();
+    state = await waitForPortalState();
     if (state !== "empty") break;
 
     // En este estado el portal ha contestado 200 pero ha dejado el documento
@@ -49,8 +58,7 @@ try {
     // desbloquea manualmente, así que la hacemos y volvemos a verificar.
     const reloadResponse = await page.reload({ waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => null);
     status = reloadResponse?.status() || status;
-    await page.waitForTimeout(5000);
-    state = await readPortalState();
+    state = await waitForPortalState();
     if (state !== "empty") break;
   }
 

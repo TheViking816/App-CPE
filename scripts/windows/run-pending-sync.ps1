@@ -1,8 +1,7 @@
 param(
   [string]$RepositoryPath = "",
   [ValidateRange(1024, 65535)][int]$GatewayPort = 9223,
-  [ValidateRange(1, 32)][int]$BatchSize = 12,
-  [ValidateRange(5, 120)][int]$WarmupSeconds = 20
+  [ValidateRange(1, 32)][int]$BatchSize = 12
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +20,6 @@ Write-Host "Preparando Chrome y procesando solamente los trabajos que ya estan e
   -RepositoryPath $RepositoryPath `
   -Port $GatewayPort `
   -BatchSize $BatchSize `
-  -WarmupSeconds $WarmupSeconds `
   -Drain
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron procesar todos los trabajos pendientes." }
 

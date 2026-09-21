@@ -43,6 +43,8 @@ test("el gateway realiza una recarga real y espera a que aparezca portal o Cloud
   assert.match(gatewayReloadSource, /attempt <= 3/);
   assert.match(gatewayReloadSource, /state = "portal"/);
   assert.match(gatewayReloadSource, /state = "challenge"/);
+  assert.match(gatewayReloadSource, /waitForPortalState/);
+  assert.doesNotMatch(gatewayReloadSource, /waitForTimeout\(5000\)/);
 });
 
 test("el worker no confunde los scripts normales de Cloudflare con un desafio", () => {
@@ -117,9 +119,9 @@ test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () 
 });
 
 test("cada tanda recarga y valida Cloudflare antes de abrir perfiles de usuarios", () => {
-  assert.match(batchRunnerSource, /WarmupSeconds = 20/);
+  assert.doesNotMatch(batchRunnerSource, /WarmupSeconds/);
   assert.match(batchRunnerSource, /start-cloudflare-gateway\.ps1/);
-  assert.doesNotMatch(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.doesNotMatch(batchRunnerSource, /Start-Sleep/);
   assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
   assert.match(batchRunnerSource, /CPE_CLOUDFLARE_POOL_SIZE = "1"/);
   assert.match(batchRunnerSource, /if \(\$clearanceExitCode -ne 0\)/);
@@ -143,11 +145,10 @@ test("el worker reclama la cola antes de validar y el acceso prepara Chrome para
   assert.match(pendingShortcutSource, /Actualizar pendientes App CPE\.lnk/);
   assert.match(pendingShortcutSource, /run-pending-sync\.ps1/);
   assert.doesNotMatch(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
-  assert.doesNotMatch(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
-  assert.doesNotMatch(batchRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.doesNotMatch(pendingRunnerSource, /Start-Sleep|WarmupSeconds/);
+  assert.doesNotMatch(batchRunnerSource, /Start-Sleep|WarmupSeconds/);
   assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
-  assert.match(pendingRunnerSource, /WarmupSeconds = 20/);
-  assert.match(pendingRunnerSource, /-WarmupSeconds \$WarmupSeconds/);
+  assert.doesNotMatch(pendingShortcutSource, /WarmupSeconds/);
   assert.match(pendingRunnerSource, /run-cloudflare-gateway-batch\.ps1/);
   assert.match(pendingRunnerSource, /-Drain/);
   assert.doesNotMatch(pendingShortcutSource, /queue-all-portal-syncs/);
