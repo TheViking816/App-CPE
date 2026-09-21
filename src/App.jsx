@@ -3699,6 +3699,7 @@ function PortalPanel({
 
     try {
       let queuedAnnualHistory = false;
+      let credentialsValidationPending = false;
       let currentSession = session;
       const requiresActivationRequest = !securityKeyOnly && !autoSyncEnabled;
       if (requiresActivationRequest || !session.email) {
@@ -3722,14 +3723,17 @@ function PortalPanel({
         queuedAnnualHistory = securityResult?.requestKind === "history";
         setPortalSyncStatus("active");
       } else if (passwordToUse) {
-        await setPortalAutoSync({
+        const credentialsResult = await setPortalAutoSync({
           token: session.token,
           enabled: true,
           portalPassword: passwordToUse,
           securityKey: securityKeyToUse
         });
-        setAutoSyncEnabled(true);
-        onConnectionChange?.(true);
+        queuedAnnualHistory = credentialsResult?.requestKind === "history";
+        credentialsValidationPending = Boolean(credentialsResult?.validationPending);
+        const credentialsValidated = !credentialsValidationPending;
+        setAutoSyncEnabled(credentialsValidated);
+        onConnectionChange?.(credentialsValidated);
       }
       writePortalCredentials(session.chapa, null);
       setSavedCredentials(null);
@@ -3737,10 +3741,12 @@ function PortalPanel({
       setSecurityKey("");
       setSecurityKeyOnly(false);
       setShowCredentials(credentialsOnly);
-      if (requiresActivationRequest || (currentSession.portalActivationStatus === "pending" && !snapshot?.payload)) {
+      if (!credentialsValidationPending && (requiresActivationRequest || (currentSession.portalActivationStatus === "pending" && !snapshot?.payload))) {
         await queuePendingPortalActivation({ token: session.token });
         setPortalMessage("Solicitud enviada. Te avisaremos por correo cuando tu acceso esté activado.");
         await sendPendingActivationEmails();
+      } else if (credentialsValidationPending) {
+        setPortalMessage("Comprobando la nueva contraseña y recuperando todo el historial.");
       } else {
         setPortalMessage(queuedAnnualHistory
           ? "En la próxima sincronización se cargarán tus primas y nóminas de todo el año."
