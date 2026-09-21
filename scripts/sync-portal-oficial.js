@@ -898,27 +898,25 @@ async function readAssignmentDetailViaPortal(sourcePage, assignment) {
   detailUrl.searchParams.set("anyo", year);
   detailUrl.searchParams.set("parte", String(assignment.parte));
 
-  await sourcePage.goto(detailUrl.toString(), {
-    waitUntil: "domcontentloaded",
-    timeout: 20000
+  // BrowserContext.request comparte las cookies de la sesion del portal. Leer el
+  // HTML por HTTP evita sustituir la pestana principal por ParteA.asp y elimina
+  // el parpadeo/reapertura que se veia al cerrar despues otras pestanas auxiliares.
+  const response = await sourcePage.context().request.get(detailUrl.toString(), {
+    timeout: 8000,
+    failOnStatusCode: false
   });
-
-  return waitForParsedContent(
-    sourcePage,
-    parseAssignmentDetail,
-    assignmentDetailScore,
-    20000,
-    isAssignmentDetailComplete,
-    2500
-  );
+  if (!response.ok()) return { recognized: false, specialties: [] };
+  return parseAssignmentDetail(await response.text());
 }
 
-async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 20000) {
+async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 6000) {
   const part = String(assignment?.parte || "").trim();
   const deadline = Date.now() + timeout;
   let best = { recognized: false, specialties: [] };
   let bestScore = 0;
-  let lastImprovementAt = Date.now();
+  let completeSince = 0;
+  const escapedPart = part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const modalPartPattern = new RegExp(`(?:^|\\n)\\s*Parte\\s+${escapedPart}\\s*(?:\\n|$)`, "i");
 
   while (Date.now() < deadline) {
     for (const contextPage of sourcePage.context().pages()) {
@@ -927,18 +925,30 @@ async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 20
           [...row.cells].map((cell) => cell.innerText || "")
         ))).catch(() => []);
         const pageText = await frame.locator("body").innerText().catch(() => "");
-        const parsed = bestAssignmentDetail(rows, pageText);
+        let parsed = bestAssignmentDetail(rows, pageText);
+        // El modal React muestra el numero en su cabecera, pero durante algunos
+        // renders no lo expone con la misma estructura que el parser antiguo.
+        // La cabecera visible permite vincular con seguridad el equipo al parte.
+        if (parsed.recognized && modalPartPattern.test(pageText)
+          && String(parsed.parte || "").trim() !== part) {
+          parsed = { ...parsed, parte: part };
+        }
         if (String(parsed.parte || "").trim() !== part) continue;
         const score = assignmentDetailScore(parsed);
         if (score > bestScore) {
           best = parsed;
           bestScore = score;
-          lastImprovementAt = Date.now();
+          completeSince = isAssignmentDetailComplete(best) ? Date.now() : 0;
+        } else if (isAssignmentDetailComplete(parsed) && !completeSince) {
+          completeSince = Date.now();
         }
       }
     }
-    if (best.recognized && Date.now() - lastImprovementAt >= 2500) return best;
-    await sourcePage.waitForTimeout(200);
+    // Una breve estabilizacion evita aceptar un render intermedio sin imponer
+    // los 20 segundos anteriores cuando todos los trabajadores ya estan visibles.
+    if (isAssignmentDetailComplete(best) && completeSince
+      && Date.now() - completeSince >= 700) return best;
+    await sourcePage.waitForTimeout(150);
   }
   return best;
 }
@@ -946,6 +956,7 @@ async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 20
 async function readAssignmentDetailViaJornalesPrimas(sourcePage, assignment) {
   const part = String(assignment?.parte || "").trim();
   await openJornalesPrimas(sourcePage);
+  const pagesBeforeClick = new Set(sourcePage.context().pages());
   let clicked = false;
 
   for (const frame of sourcePage.frames()) {
@@ -963,9 +974,28 @@ async function readAssignmentDetailViaJornalesPrimas(sourcePage, assignment) {
     if (clicked) break;
   }
 
-  if (clicked) {
-    const detail = await waitForExactAssignmentDetail(sourcePage, assignment);
-    if (detail.recognized) return detail;
+  try {
+    if (clicked) {
+      const detail = await waitForExactAssignmentDetail(sourcePage, assignment);
+      if (detail.recognized && isAssignmentDetailComplete(detail)) return detail;
+    }
+  } finally {
+    // Algunos enlaces heredados abren una pestana ademas del modal. Ya no es
+    // necesaria una vez leido el equipo y no debe reaparecer mas adelante.
+    const extraPages = sourcePage.context().pages().filter((page) => {
+      if (page === sourcePage) return false;
+      let isMatchingLegacyDetail = false;
+      try {
+        const pageUrl = new URL(page.url());
+        isMatchingLegacyDetail = /\/Noray\/ParteA\.asp$/i.test(pageUrl.pathname)
+          && pageUrl.searchParams.get("parte") === part;
+      } catch {
+        // about:blank and intermediate popup URLs are covered by pagesBeforeClick.
+      }
+      return !pagesBeforeClick.has(page) || isMatchingLegacyDetail;
+    });
+    await Promise.all(extraPages.map((page) => page.close({ runBeforeUnload: false }).catch(() => null)));
+    await sourcePage.bringToFront().catch(() => null);
   }
 
   console.warn(`Parte ${part}: el enlace de Jornales y Primas no devolvio el equipo; se prueba su enlace directo.`);
@@ -2720,7 +2750,10 @@ async function enrichAssignmentsWithDetails(page, result, previousResult, option
       Number(normalizePortalPart(right.item.parte) === "CA")
       - Number(normalizePortalPart(left.item.parte) === "CA")
     ));
-  console.log(`Completando el equipo de ${rows.length} parte(s) desde Jornadas contratadas...`);
+  const detailSourceLabel = options.source === "jornales-primas"
+    ? "Jornales y Primas"
+    : "Jornadas contratadas";
+  console.log(`Completando el equipo de ${rows.length} parte(s) desde ${detailSourceLabel}...`);
   for (const { item, index } of processingOrder) {
     let detail = previousByPart.get(String(item.parte))
       || previousByAssignment.get(assignmentIdentity(item))
@@ -2744,7 +2777,7 @@ async function enrichAssignmentsWithDetails(page, result, previousResult, option
           ? await readAssignmentDetailViaJornalesPrimas(page, item)
           : await readAssignmentDetailViaMenu(page, item);
       }
-      console.log(`Parte ${item.parte}: detalle donde-voy=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
+      console.log(`Parte ${item.parte}: detalle ${detailSourceLabel}=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
       if (freshDetail?.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
         detail = freshDetail;
         console.log(`Parte ${item.parte}: ${freshDetail.specialties?.length || 0} especialidades leidas.`);

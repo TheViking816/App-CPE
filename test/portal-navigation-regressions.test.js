@@ -110,11 +110,20 @@ test("los partes derivados de jornales reciben una pagina navegable", () => {
 
 test("los próximos jornales abren el número de parte desde Jornales y Primas", () => {
   const reader = source.match(/async function readAssignmentDetailViaJornalesPrimas[\s\S]*?async function readAssignmentDetailViaDesktopWhereAmI/)?.[0] || "";
+  const exactDetailWait = source.match(/async function waitForExactAssignmentDetail[\s\S]*?async function readAssignmentDetailViaJornalesPrimas/)?.[0] || "";
+  const directReader = source.match(/async function readAssignmentDetailViaPortal[\s\S]*?async function waitForExactAssignmentDetail/)?.[0] || "";
   const completion = source.match(/async function completeAssignmentsFromJournals[\s\S]*?async function collectVacaciones/)?.[0] || "";
   assert.match(reader, /openJornalesPrimas\(sourcePage\)/);
   assert.match(reader, /cleanText\(await candidate\.innerText/);
   assert.match(reader, /waitForExactAssignmentDetail/);
   assert.match(reader, /readAssignmentDetailViaPortal/);
+  assert.match(reader, /page\.close\(\{ runBeforeUnload: false \}\)/);
+  assert.match(reader, /sourcePage\.bringToFront/);
+  assert.match(exactDetailWait, /timeout = 6000/);
+  assert.match(exactDetailWait, /isAssignmentDetailComplete\(best\)/);
+  assert.match(exactDetailWait, />= 700/);
+  assert.match(directReader, /context\(\)\.request\.get/);
+  assert.doesNotMatch(directReader, /sourcePage\.goto\(detailUrl/);
   assert.match(completion, /source: "jornales-primas"/);
   assert.match(source, /Proximos jornales cargados desde Jornales y Primas/);
   assert.doesNotMatch(source, /let asignaciones = await readOptionalSection\(\s*"contratacion actual"/);
