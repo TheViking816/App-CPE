@@ -519,7 +519,10 @@ export function parseDescansos(html = "", now = new Date()) {
   };
 
   const monthsByKey = new Map();
-  const restCodePriority = { "": 0, SL: 1, DS: 2, FS: 2, VA: 3 };
+  // IT aparece en trabajadores pendientes de formación. Aunque el portal no
+  // documenta todavía su significado, es un estado válido del calendario y
+  // debe cerrar la lectura igual que DS, SL, FS o VA.
+  const restCodePriority = { "": 0, SL: 1, DS: 2, FS: 2, VA: 3, IT: 4 };
   const ensureMonth = (year, month) => {
     const key = `${year}-${String(month).padStart(2, "0")}`;
     if (!monthsByKey.has(key)) {
@@ -539,7 +542,7 @@ export function parseDescansos(html = "", now = new Date()) {
     return monthsByKey.get(key);
   };
 
-  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA)?\s*<\/a>/gi)) {
+  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA|IT)?\s*<\/a>/gi)) {
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);

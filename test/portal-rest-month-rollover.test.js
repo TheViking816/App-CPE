@@ -38,6 +38,19 @@ test("VA prevalece sobre un SL duplicado para la misma fecha", () => {
   assert.equal(september.days.find(({ day }) => day === 21).code, "VA");
 });
 
+test("IT se guarda como estado válido y completa la ventana mensual", () => {
+  const now = new Date("2026-09-21T12:00:00.000Z");
+  const parsed = parseDescansos([
+    restLink(2026, 9, 20, "IT"),
+    restLink(2026, 10, 1, "IT")
+  ].join(""), now);
+
+  assert.equal(hasCurrentRestMonthWindow(parsed, now), true);
+  assert.equal(parsed.months[0].days.find(({ day }) => day === 20).code, "IT");
+  assert.equal(parsed.months[1].days.find(({ day }) => day === 1).code, "IT");
+  assert.equal(parsed.totals.IT, 2);
+});
+
 test("no acepta como completa una lectura antigua de agosto y septiembre", () => {
   const now = new Date("2026-09-02T00:30:00.000Z");
   const months = [
