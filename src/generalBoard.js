@@ -245,8 +245,10 @@ export function buildGeneralBoard(rows, snapshot) {
   (snapshot?.jornadas || []).forEach((item) => {
     const journey = getJourney(map, item.fecha || snapshot.fecha, item.jornada);
     const sources = Array.isArray(item.fuentes) ? item.fuentes : [];
-    journey.anticipada = sources.includes("anticipada") && !sources.includes("turno");
-    (item.bloques || []).forEach((block) => {
+    const blocks = Array.isArray(item.bloques) ? item.bloques : [];
+    const hasPublishedParts = blocks.some((block) => /^\d+$/.test(String(block?.parte || "").trim()));
+    journey.anticipada = !hasPublishedParts && sources.includes("anticipada") && !sources.includes("turno");
+    blocks.forEach((block) => {
       const group = getGroup(journey, block.empresa, block);
       (block.especialidades || []).forEach((specialty) => addSpecialty(group, specialty.nombre, "turno", specialty.solicitudes));
     });

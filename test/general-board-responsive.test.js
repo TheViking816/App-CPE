@@ -29,7 +29,7 @@ test("lee las tarjetas de la nueva Contratación Jornada y detecta Turno", () =>
   ]);
 });
 
-test("conserva la marca anticipada aunque el portal ya publique números de parte", () => {
+test("un número de parte definitivo prevalece sobre la marca anticipada residual", () => {
   const result = parseResponsiveBoardData({
     title: "DIA: 12/09/2026 - JORNADA DE 20 A 02 H.",
     cards: [{
@@ -43,7 +43,22 @@ test("conserva la marca anticipada aunque el portal ya publique números de part
     }]
   });
 
-  assert.deepEqual(result.fuentes, ["anticipada"]);
+  assert.deepEqual(result.fuentes, ["turno"]);
   assert.equal(result.bloques[0].parte, "26223");
+  assert.equal(result.bloques[0].tipo, "turno");
+});
+
+test("mantiene anticipada mientras el portal todavía no publica un parte numérico", () => {
+  const result = parseResponsiveBoardData({
+    title: "DIA: 12/09/2026 - JORNADA DE 20 A 02 H.",
+    cards: [{
+      parte: "CONTRATACIÓN ANTICIPADA",
+      tipo: "ANTICIPADA",
+      empresa: "SEVASA",
+      especialidades: [{ nombre: "RESERVA G IV", solicitudes: "34", ceros: "0" }]
+    }]
+  });
+
+  assert.deepEqual(result.fuentes, ["anticipada"]);
   assert.equal(result.bloques[0].tipo, "anticipada");
 });

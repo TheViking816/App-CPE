@@ -74,14 +74,43 @@ export default function GeneralBoard({ chapa, onOpen }) {
 
   useEffect(() => {
     let active = true;
+    let requestInFlight = false;
+    let firstLoad = true;
     onOpen?.(chapa);
-    fetchGeneralBoard().then((result) => {
-      if (!active) return;
-      setData(result);
-      setSelected(defaultJourneyKey(result.journeys));
-    }).catch(() => active && setError("No se pudo cargar la contratación general."))
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
+    const refresh = async () => {
+      if (!active || requestInFlight) return;
+      requestInFlight = true;
+      try {
+        const result = await fetchGeneralBoard();
+        if (!active) return;
+        setData(result);
+        setSelected((current) => result.journeys.some((item) => item.key === current)
+          ? current
+          : defaultJourneyKey(result.journeys));
+        setError("");
+      } catch {
+        if (active && firstLoad) setError("No se pudo cargar la contratación general.");
+      } finally {
+        requestInFlight = false;
+        if (active && firstLoad) {
+          firstLoad = false;
+          setLoading(false);
+        }
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [chapa]);
 
   const journey = data.journeys.find((item) => item.key === selected);

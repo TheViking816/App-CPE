@@ -2,7 +2,10 @@ function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function normalizeType(value) {
+function normalizeType(value, part) {
+  // El portal puede conservar ANTICIPADA en el DOM después de publicar el
+  // parte definitivo. El número de parte es la señal autoritativa.
+  if (/^\d+$/.test(clean(part))) return "turno";
   const type = clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   return type.includes("ANTICIPADA") ? "anticipada" : "turno";
 }
@@ -17,7 +20,7 @@ export function parseResponsiveBoardData({ title = "", cards = [] } = {}) {
     operacion: clean(card?.operacion) || "Sin operación",
     muelle: clean(card?.muelle),
     observaciones: clean(card?.observaciones),
-    tipo: normalizeType(card?.tipo),
+    tipo: normalizeType(card?.tipo, card?.parte),
     especialidades: (Array.isArray(card?.especialidades) ? card.especialidades : [])
       .map((item) => ({
         nombre: clean(item?.nombre),
