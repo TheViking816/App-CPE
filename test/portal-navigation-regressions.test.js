@@ -31,7 +31,12 @@ test("primas usa Jornales y Primas y deja de abrir la ruta retirada", () => {
   assert.match(navigation, /openMenu\(page, "Consultas", "Jornales y Primas"\)/);
   assert.match(navigation, /page\.reload\(\{ waitUntil: "domcontentloaded", timeout: 45000 \}\)/);
   assert.match(navigation, /permanecio en blanco tras repetir el clic y recargar el portal/);
+  assert.match(navigation, /title\*="productividad"/);
+  assert.match(navigation, /aria-label\*="productividad"/);
+  assert.match(navigation, /Para ver las primas, pulsa el ojo/);
+  assert.match(navigation, /Do not treat that intermediate state as ready/);
   assert.match(section, /premiumRevealControl/);
+  assert.match(section, /Abriendo la productividad de Jornales y Primas/);
   assert.match(navigation, /data-lucide="eye"/);
   assert.doesNotMatch(section, /openMenu\(page, "Consultas", "Consulta de Primas Productividad"\)/);
   assert.doesNotMatch(section, /openPortalHash\(page, "User,ViewNoray,10"\)/);

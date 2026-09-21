@@ -2618,8 +2618,12 @@ function premiumRevealLocator(frame) {
   return frame.locator([
     'button[title*="prima" i]:visible',
     'button[aria-label*="prima" i]:visible',
+    'button[title*="productividad" i]:visible',
+    'button[aria-label*="productividad" i]:visible',
     '[role="button"][title*="prima" i]:visible',
     '[role="button"][aria-label*="prima" i]:visible',
+    '[role="button"][title*="productividad" i]:visible',
+    '[role="button"][aria-label*="productividad" i]:visible',
     'button:has(svg[class*="eye" i]):visible',
     'button:has(svg[data-lucide="eye"]):visible',
     'button:has(svg[data-icon="eye"]):visible',
@@ -2638,19 +2642,29 @@ function premiumRevealLocator(frame) {
 
 async function waitForJornalesPrimasScreen(page, timeout = 8000) {
   const deadline = Date.now() + timeout;
+  let readyScreen = null;
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
       const reveal = premiumRevealLocator(frame);
       if (await reveal.isVisible().catch(() => false)) return { frame, reveal };
 
+      const securityControl = frame.getByRole("button", { name: /Validar/i }).first();
+      if (await securityControl.isVisible().catch(() => false)) return { frame, reveal: null };
+
       const marker = frame.getByText(
         /Jornales del mes\s*:|Para ver las primas|clave de seguridad|Producci[oó]n/i
       ).first();
-      if (await marker.isVisible().catch(() => false)) return { frame, reveal: null };
+      if (await marker.isVisible().catch(() => false)) {
+        readyScreen = { frame, reveal: null };
+        const lockedNotice = frame.getByText(/Para ver las primas, pulsa el ojo/i).first();
+        // The React panel can paint its heading a fraction before mounting the
+        // productivity button. Do not treat that intermediate state as ready.
+        if (!await lockedNotice.isVisible().catch(() => false)) return readyScreen;
+      }
     }
     await page.waitForTimeout(200);
   }
-  return null;
+  return readyScreen;
 }
 
 async function openJornalesPrimas(page) {
@@ -2685,6 +2699,7 @@ async function collectPrimas(page, previous = null) {
     : null;
 
   if (premiumRevealControl) {
+    console.log("Abriendo la productividad de Jornales y Primas...");
     await premiumRevealControl.locator.click({ noWaitAfter: true });
   }
 
