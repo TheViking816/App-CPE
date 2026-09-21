@@ -104,8 +104,20 @@ test("la contratacion anticipada se abre desde el enlace de Donde voy", () => {
 });
 
 test("los partes derivados de jornales reciben una pagina navegable", () => {
-  assert.match(source, /completeAssignmentsFromJournals\(page, asignaciones, jornales\)/);
+  assert.match(source, /completeAssignmentsFromJournals\(\s*page,/);
   assert.doesNotMatch(source, /completeAssignmentsFromJournals\(page\.context\(\), asignaciones, jornales\)/);
+});
+
+test("los próximos jornales abren el número de parte desde Jornales y Primas", () => {
+  const reader = source.match(/async function readAssignmentDetailViaJornalesPrimas[\s\S]*?async function readAssignmentDetailViaDesktopWhereAmI/)?.[0] || "";
+  const completion = source.match(/async function completeAssignmentsFromJournals[\s\S]*?async function collectVacaciones/)?.[0] || "";
+  assert.match(reader, /openJornalesPrimas\(sourcePage\)/);
+  assert.match(reader, /cleanText\(await candidate\.innerText/);
+  assert.match(reader, /waitForExactAssignmentDetail/);
+  assert.match(reader, /readAssignmentDetailViaPortal/);
+  assert.match(completion, /source: "jornales-primas"/);
+  assert.match(source, /Proximos jornales cargados desde Jornales y Primas/);
+  assert.doesNotMatch(source, /let asignaciones = await readOptionalSection\(\s*"contratacion actual"/);
 });
 
 test("el enlace del parte nuevo admite el sufijo visual de buque pendiente", () => {

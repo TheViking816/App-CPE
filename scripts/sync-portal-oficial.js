@@ -913,6 +913,65 @@ async function readAssignmentDetailViaPortal(sourcePage, assignment) {
   );
 }
 
+async function waitForExactAssignmentDetail(sourcePage, assignment, timeout = 20000) {
+  const part = String(assignment?.parte || "").trim();
+  const deadline = Date.now() + timeout;
+  let best = { recognized: false, specialties: [] };
+  let bestScore = 0;
+  let lastImprovementAt = Date.now();
+
+  while (Date.now() < deadline) {
+    for (const contextPage of sourcePage.context().pages()) {
+      for (const frame of contextPage.frames()) {
+        const rows = await frame.locator("tr").evaluateAll((elements) => elements.map((row) => (
+          [...row.cells].map((cell) => cell.innerText || "")
+        ))).catch(() => []);
+        const pageText = await frame.locator("body").innerText().catch(() => "");
+        const parsed = bestAssignmentDetail(rows, pageText);
+        if (String(parsed.parte || "").trim() !== part) continue;
+        const score = assignmentDetailScore(parsed);
+        if (score > bestScore) {
+          best = parsed;
+          bestScore = score;
+          lastImprovementAt = Date.now();
+        }
+      }
+    }
+    if (best.recognized && Date.now() - lastImprovementAt >= 2500) return best;
+    await sourcePage.waitForTimeout(200);
+  }
+  return best;
+}
+
+async function readAssignmentDetailViaJornalesPrimas(sourcePage, assignment) {
+  const part = String(assignment?.parte || "").trim();
+  await openJornalesPrimas(sourcePage);
+  let clicked = false;
+
+  for (const frame of sourcePage.frames()) {
+    const candidates = frame.locator("a, button, [role=button], [onclick]").filter({ hasText: part });
+    const count = Math.min(await candidates.count().catch(() => 0), 30);
+    for (let index = 0; index < count; index += 1) {
+      const candidate = candidates.nth(index);
+      if (cleanText(await candidate.innerText().catch(() => "")) !== part
+        || !await candidate.isVisible().catch(() => false)) continue;
+      clicked = await candidate.click({ noWaitAfter: true }).then(() => true).catch(async () => (
+        candidate.evaluate((node) => { node.click(); return true; }).catch(() => false)
+      ));
+      if (clicked) break;
+    }
+    if (clicked) break;
+  }
+
+  if (clicked) {
+    const detail = await waitForExactAssignmentDetail(sourcePage, assignment);
+    if (detail.recognized) return detail;
+  }
+
+  console.warn(`Parte ${part}: el enlace de Jornales y Primas no devolvio el equipo; se prueba su enlace directo.`);
+  return readAssignmentDetailViaPortal(sourcePage, assignment);
+}
+
 async function readAssignmentDetailViaDesktopWhereAmI(sourcePage, assignment) {
   await sourcePage.goto("https://portal.cpevalencia.com/Noray/DondeVoy.asp", {
     waitUntil: "domcontentloaded",
@@ -2640,7 +2699,7 @@ async function collectVacacionesViaMenu(page) {
   throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
 }
 
-async function enrichAssignmentsWithDetails(page, result, previousResult) {
+async function enrichAssignmentsWithDetails(page, result, previousResult, options = {}) {
   const assignmentIdentity = (item) => [
     cleanText(item?.fecha),
     cleanText(item?.jornada).replace(/\s+/g, ""),
@@ -2681,7 +2740,9 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
           freshDetail = await readAssignmentDetailViaContractings(page, item);
         }
       } else {
-        freshDetail = await readAssignmentDetailViaMenu(page, item);
+        freshDetail = options.source === "jornales-primas"
+          ? await readAssignmentDetailViaJornalesPrimas(page, item)
+          : await readAssignmentDetailViaMenu(page, item);
       }
       console.log(`Parte ${item.parte}: detalle donde-voy=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
       if (freshDetail?.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
@@ -2719,16 +2780,17 @@ async function collectAssignments(page, previousResult) {
 }
 
 async function completeAssignmentsFromJournals(page, assignments, journals) {
-  const candidates = assignmentsFromCurrentJournals(journals, assignments);
-  if (!candidates.length) return assignments;
+  const candidates = assignmentsFromCurrentJournals(journals, { rows: [] });
+  if (!candidates.length) return { recognized: true, rows: [] };
   const enriched = await enrichAssignmentsWithDetails(
     page,
     { recognized: true, rows: candidates },
-    assignments
+    assignments,
+    { source: "jornales-primas" }
   );
   return {
     recognized: true,
-    rows: [...(assignments?.rows || []), ...(enriched.rows || [])]
+    rows: enriched.rows || []
   };
 }
 
@@ -3578,16 +3640,12 @@ async function main() {
       { allowCollectionShrink: true }
     );
     await publishProgress("primas", primas, "Primas cargadas");
-    let asignaciones = await readOptionalSection(
-      "contratacion actual",
-      () => collectAssignments(page, existingSnapshot?.payload?.asignaciones),
-      existingSnapshot?.payload?.asignaciones,
-      { recognized: false, rows: [] },
-      hasVacationData,
-      { allowCollectionShrink: true }
+    const asignaciones = await completeAssignmentsFromJournals(
+      page,
+      existingSnapshot?.payload?.asignaciones || { recognized: true, rows: [] },
+      jornales
     );
-    asignaciones = await completeAssignmentsFromJournals(page, asignaciones, jornales);
-    await publishProgress("asignaciones", asignaciones, "Contratacion actual cargada");
+    await publishProgress("asignaciones", asignaciones, "Proximos jornales cargados desde Jornales y Primas");
     jornales = mergeAssignmentsIntoPortalJornales(jornales, asignaciones);
     await publishProgress("jornales", jornales, "Jornales y contratacion consolidados");
     const sl = await readSection(

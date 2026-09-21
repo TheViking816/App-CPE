@@ -71,9 +71,10 @@ export function currentAssignmentsFromSnapshot(snapshot, currentTime = Date.now(
     .filter(Boolean);
 
   const unique = [];
-  // Jornales is a reliable fallback when the legacy "Donde voy" page fails.
-  // Assignments is applied last so its full part detail always wins.
-  [...journalAssignments, ...assignments].forEach((item) => {
+  // Inicio muestra exclusivamente los partes publicados en Jornales y Primas.
+  // La lectura detallada guardada en asignaciones solo completa esos mismos
+  // partes; nunca incorpora por su cuenta filas antiguas de "Donde voy".
+  journalAssignments.forEach((item) => {
     const date = parseDate(item.fecha);
     if (!date || date < today) return;
     const itemKey = assignmentKey(item);
@@ -84,6 +85,15 @@ export function currentAssignmentsFromSnapshot(snapshot, currentTime = Date.now(
     ));
     if (matchingIndex < 0) unique.push(item);
     else unique[matchingIndex] = mergePreferResolvedPart(unique[matchingIndex], item);
+  });
+
+  assignments.forEach((item) => {
+    const matchingIndex = unique.findIndex((saved) => (
+      assignmentKey(saved) === assignmentKey(item)
+      || (sameAssignmentContext(saved, item)
+        && (canonicalPortalPart(saved) === "CA" || canonicalPortalPart(item) === "CA"))
+    ));
+    if (matchingIndex >= 0) unique[matchingIndex] = mergePreferResolvedPart(unique[matchingIndex], item);
   });
 
   return unique.map(normalizeReservePortalRow).sort((left, right) => (

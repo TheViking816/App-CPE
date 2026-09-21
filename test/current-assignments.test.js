@@ -71,3 +71,20 @@ test("Contratacion muestra una sola reserva de grupo III como clasificador", () 
   assert.equal(result[0].especialidad, "CLASIFICADOR");
   assert.equal(result[0].payrollGroup, "III");
 });
+
+test("no muestra una asignacion de Donde voy que no figure en Jornales y Primas", () => {
+  const snapshot = {
+    payload: {
+      asignaciones: {
+        rows: [{ fecha: "23/09/2026", jornada: "DE 08 A 14 H.", parte: "27380", detail: { recognized: true } }]
+      },
+      jornales: {
+        monthLabel: "Septiembre 2026",
+        rows: [{ dia: "22", jornada: "DE 02 A 08 H.", parte: "27241" }]
+      }
+    }
+  };
+
+  const result = currentAssignmentsFromSnapshot(snapshot, new Date(2026, 8, 22, 9));
+  assert.deepEqual(result.map((item) => item.parte), ["27241"]);
+});
