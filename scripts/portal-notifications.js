@@ -37,7 +37,10 @@ function periodRows(section) {
 
 function journalKey(item) {
   const row = item.row || {};
-  const period = clean(item.period).toLocaleLowerCase("es-ES");
+  const date = journalDate(item);
+  const period = date
+    ? date.toISOString().slice(0, 7)
+    : clean(item.period).toLocaleLowerCase("es-ES").replace(/\s+de\s+/g, " ");
   const day = clean(row.dia).padStart(2, "0");
   const shift = clean(row.jornada).replace(/[^0-9]/g, "");
   return [period, day, shift].join("|");

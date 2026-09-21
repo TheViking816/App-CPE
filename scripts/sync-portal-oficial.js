@@ -2125,14 +2125,18 @@ async function collectExceptions(page) {
     // item is clicked. Use that reliable route first and retain the hash only
     // as a compatibility fallback for older portal sessions.
     await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
-    const menuResult = await readCurrentScreen(8000);
+    const menuResult = await readCurrentScreen(1800);
     if (menuResult.recognized) return menuResult;
+    console.warn("Bolsa de Excepciones sigue en blanco; se repite el clic del menu.");
+    await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
+    const retryMenuResult = await readCurrentScreen(5000);
+    if (retryMenuResult.recognized) return retryMenuResult;
   } catch {
     // The direct hash fallback below covers temporary menu failures.
   }
 
   await openPortalHash(page, "User,ViewNoray,17");
-  const directResult = await readCurrentScreen(4000);
+  const directResult = await readCurrentScreen(2500);
   if (directResult.recognized) return directResult;
   throw new Error("No se pudo leer la Bolsa de Excepciones. Se conservaran los ultimos datos disponibles.");
 }
@@ -2294,21 +2298,44 @@ async function collectRequestedDoubles(page) {
   };
 }
 
+async function findVisiblePayrollSecurityControl(page) {
+  for (const frame of page.frames()) {
+    const locator = frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }).first();
+    if (await locator.isVisible().catch(() => false)) return { frame, locator };
+  }
+  return null;
+}
+
+async function waitForPayrollRowsOrSecurity(page, timeout = 2500) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const rows = await extractPayrollRowsFromDom(page);
+    if (rows.length) return { rows, securityControl: null };
+    const securityControl = await findVisiblePayrollSecurityControl(page);
+    if (securityControl) return { rows: [], securityControl };
+    await page.waitForTimeout(150);
+  }
+  return { rows: [], securityControl: null };
+}
+
+async function waitForPayrollRows(page, timeout = 2500) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const rows = await extractPayrollRowsFromDom(page);
+    if (rows.length) return rows;
+    await page.waitForTimeout(150);
+  }
+  return [];
+}
+
 async function collectPayrolls(page) {
   if (!portalSecurityKey) return { recognized: true, locked: true, rows: [] };
-  await openPortalHash(page, "User,Request,,,");
   await openMenu(page, "Consultas", "Nómina electrónica");
 
-  const alreadyLoaded = await waitForParsedContent(
-    page,
-    parsePayrollsHtml,
-    (result) => (result.locked ? 0 : 1000) + (result.rows?.length || 0),
-    2500,
-    (result) => result.recognized && !result.locked && result.rows.length > 0
-  );
-  if (alreadyLoaded.recognized && !alreadyLoaded.locked && alreadyLoaded.rows.length) {
-    console.log(`Nominas leidas: ${alreadyLoaded.rows.length}.`);
-    return completePayrollResult(page, alreadyLoaded);
+  const ready = await waitForPayrollRowsOrSecurity(page);
+  if (ready.rows.length) {
+    console.log(`Nominas leidas: ${ready.rows.length}.`);
+    return completePayrollResult(page, { recognized: true, locked: false, rows: ready.rows });
   }
 
   const alreadyVisibleRows = await extractPayrollRowsFromDom(page);
@@ -2317,10 +2344,10 @@ async function collectPayrolls(page) {
     return completePayrollResult(page, { recognized: true, locked: false, rows: alreadyVisibleRows });
   }
 
-  let securityControl = await waitForFrameAndLocator(
+  let securityControl = ready.securityControl || await waitForFrameAndLocator(
     page,
     (frame) => frame.getByRole("button", { name: /Validar|Aceptar|Entrar|Abrir modo seguro/i }),
-    8000
+    5000
   );
   if (!securityControl) {
     await openPortalHash(page, "User,Request,,,");
@@ -2348,9 +2375,8 @@ async function collectPayrolls(page) {
     await page.keyboard.type(portalSecurityKey);
   }
   await securityControl.locator.click({ noWaitAfter: true });
-  await page.waitForTimeout(1200);
 
-  const domRows = await extractPayrollRowsFromDom(page);
+  const domRows = await waitForPayrollRows(page);
   if (domRows.length) {
     console.log(`Nominas leidas: ${domRows.length}.`);
     return completePayrollResult(page, { recognized: true, locked: false, rows: domRows });
@@ -2442,7 +2468,14 @@ async function collectAssignmentsViaMenu(page) {
   await assignmentNavigationState(page, "menu-before");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
   await assignmentNavigationState(page, "menu-after-click");
-  const listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 12000);
+  let listFrame = null;
+  try {
+    listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 1800);
+  } catch {
+    console.warn("Donde voy sigue en blanco; se repite el clic del menu sin esperar al reintento general.");
+    await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
+    listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 6000);
+  }
   const initialText = await listFrame.locator("body").innerText().catch(() => "");
   if (hasAuthoritativeNoAssignments(initialText)) {
     await page.waitForTimeout(800);
@@ -2615,6 +2648,11 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
     let detail = previousByPart.get(String(item.parte))
       || previousByAssignment.get(assignmentIdentity(item))
       || null;
+    if (fastMode && shouldReusePastAssignmentDetail(item, detail)) {
+      rows[index] = applyAssignmentDetail(item, detail);
+      console.log(`Parte ${item.parte}: detalle completo de una jornada pasada reutilizado.`);
+      continue;
+    }
     try {
       let freshDetail;
       if (normalizePortalPart(item.parte) === "CA") {
@@ -2644,6 +2682,16 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
   }
 
   return { ...result, rows };
+}
+
+export function shouldReusePastAssignmentDetail(item, detail, now = new Date()) {
+  const match = cleanText(item?.fecha).match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  const part = cleanText(item?.parte);
+  if (!match || !/^\d{4,6}$/.test(part) || !isAssignmentDetailComplete(detail)) return false;
+  const year = match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]);
+  const assignmentDate = new Date(year, Number(match[2]) - 1, Number(match[1]));
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return assignmentDate.getTime() < today.getTime();
 }
 
 async function collectAssignments(page, previousResult) {
@@ -2858,6 +2906,20 @@ async function fillPremiumSecurityKey(securityInput) {
   console.log("Clave de seguridad escrita en Jornales y Primas.");
 }
 
+async function waitForPremiumSecurityOutcome(page, timeout = 3000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      if (await premiumInvalidKeyLocator(frame).isVisible().catch(() => false)) return "invalid";
+      if (await frame.getByRole("button", { name: /Aceptar/i }).first().isVisible().catch(() => false)) return "accepted";
+      const parsed = parsePrimas(await contentWithComputedProductionColors(frame));
+      if (!parsed.locked && (parsed.rows || []).some((row) => row.jornal)) return "accepted";
+    }
+    await page.waitForTimeout(100);
+  }
+  return "pending";
+}
+
 async function submitPremiumSecurityKey(page, securityControl) {
   const securityInput = await findPremiumSecurityInput(
     securityControl.frame,
@@ -2877,8 +2939,8 @@ async function submitPremiumSecurityKey(page, securityControl) {
   }
   await securityControl.locator.click({ noWaitAfter: true });
 
-  const invalidKey = await waitForFrameAndLocator(page, premiumInvalidKeyLocator, 3000);
-  if (invalidKey) {
+  const outcome = await waitForPremiumSecurityOutcome(page);
+  if (outcome === "invalid") {
     throw new Error("La clave de seguridad de primas es incorrecta. Revisa los datos de acceso e intentalo de nuevo.");
   }
 }

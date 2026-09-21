@@ -64,6 +64,19 @@ test("no repite un jornal cuando el portal completa el parte, tipo o formato de 
   assert.equal(rows.some((row) => row.eventType === "new_journal"), false);
 });
 
+test("no repite jornales cuando el lector cambia de Septiembre de 2026 a Septiembre 2026", () => {
+  const previous = structuredClone(base);
+  previous.jornales = {
+    monthLabel: "Septiembre de 2026",
+    rows: [{ dia: "20", parte: "27107", jornada: "DE 20 A 02 H.", especialidad: "CONDUCTOR 1a" }]
+  };
+  const next = structuredClone(previous);
+  next.jornales.monthLabel = "Septiembre 2026";
+
+  const rows = buildPortalNotifications(previous, next, { now: new Date("2026-09-22T00:00:00Z") });
+  assert.equal(rows.some((row) => row.eventType === "new_journal"), false);
+});
+
 test("solo llama nueva prima al paso de pendiente a importe", () => {
   const previous = structuredClone(base);
   previous.primas.rows[0].produccion = "";

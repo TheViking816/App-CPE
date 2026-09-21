@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 
 const endpoint = String(process.argv[2] || process.env.CPE_PORTAL_CDP_ENDPOINT || "http://127.0.0.1:9223").trim();
+const challengeWaitMs = Math.max(0, Number(process.argv[3] || 0) * 1000);
 const portalUrl = "https://portal.cpevalencia.com/#User";
 const challengePattern = /Verificaci[oó]n de seguridad|verifique que es un ser humano|Just a moment|Ray ID/i;
 const portalPattern = /Iniciar sesi[oó]n|loginFields|title=["']Usuario["']|Finalizar sesi[oó]n/i;
@@ -43,6 +44,17 @@ try {
     return state;
   };
 
+  const waitForChallengeResolution = async () => {
+    if (state !== "challenge" || !challengeWaitMs) return state;
+    const deadline = Date.now() + challengeWaitMs;
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(500);
+      const nextState = await readPortalState();
+      if (nextState === "portal") return nextState;
+    }
+    return state;
+  };
+
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     // A browser reload can resubmit the POST used by the portal login. The
     // portal rejects that replay with HTTP 405, so force a fresh GET while
@@ -51,6 +63,7 @@ try {
     const response = await page.goto(portalUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
     status = response?.status() || 0;
     state = await waitForPortalState();
+    state = await waitForChallengeResolution();
     if (state !== "empty") break;
 
     // En este estado el portal ha contestado 200 pero ha dejado el documento
@@ -59,6 +72,7 @@ try {
     const reloadResponse = await page.reload({ waitUntil: "domcontentloaded", timeout: 90000 }).catch(() => null);
     status = reloadResponse?.status() || status;
     state = await waitForPortalState();
+    state = await waitForChallengeResolution();
     if (state !== "empty") break;
   }
 

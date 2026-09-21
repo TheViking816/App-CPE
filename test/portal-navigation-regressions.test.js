@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { shouldReusePastAssignmentDetail } from "../scripts/sync-portal-oficial.js";
 
 const source = await readFile(new URL("../scripts/sync-portal-oficial.js", import.meta.url), "utf8");
 
@@ -70,6 +71,7 @@ test("Bolsa de Excepciones usa primero el menú y conserva ViewNoray 17 como res
   assert.match(section, /openPortalHash\(page, "User,ViewNoray,17"\)/);
   assert.match(section, /openMenu\(page, "Solicitudes", "Bolsa de Excepciones"\)/);
   assert.ok(section.indexOf('openMenu(page, "Solicitudes", "Bolsa de Excepciones")') < section.indexOf('openPortalHash(page, "User,ViewNoray,17")'));
+  assert.match(section, /se repite el clic del menu/);
 });
 
 test("la actualización rápida reutiliza Jornales y Primas y omite especialidades guardadas", () => {
@@ -103,6 +105,31 @@ test("abre primero el acordeon exacto de fecha y jornada antes de pulsar el part
   assert.match(source, /await expandWhereAmIAssignment\(listFrame, assignment\)/);
   assert.match(source, /shortDate/);
   assert.match(source, /compactShift/);
+});
+
+test("reutiliza solo equipos completos de jornadas pasadas", () => {
+  const detail = {
+    recognized: true,
+    specialties: [{ requested: 2, workers: [{ code: "72683" }, { code: "72684" }], bolsa: 0 }]
+  };
+  assert.equal(shouldReusePastAssignmentDetail(
+    { fecha: "20/09/2026", parte: "27039" }, detail, new Date("2026-09-22T12:00:00")
+  ), true);
+  assert.equal(shouldReusePastAssignmentDetail(
+    { fecha: "22/09/2026", parte: "27241" }, detail, new Date("2026-09-22T12:00:00")
+  ), false);
+  assert.equal(shouldReusePastAssignmentDetail(
+    { fecha: "20/09/2026", parte: "27039" },
+    { ...detail, specialties: [{ requested: 2, workers: [{ code: "72683" }], bolsa: 0 }] },
+    new Date("2026-09-22T12:00:00")
+  ), false);
+});
+
+test("nominas abre el menu directamente y espera resultados sin pausa fija", () => {
+  const section = source.match(/async function collectPayrolls\(page\)[\s\S]*?async function expandWhereAmISections/)?.[0] || "";
+  assert.match(section, /openMenu\(page, "Consultas", "Nómina electrónica"\)/);
+  assert.doesNotMatch(section.split("if (!securityControl)")[0], /openPortalHash/);
+  assert.doesNotMatch(section, /waitForTimeout\(1200\)/);
 });
 
 test("contratacion y vacaciones reconocidas pueden estar vacias sin hacer parcial la lectura", () => {

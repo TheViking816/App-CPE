@@ -45,6 +45,9 @@ test("el gateway realiza una recarga real y espera a que aparezca portal o Cloud
   assert.match(gatewayReloadSource, /state = "challenge"/);
   assert.match(gatewayReloadSource, /waitForPortalState/);
   assert.doesNotMatch(gatewayReloadSource, /waitForTimeout\(5000\)/);
+  assert.match(gatewayReloadSource, /waitForChallengeResolution/);
+  assert.match(gatewaySource, /\$gatewayIsRunning/);
+  assert.doesNotMatch(gatewaySource, /ReloadDelaySeconds/);
 });
 
 test("el worker no confunde los scripts normales de Cloudflare con un desafio", () => {
