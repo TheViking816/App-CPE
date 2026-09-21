@@ -52,6 +52,8 @@ test("el horario combinado espera el resultado real y lo devuelve al Programador
 test("los horarios comunes ejecutan el runner sin accesos directos asincronos", () => {
   assert.match(calendarInstallerSource, /\$dailyAction = New-CalendarAction "Common"/);
   assert.match(calendarInstallerSource, /New-CalendarAction "MonthRollover"/);
+  assert.match(calendarInstallerSource, /App CPE - Laborables 15-00/);
+  assert.match(calendarInstallerSource, /-At "15:00"/);
   assert.match(calendarInstallerSource, /StartWhenAvailable/);
   assert.match(calendarRunnerSource, /lastRolloverMonth/);
   assert.match(calendarRunnerSource, /verify-rest-month-window\.js/);
