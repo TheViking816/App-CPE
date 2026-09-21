@@ -314,7 +314,8 @@ export function parseAssignmentDetailFromText(pageText = "") {
 }
 
 export function assignmentDetailScore(detail = {}) {
-  const specialties = mergeFullPartSpecialties(detail.specialties || [], []);
+  const safeDetail = detail && typeof detail === "object" ? detail : {};
+  const specialties = mergeFullPartSpecialties(safeDetail.specialties || [], []);
   const namedWorkers = specialties.reduce((total, specialty) => (
     total + (specialty.workers || []).filter((worker) => normalizeCell(worker?.name)).length
   ), 0);
@@ -365,8 +366,9 @@ export function parseAssignmentsFromText(pageText = "") {
 }
 
 export function isAssignmentDetailComplete(detail = {}) {
-  const specialties = Array.isArray(detail.specialties) ? detail.specialties : [];
-  return Boolean(detail.recognized && specialties.length) && specialties.every((specialty) => (
+  const safeDetail = detail && typeof detail === "object" ? detail : {};
+  const specialties = Array.isArray(safeDetail.specialties) ? safeDetail.specialties : [];
+  return Boolean(safeDetail.recognized && specialties.length) && specialties.every((specialty) => (
     (specialty.workers?.length || 0) + Number(specialty.bolsa || 0) >= Number(specialty.requested || 0)
   ));
 }

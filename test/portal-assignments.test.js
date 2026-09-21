@@ -34,6 +34,11 @@ const detailTable = (workers) => [[
   ["CONDUCTOR 1a", "5", workers]
 ]];
 
+test("un parte sin detalle previo no interrumpe la tanda", () => {
+  assert.equal(isAssignmentDetailComplete(null), false);
+  assert.equal(assignmentDetailScore(null), 0);
+});
+
 test("lee la contratacion responsive aunque el portal no publique una tabla HTML", () => {
   const result = parseAssignmentsFromText(`
     jornadas contratadas

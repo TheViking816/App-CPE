@@ -2684,10 +2684,10 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
         freshDetail = await readAssignmentDetailViaMenu(page, item);
       }
       console.log(`Parte ${item.parte}: detalle donde-voy=${assignmentDetailScore(freshDetail || {})}/${freshDetail?.specialties?.length || 0}.`);
-      if (freshDetail.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
+      if (freshDetail?.recognized && assignmentDetailScore(freshDetail) >= assignmentDetailScore(detail || {})) {
         detail = freshDetail;
-        console.log(`Parte ${item.parte}: ${freshDetail.specialties.length} especialidades leidas.`);
-      } else if (freshDetail.recognized) {
+        console.log(`Parte ${item.parte}: ${freshDetail.specialties?.length || 0} especialidades leidas.`);
+      } else if (freshDetail?.recognized) {
         console.log(`Parte ${item.parte}: la lectura nueva estaba incompleta; se conserva el detalle anterior.`);
       } else {
         console.log(`Parte ${item.parte}: la vista se abrio, pero no contenia un equipo reconocible.`);
