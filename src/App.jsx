@@ -1352,8 +1352,8 @@ function PortalJornalDetailModal({
             <div><span>Hora de relevo</span><strong>{formatEuro(payroll.relayHour)}</strong></div>
           )}
           {payroll.primaEligible && (
-            <div className={payroll.manualPremiumConflict || payroll.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
-              <span>{payroll.primaSource === "manual" ? "Prima manual" : "Prima"}</span><strong>{payroll.prima != null ? formatEuro(payroll.prima) : "Pendiente"}</strong>
+            <div className="is-premium-value">
+              <span className="portal-premium-label">{payroll.primaSource === "manual" ? "Prima manual" : "Prima"}</span><strong className="portal-premium-amount">{payroll.prima != null ? formatEuro(payroll.prima) : "Pendiente"}</strong>
             </div>
           )}
         </div>
@@ -1838,8 +1838,8 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, o
                   <span>Remate · {item.payroll.remateHours} {item.payroll.remateHours === 1 ? "hora" : "horas"} <b>{formatEuro(item.payroll.remate)}</b></span>
                 )}
                 {!item.isVacation && item.payroll?.primaEligible && (
-                  <span className={item.payroll?.manualPremiumConflict || item.payroll?.primaVerification === "pending" ? "is-unverified-prima" : undefined}>
-                    {item.payroll?.primaSource === "manual" ? "Prima manual" : "Prima"} <b>{item.payroll?.prima != null ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
+                  <span className="is-premium-value">
+                    <em className="portal-premium-label">{item.payroll?.primaSource === "manual" ? "Prima manual" : "Prima"}</em> <b className="portal-premium-amount">{item.payroll?.prima != null ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
                   </span>
                 )}
               </div>
@@ -3315,9 +3315,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                       )}
                       {item.payroll?.operationType !== "RECEPCION_ENTREGA" && (
                         <span className={item.payroll?.prima > 0
-                          ? `is-prima${item.payroll?.primaVerification === "pending" ? " is-unverified" : ""}`
+                          ? "is-prima"
                           : "is-pending"}>
-                          Prima <b>{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
+                          <em className="portal-premium-label">Prima</em> <b className="portal-premium-amount">{item.payroll?.prima > 0 ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
                         </span>
                       )}
                     </div>

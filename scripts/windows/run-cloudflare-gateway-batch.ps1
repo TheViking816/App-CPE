@@ -30,6 +30,7 @@ Start-Sleep -Seconds $WarmupSeconds
 
 $previousCdpEndpoint = $env:CPE_PORTAL_CDP_ENDPOINT
 $previousPoolSize = $env:CPE_CLOUDFLARE_POOL_SIZE
+$previousJobMaxRuntime = $env:CPE_PORTAL_JOB_MAX_RUNTIME_MS
 try {
   $env:CPE_PORTAL_CDP_ENDPOINT = $endpoint
   $env:CPE_CLOUDFLARE_POOL_SIZE = "1"
@@ -56,6 +57,9 @@ try {
   # A cf_clearance cookie copied from Chrome can be rejected by bundled Chromium.
   $env:CPE_PORTAL_BROWSER_CHANNEL = "chrome"
   $env:CPE_PORTAL_WORKER_BATCH_SIZE = [string]$BatchSize
+  # Si un perfil queda atrapado en la pantalla de Cloudflare, el worker mata
+  # ese Chrome y vuelve a poner la lectura en cola para ejecutarla de nuevo.
+  $env:CPE_PORTAL_JOB_MAX_RUNTIME_MS = [string](5 * 60 * 1000)
   if ($Drain) { $env:CPE_PORTAL_WORKER_DRAIN = "true" }
   else { $env:CPE_PORTAL_WORKER_ONCE = "true" }
   Set-Location -LiteralPath $RepositoryPath
@@ -69,5 +73,6 @@ try {
   $env:CPE_PORTAL_WORKER_BATCH_SIZE = $null
   $env:CPE_PORTAL_WORKER_ONCE = $null
   $env:CPE_PORTAL_WORKER_DRAIN = $null
+  $env:CPE_PORTAL_JOB_MAX_RUNTIME_MS = $previousJobMaxRuntime
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPointer)
 }

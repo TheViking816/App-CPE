@@ -2936,16 +2936,13 @@ select {
   color: #087f5b;
 }
 
-.portal-jornal-breakdown .is-prima.is-unverified,
-.portal-month-jornal-values .is-unverified-prima,
-.portal-jornal-detail-breakdown .is-unverified-prima {
-  background: #feecec;
-  color: #c62828;
+.portal-premium-label {
+  color: #087f5b;
+  font-style: normal;
 }
 
-.portal-month-jornal-values .is-unverified-prima b,
-.portal-jornal-detail-breakdown .is-unverified-prima strong {
-  color: #c62828;
+.portal-premium-amount {
+  color: var(--ink) !important;
 }
 
 .portal-jornal-breakdown .is-pending {
@@ -6678,16 +6675,12 @@ select {
   color: var(--ink);
 }
 
-:root[data-theme="dark"] .portal-jornal-breakdown .is-prima.is-unverified,
-:root[data-theme="dark"] .portal-month-jornal-values .is-unverified-prima,
-:root[data-theme="dark"] .portal-jornal-detail-breakdown .is-unverified-prima {
-  background: rgba(239, 68, 68, 0.17);
-  color: #fca5a5;
+:root[data-theme="dark"] .portal-premium-label {
+  color: #6ee7b7;
 }
 
-:root[data-theme="dark"] .portal-month-jornal-values .is-unverified-prima b,
-:root[data-theme="dark"] .portal-jornal-detail-breakdown .is-unverified-prima strong {
-  color: #fca5a5;
+:root[data-theme="dark"] .portal-premium-amount {
+  color: var(--ink) !important;
 }
 
 :root[data-theme="dark"] .portal-jornal-breakdown .is-pending {

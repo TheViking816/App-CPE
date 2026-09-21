@@ -123,6 +123,9 @@ test("cada tanda recarga y valida Cloudflare antes de abrir perfiles de usuarios
   assert.match(batchRunnerSource, /cloudflare-clearance-pool-check\.js/);
   assert.match(batchRunnerSource, /CPE_CLOUDFLARE_POOL_SIZE = "1"/);
   assert.match(batchRunnerSource, /if \(\$clearanceExitCode -ne 0\)/);
+  assert.match(batchRunnerSource, /CPE_PORTAL_JOB_MAX_RUNTIME_MS = \[string\]\(5 \* 60 \* 1000\)/);
+  assert.match(workerSource, /terminateChildTree\(child\)/);
+  assert.match(workerSource, /scheduleAutomaticRetry\(job\)/);
 
   const gatewayPosition = batchRunnerSource.indexOf("& powershell.exe", batchRunnerSource.indexOf("$gatewayScript"));
   const clearancePosition = batchRunnerSource.indexOf("& node $clearanceCheckScript");
