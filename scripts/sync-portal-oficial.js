@@ -2614,35 +2614,75 @@ async function collectVacaciones(page) {
   return collectVacacionesViaMenu(page);
 }
 
+function premiumRevealLocator(frame) {
+  return frame.locator([
+    'button[title*="prima" i]:visible',
+    'button[aria-label*="prima" i]:visible',
+    '[role="button"][title*="prima" i]:visible',
+    '[role="button"][aria-label*="prima" i]:visible',
+    'button:has(svg[class*="eye" i]):visible',
+    'button:has(svg[data-lucide="eye"]):visible',
+    'button:has(svg[data-icon="eye"]):visible',
+    '[role="button"]:has(svg[class*="eye" i]):visible',
+    '[role="button"]:has(svg[data-lucide="eye"]):visible',
+    '[role="button"]:has(svg[data-icon="eye"]):visible',
+    'svg[class*="eye" i]:visible',
+    'svg[data-lucide="eye"]:visible',
+    'svg[data-icon="eye"]:visible',
+    'i[class*="eye" i]:visible',
+    'span[class*="eye" i]:visible',
+    'img[title*="prima" i]:visible',
+    'img[alt*="prima" i]:visible'
+  ].join(", ")).first();
+}
+
+async function waitForJornalesPrimasScreen(page, timeout = 8000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      const reveal = premiumRevealLocator(frame);
+      if (await reveal.isVisible().catch(() => false)) return { frame, reveal };
+
+      const marker = frame.getByText(
+        /Jornales del mes\s*:|Para ver las primas|clave de seguridad|Producci[oó]n/i
+      ).first();
+      if (await marker.isVisible().catch(() => false)) return { frame, reveal: null };
+    }
+    await page.waitForTimeout(200);
+  }
+  return null;
+}
+
+async function openJornalesPrimas(page) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    if (attempt === 1) {
+      await openPortalHash(page, "User,ViewNoray,2");
+    } else {
+      if (attempt === 3) {
+        console.warn("Jornales y Primas sigue en blanco; recargando el portal antes del ultimo intento.");
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 45000 });
+        await page.waitForTimeout(1200);
+      } else {
+        console.warn("Jornales y Primas aparecio en blanco; repitiendo el clic desde el menu.");
+      }
+      await openMenu(page, "Consultas", "Jornales y Primas");
+    }
+
+    const screen = await waitForJornalesPrimasScreen(page);
+    if (screen) return screen;
+  }
+
+  throw new Error("Jornales y Primas permanecio en blanco tras repetir el clic y recargar el portal.");
+}
+
 async function collectPrimas(page, previous = null) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
   // El portal sustituyo la antigua Consulta de Primas Productividad
   // (ViewNoray 10) por Jornales y Primas (ViewNoray 2).
-  await openPortalHash(page, "User,ViewNoray,2");
-
-  const premiumRevealControl = await waitForFrameAndLocator(
-    page,
-    (frame) => frame.locator([
-      'button[title*="prima" i]:visible',
-      'button[aria-label*="prima" i]:visible',
-      '[role="button"][title*="prima" i]:visible',
-      '[role="button"][aria-label*="prima" i]:visible',
-      'button:has(svg[class*="eye" i]):visible',
-      'button:has(svg[data-lucide="eye"]):visible',
-      'button:has(svg[data-icon="eye"]):visible',
-      '[role="button"]:has(svg[class*="eye" i]):visible',
-      '[role="button"]:has(svg[data-lucide="eye"]):visible',
-      '[role="button"]:has(svg[data-icon="eye"]):visible',
-      'svg[class*="eye" i]:visible',
-      'svg[data-lucide="eye"]:visible',
-      'svg[data-icon="eye"]:visible',
-      'i[class*="eye" i]:visible',
-      'span[class*="eye" i]:visible',
-      'img[title*="prima" i]:visible',
-      'img[alt*="prima" i]:visible'
-    ].join(", ")),
-    8000
-  );
+  const premiumScreen = await openJornalesPrimas(page);
+  const premiumRevealControl = premiumScreen.reveal
+    ? { frame: premiumScreen.frame, locator: premiumScreen.reveal }
+    : null;
 
   if (premiumRevealControl) {
     await premiumRevealControl.locator.click({ noWaitAfter: true });

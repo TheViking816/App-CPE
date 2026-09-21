@@ -24,10 +24,15 @@ test("Consulta SL abre primero MostrarSL directo y conserva el menú como respal
 });
 
 test("primas usa Jornales y Primas y deja de abrir la ruta retirada", () => {
+  const navigation = source.match(/function premiumRevealLocator\([\s\S]*?async function collectPrimas\(/)?.[0] || "";
   const section = source.match(/async function collectPrimas\([\s\S]*?async function collectPrimasHistory/)?.[0] || "";
-  assert.match(section, /openPortalHash\(page, "User,ViewNoray,2"\)/);
+  assert.match(section, /openJornalesPrimas\(page\)/);
+  assert.match(navigation, /openPortalHash\(page, "User,ViewNoray,2"\)/);
+  assert.match(navigation, /openMenu\(page, "Consultas", "Jornales y Primas"\)/);
+  assert.match(navigation, /page\.reload\(\{ waitUntil: "domcontentloaded", timeout: 45000 \}\)/);
+  assert.match(navigation, /permanecio en blanco tras repetir el clic y recargar el portal/);
   assert.match(section, /premiumRevealControl/);
-  assert.match(section, /data-lucide="eye"/);
+  assert.match(navigation, /data-lucide="eye"/);
   assert.doesNotMatch(section, /openMenu\(page, "Consultas", "Consulta de Primas Productividad"\)/);
   assert.doesNotMatch(section, /openPortalHash\(page, "User,ViewNoray,10"\)/);
 });
