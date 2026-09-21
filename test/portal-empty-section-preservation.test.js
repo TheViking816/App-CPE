@@ -15,6 +15,10 @@ const slRefreshSource = await readFile(
   new URL("../supabase/migrations/20260826003827_refresh_sl_rows_from_portal.sql", import.meta.url),
   "utf8"
 );
+const fullExceptionHistorySource = await readFile(
+  new URL("../supabase/migrations/20260921143000_preserve_full_exception_history.sql", import.meta.url),
+  "utf8"
+);
 
 test("la captura conserva una coleccion anterior si la nueva seccion llega vacia", () => {
   assert.match(syncSource, /protectedCollectionKeys/);
@@ -33,4 +37,7 @@ test("la base de datos protege las colecciones y fusiona el historico de excepci
   assert.match(mergeOrderFixSource, /v_result -> 'primas'/);
   assert.match(mergeOrderFixSource, /v_result -> 'excepciones'/);
   assert.match(slRefreshSource, /v_section\.key <> 'sl'/);
+  assert.match(fullExceptionHistorySource, /from jsonb_array_elements\([\s\S]*p_existing -> 'rows'/);
+  assert.doesNotMatch(fullExceptionHistorySource, /where coalesce\(\(value ->> 'used'\)::boolean, false\)/);
+  assert.match(fullExceptionHistorySource, /priority desc/);
 });

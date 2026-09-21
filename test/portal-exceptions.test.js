@@ -61,6 +61,20 @@ test("una lectura parcial conserva una excepción utilizada que omite la tabla",
   assert.equal(result.rows[0].used, true);
 });
 
+test("una lectura parcial conserva también solicitudes aceptadas, denegadas y pendientes", () => {
+  const previousRows = [
+    { chapa: "72683", date: "2026-09-07", shift: "DE 14 A 20 H.", requestedAt: "2026-08-26", status: "Aceptada", used: false },
+    { chapa: "72683", date: "2026-09-21", shift: "DE 14 A 20 H.", requestedAt: "2026-08-22", status: "Denegada", used: false },
+    { chapa: "72683", date: "2026-09-28", shift: "DE 14 A 20 H.", requestedAt: "2026-08-22", status: "Pendiente", used: false }
+  ];
+  const result = preserveUsedExceptions(
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 0, remaining: 15, rows: previousRows },
+    { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 0, remaining: 15, rows: [] }
+  );
+
+  assert.deepEqual(result.rows, previousRows);
+});
+
 test("las excepciones utilizadas sí se reinician al cambiar de año", () => {
   const result = preserveUsedExceptions(
     { recognized: true, year: 2026, maxAnnual: 15, usedTotal: 1, remaining: 14, rows: [{ chapa: "72683", used: true }] },

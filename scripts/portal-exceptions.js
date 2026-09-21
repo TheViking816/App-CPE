@@ -56,19 +56,20 @@ export function preserveUsedExceptions(existing, incoming) {
   const incomingYear = Number(incoming.year) || 0;
   if (existingYear && incomingYear && existingYear !== incomingYear) return incoming;
 
-  const previousUsed = new Map(
+  const previousRows = new Map(
     (Array.isArray(existing.rows) ? existing.rows : [])
-      .filter((row) => row?.used)
       .map((row) => [exceptionRowKey(row), row])
   );
   const rows = (Array.isArray(incoming.rows) ? incoming.rows : []).map((row) => {
     const key = exceptionRowKey(row);
-    const saved = previousUsed.get(key);
+    const saved = previousRows.get(key);
     if (!saved) return row;
-    previousUsed.delete(key);
-    return { ...row, used: true };
+    previousRows.delete(key);
+    return { ...saved, ...row, used: Boolean(saved.used || row.used) };
   });
-  rows.push(...previousUsed.values());
+  // La tabla del portal puede omitir solicitudes pasadas, denegadas o todavía
+  // pendientes. Son historial anual y no deben desaparecer por esa omisión.
+  rows.push(...previousRows.values());
 
   const maxAnnual = Math.max(1, Number(incoming.maxAnnual) || Number(existing.maxAnnual) || 15);
   const usedTotal = Math.max(
