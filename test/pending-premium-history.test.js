@@ -25,6 +25,7 @@ async function collect(read, previous, initial = { recognized:true, monthLabel:"
     Date: class extends Date { constructor() { super("2026-09-04T12:00:00Z"); } },
     process:{ env:{} }, fastMode:true, MONTH_NAMES_ES:Array.from({length:12},(_,i)=>String(i+1)+"/"),
     cleanText: value=>String(value||""), jornalesPeriodMatches:(label,m,y)=>label===`${m}/${y}`,
+    containsAllSavedPortalRows:(incoming,saved)=>incoming.length>=saved.length,
     pendingPremiumPeriods, premiumMonthsToRead, console:{log(){},warn(){}},
     readPrimasPeriod:async(ctx,url,m,y)=>{calls.push([y,m]);return read(y,m);}
   });

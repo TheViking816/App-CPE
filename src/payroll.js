@@ -268,7 +268,7 @@ export function compareJornalesDescending(a, b) {
 function parseMonthLabel(monthLabel = "") {
   const numericMatch = String(monthLabel).match(/(\d{1,2})\s*\/\s*(\d{4})/);
   if (numericMatch) return { month: Number(numericMatch[1]), year: Number(numericMatch[2]) };
-  const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
+  const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)(?:\s+de)?\s+(\d{4})/i);
   if (!match) return { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
   const normalized = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return { month: MONTHS_ES[normalized] || new Date().getMonth() + 1, year: Number(match[2]) };

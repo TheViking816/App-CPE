@@ -25,6 +25,27 @@ test("conserva si la prima esta verificada o pendiente de verificar", () => {
   assert.equal(parsed.rows[2].produccionEstado, "paid");
 });
 
+test("no acepta como primas cargadas una tabla que todavia muestra ##", () => {
+  const lockedHtml = html.replace("135.08 EUR", "##");
+  const parsed = parsePrimas(lockedHtml);
+
+  assert.equal(parsed.recognized, true);
+  assert.equal(parsed.locked, true);
+});
+
+test("reconoce el encabezado moderno del mes sin volver a la consulta antigua", () => {
+  const modernHtml = html
+    .replace("Jornales de Agosto de 2026", "Agosto 2026")
+    .replace("<th>Jornal</th>", "<th>#</th>")
+    .replace("<th>Produccion</th>", "<th>PROD.</th>");
+  const parsed = parsePrimas(modernHtml);
+
+  assert.equal(parsed.recognized, true);
+  assert.equal(parsed.monthLabel, "Agosto 2026");
+  assert.equal(parsed.rows[1].produccion, "153.51 EUR");
+  assert.equal(parsed.rows[1].produccionEstado, "pending");
+});
+
 test("propaga el estado de verificacion al calculo del jornal", () => {
   const primas = parsePrimas(html).rows;
   const [verified, pending, paid] = enrichJornales(primas, primas, "Agosto de 2026");

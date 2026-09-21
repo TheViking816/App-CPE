@@ -34,6 +34,8 @@ test("primas usa Jornales y Primas y deja de abrir la ruta retirada", () => {
   assert.match(navigation, /title\*="productividad"/);
   assert.match(navigation, /aria-label\*="productividad"/);
   assert.match(navigation, /Para ver las primas, pulsa el ojo/);
+  assert.match(navigation, /Validar\|Verificar/);
+  assert.match(navigation, /security-pass/);
   assert.match(navigation, /Do not treat that intermediate state as ready/);
   assert.match(section, /premiumRevealControl/);
   assert.match(section, /Abriendo la productividad de Jornales y Primas/);
@@ -49,6 +51,17 @@ test("primas escribe y verifica la clave en el formulario de productividad", () 
   assert.match(section, /input\[placeholder\*="clave" i\]/);
   assert.match(section, /writtenValue !== portalSecurityKey/);
   assert.match(section, /No se pudo escribir la clave de seguridad/);
+  assert.match(source, /El portal no habilito la verificacion de la clave/);
+  assert.match(source, /unlockedStableSince/);
+  assert.match(source, /Date\.now\(\) - unlockedStableSince >= 3000/);
+  assert.match(source, /quedo en blanco tras verificar; se vuelve a abrir la seccion/);
+  assert.match(source, /retrySecurityControl/);
+});
+
+test("el login no confunde otros campos de texto con el usuario", () => {
+  const section = source.match(/async function login\([\s\S]*?async function openMenu/)?.[0] || "";
+  assert.match(section, /input\[title="Usuario"\]:visible/);
+  assert.doesNotMatch(section, /input\[type="text"\]:visible/);
 });
 
 test("Bolsa de Excepciones conserva ViewNoray 17 sin esperar en un panel vacío", () => {

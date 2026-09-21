@@ -321,14 +321,14 @@ async function contentWithComputedProductionColors(root) {
       const rows = [...table.querySelectorAll("tr")];
       const headerRowIndex = rows.findIndex((row) => {
         const text = String(row.textContent || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return /Jornal/i.test(text) && /Produccion/i.test(text);
+        return /(?:Jornal|#)/i.test(text) && /Prod(?:uccion)?\.?/i.test(text);
       });
       if (headerRowIndex === -1) continue;
 
       const headerCells = [...rows[headerRowIndex].querySelectorAll(":scope > th, :scope > td")];
       const productionIndex = headerCells.findIndex((cell) => {
         const text = String(cell.textContent || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return /Produccion/i.test(text);
+        return /Prod(?:uccion)?\.?/i.test(text);
       });
       if (productionIndex === -1) continue;
 
@@ -355,18 +355,32 @@ async function waitForParsedPrimasContent(page, timeout = 12000) {
   const deadline = Date.now() + timeout;
   let bestResult = parsePrimas("");
   let bestScore = 0;
+  let unlockedFingerprint = "";
+  let unlockedStableSince = 0;
 
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
       const result = parsePrimas(await contentWithComputedProductionColors(frame));
       const resultScore = (result.rows || []).filter((row) => row.jornal).length * 1000
-        + (result.monthLabel ? 100 : 0);
+        + (result.monthLabel ? 100 : 0)
+        + (result.locked ? 0 : 500)
+        + (result.rows || []).filter((row) => String(row.produccion || "").trim()).length;
       if (resultScore > bestScore) {
         bestResult = result;
         bestScore = resultScore;
       }
+      if (!result.locked && (result.rows || []).some((row) => row.jornal)) {
+        const fingerprint = (result.rows || [])
+          .map((row) => `${row.jornal}:${row.parte}:${row.produccion}:${row.produccionEstado}`)
+          .join("|");
+        if (fingerprint !== unlockedFingerprint) {
+          unlockedFingerprint = fingerprint;
+          unlockedStableSince = Date.now();
+        } else if (Date.now() - unlockedStableSince >= 3000) {
+          return bestResult;
+        }
+      }
     }
-    if (bestScore > 0) return bestResult;
     await page.waitForTimeout(200);
   }
 
@@ -560,18 +574,24 @@ export function parseDescansos(html = "", now = new Date()) {
 
 export function parsePrimas(html = "") {
   const pageText = textFromHtml(html);
+  const legacyMonthLabel = pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "";
+  const modernMonthLabel = pageText.match(new RegExp(
+    `\\b(?:${MONTH_NAMES_ES.join("|")})\\s+(?:de\\s+)?20\\d{2}\\b`,
+    "i"
+  ))?.[0]?.trim() || "";
+  const monthLabel = legacyMonthLabel || modernMonthLabel;
   const detailedRows = parseDetailedRowsFromTable(html);
   const rows = detailedRows.map((row) => row.map((cell) => cell.value));
   const headerIndex = rows.findIndex((row) => (
-    row.some((cell) => /jornal/i.test(cell))
-    && row.some((cell) => /producci/i.test(cell))
+    row.some((cell) => /^(?:jornal|#)$/i.test(cleanText(cell)))
+    && row.some((cell) => /^prod(?:ucci[oó]n)?\.?$/i.test(cleanText(cell)))
   ));
 
   if (headerIndex === -1) {
     return {
-      recognized: Boolean(pageText.match(/Jornales\s+de\s+([^\n|]+)/i)),
+      recognized: Boolean(monthLabel),
       locked: /clave\s+de\s+seguridad|validar/i.test(pageText),
-      monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
+      monthLabel,
       rows: rows
         .filter((row) => row.length > 1)
         .map((row) => ({ values: row }))
@@ -584,30 +604,34 @@ export function parsePrimas(html = "") {
     return index === -1 ? fallback : index;
   };
 
+  const parsedRows = detailedRows.slice(headerIndex + 1)
+    .filter((row) => row.length >= 6 && /^\d+$/.test(String(row[0]?.value || "")))
+    .map((detailedRow) => {
+      const row = detailedRow.map((cell) => cell.value);
+      const productionIndex = indexOf(/^prod(?:ucci[oó]n)?\.?$/, 9);
+      return ({
+        values: row,
+        jornal: row[indexOf(/^(?:jornal|#)$/, 0)] || "",
+        parte: row[indexOf(/parte/, 1)] || "",
+        dia: row[indexOf(/^dia$/, 2)] || "",
+        tipo: row[indexOf(/tipo/, 3)] || "",
+        jornada: row[indexOf(/jornada/, 4)] || "",
+        especialidad: row[indexOf(/especialidad/, 5)] || "",
+        empresa: row[indexOf(/empresa/, 6)] || "",
+        buque: row[indexOf(/buque/, 7)] || "",
+        operacion: row[indexOf(/operaci/, 8)] || "",
+        produccion: row[productionIndex] || "",
+        produccionEstado: parseProductionVerification(detailedRow[productionIndex]?.html)
+      });
+    });
+  const locked = /Para ver las primas|clave\s+de\s+seguridad|id=["']security-pass["']/i.test(`${pageText}\n${html}`)
+    || parsedRows.some((row) => String(row.produccion || "").trim() === "##");
+
   return {
     recognized: true,
-    locked: false,
-    monthLabel: pageText.match(/Jornales\s+de\s+([^\n|]+)/i)?.[1]?.trim() || "",
-    rows: detailedRows.slice(headerIndex + 1)
-      .filter((row) => row.length >= 6 && /^\d+$/.test(String(row[0]?.value || "")))
-      .map((detailedRow) => {
-        const row = detailedRow.map((cell) => cell.value);
-        const productionIndex = indexOf(/producci/, 9);
-        return ({
-          values: row,
-          jornal: row[indexOf(/jornal/, 0)] || "",
-          parte: row[indexOf(/parte/, 1)] || "",
-          dia: row[indexOf(/^dia$/, 2)] || "",
-          tipo: row[indexOf(/tipo/, 3)] || "",
-          jornada: row[indexOf(/jornada/, 4)] || "",
-          especialidad: row[indexOf(/especialidad/, 5)] || "",
-          empresa: row[indexOf(/empresa/, 6)] || "",
-          buque: row[indexOf(/buque/, 7)] || "",
-          operacion: row[indexOf(/operaci/, 8)] || "",
-          produccion: row[productionIndex] || "",
-          produccionEstado: parseProductionVerification(detailedRow[productionIndex]?.html)
-        });
-      })
+    locked,
+    monthLabel,
+    rows: parsedRows
   };
 }
 
@@ -1234,7 +1258,9 @@ async function login(page, attempt = 0) {
 
   const loginForm = await waitForFrameAndLocator(
     page,
-    (frame) => frame.locator('input[title="Usuario"]:visible, input[type="text"]:visible'),
+    // Do not fall back to any text input: authenticated portal screens contain
+    // unrelated fields and can otherwise be mistaken for the login form.
+    (frame) => frame.locator('input[title="Usuario"]:visible'),
     10000
   );
   if (!loginForm) {
@@ -2640,6 +2666,14 @@ function premiumRevealLocator(frame) {
   ].join(", ")).first();
 }
 
+function premiumSecuritySubmitLocator(frame) {
+  return frame.getByRole("button", { name: /Validar|Verificar/i }).first();
+}
+
+function premiumInvalidKeyLocator(frame) {
+  return frame.getByText(/clave.{0,40}(?:incorrecta|no\s+es\s+v[aá]lida)|(?:incorrecta|inv[aá]lida).{0,40}clave/i).first();
+}
+
 async function waitForJornalesPrimasScreen(page, timeout = 8000) {
   const deadline = Date.now() + timeout;
   let readyScreen = null;
@@ -2648,8 +2682,11 @@ async function waitForJornalesPrimasScreen(page, timeout = 8000) {
       const reveal = premiumRevealLocator(frame);
       if (await reveal.isVisible().catch(() => false)) return { frame, reveal };
 
-      const securityControl = frame.getByRole("button", { name: /Validar/i }).first();
+      const securityControl = premiumSecuritySubmitLocator(frame);
       if (await securityControl.isVisible().catch(() => false)) return { frame, reveal: null };
+
+      const securityInput = frame.locator('#security-pass, input[type="password"][placeholder*="clave" i]').first();
+      if (await securityInput.isVisible().catch(() => false)) return { frame, reveal: null };
 
       const marker = frame.getByText(
         /Jornales del mes\s*:|Para ver las primas|clave de seguridad|Producci[oó]n/i
@@ -2744,6 +2781,31 @@ async function fillPremiumSecurityKey(securityInput) {
   console.log("Clave de seguridad escrita en Jornales y Primas.");
 }
 
+async function submitPremiumSecurityKey(page, securityControl) {
+  const securityInput = await findPremiumSecurityInput(
+    securityControl.frame,
+    securityControl.locator
+  );
+  if (!securityInput) {
+    throw new Error("No aparecio el campo de clave de seguridad de Jornales y Primas.");
+  }
+  await fillPremiumSecurityKey(securityInput);
+  await securityControl.locator.waitFor({ state: "visible", timeout: 5000 });
+  const submitDeadline = Date.now() + 5000;
+  while (await securityControl.locator.isDisabled().catch(() => false)) {
+    if (Date.now() >= submitDeadline) {
+      throw new Error("El portal no habilito la verificacion de la clave de Jornales y Primas.");
+    }
+    await page.waitForTimeout(100);
+  }
+  await securityControl.locator.click({ noWaitAfter: true });
+
+  const invalidKey = await waitForFrameAndLocator(page, premiumInvalidKeyLocator, 3000);
+  if (invalidKey) {
+    throw new Error("La clave de seguridad de primas es incorrecta. Revisa los datos de acceso e intentalo de nuevo.");
+  }
+}
+
 async function collectPrimas(page, previous = null) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
   // El portal sustituyo la antigua Consulta de Primas Productividad
@@ -2760,7 +2822,7 @@ async function collectPrimas(page, previous = null) {
 
   const securityControl = await waitForFrameAndLocator(
     page,
-    (frame) => frame.getByRole("button", { name: /Validar/i }),
+    premiumSecuritySubmitLocator,
     10000
   );
 
@@ -2781,24 +2843,7 @@ async function collectPrimas(page, previous = null) {
     return collectPrimasHistory(page, { ...current, locked: false, recognized: true }, previous);
   }
 
-  const securityInput = await findPremiumSecurityInput(
-    securityControl.frame,
-    securityControl.locator
-  );
-  if (!securityInput) {
-    throw new Error("No aparecio el campo de clave de seguridad de Jornales y Primas.");
-  }
-  await fillPremiumSecurityKey(securityInput);
-  await securityControl.locator.click({ noWaitAfter: true });
-
-  const invalidKey = await waitForFrameAndLocator(
-    page,
-    (frame) => frame.getByText(/La clave de seguridad es incorrecta/i),
-    3000
-  );
-  if (invalidKey) {
-    throw new Error("La clave de seguridad de primas es incorrecta. Revisa los datos de acceso e intentalo de nuevo.");
-  }
+  await submitPremiumSecurityKey(page, securityControl);
 
   const accept = await waitForFrameLocator(
     page,
@@ -2809,8 +2854,20 @@ async function collectPrimas(page, previous = null) {
     await accept.click({ noWaitAfter: true });
   }
 
-  const result = await waitForParsedPrimasContent(page, 15000);
-  if (result.locked) {
+  let result = await waitForParsedPrimasContent(page, 15000);
+  if (!(result.rows || []).some((row) => row.jornal)) {
+    console.warn("Jornales y Primas quedo en blanco tras verificar; se vuelve a abrir la seccion.");
+    const retryScreen = await openJornalesPrimas(page);
+    if (retryScreen.reveal) {
+      await retryScreen.reveal.click({ noWaitAfter: true });
+    }
+    const retrySecurityControl = await waitForFrameAndLocator(page, premiumSecuritySubmitLocator, 5000);
+    if (retrySecurityControl) {
+      await submitPremiumSecurityKey(page, retrySecurityControl);
+    }
+    result = await waitForParsedPrimasContent(page, 15000);
+  }
+  if (result.locked || !(result.rows || []).some((row) => row.jornal)) {
     throw new Error("La clave de seguridad de primas no fue validada.");
   }
   return collectPrimasHistory(page, result, previous);
