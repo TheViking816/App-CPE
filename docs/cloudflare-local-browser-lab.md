@@ -48,7 +48,7 @@ El primer comando recupera la clave temporal desde Vault y restaura después el 
 5. Tras validar 72683, ejecutar una única tanda real de hasta diez trabajos:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/run-cloudflare-gateway-batch.ps1 -BatchSize 10
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/run-cloudflare-gateway-batch.ps1 -BatchSize 12
 ```
 
 Cada trabajo recibe un contexto independiente con únicamente la autorización de Cloudflare copiada en memoria. Las sesiones del portal no se comparten. El proceso termina después de esa tanda y no queda escuchando la cola.

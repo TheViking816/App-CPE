@@ -1,6 +1,6 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
-  [ValidateRange(1, 32)][int]$BatchSize = 10,
+  [ValidateRange(1, 32)][int]$BatchSize = 12,
   [string]$ProfileRoot = "",
   [switch]$ReadSecretFromClipboard,
   [switch]$ReadSecretFromStdin,

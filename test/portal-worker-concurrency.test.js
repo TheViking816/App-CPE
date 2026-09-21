@@ -5,9 +5,9 @@ import fs from "node:fs";
 const source = fs.readFileSync(new URL("../scripts/portal-sync-worker.js", import.meta.url), "utf8");
 const scheduleInstallerSource = fs.readFileSync(new URL("../scripts/windows/install-portal-sync-schedule.ps1", import.meta.url), "utf8");
 
-test("el worker procesa tandas acotadas de cinco por defecto", () => {
+test("el worker procesa tandas acotadas de doce por defecto", () => {
   assert.match(source, /CPE_PORTAL_WORKER_BATCH_SIZE/);
-  assert.match(source, /\|\| 5/);
+  assert.match(source, /\|\| 12/);
   assert.match(source, /Math\.min\(32/);
   assert.match(source, /limit=\$\{batchSize\}/);
   assert.match(source, /\.\.\.jobs\.map\(\(job, index\) => runJob/);

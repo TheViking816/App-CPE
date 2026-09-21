@@ -1,6 +1,6 @@
 # Worker persistente del portal
 
-Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume los trabajos `queued` de Supabase en tandas estrictas de hasta 10: espera a que termine una tanda completa antes de reclamar la siguiente.
+Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume los trabajos `queued` de Supabase en tandas estrictas de hasta 12: espera a que termine una tanda completa antes de reclamar la siguiente.
 
 ## Variables
 
@@ -10,8 +10,8 @@ Este worker sustituye el arranque de GitHub Actions para cada lectura. Consume l
 - `CPE_PORTAL_HEADLESS=true`
 - `CPE_PORTAL_BROWSER_CHANNEL=bundled`
 - `CPE_PORTAL_WORKER_POLL_MS=2500` (opcional)
-- `CPE_PORTAL_WORKER_BATCH_SIZE=10`
-- `CPE_PORTAL_WORKER_PROFILE_ROOT` (directorio raíz de los 10 perfiles persistentes del worker)
+- `CPE_PORTAL_WORKER_BATCH_SIZE=12`
+- `CPE_PORTAL_WORKER_PROFILE_ROOT` (directorio raíz de los 12 perfiles persistentes del worker)
 
 ## Despliegue
 
@@ -26,11 +26,11 @@ El primer refresco que construye el resumen anual recorre los meses transcurrido
 
 ## Instalacion en Windows
 
-El worker local usa Chrome desde la conexion del ordenador y procesa hasta 10 chapas simultáneamente. Mantiene un grupo fijo de 10 perfiles de navegador con autorización de Cloudflare que se reutilizan para todos los usuarios. Si hay 18 trabajos, ejecuta primero 10 y después los 8 restantes.
+El worker local usa Chrome desde la conexion del ordenador y procesa hasta 12 chapas simultáneamente. Mantiene un grupo fijo de 12 perfiles de navegador con autorización de Cloudflare que se reutilizan para todos los usuarios. Si hay 18 trabajos, ejecuta primero 12 y después los 6 restantes.
 
 1. Crear en Supabase una clave secreta dedicada para este worker.
-2. Con Chrome cerrado, ejecutar `scripts/windows/seed-portal-worker-profiles.ps1 -BatchSize 10` una sola vez para copiar una autorización válida a los 10 perfiles aislados.
-3. Ejecutar `scripts/windows/install-portal-worker.ps1 -BatchSize 10`. La clave se cifra con DPAPI para el usuario actual de Windows; no se guarda en el repositorio ni en texto plano.
+2. Con Chrome cerrado, ejecutar `scripts/windows/seed-portal-worker-profiles.ps1 -BatchSize 12` una sola vez para copiar una autorización válida a los 12 perfiles aislados.
+3. Ejecutar `scripts/windows/install-portal-worker.ps1 -BatchSize 12`. La clave se cifra con DPAPI para el usuario actual de Windows; no se guarda en el repositorio ni en texto plano.
 4. Aplicar la migración `20260817182201_set_requested_portal_sync_schedule.sql` y desplegar las Edge Functions.
 5. Cambiar `CPE_PORTAL_EXECUTION_MODE` a `persistent` solamente cuando la tarea local esté en ejecución.
 

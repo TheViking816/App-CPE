@@ -11,7 +11,7 @@ const pollMs = Math.max(1000, Number(process.env.CPE_PORTAL_WORKER_POLL_MS || 25
 const batchSize = Math.max(1, Math.min(32, Number(
   process.env.CPE_PORTAL_WORKER_BATCH_SIZE
   || process.env.CPE_PORTAL_WORKER_CONCURRENCY
-  || 5
+  || 12
 )));
 const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT || "").trim();
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();

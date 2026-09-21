@@ -1,7 +1,7 @@
 param(
   [string]$RepositoryPath = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path,
   [ValidateSet("FullHistory", "CurrentMonth")][string]$Mode,
-  [ValidateRange(1, 32)][int]$BatchSize = 6
+  [ValidateRange(1, 32)][int]$BatchSize = 12
 )
 
 $ErrorActionPreference = "Stop"
