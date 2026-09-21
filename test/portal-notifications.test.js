@@ -18,16 +18,18 @@ test("no crea novedades en la primera lectura ni durante progreso", () => {
 });
 
 test("detecta solo los siete tipos permitidos e impide duplicados conceptuales", () => {
-  const next = structuredClone(base);
+  const previous = structuredClone(base);
+  previous.primas.rows.push({ dia: "31", parte: "24817", jornada: "DE 02 A 08 H.", especialidad: "CONDUCTOR 1a", produccion: "", produccionEstado: "pending" });
+  const next = structuredClone(previous);
   next.jornales.rows.push({ dia: "31", parte: "24817", jornada: "DE 02 A 08 H.", especialidad: "CONDUCTOR 1a" });
   next.primas.rows[0].produccion = "38.20 €";
-  next.primas.rows.push({ dia: "31", parte: "24817", jornada: "DE 02 A 08 H.", especialidad: "CONDUCTOR 1a", produccion: "18.50 €" });
+  next.primas.rows[1].produccion = "18.50 €";
   next.nominas.rows.push({ id: "08/26-Mensual", title: "Mensual 08/26", period: "08/26" });
   next.descansos.months[0].days[0].code = "SL";
   next.vacaciones.rows[0].fin = "08/09/2026";
   next.excepciones.rows[0].status = "Aceptada";
 
-  const rows = buildPortalNotifications(base, next, { now: new Date("2026-08-30T12:00:00Z") });
+  const rows = buildPortalNotifications(previous, next, { now: new Date("2026-08-30T12:00:00Z") });
   assert.deepEqual(new Set(rows.map((row) => row.eventType)), new Set([
     "new_journal", "new_premium", "premium_modified", "new_payroll",
     "rests_changed", "vacations_changed", "exceptions_changed"
@@ -60,4 +62,42 @@ test("no repite un jornal cuando el portal completa el parte, tipo o formato de 
 
   const rows = buildPortalNotifications(previous, next, { now: new Date("2026-09-01T00:00:00Z") });
   assert.equal(rows.some((row) => row.eventType === "new_journal"), false);
+});
+
+test("solo llama nueva prima al paso de pendiente a importe", () => {
+  const previous = structuredClone(base);
+  previous.primas.rows[0].produccion = "";
+  previous.primas.rows[0].produccionEstado = "pending";
+  const next = structuredClone(previous);
+  next.primas.rows[0].produccion = "30,00 EUR";
+  next.primas.rows[0].produccionEstado = "verified";
+
+  const rows = buildPortalNotifications(previous, next);
+  assert.deepEqual(rows.map((row) => row.eventType), ["new_premium"]);
+});
+
+test("llama prima modificada al cambio entre dos importes reales aunque el portal complete otros campos", () => {
+  const previous = structuredClone(base);
+  previous.primas.monthLabel = "Agosto de 2026";
+  previous.primas.rows[0].tipo = "";
+  previous.primas.rows[0].especialidad = "CONDUCTOR 1A";
+  const next = structuredClone(previous);
+  next.primas.monthLabel = "Agosto 2026";
+  next.primas.rows[0].tipo = "TUR";
+  next.primas.rows[0].especialidad = "Conductor de 1a";
+  next.primas.rows[0].produccion = "38,20 EUR";
+
+  const rows = buildPortalNotifications(previous, next);
+  assert.deepEqual(rows.map((row) => row.eventType), ["premium_modified"]);
+  assert.equal(rows[0].title, "Prima modificada");
+});
+
+test("no anuncia como nueva una prima que aparece por primera vez ni un mero cambio de formato", () => {
+  const withoutPremium = structuredClone(base);
+  withoutPremium.primas.rows = [];
+  assert.equal(buildPortalNotifications(withoutPremium, base).some((row) => row.eventType === "new_premium"), false);
+
+  const reformatted = structuredClone(base);
+  reformatted.primas.rows[0].produccion = "30,00 EUR";
+  assert.equal(buildPortalNotifications(base, reformatted).some((row) => row.eventType.includes("premium")), false);
 });

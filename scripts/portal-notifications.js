@@ -45,15 +45,30 @@ function journalKey(item) {
 
 function premiumKey(item) {
   const row = item.row || {};
-  return [item.period, row.dia, row.parte, row.jornada, row.especialidad, row.tipo].map(clean).join("|");
+  const date = journalDate(item);
+  const period = date
+    ? date.toISOString().slice(0, 7)
+    : clean(item.period).toLocaleLowerCase("es-ES").replace(/\s+de\s+/g, " ");
+  const day = clean(row.dia).replace(/\D/g, "").padStart(2, "0");
+  const part = clean(row.parte).replace(/\D/g, "") || clean(row.parte).toLocaleUpperCase("es-ES");
+  const shift = clean(row.jornada).replace(/[^0-9]/g, "");
+  return [period, day, part, shift].join("|");
 }
 
 function premiumAmount(row) {
   return clean(row?.produccion || row?.prima || row?.importe);
 }
 
-function meaningfulAmount(value) {
-  return Boolean(clean(value)) && !/^[-—]+$/.test(clean(value));
+function numericAmount(value) {
+  const compact = clean(value).replace(/[^0-9,.-]/g, "");
+  if (!compact || /^[-—]+$/.test(compact)) return null;
+  const lastComma = compact.lastIndexOf(",");
+  const lastDot = compact.lastIndexOf(".");
+  let normalized = compact;
+  if (lastComma > lastDot) normalized = compact.replace(/\./g, "").replace(",", ".");
+  else if (lastDot > lastComma) normalized = compact.replace(/,/g, "");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) && amount > 0 ? Number(amount.toFixed(2)) : null;
 }
 
 function journalDate(item) {
@@ -122,17 +137,21 @@ export function buildPortalNotifications(previousPayload, nextPayload, { now = n
   }
 
   if (previousPayload?.primas?.recognized && !previousPayload?.primas?.locked && nextPayload?.primas?.recognized && !nextPayload?.primas?.locked) {
-    const previous = new Map(periodRows(previousPayload.primas).map((item) => [premiumKey(item), premiumAmount(item.row)]));
+    const previous = new Map(periodRows(previousPayload.primas).map((item) => [premiumKey(item), item]));
     for (const item of periodRows(nextPayload.primas)) {
       const key = premiumKey(item);
       const amount = premiumAmount(item.row);
-      if (!meaningfulAmount(amount)) continue;
+      const currentNumericAmount = numericAmount(amount);
+      const previousItem = previous.get(key);
+      if (currentNumericAmount == null || !previousItem) continue;
+      const previousAmount = premiumAmount(previousItem.row);
+      const previousNumericAmount = numericAmount(previousAmount);
       const row = item.row || {};
-      const common = { part: clean(row.parte), amount, previousAmount: clean(previous.get(key)), day: clean(row.dia), period: clean(item.period) };
-      if (!previous.has(key) || !meaningfulAmount(previous.get(key))) {
+      const common = { part: clean(row.parte), amount, previousAmount, day: clean(row.dia), period: clean(item.period) };
+      if (previousNumericAmount == null) {
         result.push(notification("new_premium", "Nueva prima", [row.parte && `Parte ${clean(row.parte)}`, amount].filter(Boolean).join(" · "), key, "sueldometro", common));
-      } else if (clean(previous.get(key)) !== amount) {
-        result.push(notification("premium_modified", "Prima modificada", `${clean(previous.get(key))} → ${amount}${row.parte ? ` · Parte ${clean(row.parte)}` : ""}`, key, "sueldometro", common));
+      } else if (previousNumericAmount !== currentNumericAmount) {
+        result.push(notification("premium_modified", "Prima modificada", `${previousAmount} → ${amount}${row.parte ? ` · Parte ${clean(row.parte)}` : ""}`, key, "sueldometro", common));
       }
     }
   }
