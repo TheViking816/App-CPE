@@ -45,6 +45,7 @@ test("el resumen anual suma el importe y el día VA al mes correspondiente", () 
 });
 
 test("Descansos recibe los VA confirmados aunque conserve un SL anterior", () => {
-  assert.match(appSource, /vacationDates\.has\(dateKey\) \? "VA" : \(item\.code \|\| ""\)/);
-  assert.match(appSource, /<PortalCalendarPreview descansos=\{descansos\} slRows=\{slRows\} vacationEntries=\{vacationPayrollEntries\} \/>/);
+  assert.match(appSource, /isVacation = item\.vacation \|\| vacationDates\.has\(dateKey\)/);
+  assert.match(appSource, /displayCode = isVacation && code === "SL" \? "VA" : code/);
+  assert.match(appSource, /<PortalCalendarPreview[^>]*vacationEntries=\{vacationPayrollEntries\}/);
 });

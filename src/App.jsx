@@ -3,8 +3,8 @@ import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import { selectPremiumRowsForMonth } from "./portal-premium-period.js";
 import { hasSalaryData } from "./portal-salary-state.js";
 import { needsPortalSecurityKey } from "./portalSecurityNotice.js";
-import { calendarDays, calendarMonths } from "./portal-calendar.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
+import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -2432,7 +2432,9 @@ function PortalVacationPreview({ vacaciones }) {
 
   useEffect(() => {
     if (months.length && !months.some((month) => month.key === selectedMonthKey)) {
-      setSelectedMonthKey(months[0].key);
+      const now = new Date();
+      const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      setSelectedMonthKey(months.find((month) => month.key === currentKey)?.key || months[0].key);
     }
   }, [months, selectedMonthKey]);
 
@@ -2570,8 +2572,9 @@ function PortalExceptionsPreview({ exceptions }) {
   );
 }
 
-function PortalCalendarPreview({ descansos, slRows = [], vacationEntries = [] }) {
-  const months = useMemo(() => calendarMonths(descansos?.months || []), [descansos?.months]);
+function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows = [], vacationEntries = [] }) {
+  const months = useMemo(() => buildPersonalRestMonths(descansos, disponibilidad, vacaciones), [descansos, disponibilidad, vacaciones]);
+  const group = parseRestGroup(descansos?.worker?.group);
   const vacationDates = useMemo(() => new Set(
     vacationEntries.map((item) => String(item?.payroll?.date || "")).filter(Boolean)
   ), [vacationEntries]);
@@ -2585,16 +2588,9 @@ function PortalCalendarPreview({ descansos, slRows = [], vacationEntries = [] })
     return positions;
   }, [slRows]);
   const defaultMonthIndex = useMemo(() => {
-    if (!months.length) return 0;
     const now = new Date();
-    const currentIndex = months.findIndex((item) => (
-      Number(item.month) === now.getMonth() + 1 && Number(item.year) === now.getFullYear()
-    ));
-    if (currentIndex !== -1) return currentIndex;
-    const withCodesIndex = months.findIndex((item) => (
-      item.days?.some((day) => day.code) || item.codes?.length
-    ));
-    return withCodesIndex === -1 ? 0 : withCodesIndex;
+    const currentIndex = months.findIndex((item) => Number(item.month) === now.getMonth() + 1 && Number(item.year) === now.getFullYear());
+    return currentIndex < 0 ? Math.max(0, months.findIndex((item) => item.key > `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)) : currentIndex;
   }, [months]);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(defaultMonthIndex);
 
@@ -2604,7 +2600,7 @@ function PortalCalendarPreview({ descansos, slRows = [], vacationEntries = [] })
 
   const month = months[selectedMonthIndex] || months[defaultMonthIndex] || months[0];
   if (!month) return null;
-  const days = calendarDays(month);
+  const days = month.days;
   const today = new Date();
   const isCurrentMonth = Number(month.month) === today.getMonth() + 1 && Number(month.year) === today.getFullYear();
 
@@ -2613,55 +2609,52 @@ function PortalCalendarPreview({ descansos, slRows = [], vacationEntries = [] })
       <div className="section-title-row compact">
         <div>
           <p>Calendario</p>
-          <h1>{month.title}</h1>
+          <h1>{MONTHS_ES[month.month - 1]} {month.year}</h1>
+          <small>{group ? `Grupo ${group.label}` : "Grupo de descanso pendiente de sincronizar"} · {month.source === "history" ? "Disponibilidad oficial" : month.source === "portal" ? "Descansos personales del portal y calendario de empresa" : "Calendario de empresa"}</small>
         </div>
       </div>
-      {months.length > 1 && (
-        <div className="portal-month-tabs" role="tablist" aria-label="Meses de descansos">
-          {months.map((item, index) => (
-            <button
-              key={`${item.year || ""}-${item.month || ""}-${item.title}`}
-              className={index === selectedMonthIndex ? "is-active" : ""}
-              type="button"
-              onClick={() => setSelectedMonthIndex(index)}
-            >
-              {item.title}
-            </button>
-          ))}
-        </div>
-      )}
+      {months.length > 1 && <div className="personal-rest-navigation">
+        <button type="button" disabled={selectedMonthIndex === 0} onClick={() => setSelectedMonthIndex((index) => index - 1)} aria-label="Mes anterior">‹</button>
+        <select aria-label="Mes del calendario de descansos" value={month.key} onChange={(event) => setSelectedMonthIndex(months.findIndex((item) => item.key === event.target.value))}>
+          {months.map((item) => <option key={item.key} value={item.key}>{MONTHS_ES[item.month - 1]} {item.year}</option>)}
+        </select>
+        <button type="button" disabled={selectedMonthIndex === months.length - 1} onClick={() => setSelectedMonthIndex((index) => index + 1)} aria-label="Mes siguiente">›</button>
+      </div>}
       <div className="portal-calendar-grid">
         {["L", "M", "X", "J", "V", "S", "D"].map((weekday) => (
           <div className="portal-weekday" key={weekday}>{weekday}</div>
         ))}
         {days.map((item) => {
           const day = item.day;
+          const code = item.code || "";
           const date = new Date(Number(month.year), Number(month.month) - 1, day);
           const dateKey = `${month.year}-${String(month.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const code = vacationDates.has(dateKey) ? "VA" : (item.code || "");
-          const slPosition = code.toUpperCase() === "SL" ? slPositionByDate.get(dateKey) : "";
+          const isVacation = item.vacation || vacationDates.has(dateKey);
+          const displayCode = isVacation && code === "SL" ? "VA" : code;
+          const slPosition = code.toUpperCase() === "SL" && !isVacation ? slPositionByDate.get(dateKey) : "";
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
           return (
             <div
               key={day}
-              className={`portal-day ${code.toLowerCase()} ${isToday ? "is-today" : ""}`}
+              className={`portal-day personal-rest-day is-${isVacation && code === "SL" ? "portal-vacation" : item.type || "ordinary"} ${isVacation ? "has-vacation" : ""} ${isToday ? "is-today" : ""}`}
               style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
             >
               <span>{day}</span>
               <small>{WEEKDAYS_ES[date.getDay()]}</small>
-              {code && (
+              {(displayCode || item.type || isVacation) && (
                 <strong
                   className={slPosition ? "portal-day-sl-position" : undefined}
                   title={slPosition ? `Posicion SL ${slPosition}` : undefined}
                 >
-                  {slPosition ? `${code} · ${slPosition}` : code}
+                  {[slPosition ? `${displayCode} · ${slPosition}` : displayCode || ({ rest: "DS", week: "DS", holiday: "FH", requested: "SL" }[item.type] || ""), isVacation && displayCode !== "VA" ? "VA" : ""].filter(Boolean).join(" · ")}
                 </strong>
               )}
             </div>
           );
         })}
       </div>
+      <div className="personal-rest-legend"><span><i className="is-rest" /> Descanso</span>{group && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span>{month.source === "history" && <><span><i className="is-rest" /> Festivo o VA del portal</span><span><i className="is-requested" /> Solicitado</span><span><i className="is-permission" /> Permiso</span><span><i className="is-training" /> Formación</span></>}</div>
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>
@@ -3350,7 +3343,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "rests") && descansos && (
         <div ref={descansosRef} className="portal-scroll-anchor">
-          <PortalCalendarPreview descansos={descansos} slRows={slRows} vacationEntries={vacationPayrollEntries} />
+          <PortalCalendarPreview descansos={descansos} disponibilidad={payload?.disponibilidad} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries} />
         </div>
       )}
 
