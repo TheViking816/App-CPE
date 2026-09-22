@@ -1791,7 +1791,6 @@ select {
   gap: 12px;
 }
 
-.portal-sync-card,
 .portal-calendar-card,
 .portal-vacation-card,
 .portal-empty-state,
@@ -1803,25 +1802,24 @@ select {
 }
 
 .portal-sync-card {
-  display: grid;
-  gap: 4px;
-  padding: 13px 14px;
-  border-left: 5px solid var(--orange);
-}
-
-.portal-sync-card span,
-.portal-sync-card small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 18px;
+  padding: 0 4px;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
-.portal-sync-card strong {
-  color: var(--ink);
-  font-size: 22px;
-  font-weight: 950;
-  line-height: 1.05;
+.portal-sync-card svg {
+  flex: 0 0 auto;
+}
+
+.portal-sync-card time {
+  color: var(--muted);
+  font-weight: 750;
 }
 
 .portal-admin-sync-card {
@@ -6447,7 +6445,6 @@ select {
 :root[data-theme="dark"] .portal-jornales-list article,
 :root[data-theme="dark"] .portal-primas-list article,
 :root[data-theme="dark"] .portal-code,
-:root[data-theme="dark"] .portal-sync-card,
 :root[data-theme="dark"] .portal-calendar-card,
 :root[data-theme="dark"] .portal-vacation-card,
 :root[data-theme="dark"] .portal-vacation-periods article,
@@ -6499,7 +6496,6 @@ select {
 :root[data-theme="dark"] .portal-irpf-heading strong,
 :root[data-theme="dark"] .portal-irpf-breakdown strong,
 :root[data-theme="dark"] .portal-code,
-:root[data-theme="dark"] .portal-sync-card strong,
 :root[data-theme="dark"] .portal-empty-state strong {
   color: var(--ink);
 }

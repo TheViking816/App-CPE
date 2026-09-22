@@ -330,6 +330,13 @@ function formatUpdatedAt(value) {
   }).format(date);
 }
 
+function formatSyncTime(value) {
+  if (!value) return "Sin actualizar";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin actualizar";
+  return new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
 function formatCurrentDateTime(value) {
   return new Intl.DateTimeFormat("es-ES", {
     weekday: "short",
@@ -3032,10 +3039,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
   return (
     <div className="portal-results">
-      <section className="portal-sync-card">
-        <span>Ultima sincronizacion</span>
-        <strong>{formatUpdatedAt(snapshot.updatedAt)}</strong>
-        <small>Chapa {snapshot.chapa}</small>
+      <section className="portal-sync-card" aria-label="Última sincronización">
+        <Clock3 size={13} aria-hidden="true" />
+        <span>Última sincronización ·</span>
+        <time dateTime={snapshot.updatedAt || undefined} title={formatUpdatedAt(snapshot.updatedAt)}>{formatSyncTime(snapshot.updatedAt)}</time>
       </section>
 
       {payload?.sync?.inProgress && (
