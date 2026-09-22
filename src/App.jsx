@@ -2610,7 +2610,6 @@ function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows =
         <div>
           <p>Calendario</p>
           <h1>{MONTHS_ES[month.month - 1]} {month.year}</h1>
-          <small>{group ? `Grupo ${group.label}` : "Grupo de descanso pendiente de sincronizar"} · {month.source === "history" ? "Disponibilidad oficial" : month.source === "portal" ? "Descansos personales del portal y calendario de empresa" : "Calendario de empresa"}</small>
         </div>
       </div>
       {months.length > 1 && <div className="personal-rest-navigation">
@@ -2654,7 +2653,7 @@ function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows =
           );
         })}
       </div>
-      <div className="personal-rest-legend"><span><i className="is-rest" /> Descanso</span>{group && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span>{month.source === "history" && <><span><i className="is-rest" /> Festivo o VA del portal</span><span><i className="is-requested" /> Solicitado</span><span><i className="is-permission" /> Permiso</span><span><i className="is-training" /> Formación</span></>}</div>
+      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span>{group && month.source === "company" && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span>{month.source === "history" && <><span><i className="is-requested" /> Solicitado</span><span><i className="is-permission" /> Permiso</span><span><i className="is-training" /> Formación</span></>}</div>
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>

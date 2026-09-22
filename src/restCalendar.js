@@ -85,7 +85,7 @@ export function buildPersonalRestMonths(descansos, disponibilidad, vacaciones, n
       const companyType = companyRestType(month.year, month.month, day, group);
       const code = key < currentKey ? String(history?.code || "").toUpperCase() : String(portal?.code || "").toUpperCase();
       const type = code ? ({ DS: "rest", FS: "festive", FH: "holiday", VA: "portal-vacation", SL: "requested", PA: "permission", FM: "training" }[code] || "other")
-        : key < currentKey ? "" : companyType;
+        : key < currentKey || month.portal ? "" : companyType;
       return { day, dateKey, code, type, vacation: vacationDays.has(dateKey), position: "" };
     });
     return { key, year: month.year, month: month.month, days, source: key < currentKey ? "history" : month.portal ? "portal" : "company" };

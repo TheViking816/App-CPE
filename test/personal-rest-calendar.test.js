@@ -31,3 +31,19 @@ test("personal portal days win in the current month, history keeps all codes and
   assert.equal(september.days[23].vacation, true);
   assert.equal(months.find((month) => month.key === "2026-10").days[2].type, "week");
 });
+
+test("a blank portal day overrides a green company weekend and FS differs from DS", () => {
+  const months = buildPersonalRestMonths(
+    { worker: { group: "A-V" }, months: [{ year: 2026, month: 10, days: [
+      { day: 9, code: "DS" }, { day: 17, code: "FS" }, { day: 18, code: "" }
+    ] }] },
+    null,
+    null,
+    new Date(2026, 8, 22)
+  );
+  const october = months.find((month) => month.key === "2026-10");
+  assert.equal(october.days[8].type, "rest");
+  assert.equal(october.days[16].type, "festive");
+  assert.equal(october.days[17].type, "");
+  assert.equal(months.find((month) => month.key === "2026-11").days[0].type, "week");
+});

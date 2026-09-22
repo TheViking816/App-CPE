@@ -6040,7 +6040,8 @@ select {
 .personal-rest-navigation button { width: 42px; font-size: 24px; cursor: pointer; }
 .personal-rest-navigation button:disabled { opacity: .4; cursor: default; }
 .personal-rest-navigation select { flex: 1; padding: 0 10px; }
-.portal-day.personal-rest-day.is-rest, .portal-day.personal-rest-day.is-festive { border-color: #93c5fd; background: #dbeafe; }
+.portal-day.personal-rest-day.is-rest { border-color: #93c5fd; background: #dbeafe; }
+.portal-day.personal-rest-day.is-festive { border-color: #2dd4bf; background: #ccfbf1; }
 .portal-day.personal-rest-day.is-week { border-color: #86c98a; background: #def4db; }
 .portal-day.personal-rest-day.is-holiday { border-color: #aeb4bb; background: #e5e7eb; }
 .portal-day.personal-rest-day.is-requested { border-color: #facc15; background: #fef08a; }
@@ -6055,6 +6056,7 @@ select {
 .personal-rest-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .personal-rest-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #dbeafe; }
 .personal-rest-legend i.is-week { background: #def4db; }
+.personal-rest-legend i.is-festive { background: #ccfbf1; border: 1px solid #2dd4bf; }
 .personal-rest-legend i.is-holiday { background: #e5e7eb; }
 .personal-rest-legend i.has-vacation { background: #f5f3ff; border: 2px solid #8b5cf6; }
 .personal-rest-legend i.is-requested { background: #fef08a; }
@@ -6661,6 +6663,23 @@ select {
 
 :root[data-theme="dark"] .portal-day.it strong {
   color: #fca5a5;
+}
+
+:root[data-theme="dark"] .portal-day.personal-rest-day.is-rest {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: rgba(37, 99, 235, 0.25);
+}
+
+:root[data-theme="dark"] .portal-day.personal-rest-day.is-festive {
+  border-color: rgba(45, 212, 191, 0.55);
+  background: rgba(13, 148, 136, 0.25);
+}
+
+:root[data-theme="dark"] .personal-rest-navigation button,
+:root[data-theme="dark"] .personal-rest-navigation select {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(8, 22, 38, 0.72);
+  color: var(--ink);
 }
 
 :root[data-theme="dark"] .portal-sl-list strong {
