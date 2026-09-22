@@ -6049,8 +6049,7 @@ select {
 .portal-day.personal-rest-day.is-training { border-color: #4ade80; background: #dcfce7; }
 .portal-day.personal-rest-day.is-portal-vacation { border-color: #60a5fa; background: #dbeafe; }
 .portal-day.personal-rest-day.is-other { border-color: #94a3b8; background: #e2e8f0; }
-.portal-day.personal-rest-day.has-vacation { box-shadow: inset 0 0 0 2px #8b5cf6; }
-.portal-day.personal-rest-day.has-vacation.is-ordinary { background: #f5f3ff; }
+.portal-day.personal-rest-day.has-vacation { border-color: #8b5cf6; background: #faf5ff; box-shadow: inset 0 0 0 1px #8b5cf6; }
 .portal-day.personal-rest-day strong { text-align: center; overflow-wrap: anywhere; }
 .personal-rest-legend { display: flex; flex-wrap: wrap; gap: 7px 13px; margin: 11px 0 4px; color: var(--muted); font-size: 11px; font-weight: 750; }
 .personal-rest-legend span { display: inline-flex; align-items: center; gap: 5px; }
@@ -6673,6 +6672,12 @@ select {
 :root[data-theme="dark"] .portal-day.personal-rest-day.is-festive {
   border-color: rgba(45, 212, 191, 0.55);
   background: rgba(13, 148, 136, 0.25);
+}
+
+:root[data-theme="dark"] .portal-day.personal-rest-day.has-vacation {
+  border-color: #a78bfa;
+  background: rgba(124, 58, 237, 0.22);
+  box-shadow: inset 0 0 0 1px #a78bfa;
 }
 
 :root[data-theme="dark"] .personal-rest-navigation button,

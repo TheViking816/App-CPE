@@ -2628,15 +2628,15 @@ function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows =
           const code = item.code || "";
           const date = new Date(Number(month.year), Number(month.month) - 1, day);
           const dateKey = `${month.year}-${String(month.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const isVacation = item.vacation || vacationDates.has(dateKey);
-          const displayCode = isVacation && code === "SL" ? "VA" : code;
+          const isVacation = item.vacation || vacationDates.has(dateKey) || code === "VA";
+          const displayCode = isVacation ? "VA" : code;
           const slPosition = code.toUpperCase() === "SL" && !isVacation ? slPositionByDate.get(dateKey) : "";
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
           return (
             <div
               key={day}
-              className={`portal-day personal-rest-day is-${isVacation && code === "SL" ? "portal-vacation" : item.type || "ordinary"} ${isVacation ? "has-vacation" : ""} ${isToday ? "is-today" : ""}`}
+              className={`portal-day personal-rest-day is-${isVacation ? "vacation" : item.type || "ordinary"} ${isVacation ? "has-vacation" : ""} ${isToday ? "is-today" : ""}`}
               style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
             >
               <span>{day}</span>
@@ -2646,7 +2646,7 @@ function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows =
                   className={slPosition ? "portal-day-sl-position" : undefined}
                   title={slPosition ? `Posicion SL ${slPosition}` : undefined}
                 >
-                  {[slPosition ? `${displayCode} · ${slPosition}` : displayCode || ({ rest: "DS", week: "DS", holiday: "FH", requested: "SL" }[item.type] || ""), isVacation && displayCode !== "VA" ? "VA" : ""].filter(Boolean).join(" · ")}
+                  {slPosition ? `${displayCode} · ${slPosition}` : displayCode || ({ rest: "DS", week: "DS", holiday: "FH", requested: "SL" }[item.type] || "")}
                 </strong>
               )}
             </div>
