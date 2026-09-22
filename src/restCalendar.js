@@ -1,5 +1,4 @@
-// Transcription of the company calendar supplied for 2026. Earlier months are
-// read from the worker's personal availability history instead.
+// Transcription of the company calendar supplied for 2026.
 export const COMPANY_REST_2026 = {
   9: {
     a: [12, 13, 15, 24], an: [8, 11, 23], av: [10, 14, 29],
@@ -54,17 +53,13 @@ export function vacationDateKeys(vacaciones) {
   return dates;
 }
 
-export function buildPersonalRestMonths(descansos, disponibilidad, vacaciones, now = new Date()) {
+export function buildPersonalRestMonths(descansos, vacaciones, now = new Date()) {
   const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const group = parseRestGroup(descansos?.worker?.group);
-  const past = (disponibilidad?.months || []).filter((month) =>
-    `${month.year}-${String(month.month).padStart(2, "0")}` < currentKey
-  );
   const monthByKey = new Map();
-  for (const month of past) monthByKey.set(`${month.year}-${String(month.month).padStart(2, "0")}`, { year: month.year, month: month.month, history: month });
   for (const month of descansos?.months || []) {
     const key = `${month.year}-${String(month.month).padStart(2, "0")}`;
-    if (key >= currentKey) monthByKey.set(key, { ...(monthByKey.get(key) || {}), year: month.year, month: month.month, portal: month });
+    if (key >= currentKey) monthByKey.set(key, { year: month.year, month: month.month, portal: month });
   }
   if (now.getFullYear() === 2026) {
     for (let month = now.getMonth() + 1; month <= 12; month += 1) {
@@ -75,19 +70,17 @@ export function buildPersonalRestMonths(descansos, disponibilidad, vacaciones, n
   const vacationDays = vacationDateKeys(vacaciones);
   return [...monthByKey.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, month]) => {
     const total = new Date(month.year, month.month, 0).getDate();
-    const historicalByDay = new Map((month.history?.days || []).map((day) => [Number(day.day), day]));
     const portalByDay = new Map((month.portal?.days || []).map((day) => [Number(day.day), day]));
     const days = Array.from({ length: total }, (_, index) => {
       const day = index + 1;
       const dateKey = `${key}-${String(day).padStart(2, "0")}`;
-      const history = historicalByDay.get(day);
       const portal = portalByDay.get(day);
       const companyType = companyRestType(month.year, month.month, day, group);
-      const code = key < currentKey ? String(history?.code || "").toUpperCase() : String(portal?.code || "").toUpperCase();
+      const code = String(portal?.code || "").toUpperCase();
       const type = code ? ({ DS: "rest", FS: "festive", FH: "holiday", VA: "portal-vacation", SL: "requested", PA: "permission", FM: "training" }[code] || "other")
-        : key < currentKey || month.portal ? "" : companyType;
+        : month.portal ? "" : companyType;
       return { day, dateKey, code, type, vacation: vacationDays.has(dateKey), position: "" };
     });
-    return { key, year: month.year, month: month.month, days, source: key < currentKey ? "history" : month.portal ? "portal" : "company" };
+    return { key, year: month.year, month: month.month, days, source: month.portal ? "portal" : "company" };
   });
 }

@@ -2572,8 +2572,8 @@ function PortalExceptionsPreview({ exceptions }) {
   );
 }
 
-function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows = [], vacationEntries = [] }) {
-  const months = useMemo(() => buildPersonalRestMonths(descansos, disponibilidad, vacaciones), [descansos, disponibilidad, vacaciones]);
+function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEntries = [] }) {
+  const months = useMemo(() => buildPersonalRestMonths(descansos, vacaciones), [descansos, vacaciones]);
   const group = parseRestGroup(descansos?.worker?.group);
   const vacationDates = useMemo(() => new Set(
     vacationEntries.map((item) => String(item?.payroll?.date || "")).filter(Boolean)
@@ -2653,7 +2653,7 @@ function PortalCalendarPreview({ descansos, disponibilidad, vacaciones, slRows =
           );
         })}
       </div>
-      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span>{group && month.source === "company" && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span>{month.source === "history" && <><span><i className="is-requested" /> Solicitado</span><span><i className="is-permission" /> Permiso</span><span><i className="is-training" /> Formación</span></>}</div>
+      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span><span><i className="is-requested" /> SL · Solicitado</span>{group && month.source === "company" && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span></div>
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>
@@ -3342,7 +3342,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "rests") && descansos && (
         <div ref={descansosRef} className="portal-scroll-anchor">
-          <PortalCalendarPreview descansos={descansos} disponibilidad={payload?.disponibilidad} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries} />
+          <PortalCalendarPreview descansos={descansos} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries} />
         </div>
       )}
 

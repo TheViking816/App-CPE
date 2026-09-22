@@ -15,7 +15,6 @@ import {
   parseAssignmentsFromText
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
-import { readAvailabilityDom } from "./portal-availability.js";
 import { buildPortalNotifications } from "./portal-notifications.js";
 import { parseExceptions, preserveUsedExceptions } from "./portal-exceptions.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
@@ -1773,19 +1772,6 @@ async function collectDescansos(page) {
   if (hasCurrentRestMonthWindow(result)) return result;
 
   throw new Error("El calendario no incluye el mes actual y el siguiente. Se conservaran los ultimos datos disponibles.");
-}
-
-async function collectDisponibilidad(page) {
-  await openPortalHash(page, "User,ViewNoray,4");
-  const deadline = Date.now() + 20000;
-  while (Date.now() < deadline) {
-    for (const frame of page.frames()) {
-      const result = await frame.evaluate(readAvailabilityDom).catch(() => []);
-      if (result.length >= 8) return { recognized: true, months: result };
-    }
-    await page.waitForTimeout(400);
-  }
-  throw new Error("El portal no devolvio los calendarios de disponibilidad de los ultimos 12 meses.");
 }
 
 async function collectSl(page) {
@@ -3653,6 +3639,7 @@ async function main() {
     const hasVacationData = (value) => Boolean(value?.recognized);
     const hasExceptionData = (value) => Boolean(value?.recognized);
     const progressPayload = { ...(existingSnapshot?.payload || {}) };
+    delete progressPayload.disponibilidad;
     // La bandeja no forma parte de App CPE. Eliminar también cualquier copia
     // antigua mientras se publica el progreso de una nueva sincronización.
     delete progressPayload.mensajes;
@@ -3770,15 +3757,6 @@ async function main() {
       };
     }
     await publishProgress("descansos", descansos, "Descansos cargados");
-    const disponibilidad = await readOptionalSection(
-      "disponibilidad de los ultimos 12 meses",
-      () => collectDisponibilidad(page),
-      existingSnapshot?.payload?.disponibilidad,
-      { recognized: false, months: [] },
-      (value) => Boolean(value?.recognized && value.months?.length),
-      { allowCollectionShrink: true }
-    );
-    await publishProgress("disponibilidad", disponibilidad, "Historial de disponibilidad cargado");
     const excepcionesLeidas = await readOptionalSection(
       "bolsa de excepciones",
       () => collectExceptions(page),
@@ -3846,7 +3824,6 @@ async function main() {
       jornales,
       asignaciones,
       descansos,
-      disponibilidad,
       especialidades,
       excepciones,
       sl,

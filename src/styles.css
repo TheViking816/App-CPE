@@ -741,15 +741,37 @@ a {
 }
 
 .section-heading {
-  margin: 2px 0 15px;
-  padding: 0 4px;
+  position: relative;
+  margin: 2px 0 8px;
+  padding: 16px 18px 17px 21px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(115deg, #eaf3ff, var(--card) 72%);
+  box-shadow: 0 6px 18px rgba(7, 31, 63, 0.06);
+}
+
+.section-heading::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(#2f80ed, #24b9b0);
+  content: "";
+}
+
+.section-heading p {
+  color: #376390;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .07em;
 }
 
 .section-heading h1 {
-  margin: 3px 0 0;
+  margin: 6px 0 0;
   color: var(--ink);
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: clamp(24px, 5vw, 29px);
+  line-height: 1.12;
+  letter-spacing: -.025em;
 }
 
 .section-heading span {
@@ -758,6 +780,14 @@ a {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+:root[data-theme="dark"] .section-heading {
+  background: linear-gradient(115deg, #172f4d, var(--card) 72%);
+}
+
+:root[data-theme="dark"] .section-heading p {
+  color: #9ec9f4;
 }
 
 .doors-table-section {
@@ -1120,7 +1150,7 @@ select {
 }
 
 .general-board .section-heading {
-  padding: 22px 18px 16px;
+  margin: 2px 18px 16px;
 }
 
 .general-loading {

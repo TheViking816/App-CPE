@@ -13,18 +13,17 @@ test("A-V uses blue A days without a letter, A-V days, green weekends and common
   assert.equal(companyRestType(2026, 12, 2, group), "");
 });
 
-test("personal portal days win in the current month, history keeps all codes and vacations overlay both", () => {
+test("personal portal days win in the current month, vacations overlay rests, and past months are hidden", () => {
   const months = buildPersonalRestMonths(
-    { worker: { group: "A-V" }, months: [{ year: 2026, month: 9, days: [{ day: 23, code: "DS" }, { day: 24, code: "SL" }] }] },
-    { months: [{ year: 2026, month: 8, days: [{ day: 3, code: "FM" }, { day: 4, code: "PA" }, { day: 5, code: "FH" }] }] },
+    { worker: { group: "A-V" }, months: [
+      { year: 2026, month: 8, days: [{ day: 3, code: "FM" }] },
+      { year: 2026, month: 9, days: [{ day: 23, code: "DS" }, { day: 24, code: "SL" }] }
+    ] },
     { rows: [{ inicio: "23/09/2026", fin: "24/09/2026" }] },
     new Date(2026, 8, 22)
   );
-  const august = months.find((month) => month.key === "2026-08");
   const september = months.find((month) => month.key === "2026-09");
-  assert.equal(august.days[2].type, "training");
-  assert.equal(august.days[3].type, "permission");
-  assert.equal(august.days[4].type, "holiday");
+  assert.equal(months.some((month) => month.key === "2026-08"), false);
   assert.equal(september.days[22].type, "rest");
   assert.equal(september.days[22].vacation, true);
   assert.equal(september.days[23].type, "requested");
@@ -37,7 +36,6 @@ test("a blank portal day overrides a green company weekend and FS differs from D
     { worker: { group: "A-V" }, months: [{ year: 2026, month: 10, days: [
       { day: 9, code: "DS" }, { day: 17, code: "FS" }, { day: 18, code: "" }
     ] }] },
-    null,
     null,
     new Date(2026, 8, 22)
   );
