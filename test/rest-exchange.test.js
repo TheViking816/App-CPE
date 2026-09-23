@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canRespondToRestOffer, confirmedRestExchangeDays } from "../src/restExchange.js";
+import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "../src/restExchange.js";
 
 test("only personal portal DS and FS may be offered; SL, VA and inferred weekends cannot", () => {
   const dates = confirmedRestExchangeDays({
@@ -23,4 +23,25 @@ test("responding requires a confirmed reciprocal day and a workday for any recei
   assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", offeredDate: "2026-09-24", wantedDate: "2026-09-23" }, rest, work), false);
   assert.equal(canRespondToRestOffer({ kind: "give", status: "open", offeredDate: "2026-09-24" }, rest, work), false);
   assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", isOwn: true, offeredDate: "2026-09-23", wantedDate: "2026-09-24" }, rest, work), false);
+});
+
+test("official rest procedures use the corresponding portal form and each party's dates", () => {
+  const ownSwap = restPortalProcedure({ kind: "swap", isOwn: true, offeredDate: "2026-10-03" },
+    { offeredDate: "2026-10-18", counterpartChapa: "12345" });
+  assert.match(ownSwap.url, /ViewNoray,15$/);
+  assert.match(ownSwap.instruction, /TENGO: 03\/10\/2026; CAMBIO CON: chapa 12345; TIENE: 18\/10\/2026/);
+  const otherSwap = restPortalProcedure({ kind: "swap", isOwn: false, offeredDate: "2026-10-03" },
+    { offeredDate: "2026-10-18", counterpartChapa: "72683" });
+  assert.match(otherSwap.instruction, /TENGO: 18\/10\/2026; CAMBIO CON: chapa 72683; TIENE: 03\/10\/2026/);
+
+  const ownGive = restPortalProcedure({ kind: "give", isOwn: true, offeredDate: "2026-10-03" },
+    { counterpartChapa: "12345" });
+  assert.match(ownGive.url, /ViewNoray,24$/);
+  assert.match(ownGive.instruction, /TENGO: 03\/10\/2026; CEDO A: chapa 12345/);
+  const myResponseToWant = restPortalProcedure({ kind: "want", isOwn: false },
+    { isOwn: true, offeredDate: "2026-10-18", counterpartChapa: "72683" });
+  assert.match(myResponseToWant.instruction, /TENGO: 18\/10\/2026; CEDO A: chapa 72683/);
+  const recipient = restPortalProcedure({ kind: "give", isOwn: false },
+    { isOwn: true, counterpartChapa: "72683" });
+  assert.match(recipient.instruction, /compañero que cede/);
 });

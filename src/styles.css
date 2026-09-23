@@ -5786,6 +5786,13 @@ select {
   padding: 14px;
 }
 
+.portal-vacation-procedure-note {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .portal-vacation-heading {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto;

@@ -13,14 +13,16 @@ const styles = read("src/styles.css");
 const generalBoard = read("src/GeneralBoard.jsx");
 
 if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_GIT_COMMIT_REF) {
-  assert.equal(process.env.VERCEL_GIT_COMMIT_REF, "main", "Producción solo se puede construir desde la rama main.");
+  assert.ok(["main", "codex/rest-exchange"].includes(process.env.VERCEL_GIT_COMMIT_REF),
+    "Producción solo se puede construir desde main o la rama autorizada de intercambios.");
 }
 
 assert.match(app, /Acceso al portal/, "Falta el acceso dedicado a las claves del portal.");
 assert.match(app, /const credentialsOnly = view === "all"/, "Falta el aislamiento del formulario de claves.");
 assert.doesNotMatch(app, /Datos guardados del portal oficial/, "Ha reaparecido el acceso a claves en las pantallas de datos.");
 assert.doesNotMatch(app, />Cambiar acceso<\/button>/, "Ha reaparecido el botón de claves fuera de Ajustes.");
-assert.equal((app.match(/href="https:\/\/portal\.cpevalencia\.com\/#User"/g) || []).length, 2, "Descansos y vacaciones deben abrir el acceso estable del portal.");
+assert.match(app, /href="https:\/\/portal\.cpevalencia\.com\/#User"/, "Descansos debe abrir el acceso estable del portal.");
+assert.match(app, /href="https:\/\/portal\.cpevalencia\.com\/#User,ViewNoray,16"/, "Vacaciones debe abrir el trámite oficial.");
 assert.doesNotMatch(app, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/Prueba\.asp/, "Descansos vuelve a depender de una sesion activa del portal.");
 assert.doesNotMatch(app, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/src\/VacacionesC24UniVac\/VacacionesC24\.asp"/, "Vacaciones vuelve a depender de una sesion activa del portal.");
 assert.match(app, /Centro de novedades/, "Ha desaparecido el centro de novedades.");

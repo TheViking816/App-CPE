@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { canRespondToRestOffer, confirmedRestExchangeDays } from "./restExchange.js";
+import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -150,17 +150,21 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
         <span>{proposal.proposerName} {proposal.offeredDate ? `ofrece ${formatDay(proposal.offeredDate)}` : "solicita la cesión"}</span>
         <div><button type="button" disabled={busy} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: true }),
-          "Acuerdo registrado. Ambos debéis tramitarlo en el portal oficial."
+          "Acuerdo registrado. Falta tramitarlo en el portal oficial."
         )}>Aceptar</button><button type="button" className="rest-exchange-secondary" disabled={busy} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: false }),
           "Propuesta rechazada."
         )}>Rechazar</button></div>
       </div>)}
-      {personal && proposals.filter((proposal) => proposal.status === "accepted").map((proposal) => <div className="rest-exchange-agreement" key={proposal.id}>
-        <strong>Acuerdo con chapa {proposal.counterpartChapa}</strong>
-        <span>Tramitad el intercambio o la cesión en el Portal CPE. Esta app no modifica los descansos oficiales.</span>
-        <a href="https://portal.cpevalencia.com/#User" target="_blank" rel="noreferrer">Abrir portal oficial ↗</a>
-      </div>)}
+      {personal && proposals.filter((proposal) => proposal.status === "accepted").map((proposal) => {
+        const procedure = restPortalProcedure(offer, proposal);
+        return <div className="rest-exchange-agreement" key={proposal.id}>
+          <strong>Acuerdo con chapa {proposal.counterpartChapa}</strong>
+          <span>{procedure.instruction}</span>
+          <span>El acuerdo aquí no modifica el calendario oficial. Comprueba el estado de la petición en el Portal CPE.</span>
+          <a href={procedure.url} target="_blank" rel="noreferrer">{procedure.label} ↗</a>
+        </div>;
+      })}
     </article>;
   }
 
