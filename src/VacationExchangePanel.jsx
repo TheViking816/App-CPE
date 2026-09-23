@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
+import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { assignedVacationDays, canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
 import {
   cancelVacationExchange, decideVacationExchange, getVacationExchange,
@@ -117,8 +118,7 @@ export default function VacationExchangePanel({ session, vacaciones }) {
   const today = todayKey();
   const board = offers.filter((offer) => offer.status === "open"
     && offer.offeredStart >= today && offer.wantedStart >= today);
-  const mine = offers.filter((offer) => offer.isOwn
-    || proposals.some((proposal) => proposal.offerId === offer.id && proposal.isOwn));
+  const mine = recentPersonalOffers(offers, proposals);
 
   function offerCard(offer, personal = false) {
     const related = proposals.filter((proposal) => proposal.offerId === offer.id);
@@ -135,10 +135,10 @@ export default function VacationExchangePanel({ session, vacaciones }) {
     return <article className="rest-exchange-offer" key={offer.id}>
       <div className="rest-exchange-offer-head">
         <div><span>Intercambio de vacaciones</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
-        <div className="rest-exchange-offer-groups">
-          <small>Grupo profesional: {offer.professionalGroup || "pendiente de sincronización"}</small>
+        {(offer.professionalGroup || offer.restGroup) && <div className="rest-exchange-offer-groups">
+          {offer.professionalGroup && <small>Grupo profesional: {offer.professionalGroup}</small>}
           {offer.restGroup && <small>Descanso: {offer.restGroup}</small>}
-        </div>
+        </div>}
       </div>
       <div className="rest-exchange-dates">
         <div><small>Tengo · {dateRangeKeys(offer.offeredStart, offer.offeredEnd).length} días</small><strong>{formatRange(offer.offeredStart, offer.offeredEnd)}</strong></div>
@@ -166,7 +166,7 @@ export default function VacationExchangePanel({ session, vacaciones }) {
             "Propuesta retirada.")}>Retirar mi propuesta</button>{chat(minePending)}</div>}
       {personal && related.filter((proposal) => proposal.status === "pending" && !proposal.isOwn)
         .map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
-          <span>{proposal.proposerName} ofrece el periodo que buscas.</span>
+          <span>{proposal.proposerName} ofrece {formatRange(offer.wantedStart, offer.wantedEnd)} y quiere {formatRange(offer.offeredStart, offer.offeredEnd)}.</span>
           <div>{chatButton(proposal)}
             <button type="button" disabled={busy} onClick={() => mutate(
               () => decideVacationExchange({ token: session.token, proposalId: proposal.id, accept: true }),
@@ -179,7 +179,8 @@ export default function VacationExchangePanel({ session, vacaciones }) {
           </div>{chat(proposal)}
         </div>)}
       {personal && related.filter((proposal) => proposal.status === "accepted").map((proposal) => <div className="rest-exchange-agreement" key={proposal.id}>
-        <strong>Acuerdo con chapa {proposal.counterpartChapa}</strong>
+        <strong>Acuerdo con {counterpartName(offer, proposal)} {proposal.counterpartChapa}</strong>
+        <span>{counterpartName(offer, proposal)} ofrece {formatRange(offer.isOwn ? offer.wantedStart : offer.offeredStart, offer.isOwn ? offer.wantedEnd : offer.offeredEnd)} y quiere {formatRange(offer.isOwn ? offer.offeredStart : offer.wantedStart, offer.isOwn ? offer.offeredEnd : offer.wantedEnd)}.</span>
         <span>En «Solicitud Vacaciones → Intercambio», indica CEDO: {formatRange(offer.isOwn ? offer.offeredStart : offer.wantedStart, offer.isOwn ? offer.offeredEnd : offer.wantedEnd)}; CAMBIO CON: chapa {proposal.counterpartChapa}; ME CEDE: {formatRange(offer.isOwn ? offer.wantedStart : offer.offeredStart, offer.isOwn ? offer.wantedEnd : offer.offeredEnd)}.</span>
         <span>El acuerdo en esta app no cambia tus vacaciones. Tramitadlo y comprobad su confirmación en el portal.</span>
         <a href="https://portal.cpevalencia.com/#User,ViewNoray,16" target="_blank" rel="noreferrer">Abrir intercambio en el Portal CPE ↗</a>
@@ -192,7 +193,7 @@ export default function VacationExchangePanel({ session, vacaciones }) {
     <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambiar vacaciones</h2></div></div>
     <p className="rest-exchange-intro">Publica un día suelto o un periodo seguido que tengas asignado y el periodo de igual duración que prefieres. El acuerdo se tramita y confirma en el Portal CPE.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
-      {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis gestiones"]].map(([value, label]) =>
+      {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""}
           key={value} onClick={() => setTab(value)}>{label}</button>)}
     </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
 import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
+import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -138,8 +139,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const board = offers.filter((offer) => offer.status === "open"
     && (!offer.offeredDate || offer.offeredDate >= today)
     && (!offer.wantedDate || offer.wantedDate >= today));
-  const mine = offers.filter((offer) => offer.status !== "cancelled"
-    && (offer.isOwn || (data.proposals || []).some((proposal) => proposal.offerId === offer.id && proposal.isOwn)));
+  const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
   function offerCard(offer, personal = false) {
@@ -156,10 +156,10 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     return <article className="rest-exchange-offer" key={offer.id}>
       <div className="rest-exchange-offer-head">
         <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
-        <div className="rest-exchange-offer-groups">
-          <small>Grupo profesional: {offer.professionalGroup || "pendiente de sincronización"}</small>
+        {(offer.professionalGroup || offer.ownerGroup) && <div className="rest-exchange-offer-groups">
+          {offer.professionalGroup && <small>Grupo profesional: {offer.professionalGroup}</small>}
           {offer.ownerGroup && <small>Descanso: {offer.ownerGroup}</small>}
-        </div>
+        </div>}
       </div>
       <div className="rest-exchange-dates">
         {offer.offeredDate && <div><small>Ofrece</small><strong>{formatDay(offer.offeredDate)}</strong></div>}
@@ -190,7 +190,11 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
         {chat(myProposal)}
       </div>}
       {personal && proposals.filter((proposal) => proposal.status === "pending" && !proposal.isOwn).map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
-        <span>{proposal.proposerName} {proposal.offeredDate ? `ofrece ${formatDay(proposal.offeredDate)}` : "solicita la cesión"}</span>
+        <span>{offer.kind === "give"
+          ? `${proposal.proposerName} quiere ${formatDay(offer.offeredDate)}.`
+          : offer.kind === "want"
+            ? `${proposal.proposerName} ofrece ${formatDay(proposal.offeredDate)} para cedértelo.`
+            : `${proposal.proposerName} ofrece ${formatDay(proposal.offeredDate)} y quiere ${formatDay(offer.offeredDate)}.`}</span>
         <div>{chatButton(proposal)}<button type="button" disabled={busy} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: true }),
           "Acuerdo registrado. Falta tramitarlo en el portal oficial."
@@ -202,8 +206,14 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       </div>)}
       {personal && proposals.filter((proposal) => proposal.status === "accepted").map((proposal) => {
         const procedure = restPortalProcedure(offer, proposal);
+        const name = counterpartName(offer, proposal);
         return <div className="rest-exchange-agreement" key={proposal.id}>
-          <strong>Acuerdo con chapa {proposal.counterpartChapa}</strong>
+          <strong>Acuerdo con {name} {proposal.counterpartChapa}</strong>
+          <span>{offer.kind === "swap"
+            ? `${name} ofrece ${formatDay(offer.isOwn ? proposal.offeredDate : offer.offeredDate)} y quiere ${formatDay(offer.isOwn ? offer.offeredDate : proposal.offeredDate)}.`
+            : offer.kind === "give"
+              ? offer.isOwn ? `${name} quiere ${formatDay(offer.offeredDate)}.` : `${name} ofrece ${formatDay(offer.offeredDate)}.`
+              : offer.isOwn ? `${name} ofrece ${formatDay(proposal.offeredDate)}.` : `${name} quiere ${formatDay(offer.wantedDate)}.`}</span>
           <span>{procedure.instruction}</span>
           <span>El acuerdo aquí no modifica el calendario oficial. Comprueba el estado de la petición en el Portal CPE.</span>
           <a href={procedure.url} target="_blank" rel="noreferrer">{procedure.label} ↗</a>
@@ -218,7 +228,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambios y cesiones</h2></div></div>
     <p className="rest-exchange-intro">Publica un DS o FS, busca el día que necesitas y acordadlo aquí. El cambio solo será efectivo cuando lo tramitéis en el portal oficial.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
-      {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis gestiones"]].map(([value, label]) =>
+      {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{label}</button>)}
     </div>
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
