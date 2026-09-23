@@ -2419,7 +2419,7 @@ function formatVacationRange(period) {
   return start.getTime() === end.getTime() ? startLabel : `${startLabel} - ${endLabel}`;
 }
 
-function PortalVacationPreview({ vacaciones }) {
+function PortalVacationPreview({ vacaciones, onDaySelect, selectedDay }) {
   const periods = vacaciones?.rows || [];
   const months = useMemo(() => {
     const byMonth = new Map();
@@ -2491,7 +2491,18 @@ function PortalVacationPreview({ vacaciones }) {
         {Array.from({ length: totalDaysInMonth }, (_, index) => {
           const day = index + 1;
           const isVacation = vacationDays.has(day);
-          return <span className={isVacation ? "is-vacation" : ""} key={day}>{day}{isVacation && <small>VA</small>}</span>;
+          const dateKey = `${selectedMonth.year}-${String(selectedMonth.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const now = new Date();
+          const canSelect = Boolean(onDaySelect) && new Date(selectedMonth.year, selectedMonth.month - 1, day)
+            >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const DayTag = canSelect ? "button" : "span";
+          return <DayTag type={canSelect ? "button" : undefined}
+            className={`${isVacation ? "is-vacation" : ""}${selectedDay?.dateKey === dateKey ? " is-selected" : ""}`}
+            key={day}
+            onClick={canSelect ? () => onDaySelect({ dateKey, isVacation }) : undefined}
+            aria-label={canSelect ? `${day} de ${MONTHS_ES[selectedMonth.month - 1]}: ${isVacation ? "vacaciones asignadas; ofrecer este día" : "quiero vacaciones este día"}` : undefined}>
+            {day}{isVacation && <small>VA</small>}
+          </DayTag>;
         })}
       </div>
       <div className="portal-vacation-periods compact">
@@ -2760,6 +2771,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [selectedAnnualMonthKey, setSelectedAnnualMonthKey] = useState("");
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [selectedRestDay, setSelectedRestDay] = useState(null);
+  const [selectedVacationDay, setSelectedVacationDay] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const [relayHours, setRelayHours] = useState({});
   const [savingRelayHourKey, setSavingRelayHourKey] = useState("");
@@ -3371,11 +3383,14 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "holidays") && (
         <div ref={vacacionesRef} className="portal-scroll-anchor">
-          <PortalVacationPreview vacaciones={vacaciones} />
+          <PortalVacationPreview vacaciones={vacaciones}
+            onDaySelect={view === "holidays" ? setSelectedVacationDay : undefined}
+            selectedDay={selectedVacationDay} />
         </div>
       )}
 
-      {view === "holidays" && <VacationExchangePanel session={session} vacaciones={vacaciones} />}
+      {view === "holidays" && <VacationExchangePanel session={session} vacaciones={vacaciones}
+        selectedDay={selectedVacationDay} />}
 
       {(view === "all" || view === "exceptions") && exceptions?.recognized && (
         <div ref={exceptionsRef} className="portal-scroll-anchor">

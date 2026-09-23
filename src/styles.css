@@ -5873,7 +5873,7 @@ select {
 }
 
 .portal-vacation-weekday,
-.portal-vacation-calendar > span:not(.portal-vacation-weekday) {
+.portal-vacation-calendar > :is(span, button):not(.portal-vacation-weekday) {
   display: grid;
   place-items: center;
 }
@@ -5885,7 +5885,7 @@ select {
   font-weight: 950;
 }
 
-.portal-vacation-calendar > span:not(.portal-vacation-weekday) {
+.portal-vacation-calendar > :is(span, button):not(.portal-vacation-weekday) {
   min-height: 43px;
   gap: 0;
   border: 1px solid #e1e8ef;
@@ -5894,14 +5894,20 @@ select {
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
+  font-family: inherit;
 }
 
-.portal-vacation-calendar > span.is-vacation {
+.portal-vacation-calendar > :is(span, button).is-vacation {
   border-color: #a78bfa;
   background: #ede9fe;
   color: #5b21b6;
   box-shadow: inset 0 -3px 0 #8b5cf6;
 }
+
+.portal-vacation-calendar > button { cursor: pointer; }
+.portal-vacation-calendar > button:hover { border-color: #8b5cf6; }
+.portal-vacation-calendar > button.is-selected { outline: 2px solid #7c3aed; outline-offset: 1px; }
+.portal-vacation-calendar > button:focus-visible { outline: 3px solid #7c3aed; outline-offset: 2px; }
 
 .portal-vacation-calendar small {
   font-size: 8px;
@@ -6605,7 +6611,7 @@ select {
 :root[data-theme="dark"] .assignment-detail-operation,
 :root[data-theme="dark"] .assignment-detail-workers > article,
 :root[data-theme="dark"] .assignment-detail-empty,
-:root[data-theme="dark"] .portal-vacation-calendar > span:not(.portal-vacation-weekday),
+:root[data-theme="dark"] .portal-vacation-calendar > :is(span, button):not(.portal-vacation-weekday),
 :root[data-theme="dark"] .portal-vacation-month-tabs button {
   border-color: rgba(148, 163, 184, 0.24);
   background: rgba(8, 22, 38, 0.72);
@@ -6654,7 +6660,7 @@ select {
 :root[data-theme="dark"] .assignment-detail-operation strong,
 :root[data-theme="dark"] .assignment-detail-section-title > strong,
 :root[data-theme="dark"] .assignment-detail-workers p,
-:root[data-theme="dark"] .portal-vacation-calendar > span:not(.portal-vacation-weekday),
+:root[data-theme="dark"] .portal-vacation-calendar > :is(span, button):not(.portal-vacation-weekday),
 :root[data-theme="dark"] .portal-vacation-month-tabs button {
   color: var(--ink);
 }
@@ -6684,7 +6690,7 @@ select {
   background: rgba(8, 22, 38, 0.4);
 }
 
-:root[data-theme="dark"] .portal-vacation-calendar > span.is-vacation,
+:root[data-theme="dark"] .portal-vacation-calendar > :is(span, button).is-vacation,
 :root[data-theme="dark"] .portal-vacation-month-tabs button.is-active {
   border-color: rgba(167, 139, 250, 0.55);
   background: rgba(124, 58, 237, 0.22);

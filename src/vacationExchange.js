@@ -34,3 +34,9 @@ export function canRespondToVacationOffer(offer, assignedDays) {
     && wanted.every((date) => assignedDays.has(date))
     && offered.every((date) => !assignedDays.has(date));
 }
+
+export function vacationSelectionPatch(dateKey, isVacation) {
+  return isVacation
+    ? { offeredStart: dateKey, offeredEnd: dateKey }
+    : { wantedStart: dateKey, wantedEnd: dateKey };
+}

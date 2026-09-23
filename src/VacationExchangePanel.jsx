@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
-import { assignedVacationDays, canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
+import { assignedVacationDays, canRespondToVacationOffer, dateRangeKeys, vacationSelectionPatch } from "./vacationExchange.js";
 import {
   cancelVacationExchange, decideVacationExchange, getVacationExchange,
   proposeVacationExchange, publishVacationExchange, updateVacationExchange,
@@ -23,7 +23,7 @@ function formatRange(start, end) {
   return start === end ? formatDay(start) : `${formatDay(start)} – ${formatDay(end)}`;
 }
 
-export default function VacationExchangePanel({ session, vacaciones }) {
+export default function VacationExchangePanel({ session, vacaciones, selectedDay }) {
   const [tab, setTab] = useState("board");
   const [offeredStart, setOfferedStart] = useState("");
   const [offeredEnd, setOfferedEnd] = useState("");
@@ -36,6 +36,7 @@ export default function VacationExchangePanel({ session, vacaciones }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const panelRef = useRef(null);
   const assignedDays = useMemo(() => assignedVacationDays(vacaciones), [vacaciones]);
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
@@ -58,6 +59,23 @@ export default function VacationExchangePanel({ session, vacaciones }) {
     }, 45_000);
     return () => window.clearInterval(timer);
   }, [reload]);
+
+  useEffect(() => {
+    if (!selectedDay) return;
+    const patch = vacationSelectionPatch(selectedDay.dateKey, selectedDay.isVacation);
+    setEditingOfferId("");
+    setError("");
+    setNotice("");
+    setTab("publish");
+    if (patch.offeredStart) {
+      setOfferedStart(patch.offeredStart);
+      setOfferedEnd(patch.offeredEnd);
+    } else {
+      setWantedStart(patch.wantedStart);
+      setWantedEnd(patch.wantedEnd);
+    }
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedDay]);
 
   async function mutate(action, message) {
     setBusy(true);
@@ -189,7 +207,7 @@ export default function VacationExchangePanel({ session, vacaciones }) {
     </article>;
   }
 
-  return <section className="rest-exchange-panel vacation-exchange-panel">
+  return <section className="rest-exchange-panel vacation-exchange-panel" ref={panelRef}>
     <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambiar vacaciones</h2></div></div>
     <p className="rest-exchange-intro">Publica un día suelto o un periodo seguido que tengas asignado y el periodo de igual duración que prefieres. El acuerdo se tramita y confirma en el Portal CPE.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
