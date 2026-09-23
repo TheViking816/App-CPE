@@ -256,7 +256,6 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           {days.work.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)}</option>)}
         </select>
       </label>}
-      <p className="rest-exchange-note">Los SL y las vacaciones no se pueden ofrecer. Solo aparecen días verificados en tu calendario personal del portal.</p>
       <button type="submit" disabled={busy || loading}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
     </form>}
     {tab === "board" && <div className="rest-exchange-list">
