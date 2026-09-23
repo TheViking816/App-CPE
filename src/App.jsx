@@ -6,6 +6,7 @@ import { needsPortalSecurityKey } from "./portalSecurityNotice.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
+import VacationExchangePanel from "./VacationExchangePanel.jsx";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -3044,6 +3045,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     return <>
       <PortalFeatureTemplate view={view} />
       {view === "rests" && <RestExchangePanel session={session} descansos={null} vacaciones={null} />}
+      {view === "holidays" && <VacationExchangePanel session={session} vacaciones={null} />}
     </>;
   }
 
@@ -3372,6 +3374,8 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           <PortalVacationPreview vacaciones={vacaciones} />
         </div>
       )}
+
+      {view === "holidays" && <VacationExchangePanel session={session} vacaciones={vacaciones} />}
 
       {(view === "all" || view === "exceptions") && exceptions?.recognized && (
         <div ref={exceptionsRef} className="portal-scroll-anchor">
@@ -4212,6 +4216,10 @@ const NOTIFICATION_TYPES = {
   rests_changed: { label: "Descansos", Icon: CalendarDays, tone: "rests" },
   rest_proposal: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
   rest_response: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
+  rest_message: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
+  vacation_proposal: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
+  vacation_response: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
+  vacation_message: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   vacations_changed: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   exceptions_changed: { label: "Excepciones", Icon: CalendarOff, tone: "exceptions" }
 };

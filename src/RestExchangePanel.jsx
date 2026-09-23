@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
+import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
 import {
   cancelRestExchange,
   decideRestExchange,
   getRestExchange,
   proposeRestExchange,
   publishRestExchange,
+  updateRestExchange,
   withdrawRestExchange
 } from "./supabaseClient.js";
 
@@ -32,6 +34,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const [kind, setKind] = useState("swap");
   const [offeredDate, setOfferedDate] = useState("");
   const [wantedDate, setWantedDate] = useState("");
+  const [editingOfferId, setEditingOfferId] = useState("");
+  const [activeChatId, setActiveChatId] = useState("");
   const [data, setData] = useState({ offers: [], proposals: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -66,6 +70,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
 
   useEffect(() => {
     if (!selectedDay) return;
+    setEditingOfferId("");
     setError("");
     setNotice("");
     setTab("publish");
@@ -104,10 +109,28 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       || (kind === "give" && !giving) || (kind === "want" && !needing)) {
       return setError("Selecciona los días correspondientes.");
     }
-    return mutate(
-      () => publishRestExchange({ token: session.token, kind, offeredDate: giving, wantedDate: needing }),
-      "Publicación visible en el tablón. El descanso oficial aún no cambia."
-    );
+    return mutate(async () => {
+      if (editingOfferId) {
+        await updateRestExchange({ token: session.token, offerId: editingOfferId, kind,
+          offeredDate: giving, wantedDate: needing });
+        setEditingOfferId("");
+      } else {
+        await publishRestExchange({ token: session.token, kind,
+          offeredDate: giving, wantedDate: needing });
+      }
+      setTab("mine");
+    }, editingOfferId ? "Publicación actualizada." : "Publicación creada.");
+  }
+
+  function editOffer(offer) {
+    setEditingOfferId(offer.id);
+    setKind(offer.kind);
+    setOfferedDate(offer.offeredDate || "");
+    setWantedDate(offer.wantedDate || "");
+    setError("");
+    setNotice("");
+    setTab("publish");
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   const offers = data.offers || [];
@@ -115,23 +138,34 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const board = offers.filter((offer) => offer.status === "open"
     && (!offer.offeredDate || offer.offeredDate >= today)
     && (!offer.wantedDate || offer.wantedDate >= today));
-  const mine = offers.filter((offer) => offer.isOwn || (data.proposals || []).some((proposal) => proposal.offerId === offer.id && proposal.isOwn));
+  const mine = offers.filter((offer) => offer.status !== "cancelled"
+    && (offer.isOwn || (data.proposals || []).some((proposal) => proposal.offerId === offer.id && proposal.isOwn)));
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
   function offerCard(offer, personal = false) {
     const proposals = proposalsByOffer(offer.id);
     const myProposal = proposals.find((proposal) => proposal.isOwn && ["pending", "accepted"].includes(proposal.status));
     const canRespond = canRespondToRestOffer(offer, restDates, workDates);
+    const chatButton = (proposal) => <button type="button" className="rest-exchange-secondary"
+      onClick={() => setActiveChatId((current) => current === proposal.id ? "" : proposal.id)}>
+      {activeChatId === proposal.id ? "Cerrar chat" : "Chat privado"}
+    </button>;
+    const chat = (proposal) => activeChatId === proposal.id
+      ? <PrivateExchangeChat token={session.token} proposalId={proposal.id}
+          canWrite={["pending", "accepted"].includes(proposal.status)} /> : null;
     return <article className="rest-exchange-offer" key={offer.id}>
       <div className="rest-exchange-offer-head">
-        <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}</strong></div>
-        <small>{offer.ownerGroup ? `Grupo ${offer.ownerGroup}` : "Grupo no disponible"}</small>
+        <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
+        <div className="rest-exchange-offer-groups">
+          <small>Grupo profesional: {offer.professionalGroup || "pendiente de sincronización"}</small>
+          {offer.ownerGroup && <small>Descanso: {offer.ownerGroup}</small>}
+        </div>
       </div>
       <div className="rest-exchange-dates">
         {offer.offeredDate && <div><small>Ofrece</small><strong>{formatDay(offer.offeredDate)}</strong></div>}
         {offer.wantedDate && <div><small>Busca</small><strong>{formatDay(offer.wantedDate)}</strong></div>}
       </div>
-      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente de tramitar en el portal" : offer.status === "cancelled" ? "Retirado" : "Abierto"}</span>}
+      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente de tramitar en el portal" : "Abierto"}</span>}
       {offer.status === "open" && !offer.isOwn && !myProposal && <div className="rest-exchange-actions">
         <button type="button" disabled={busy || !canRespond} onClick={() => mutate(
           () => proposeRestExchange({ token: session.token, offerId: offer.id,
@@ -142,19 +176,29 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           ? "Ese día no figura como laborable para ti en el portal."
           : "No tienes el día solicitado como DS o FS confirmado."}</small>}
       </div>}
-      {offer.isOwn && offer.status === "open" && <button type="button" className="rest-exchange-secondary" disabled={busy}
-        onClick={() => mutate(() => cancelRestExchange({ token: session.token, offerId: offer.id }), "Publicación retirada.")}>Retirar publicación</button>}
-      {myProposal?.status === "pending" && <button type="button" className="rest-exchange-secondary" disabled={busy}
-        onClick={() => mutate(() => withdrawRestExchange({ token: session.token, proposalId: myProposal.id }), "Propuesta retirada.")}>Retirar mi propuesta</button>}
+      {offer.isOwn && offer.status === "open" && <div className="rest-exchange-manage">
+        <button type="button" className="rest-exchange-secondary" disabled={busy || proposals.some((proposal) => proposal.status === "pending")}
+          onClick={() => editOffer(offer)}>Editar</button>
+        <button type="button" className="rest-exchange-secondary" disabled={busy}
+          onClick={() => mutate(() => cancelRestExchange({ token: session.token, offerId: offer.id }), "Publicación eliminada.")}>Eliminar</button>
+        {proposals.some((proposal) => proposal.status === "pending") && <small>Responde o rechaza las propuestas pendientes para poder editar.</small>}
+      </div>}
+      {myProposal?.status === "pending" && <div className="rest-exchange-manage">
+        {chatButton(myProposal)}
+        <button type="button" className="rest-exchange-secondary" disabled={busy}
+          onClick={() => mutate(() => withdrawRestExchange({ token: session.token, proposalId: myProposal.id }), "Propuesta retirada.")}>Retirar mi propuesta</button>
+        {chat(myProposal)}
+      </div>}
       {personal && proposals.filter((proposal) => proposal.status === "pending" && !proposal.isOwn).map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
         <span>{proposal.proposerName} {proposal.offeredDate ? `ofrece ${formatDay(proposal.offeredDate)}` : "solicita la cesión"}</span>
-        <div><button type="button" disabled={busy} onClick={() => mutate(
+        <div>{chatButton(proposal)}<button type="button" disabled={busy} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: true }),
           "Acuerdo registrado. Falta tramitarlo en el portal oficial."
         )}>Aceptar</button><button type="button" className="rest-exchange-secondary" disabled={busy} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: false }),
           "Propuesta rechazada."
         )}>Rechazar</button></div>
+        {chat(proposal)}
       </div>)}
       {personal && proposals.filter((proposal) => proposal.status === "accepted").map((proposal) => {
         const procedure = restPortalProcedure(offer, proposal);
@@ -163,6 +207,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           <span>{procedure.instruction}</span>
           <span>El acuerdo aquí no modifica el calendario oficial. Comprueba el estado de la petición en el Portal CPE.</span>
           <a href={procedure.url} target="_blank" rel="noreferrer">{procedure.label} ↗</a>
+          {chatButton(proposal)}
+          {chat(proposal)}
         </div>;
       })}
     </article>;
@@ -178,6 +224,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
     {notice && <p className="rest-exchange-notice" role="status">{notice}</p>}
     {tab === "publish" && <form className="rest-exchange-form" onSubmit={publish}>
+      {editingOfferId && <div className="rest-exchange-edit-heading"><strong>Editar publicación</strong><button type="button" className="rest-exchange-secondary" onClick={() => setEditingOfferId("")}>Cancelar edición</button></div>}
       {selectedDay && !restDates.has(selectedDay.dateKey) && !workDates.has(selectedDay.dateKey) &&
         <p className="rest-exchange-note">El día seleccionado aún no consta como DS, FS o laborable confirmado en el portal. Elige otro día de las listas.</p>}
       <label>Quiero publicar
@@ -187,20 +234,20 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           <option value="want">Buscar un descanso</option>
         </select>
       </label>
-      {kind !== "want" && <label>Mi DS o FS confirmado
+      {kind !== "want" && <label>Tengo
         <select value={offeredDate} onChange={(event) => setOfferedDate(event.target.value)} required>
           <option value="">Selecciona un día</option>
           {days.rest.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)} · {day.code}</option>)}
         </select>
       </label>}
-      {kind !== "give" && <label>Día en el que quiero descansar
+      {kind !== "give" && <label>Quiero
         <select value={wantedDate} onChange={(event) => setWantedDate(event.target.value)} required>
           <option value="">Selecciona un día laborable</option>
           {days.work.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)}</option>)}
         </select>
       </label>}
       <p className="rest-exchange-note">Los SL y las vacaciones no se pueden ofrecer. Solo aparecen días verificados en tu calendario personal del portal.</p>
-      <button type="submit" disabled={busy || loading}>{busy ? "Guardando…" : "Publicar en el tablón"}</button>
+      <button type="submit" disabled={busy || loading}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
     </form>}
     {tab === "board" && <div className="rest-exchange-list">
       {loading ? <p>Cargando publicaciones…</p> : board.length ? board.map((offer) => offerCard(offer)) : <p>No hay publicaciones abiertas todavía.</p>}

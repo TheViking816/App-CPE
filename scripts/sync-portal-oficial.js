@@ -516,7 +516,8 @@ export function parseDescansos(html = "", now = new Date()) {
   const worker = {
     chapa: normalizeChapa(expectedChapa || workerMatch?.[1] || ""),
     name: normalizePortalPersonName(workerMatch?.[expectedChapa ? 1 : 2] || ""),
-    group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([^\n|]+)/i)?.[1]?.trim() || "",
+    professionalGroup: pageText.match(/Grupo\s+Profesional:\s*([^\n|]+)/i)?.[1]?.trim() || "",
+    group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([ABC]\s*-\s*[VN])/i)?.[1]?.trim() || "",
     currentMonthRest: Number(pageText.match(/Descansos\s+mes\s+actual:\s*\((\d+)\)/i)?.[1] || 0),
     nextMonthRest: Number(pageText.match(/Descansos\s+proximo\s+mes:\s*\((\d+)\)/i)?.[1] || 0)
   };

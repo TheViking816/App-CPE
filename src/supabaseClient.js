@@ -101,6 +101,103 @@ export async function publishRestExchange({ token, kind, offeredDate = null, wan
   return data;
 }
 
+export async function updateRestExchange({ token, offerId, kind, offeredDate = null, wantedDate = null }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_update", {
+    p_token: token, p_offer_id: offerId, p_kind: kind,
+    p_offered_date: offeredDate, p_wanted_date: wantedDate
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getRestExchangeMessages({ token, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_messages", {
+    p_token: token, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function sendRestExchangeMessage({ token, proposalId, body }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_send_message", {
+    p_token: token, p_proposal_id: proposalId, p_body: body
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getVacationExchange({ token }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_list", { p_token: token });
+  if (error) throw error;
+  return data || { offers: [], proposals: [] };
+}
+
+export async function publishVacationExchange({ token, offeredStart, offeredEnd, wantedStart, wantedEnd }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_publish", {
+    p_token: token, p_offered_start: offeredStart, p_offered_end: offeredEnd,
+    p_wanted_start: wantedStart, p_wanted_end: wantedEnd
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function updateVacationExchange({ token, offerId, offeredStart, offeredEnd, wantedStart, wantedEnd }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_update", {
+    p_token: token, p_offer_id: offerId, p_offered_start: offeredStart, p_offered_end: offeredEnd,
+    p_wanted_start: wantedStart, p_wanted_end: wantedEnd
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function proposeVacationExchange({ token, offerId }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_propose", {
+    p_token: token, p_offer_id: offerId
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function decideVacationExchange({ token, proposalId, accept }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_decide", {
+    p_token: token, p_proposal_id: proposalId, p_accept: accept
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelVacationExchange({ token, offerId }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_cancel", {
+    p_token: token, p_offer_id: offerId
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function withdrawVacationExchange({ token, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_withdraw", {
+    p_token: token, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getVacationExchangeMessages({ token, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_messages", {
+    p_token: token, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function sendVacationExchangeMessage({ token, proposalId, body }) {
+  const { data, error } = await supabase.rpc("app_cpe_vacation_exchange_send_message", {
+    p_token: token, p_proposal_id: proposalId, p_body: body
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function proposeRestExchange({ token, offerId, offeredDate = null }) {
   const { data, error } = await supabase.rpc("app_cpe_rest_exchange_propose", {
     p_token: token, p_offer_id: offerId, p_offered_date: offeredDate

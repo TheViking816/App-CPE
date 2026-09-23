@@ -11,6 +11,15 @@ function restLink(year, month, day, code = "DS") {
   return `<a href="javascript:selFecha(${year},${month},${day})">${code}</a>`;
 }
 
+test("guarda el grupo profesional del portal separado del grupo de descanso", () => {
+  const parsed = parseDescansos([
+    "<div>Grupo Profesional: (SIN-F ) - Pend. De FORMACION<br>Grupo de Descanso 2024: A - V</div>",
+    restLink(2026, 9, 24), restLink(2026, 10, 2)
+  ].join(""), new Date("2026-09-23T12:00:00.000Z"));
+  assert.equal(parsed.worker.professionalGroup, "(SIN-F ) - Pend. De FORMACION");
+  assert.equal(parsed.worker.group, "A - V");
+});
+
 test("al cambiar de agosto a septiembre publica septiembre y octubre", () => {
   const now = new Date("2026-09-02T00:30:00.000Z");
   const parsed = parseDescansos([
