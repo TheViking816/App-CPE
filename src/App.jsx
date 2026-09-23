@@ -5,6 +5,7 @@ import { hasSalaryData } from "./portal-salary-state.js";
 import { needsPortalSecurityKey } from "./portalSecurityNotice.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
+import RestExchangePanel from "./RestExchangePanel.jsx";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -2579,7 +2580,7 @@ function PortalExceptionsPreview({ exceptions }) {
   );
 }
 
-function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEntries = [] }) {
+function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEntries = [], onDaySelect, selectedDay }) {
   const months = useMemo(() => buildPersonalRestMonths(descansos, vacaciones), [descansos, vacaciones]);
   const group = parseRestGroup(descansos?.worker?.group);
   const vacationDates = useMemo(() => new Set(
@@ -2640,11 +2641,15 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
           const slPosition = code.toUpperCase() === "SL" && !isVacation ? slPositionByDate.get(dateKey) : "";
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
+          const DayTag = onDaySelect ? "button" : "div";
           return (
-            <div
+            <DayTag
+              type={onDaySelect ? "button" : undefined}
               key={day}
-              className={`portal-day personal-rest-day is-${isVacation ? "vacation" : item.type || "ordinary"} ${isVacation ? "has-vacation" : ""} ${isToday ? "is-today" : ""}`}
+              className={`portal-day personal-rest-day is-${isVacation ? "vacation" : item.type || "ordinary"} ${isVacation ? "has-vacation" : ""} ${isToday ? "is-today" : ""} ${selectedDay?.dateKey === dateKey ? "is-selected" : ""}`}
               style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
+              onClick={onDaySelect ? () => onDaySelect({ dateKey, code: displayCode, source: month.source }) : undefined}
+              aria-label={onDaySelect ? `${day} de ${MONTHS_ES[month.month - 1]}: ${displayCode || ({ rest: "descanso", week: "descanso", holiday: "festivo inhábil", requested: "lista de espera" }[item.type] || "día laborable")}. Ver opciones de intercambio` : undefined}
             >
               <span>{day}</span>
               <small>{WEEKDAYS_ES[date.getDay()]}</small>
@@ -2656,7 +2661,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
                   {slPosition ? `${displayCode} · ${slPosition}` : displayCode || ({ rest: "DS", week: "DS", holiday: "FH", requested: "SL" }[item.type] || "")}
                 </strong>
               )}
-            </div>
+            </DayTag>
           );
         })}
       </div>
@@ -2752,6 +2757,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [selectedJornal, setSelectedJornal] = useState(null);
   const [selectedAnnualMonthKey, setSelectedAnnualMonthKey] = useState("");
   const [selectedPayroll, setSelectedPayroll] = useState(null);
+  const [selectedRestDay, setSelectedRestDay] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
   const [relayHours, setRelayHours] = useState({});
   const [savingRelayHourKey, setSavingRelayHourKey] = useState("");
@@ -3034,7 +3040,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   };
 
   if (!payload) {
-    return <PortalFeatureTemplate view={view} />;
+    return <>
+      <PortalFeatureTemplate view={view} />
+      {view === "rests" && <RestExchangePanel session={session} descansos={null} vacaciones={null} />}
+    </>;
   }
 
   return (
@@ -3349,9 +3358,13 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "rests") && descansos && (
         <div ref={descansosRef} className="portal-scroll-anchor">
-          <PortalCalendarPreview descansos={descansos} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries} />
+          <PortalCalendarPreview descansos={descansos} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries}
+            onDaySelect={view === "rests" ? setSelectedRestDay : undefined} selectedDay={selectedRestDay} />
         </div>
       )}
+
+      {view === "rests" && <RestExchangePanel session={session} descansos={descansos}
+        vacaciones={vacaciones} vacationEntries={vacationPayrollEntries} selectedDay={selectedRestDay} />}
 
       {(view === "all" || view === "holidays") && (
         <div ref={vacacionesRef} className="portal-scroll-anchor">
@@ -4196,6 +4209,8 @@ const NOTIFICATION_TYPES = {
   premium_modified: { label: "Prima", Icon: ReceiptText, tone: "premium-change" },
   new_payroll: { label: "Nómina", Icon: FileLock2, tone: "payroll" },
   rests_changed: { label: "Descansos", Icon: CalendarDays, tone: "rests" },
+  rest_proposal: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
+  rest_response: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
   vacations_changed: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   exceptions_changed: { label: "Excepciones", Icon: CalendarOff, tone: "exceptions" }
 };

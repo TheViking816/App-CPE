@@ -86,6 +86,53 @@ export async function loginUser({ chapa, password }) {
   return data;
 }
 
+export async function getRestExchange({ token }) {
+  if (!supabase || !token) return { offers: [], proposals: [] };
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_list", { p_token: token });
+  if (error) throw error;
+  return data || { offers: [], proposals: [] };
+}
+
+export async function publishRestExchange({ token, kind, offeredDate = null, wantedDate = null }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_publish", {
+    p_token: token, p_kind: kind, p_offered_date: offeredDate, p_wanted_date: wantedDate
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function proposeRestExchange({ token, offerId, offeredDate = null }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_propose", {
+    p_token: token, p_offer_id: offerId, p_offered_date: offeredDate
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function decideRestExchange({ token, proposalId, accept }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_decide", {
+    p_token: token, p_proposal_id: proposalId, p_accept: accept
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelRestExchange({ token, offerId }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_cancel", {
+    p_token: token, p_offer_id: offerId
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function withdrawRestExchange({ token, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_rest_exchange_withdraw", {
+    p_token: token, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function updateUserSpecialties({ token, specialties }) {
   if (!supabase) return null;
 

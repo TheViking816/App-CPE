@@ -6079,6 +6079,10 @@ select {
 .portal-day.personal-rest-day.is-other { border-color: #94a3b8; background: #e2e8f0; }
 .portal-day.personal-rest-day.has-vacation { border-color: #8b5cf6; background: #faf5ff; box-shadow: inset 0 0 0 1px #8b5cf6; }
 .portal-day.personal-rest-day strong { text-align: center; overflow-wrap: anywhere; }
+.portal-day.personal-rest-day[type="button"] { width: 100%; padding: 0; color: var(--ink); font: inherit; cursor: pointer; }
+.portal-day.personal-rest-day[type="button"]:hover { border-color: #3b82f6; box-shadow: 0 2px 9px rgba(37, 99, 235, .16); }
+.portal-day.personal-rest-day.is-selected { outline: 2px solid #2563eb; outline-offset: 1px; }
+.portal-day.personal-rest-day:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
 .personal-rest-legend { display: flex; flex-wrap: wrap; gap: 7px 13px; margin: 11px 0 4px; color: var(--muted); font-size: 11px; font-weight: 750; }
 .personal-rest-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .personal-rest-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #dbeafe; }
@@ -6089,6 +6093,43 @@ select {
 .personal-rest-legend i.is-requested { background: #fef08a; }
 .personal-rest-legend i.is-permission { background: #e0e7ff; }
 .personal-rest-legend i.is-training { background: #dcfce7; }
+
+.rest-exchange-panel { display: grid; gap: 13px; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: 0 7px 18px rgba(7,31,63,.06); scroll-margin-top: 18px; }
+.rest-exchange-heading p { margin: 0 0 3px; color: #376390; font-size: 11px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.rest-exchange-heading h2 { margin: 0; color: var(--ink); font-size: 22px; line-height: 1.2; }
+.rest-exchange-intro, .rest-exchange-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.rest-exchange-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border-radius: 11px; background: #eef3fa; }
+.rest-exchange-tabs button { min-height: 38px; padding: 6px; border: 0; border-radius: 8px; background: transparent; color: #4d627c; font: inherit; font-size: 11px; font-weight: 850; cursor: pointer; }
+.rest-exchange-tabs button.active { background: var(--card); color: #1e4d81; box-shadow: 0 2px 8px rgba(7,31,63,.1); }
+.rest-exchange-form, .rest-exchange-list { display: grid; gap: 11px; }
+.rest-exchange-form label { display: grid; gap: 5px; color: var(--ink); font-size: 12px; font-weight: 800; }
+.rest-exchange-form select { width: 100%; min-height: 43px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); font: inherit; }
+.rest-exchange-form > button, .rest-exchange-actions > button, .rest-exchange-proposal button { min-height: 40px; padding: 7px 12px; border: 0; border-radius: 9px; background: #1764ad; color: #fff; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; }
+.rest-exchange-panel button:disabled { opacity: .55; cursor: default; }
+.rest-exchange-error, .rest-exchange-notice { margin: 0; padding: 9px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.rest-exchange-error { background: #fef2f2; color: #b91c1c; }
+.rest-exchange-notice { background: #ecfdf5; color: #047857; }
+.rest-exchange-offer { display: grid; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); }
+.rest-exchange-offer-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+.rest-exchange-offer-head > div, .rest-exchange-dates > div { display: grid; gap: 2px; }
+.rest-exchange-offer-head span { color: #1764ad; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.rest-exchange-offer-head strong { color: var(--ink); font-size: 15px; }
+.rest-exchange-offer-head small, .rest-exchange-dates small { color: var(--muted); font-size: 10px; font-weight: 700; }
+.rest-exchange-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.rest-exchange-dates > div { padding: 9px; border-radius: 8px; background: #eef5ff; }
+.rest-exchange-dates strong { color: var(--ink); font-size: 12px; }
+.rest-exchange-actions { display: grid; gap: 6px; }
+.rest-exchange-actions small, .rest-exchange-status { color: var(--muted); font-size: 11px; }
+.rest-exchange-panel .rest-exchange-secondary { min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--muted); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.rest-exchange-proposal, .rest-exchange-agreement { display: grid; gap: 8px; padding: 10px; border-radius: 9px; background: #f0f7ff; color: var(--ink); font-size: 12px; }
+.rest-exchange-proposal > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.rest-exchange-agreement span { color: var(--muted); line-height: 1.4; }
+.rest-exchange-agreement a { color: #1764ad; font-weight: 850; }
+:root[data-theme="dark"] .rest-exchange-tabs, :root[data-theme="dark"] .rest-exchange-dates > div, :root[data-theme="dark"] .rest-exchange-proposal, :root[data-theme="dark"] .rest-exchange-agreement { background: #182d45; }
+:root[data-theme="dark"] .rest-exchange-tabs button { color: #adc0d5; }
+:root[data-theme="dark"] .rest-exchange-tabs button.active { color: #a9d3ff; }
+:root[data-theme="dark"] .rest-exchange-heading p, :root[data-theme="dark"] .rest-exchange-offer-head span { color: #9ec9f4; }
+:root[data-theme="dark"] .rest-exchange-agreement a { color: #9ec9f4; }
 
 .portal-sl-list {
   display: grid;
