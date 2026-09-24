@@ -33,4 +33,5 @@ jobs:
       - name: Verify Jornales access without exposing credentials
         env:
           CPE_NORAY_PILOT_72683_URL: ${{ secrets.CPE_NORAY_PILOT_72683_URL }}
-        run: node scripts/probe-noray-runner.js
+          CPE_NORAY_PILOT_HEADED: "1"
+        run: xvfb-run -a node scripts/probe-noray-runner.js

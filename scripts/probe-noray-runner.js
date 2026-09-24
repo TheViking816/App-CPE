@@ -32,7 +32,8 @@ export async function probeNoray({ rawUrl, browserType, httpFetch = fetch, write
   write(`HTTP directo: ${httpStatus}; desafío Cloudflare: ${httpChallenge ? "sí" : "no"}`);
 
   const launcher = browserType || (await import("playwright")).chromium;
-  const browser = await launcher.launch({ headless: true });
+  const headed = process.env.CPE_NORAY_PILOT_HEADED === "1";
+  const browser = await launcher.launch({ headless: !headed, ...(headed ? { channel: "chrome" } : {}) });
   try {
     const page = await browser.newPage();
     let navigation;
