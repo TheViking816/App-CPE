@@ -11,7 +11,7 @@ export function confirmedRestExchangeDays(descansos, vacaciones, vacationEntries
     for (const day of month.days) {
       if (day.dateKey < current || day.vacation || payrollVacationDays.has(day.dateKey)) continue;
       if (["DS", "FS"].includes(day.code)) rest.push({ date: day.dateKey, code: day.code });
-      else if (!day.code && !day.type) work.push({ date: day.dateKey });
+      else if (["", "SL"].includes(day.code)) work.push({ date: day.dateKey, code: day.code });
     }
   }
   return { rest, work };

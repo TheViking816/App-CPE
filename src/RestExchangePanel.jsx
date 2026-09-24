@@ -105,7 +105,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     const giving = kind !== "want" ? offeredDate : null;
     const needing = kind !== "give" ? wantedDate : null;
     if (giving && !restDates.has(giving)) return setError("Elige un DS o FS confirmado en tu portal.");
-    if (needing && !workDates.has(needing)) return setError("Elige un día laborable visible en tu portal.");
+    if (needing && !workDates.has(needing)) return setError("Elige un día disponible para solicitar en tu calendario del portal.");
     if ((kind === "swap" && (!giving || !needing || giving === needing))
       || (kind === "give" && !giving) || (kind === "want" && !needing)) {
       return setError("Selecciona los días correspondientes.");
@@ -173,7 +173,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           "Propuesta enviada. El autor recibirá una notificación."
         )}>Me interesa</button>
         {!canRespond && <small>{offer.offeredDate && !workDates.has(offer.offeredDate)
-          ? "Ese día no figura como laborable para ti en el portal."
+          ? "Ese día no figura como disponible para ti en el portal."
           : "No tienes el día solicitado como DS o FS confirmado."}</small>}
       </div>}
       {offer.isOwn && offer.status === "open" && <div className="rest-exchange-manage">
@@ -236,7 +236,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     {tab === "publish" && <form className="rest-exchange-form" onSubmit={publish}>
       {editingOfferId && <div className="rest-exchange-edit-heading"><strong>Editar publicación</strong><button type="button" className="rest-exchange-secondary" onClick={() => setEditingOfferId("")}>Cancelar edición</button></div>}
       {selectedDay && !restDates.has(selectedDay.dateKey) && !workDates.has(selectedDay.dateKey) &&
-        <p className="rest-exchange-note">El día seleccionado aún no consta como DS, FS o laborable confirmado en el portal. Elige otro día de las listas.</p>}
+        <p className="rest-exchange-note">El día seleccionado aún no consta como DS, FS o día disponible en el portal. Elige otro día de las listas.</p>}
       <label>Quiero publicar
         <select value={kind} onChange={(event) => setKind(event.target.value)}>
           <option value="swap">Intercambiar un descanso</option>
@@ -252,8 +252,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       </label>}
       {kind !== "give" && <label>Quiero
         <select value={wantedDate} onChange={(event) => setWantedDate(event.target.value)} required>
-          <option value="">Selecciona un día laborable</option>
-          {days.work.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)}</option>)}
+          <option value="">Selecciona un día</option>
+          {days.work.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)}{day.code ? ` · ${day.code}` : ""}</option>)}
         </select>
       </label>}
       <button type="submit" disabled={busy || loading}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>

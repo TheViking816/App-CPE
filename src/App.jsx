@@ -2517,7 +2517,6 @@ function PortalVacationPreview({ vacaciones, onDaySelect, selectedDay }) {
           );
         })}
       </div>
-      <p className="portal-vacation-procedure-note">Para intercambiar vacaciones con un compañero, entra en «Solicitud Vacaciones» y elige «Intercambio». Comprueba después si hay alguna cesión o intercambio pendiente de confirmar.</p>
       <a className="portal-official-action" href="https://portal.cpevalencia.com/#User,ViewNoray,16" target="_blank" rel="noreferrer">
         Abrir intercambio de vacaciones en el Portal <ExternalLink size={15} />
       </a>
