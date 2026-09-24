@@ -47,6 +47,12 @@ export async function probeNoray({ rawUrl, browserType, httpFetch = fetch, write
     write(`Navegador del runner: HTTP ${navigation?.status() || "sin respuesta"}; desafío Cloudflare: ${browserChallenge ? "sí" : "no"}`);
     if (browserChallenge) throw new Error("Cloudflare desafió al navegador del runner");
 
+    // Allow the actual Noray page to perform its normal initialization before probing its API.
+    await page.waitForTimeout(8000);
+    const initializedBody = await page.locator("body").innerText({ timeout: 10000 }).catch(() => "");
+    const clearancePresent = (await page.context().cookies(ORIGIN)).some((cookie) => cookie.name === "cf_clearance");
+    write(`Página inicializada: ${/Jornales|Primas/i.test(initializedBody) ? "sí" : "no"}; autorización Cloudflare en navegador: ${clearancePresent ? "sí" : "no"}`);
+
     const auth = await page.evaluate(async () => {
       const params = new URLSearchParams(location.search);
       const response = await fetch("/api/v1/auth/validar-acceso", {
