@@ -1,6 +1,8 @@
-const PILOT_CHAPA = "72683";
 const NORAY_ORIGIN = "https://norayweb.cpevalencia.com";
 const SECTIONS = new Set([
+  "disponibilidad12m",
+  "dobles",
+  "puertas",
   "jornales",
   "donde-voy",
   "mis-especialidades",
@@ -71,8 +73,8 @@ export default async function handler(request, response) {
     if (
       target.origin !== NORAY_ORIGIN ||
       target.pathname !== `/${section}` ||
-      target.searchParams.get("usr") !== PILOT_CHAPA ||
-      target.searchParams.get("rec") !== "2611" ||
+      !/^\d{4,8}$/.test(target.searchParams.get("usr") || "") ||
+      !/^[1-9]\d{0,9}$/.test(target.searchParams.get("rec") || "") ||
       !/^[a-f0-9]{64}$/.test(target.searchParams.get("pwd") || "")
     ) {
       return sendError(response, 502, "El enlace del portal no es válido.");

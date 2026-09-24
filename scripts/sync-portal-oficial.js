@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import { isPremiumCredentialNotice, isExplicitSectionFailure } from "./portal-sync-outcome.js";
+import { norayRegistroFromUrl } from "./noray-iframe-identity.js";
 import { readPortalSectionWithRetry } from "./portal-section-retry.js";
 import { hasAuthoritativeNoAssignments } from "./portal-assignment-empty.js";
 import path from "node:path";
@@ -3466,6 +3467,19 @@ async function main() {
     || context.pages()[0]
     || await context.newPage();
   let latestProgressSnapshot = null;
+  let observedNorayRegistro = null;
+  // The worker sees iframe requests during normal sync. Keep only the user's
+  // registro number, never the credential-bearing iframe address.
+  context.on("request", (request) => {
+    const registro = norayRegistroFromUrl(request.url(), portalUser);
+    if (registro) observedNorayRegistro = registro;
+  });
+  for (const openPage of context.pages()) {
+    for (const frame of openPage.frames()) {
+      const registro = norayRegistroFromUrl(frame.url(), portalUser);
+      if (registro) observedNorayRegistro = registro;
+    }
+  }
 
   try {
     const updatedAt = new Date().toISOString();
@@ -3511,6 +3525,7 @@ async function main() {
       const nominas = await collectPayrolls(page);
       const payload = {
         ...(existingSnapshot?.payload || {}),
+        ...(observedNorayRegistro ? { norayRegistro: observedNorayRegistro } : {}),
         nominas,
         sync: {
           inProgress: false,
@@ -3640,12 +3655,14 @@ async function main() {
     const hasVacationData = (value) => Boolean(value?.recognized);
     const hasExceptionData = (value) => Boolean(value?.recognized);
     const progressPayload = { ...(existingSnapshot?.payload || {}) };
+    if (observedNorayRegistro) progressPayload.norayRegistro = observedNorayRegistro;
     delete progressPayload.disponibilidad;
     // La bandeja no forma parte de App CPE. Eliminar también cualquier copia
     // antigua mientras se publica el progreso de una nueva sincronización.
     delete progressPayload.mensajes;
     const publishProgress = async (section, value, stage) => {
       progressPayload[section] = value;
+      if (observedNorayRegistro) progressPayload.norayRegistro = observedNorayRegistro;
       progressPayload.sync = {
         inProgress: true,
         stage,
@@ -3822,6 +3839,9 @@ async function main() {
     }
 
     const payload = {
+      ...(observedNorayRegistro || existingSnapshot?.payload?.norayRegistro
+        ? { norayRegistro: observedNorayRegistro || existingSnapshot.payload.norayRegistro }
+        : {}),
       jornales,
       asignaciones,
       descansos,

@@ -7,7 +7,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
-import { NORAY_PILOT_CHAPA, PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
+import { PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -3975,6 +3975,22 @@ function PortalPanel({
 }
 
 function LinksPanel({ session }) {
+  const [showNorayLinks, setShowNorayLinks] = useState(false);
+
+  useEffect(() => {
+    if (!session?.token || session.supportAccess) {
+      setShowNorayLinks(false);
+      return undefined;
+    }
+    let cancelled = false;
+    getPortalAutoSyncStatus({ token: session.token })
+      .then((status) => {
+        if (!cancelled) setShowNorayLinks(Boolean(status?.enabled && status?.syncStatus === "active" && status?.lastSuccessAt));
+      })
+      .catch(() => { if (!cancelled) setShowNorayLinks(false); });
+    return () => { cancelled = true; };
+  }, [session?.token, session?.supportAccess]);
+
   return (
     <section className="page-panel portal-links-panel">
       <div className="section-heading">
@@ -3987,7 +4003,7 @@ function LinksPanel({ session }) {
         </span>
         <ExternalLink size={19} aria-hidden="true" />
       </a>
-      {session?.chapa === NORAY_PILOT_CHAPA && !session.supportAccess && (
+      {showNorayLinks && (
         <div className="portal-link-groups">
           {PORTAL_LINK_GROUPS.map((group) => (
             <section className="portal-link-group" key={group.title}>

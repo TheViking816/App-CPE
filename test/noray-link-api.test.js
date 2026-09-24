@@ -19,7 +19,7 @@ test("el puente rechaza secciones no verificadas sin consultar credenciales", as
   assert.equal(result.headers.location, undefined);
 });
 
-test("el puente solo redirige al iframe y a la chapa del piloto", async () => {
+test("el puente redirige al iframe personalizado que autoriza la base", async () => {
   const oldFetch = globalThis.fetch;
   const oldUrl = process.env.VITE_SUPABASE_URL;
   const oldKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -29,18 +29,18 @@ test("el puente solo redirige al iframe y a la chapa del piloto", async () => {
   globalThis.fetch = async (_url, options) => {
     requested.push(JSON.parse(options.body));
     return new Response(JSON.stringify(
-      `https://norayweb.cpevalencia.com/jornales?cal=gwt&mode=PROD&req=login&usr=72683&rec=2611&pwd=${"a".repeat(64)}`
+      `https://norayweb.cpevalencia.com/puertas?cal=gwt&mode=PROD&req=login&usr=72710&rec=4321&pwd=${"a".repeat(64)}`
     ), { status: 200 });
   };
 
   try {
     const result = response();
-    await handler({ method: "POST", headers: {}, body: { token: "test-token", section: "jornales" } }, result);
+    await handler({ method: "POST", headers: {}, body: { token: "test-token", section: "puertas" } }, result);
     assert.equal(result.statusCode, 303);
     assert.equal(result.headers["cache-control"], "private, no-store, max-age=0");
     assert.equal(result.headers["referrer-policy"], "no-referrer");
-    assert.equal(new URL(result.headers.location).pathname, "/jornales");
-    assert.deepEqual(requested, [{ p_token: "test-token", p_section: "jornales" }]);
+    assert.equal(new URL(result.headers.location).pathname, "/puertas");
+    assert.deepEqual(requested, [{ p_token: "test-token", p_section: "puertas" }]);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldUrl === undefined) delete process.env.VITE_SUPABASE_URL;
