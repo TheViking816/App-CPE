@@ -20,6 +20,15 @@ test("guarda el grupo profesional del portal separado del grupo de descanso", ()
   assert.equal(parsed.worker.group, "A - V");
 });
 
+test("conserva el grupo profesional RTT sin mezclarlo con el de descanso", () => {
+  const parsed = parseDescansos([
+    "<div>Grupo Profesional: (G-DA ) - solo RTT<br>Grupo de Descanso 2024: C - N</div>",
+    restLink(2026, 9, 24), restLink(2026, 10, 2)
+  ].join(""), new Date("2026-09-23T12:00:00.000Z"));
+  assert.equal(parsed.worker.professionalGroup, "(G-DA ) - solo RTT");
+  assert.equal(parsed.worker.group, "C - N");
+});
+
 test("al cambiar de agosto a septiembre publica septiembre y octubre", () => {
   const now = new Date("2026-09-02T00:30:00.000Z");
   const parsed = parseDescansos([
