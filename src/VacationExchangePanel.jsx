@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
+import { conversationHash } from "./ExchangeConversations.jsx";
+import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { assignedVacationDays, canRespondToVacationOffer, dateRangeKeys, vacationSelectionPatch } from "./vacationExchange.js";
 import {
@@ -30,7 +31,6 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
   const [wantedStart, setWantedStart] = useState("");
   const [wantedEnd, setWantedEnd] = useState("");
   const [editingOfferId, setEditingOfferId] = useState("");
-  const [activeChatId, setActiveChatId] = useState("");
   const [data, setData] = useState({ offers: [], proposals: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -78,6 +78,10 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
   }, [selectedDay]);
 
   async function mutate(action, message) {
+    if (EXCHANGE_PREVIEW_READ_ONLY) {
+      setError("Esta vista previa está en modo consulta para proteger los datos de producción.");
+      return;
+    }
     setBusy(true);
     setError("");
     setNotice("");
@@ -143,12 +147,9 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
     const minePending = related.find((proposal) => proposal.isOwn && proposal.status === "pending");
     const canRespond = canRespondToVacationOffer(offer, assignedDays);
     const chatButton = (proposal) => <button type="button" className="rest-exchange-secondary"
-      onClick={() => setActiveChatId((current) => current === proposal.id ? "" : proposal.id)}>
-      {activeChatId === proposal.id ? "Cerrar chat" : "Chat privado"}
+      onClick={() => { window.location.hash = conversationHash("vacation", proposal.id); }}>
+      Abrir conversación
     </button>;
-    const chat = (proposal) => activeChatId === proposal.id
-      ? <PrivateExchangeChat type="vacation" token={session.token} proposalId={proposal.id}
-          canWrite={["pending", "accepted"].includes(proposal.status)} /> : null;
 
     return <article className="rest-exchange-offer" key={offer.id}>
       <div className="rest-exchange-offer-head">
@@ -181,7 +182,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
       {minePending && <div className="rest-exchange-manage">{chatButton(minePending)}
         <button type="button" className="rest-exchange-secondary" disabled={busy}
           onClick={() => mutate(() => withdrawVacationExchange({ token: session.token, proposalId: minePending.id }),
-            "Propuesta retirada.")}>Retirar mi propuesta</button>{chat(minePending)}</div>}
+            "Propuesta retirada.")}>Retirar mi propuesta</button></div>}
       {personal && related.filter((proposal) => proposal.status === "pending" && !proposal.isOwn)
         .map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
           <span>{proposal.proposerName} ofrece {formatRange(offer.wantedStart, offer.wantedEnd)} y quiere {formatRange(offer.offeredStart, offer.offeredEnd)}.</span>
@@ -194,7 +195,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
               () => decideVacationExchange({ token: session.token, proposalId: proposal.id, accept: false }),
               "Propuesta rechazada."
             )}>Rechazar</button>
-          </div>{chat(proposal)}
+          </div>
         </div>)}
       {personal && related.filter((proposal) => proposal.status === "accepted").map((proposal) => <div className="rest-exchange-agreement" key={proposal.id}>
         <strong>Acuerdo con {counterpartName(offer, proposal)} {proposal.counterpartChapa}</strong>
@@ -202,12 +203,13 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
         <span>En «Solicitud Vacaciones → Intercambio», indica CEDO: {formatRange(offer.isOwn ? offer.offeredStart : offer.wantedStart, offer.isOwn ? offer.offeredEnd : offer.wantedEnd)}; CAMBIO CON: chapa {proposal.counterpartChapa}; ME CEDE: {formatRange(offer.isOwn ? offer.wantedStart : offer.offeredStart, offer.isOwn ? offer.wantedEnd : offer.offeredEnd)}.</span>
         <span>El acuerdo en esta app no cambia tus vacaciones. Tramitadlo y comprobad su confirmación en el portal.</span>
         <a href="https://portal.cpevalencia.com/#User,ViewNoray,16" target="_blank" rel="noreferrer">Abrir intercambio en el Portal CPE ↗</a>
-        {chatButton(proposal)}{chat(proposal)}
+        {chatButton(proposal)}
       </div>)}
     </article>;
   }
 
   return <section className="rest-exchange-panel vacation-exchange-panel" ref={panelRef}>
+    {EXCHANGE_PREVIEW_READ_ONLY && <p className="rest-exchange-note">Vista previa en modo consulta. No se guardarán cambios en las ofertas.</p>}
     <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambiar vacaciones</h2></div></div>
     <p className="rest-exchange-intro">Publica un día suelto o un periodo seguido que tengas asignado y el periodo de igual duración que prefieres. El acuerdo se tramita y confirma en el Portal CPE.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">

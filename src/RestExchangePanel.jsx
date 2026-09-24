@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
-import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
+import { conversationHash } from "./ExchangeConversations.jsx";
+import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import {
   cancelRestExchange,
@@ -36,7 +37,6 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const [offeredDate, setOfferedDate] = useState("");
   const [wantedDate, setWantedDate] = useState("");
   const [editingOfferId, setEditingOfferId] = useState("");
-  const [activeChatId, setActiveChatId] = useState("");
   const [data, setData] = useState({ offers: [], proposals: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -86,6 +86,10 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   }, [selectedDay]);
 
   async function mutate(action, successMessage) {
+    if (EXCHANGE_PREVIEW_READ_ONLY) {
+      setError("Esta vista previa está en modo consulta para proteger los datos de producción.");
+      return;
+    }
     setBusy(true);
     setError("");
     setNotice("");
@@ -147,12 +151,9 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     const myProposal = proposals.find((proposal) => proposal.isOwn && ["pending", "accepted"].includes(proposal.status));
     const canRespond = canRespondToRestOffer(offer, restDates, workDates);
     const chatButton = (proposal) => <button type="button" className="rest-exchange-secondary"
-      onClick={() => setActiveChatId((current) => current === proposal.id ? "" : proposal.id)}>
-      {activeChatId === proposal.id ? "Cerrar chat" : "Chat privado"}
+      onClick={() => { window.location.hash = conversationHash("rest", proposal.id); }}>
+      Abrir conversación
     </button>;
-    const chat = (proposal) => activeChatId === proposal.id
-      ? <PrivateExchangeChat token={session.token} proposalId={proposal.id}
-          canWrite={["pending", "accepted"].includes(proposal.status)} /> : null;
     return <article className="rest-exchange-offer" key={offer.id}>
       <div className="rest-exchange-offer-head">
         <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
@@ -187,7 +188,6 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
         {chatButton(myProposal)}
         <button type="button" className="rest-exchange-secondary" disabled={busy}
           onClick={() => mutate(() => withdrawRestExchange({ token: session.token, proposalId: myProposal.id }), "Propuesta retirada.")}>Retirar mi propuesta</button>
-        {chat(myProposal)}
       </div>}
       {personal && proposals.filter((proposal) => proposal.status === "pending" && !proposal.isOwn).map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
         <span>{offer.kind === "give"
@@ -202,7 +202,6 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: false }),
           "Propuesta rechazada."
         )}>Rechazar</button></div>
-        {chat(proposal)}
       </div>)}
       {personal && proposals.filter((proposal) => proposal.status === "accepted").map((proposal) => {
         const procedure = restPortalProcedure(offer, proposal);
@@ -218,13 +217,13 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           <span>El acuerdo aquí no modifica el calendario oficial. Comprueba el estado de la petición en el Portal CPE.</span>
           <a href={procedure.url} target="_blank" rel="noreferrer">{procedure.label} ↗</a>
           {chatButton(proposal)}
-          {chat(proposal)}
         </div>;
       })}
     </article>;
   }
 
   return <section className="rest-exchange-panel" ref={panelRef}>
+    {EXCHANGE_PREVIEW_READ_ONLY && <p className="rest-exchange-note">Vista previa en modo consulta. No se guardarán cambios en las ofertas.</p>}
     <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambios y cesiones</h2></div></div>
     <p className="rest-exchange-intro">Publica un DS o FS, busca el día que necesitas y acordadlo aquí. El cambio solo será efectivo cuando lo tramitéis en el portal oficial.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">

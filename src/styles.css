@@ -6189,6 +6189,61 @@ select {
 .rest-exchange-chat label { font-weight: 800; }
 .rest-exchange-chat textarea { width: 100%; box-sizing: border-box; padding: 9px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; }
 .rest-exchange-chat form button { min-height: 38px; border: 0; border-radius: 8px; background: #1764ad; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.exchange-inbox { display: grid; gap: 18px; max-width: 1180px; margin: 0 auto; color: var(--ink); }
+.exchange-inbox-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+.exchange-inbox-header span { color: #1764ad; font-size: 11px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.exchange-inbox-header h1 { margin: 4px 0; font-size: clamp(24px, 4vw, 32px); }
+.exchange-inbox-header p { margin: 0; color: var(--muted); font-size: 13px; }
+.exchange-inbox-unread, .exchange-inbox-count { flex: none; padding: 5px 9px; border-radius: 999px; background: #1764ad; color: #fff; font-size: 11px; }
+.exchange-inbox-preview-note { margin: -6px 0 0; padding: 10px 14px; border-radius: 10px; background: #fff7e6; color: #805200; font-size: 12px; }
+.exchange-inbox-shell { display: grid; grid-template-columns: minmax(310px, 39%) minmax(0, 1fr); min-height: 560px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--card); box-shadow: 0 10px 30px rgba(19, 48, 79, .06); }
+.exchange-inbox-list { min-width: 0; border-right: 1px solid var(--line); }
+.exchange-inbox-filters, .exchange-inbox-types { display: flex; gap: 5px; padding: 12px 14px 0; }
+.exchange-inbox-filters button, .exchange-inbox-types button { border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.exchange-inbox-filters button { flex: 1; min-height: 38px; }
+.exchange-inbox-filters span { margin-left: 4px; opacity: .75; }
+.exchange-inbox-types { padding-bottom: 12px; }
+.exchange-inbox-types button { padding: 6px 10px; }
+.exchange-inbox-filters button.is-active, .exchange-inbox-types button.is-active { background: #eaf3ff; color: #145a9d; }
+.exchange-inbox-rows { display: grid; align-content: start; max-height: 660px; overflow-y: auto; }
+.exchange-inbox-row { display: flex; align-items: start; gap: 11px; width: 100%; padding: 15px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.exchange-inbox-row:hover, .exchange-inbox-row.is-selected { background: #f1f7ff; }
+.exchange-inbox-avatar { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #145a9d; background: #eaf3ff; }
+.exchange-inbox-avatar.is-vacation { color: #a35a0b; background: #fff3db; }
+.exchange-inbox-row-copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
+.exchange-inbox-row-top { display: flex; justify-content: space-between; gap: 7px; }
+.exchange-inbox-row-top strong, .exchange-inbox-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exchange-inbox-row-top strong { font-size: 13px; }
+.exchange-inbox-row small, .exchange-inbox-detail-head small { color: var(--muted); font-size: 11px; }
+.exchange-inbox-preview { color: var(--muted); font-size: 12px; }
+.exchange-inbox-empty, .exchange-inbox-placeholder { display: grid; place-content: center; justify-items: center; gap: 8px; min-height: 230px; padding: 25px; color: var(--muted); text-align: center; font-size: 12px; }
+.exchange-inbox-empty strong, .exchange-inbox-placeholder strong { color: var(--ink); font-size: 14px; }
+.exchange-inbox-error { padding: 15px; color: #b42318; }
+.exchange-inbox-detail { display: grid; align-content: start; min-width: 0; }
+.exchange-inbox-detail-head { display: flex; align-items: center; gap: 11px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.exchange-inbox-detail-head div { display: grid; gap: 3px; }
+.exchange-inbox-detail-head strong { font-size: 14px; }
+.exchange-inbox-back { display: none; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.exchange-inbox-context { display: flex; gap: 8px; padding: 13px 18px; border-bottom: 1px solid var(--line); }
+.exchange-inbox-context span { display: grid; flex: 1; gap: 3px; padding: 10px; border-radius: 9px; background: #f1f7ff; }
+.exchange-inbox-context small { color: var(--muted); font-size: 11px; }
+.exchange-inbox-context strong { font-size: 12px; }
+.exchange-inbox-detail .rest-exchange-chat { border: 0; border-radius: 0; padding: 18px; }
+.exchange-inbox-detail .rest-exchange-messages { max-height: 440px; min-height: 210px; }
+.exchange-inbox-readonly { margin: 0 18px 18px; color: var(--muted); font-size: 12px; }
+@media (max-width: 720px) {
+  .exchange-inbox-header { padding: 18px; }
+  .exchange-inbox-shell { display: block; min-height: 480px; }
+  .exchange-inbox-list { border-right: 0; }
+  .exchange-inbox-list.has-selection { display: none; }
+  .exchange-inbox-detail { display: none; }
+  .exchange-inbox-detail.has-selection { display: grid; }
+  .exchange-inbox-back { display: grid; place-items: center; padding: 6px; }
+  .exchange-inbox-detail .rest-exchange-messages { max-height: 45vh; }
+}
+:root[data-theme="dark"] .exchange-inbox-row:hover, :root[data-theme="dark"] .exchange-inbox-row.is-selected,
+:root[data-theme="dark"] .exchange-inbox-context span, :root[data-theme="dark"] .exchange-inbox-filters button.is-active,
+:root[data-theme="dark"] .exchange-inbox-types button.is-active { background: #182d45; color: #a9d3ff; }
 :root[data-theme="dark"] .rest-exchange-message { background: #1b3c5d; }
 :root[data-theme="dark"] .rest-exchange-message.is-own { background: #1b5648; }
 :root[data-theme="dark"] .rest-exchange-tabs, :root[data-theme="dark"] .rest-exchange-dates > div, :root[data-theme="dark"] .rest-exchange-proposal, :root[data-theme="dark"] .rest-exchange-agreement { background: #182d45; }

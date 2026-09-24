@@ -12,6 +12,8 @@ test("restaura varias secciones internas desde su hash", () => {
   assert.equal(tabFromHash("#/vacaciones"), "vacaciones");
   assert.equal(tabFromHash("#/nominas"), "nominas");
   assert.equal(tabFromHash("#/estado"), "estado");
+  assert.equal(tabFromHash("#/conversaciones"), "conversaciones");
+  assert.equal(tabFromHash("#/conversaciones/rest/00000000-0000-0000-0000-000000000001"), "conversaciones");
 });
 
 test("normaliza rutas válidas y usa Inicio para rutas desconocidas", () => {

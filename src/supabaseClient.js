@@ -118,6 +118,47 @@ export async function getRestExchangeMessages({ token, proposalId }) {
   return data || [];
 }
 
+export async function getExchangeThreads({ token }) {
+  const { data, error } = await supabase.rpc("app_cpe_exchange_threads", { p_token: token });
+  if (error && !["PGRST202", "42883"].includes(error.code)) throw error;
+  if (error) {
+    // A Git preview can use the current database before its branch migration is applied.
+    const [rests, vacations] = await Promise.all([
+      getRestExchange({ token }), getVacationExchange({ token })
+    ]);
+    const restThreads = (rests.proposals || []).flatMap((proposal) => {
+      const offer = (rests.offers || []).find((item) => item.id === proposal.offerId);
+      if (!offer) return [];
+      return [{ type: "rest", proposalId: proposal.id, offerId: offer.id,
+        counterpartName: offer.isOwn ? proposal.proposerName : offer.ownerName,
+        counterpartChapa: proposal.counterpartChapa || null, status: proposal.status,
+        offerStatus: offer.status, offered: offer.isOwn ? offer.offeredDate : proposal.offeredDate,
+        wanted: offer.isOwn ? offer.wantedDate : offer.offeredDate,
+        createdAt: proposal.createdAt, lastAt: proposal.createdAt, lastMessage: null, unread: 0 }];
+    });
+    const vacationThreads = (vacations.proposals || []).flatMap((proposal) => {
+      const offer = (vacations.offers || []).find((item) => item.id === proposal.offerId);
+      if (!offer) return [];
+      return [{ type: "vacation", proposalId: proposal.id, offerId: offer.id,
+        counterpartName: offer.isOwn ? proposal.proposerName : offer.ownerName,
+        counterpartChapa: proposal.counterpartChapa || null, status: proposal.status,
+        offerStatus: offer.status, offered: offer.isOwn ? offer.offeredStart : offer.wantedStart,
+        wanted: offer.isOwn ? offer.wantedStart : offer.offeredStart,
+        createdAt: proposal.createdAt, lastAt: proposal.createdAt, lastMessage: null, unread: 0 }];
+    });
+    return [...restThreads, ...vacationThreads].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  }
+  return data || [];
+}
+
+export async function markExchangeThreadRead({ token, type, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_exchange_mark_read", {
+    p_token: token, p_type: type, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function sendRestExchangeMessage({ token, proposalId, body }) {
   const { data, error } = await supabase.rpc("app_cpe_rest_exchange_send_message", {
     p_token: token, p_proposal_id: proposalId, p_body: body

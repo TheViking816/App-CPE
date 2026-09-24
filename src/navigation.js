@@ -15,6 +15,7 @@ export const VALID_TABS = new Set([
   "portal",
   "tablon",
   "foro",
+  "conversaciones",
   "enlaces",
   "monitor"
 ]);

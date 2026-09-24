@@ -7,6 +7,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
+import ExchangeConversations, { conversationHash } from "./ExchangeConversations.jsx";
 import { PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
 import {
   BriefcaseBusiness,
@@ -275,6 +276,7 @@ const SIDE_NAV_GROUPS = [
   {
     label: "Comunidad",
     items: [
+      { id: "conversaciones", label: "Conversaciones", Icon: MessageCircle },
       { id: "foro", label: "Foro", Icon: MessageCircle }
     ]
   },
@@ -4444,7 +4446,10 @@ export function App() {
       const allowedTab = nextTab === "monitor" && !isAdmin ? "inicio" : nextTab;
       setActiveTab(allowedTab);
       const canonicalHash = hashForTab(allowedTab);
-      if (window.location.hash !== canonicalHash) window.history.replaceState(null, "", canonicalHash);
+      if (window.location.hash !== canonicalHash
+        && !/^#\/conversaciones\/(rest|vacation)\/[0-9a-f-]{36}$/i.test(window.location.hash)) {
+        window.history.replaceState(null, "", canonicalHash);
+      }
     };
     syncTabFromHash();
     window.addEventListener("hashchange", syncTabFromHash);
@@ -4516,7 +4521,11 @@ export function App() {
       }));
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => refreshNotifications({ quiet: true }));
     }
-    navigateToTab(item.targetTab || "novedades");
+    if (["rest_message", "vacation_message"].includes(item.eventType) && item.metadata?.proposalId) {
+      window.location.hash = conversationHash(item.eventType === "rest_message" ? "rest" : "vacation", item.metadata.proposalId);
+    } else {
+      navigateToTab(item.targetTab || "novedades");
+    }
   };
 
   const markAllNotificationsRead = async () => {
@@ -5014,6 +5023,7 @@ export function App() {
           />
         )}
         {activeTab === "enlaces" && <LinksPanel session={session} />}
+        {activeTab === "conversaciones" && <ExchangeConversations session={session} />}
         {activeTab === "foro" && <ForumPanel session={session} onLatestMessage={handleLatestForumMessage} />}
         {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
         {activeTab !== "foro" && <ContactFooter />}
