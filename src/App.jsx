@@ -88,6 +88,7 @@ import {
   getOfficialPortalDocument,
   getOfficialPortalSnapshot,
   getPortalAutoSyncStatus,
+  canOpenNorayLinks,
   getPortalSyncJob,
   getUserRelayHours,
   getUserRemateHours,
@@ -3978,18 +3979,18 @@ function LinksPanel({ session }) {
   const [showNorayLinks, setShowNorayLinks] = useState(false);
 
   useEffect(() => {
-    if (!session?.token || session.supportAccess) {
+    if (!session?.token) {
       setShowNorayLinks(false);
       return undefined;
     }
     let cancelled = false;
-    getPortalAutoSyncStatus({ token: session.token })
-      .then((status) => {
-        if (!cancelled) setShowNorayLinks(Boolean(status?.enabled && status?.syncStatus === "active" && status?.lastSuccessAt));
+    canOpenNorayLinks({ token: session.token })
+      .then((available) => {
+        if (!cancelled) setShowNorayLinks(available);
       })
       .catch(() => { if (!cancelled) setShowNorayLinks(false); });
     return () => { cancelled = true; };
-  }, [session?.token, session?.supportAccess]);
+  }, [session?.token]);
 
   return (
     <section className="page-panel portal-links-panel">

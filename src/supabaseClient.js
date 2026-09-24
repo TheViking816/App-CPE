@@ -733,6 +733,15 @@ export async function getPortalAutoSyncStatus({ token }) {
   return data || null;
 }
 
+export async function canOpenNorayLinks({ token }) {
+  if (!supabase || !token) return false;
+  const { data, error } = await supabase.rpc("app_cpe_can_open_noray_links", {
+    p_token: token
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 export async function getUserNotifications({ token, limit = 100 }) {
   if (!supabase || !token) return { rows: [], unread: 0 };
   const { data, error } = await supabase.rpc("app_cpe_get_notifications", {
