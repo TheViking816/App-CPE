@@ -143,7 +143,9 @@ export async function getExchangeThreads({ token }) {
         counterpartName: offer.isOwn ? proposal.proposerName : offer.ownerName,
         counterpartChapa: proposal.counterpartChapa || null, status: proposal.status,
         offerStatus: offer.status, offered: offer.isOwn ? offer.offeredStart : offer.wantedStart,
+        offeredEnd: offer.isOwn ? offer.offeredEnd : offer.wantedEnd,
         wanted: offer.isOwn ? offer.wantedStart : offer.offeredStart,
+        wantedEnd: offer.isOwn ? offer.wantedEnd : offer.offeredEnd,
         createdAt: proposal.createdAt, lastAt: proposal.createdAt, lastMessage: null, unread: 0 }];
     });
     return [...restThreads, ...vacationThreads].sort((a, b) => b.lastAt.localeCompare(a.lastAt));

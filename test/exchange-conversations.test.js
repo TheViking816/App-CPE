@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const migration = readFileSync(new URL("../supabase/migrations/20260924210948_exchange_conversations_inbox.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../supabase/migrations/20260924214448_exchange_conversations_inbox.sql", import.meta.url), "utf8");
 const restPanel = readFileSync(new URL("../src/RestExchangePanel.jsx", import.meta.url), "utf8");
 const vacationPanel = readFileSync(new URL("../src/VacationExchangePanel.jsx", import.meta.url), "utf8");
 

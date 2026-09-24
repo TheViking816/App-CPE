@@ -55,7 +55,8 @@ begin
     'type', t.exchange_type, 'proposalId', t.proposal_id, 'offerId', t.offer_id,
     'counterpartName', t.counterpart_name, 'counterpartChapa', t.counterpart_chapa,
     'status', t.proposal_status, 'offerStatus', t.offer_status,
-    'offered', t.offered_label, 'wanted', t.wanted_label,
+    'offered', t.offered_label, 'offeredEnd', t.offered_end_label,
+    'wanted', t.wanted_label, 'wantedEnd', t.wanted_end_label,
     'createdAt', t.created_at, 'lastAt', coalesce(t.message_at, t.created_at),
     'lastMessage', t.message_body, 'lastMessageIsOwn', t.message_sender_id = v_user.id,
     'unread', t.unread_count
@@ -70,6 +71,7 @@ begin
       p.status proposal_status, o.status offer_status,
       case when o.owner_id = v_user.id then o.offered_date else p.offered_date end offered_label,
       case when o.owner_id = v_user.id then o.wanted_date else o.offered_date end wanted_label,
+      null::date offered_end_label, null::date wanted_end_label,
       p.created_at, lm.body message_body, lm.created_at message_at, lm.sender_id message_sender_id,
       (select count(*) from public.app_cpe_rest_messages m
        where m.proposal_id = p.id and m.sender_id <> v_user.id
@@ -94,6 +96,8 @@ begin
       p.status, o.status,
       case when o.owner_id = v_user.id then o.offered_start else o.wanted_start end,
       case when o.owner_id = v_user.id then o.wanted_start else o.offered_start end,
+      case when o.owner_id = v_user.id then o.offered_end else o.wanted_end end,
+      case when o.owner_id = v_user.id then o.wanted_end else o.offered_end end,
       p.created_at, lm.body, lm.created_at, lm.sender_id,
       (select count(*) from public.app_cpe_vacation_messages m
        where m.proposal_id = p.id and m.sender_id <> v_user.id

@@ -23,6 +23,11 @@ function formatDate(value) {
   }).format(date);
 }
 
+function formatRange(start, end) {
+  const first = formatDate(start);
+  return end && end !== start ? `${first} – ${formatDate(end)}` : first;
+}
+
 function formatWhen(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -148,8 +153,8 @@ export default function ExchangeConversations({ session }) {
               <small>{selected.type === "rest" ? "Descanso" : "Vacaciones"} · {threadStatus(selected)}</small></div>
           </div>
           <div className="exchange-inbox-context">
-            <span><small>Tengo</small><strong>{formatDate(selected.offered) || "—"}</strong></span>
-            <span><small>Quiero</small><strong>{formatDate(selected.wanted) || "—"}</strong></span>
+            <span><small>Tengo</small><strong>{formatRange(selected.offered, selected.offeredEnd) || "—"}</strong></span>
+            <span><small>Quiero</small><strong>{formatRange(selected.wanted, selected.wantedEnd) || "—"}</strong></span>
           </div>
           <PrivateExchangeChat key={selectedKey} token={session.token} type={selected.type}
             proposalId={selected.proposalId} canWrite={isActive(selected) && !EXCHANGE_PREVIEW_READ_ONLY} compact
