@@ -185,7 +185,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
             "Propuesta retirada.")}>Retirar mi propuesta</button></div>}
       {personal && related.filter((proposal) => proposal.status === "pending" && !proposal.isOwn)
         .map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
-          <span>{proposal.proposerName} ofrece {formatRange(offer.wantedStart, offer.wantedEnd)} y quiere {formatRange(offer.offeredStart, offer.offeredEnd)}.</span>
+          <span>{proposal.proposerName}{proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} ofrece {formatRange(offer.wantedStart, offer.wantedEnd)} y quiere {formatRange(offer.offeredStart, offer.offeredEnd)}.</span>
           <div>{chatButton(proposal)}
             <button type="button" disabled={busy} onClick={() => mutate(
               () => decideVacationExchange({ token: session.token, proposalId: proposal.id, accept: true }),

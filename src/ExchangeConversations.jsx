@@ -158,6 +158,7 @@ export default function ExchangeConversations({ session }) {
           </div>
           <PrivateExchangeChat key={selectedKey} token={session.token} type={selected.type}
             proposalId={selected.proposalId} canWrite={isActive(selected) && !EXCHANGE_PREVIEW_READ_ONLY} compact
+            ownChapa={session.chapa} counterpartChapa={selected.counterpartChapa}
             onActivity={() => reload({ quiet: true })} />
           {!isActive(selected) && <p className="exchange-inbox-readonly">Esta conversación es parte de tu historial y ya no admite mensajes nuevos.</p>}
         </> : <div className="exchange-inbox-placeholder"><MessageCircle size={36} />

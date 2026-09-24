@@ -4,7 +4,7 @@ import {
   sendRestExchangeMessage, sendVacationExchangeMessage
 } from "./supabaseClient.js";
 
-export default function PrivateExchangeChat({ token, proposalId, canWrite, type = "rest", compact = false, onActivity }) {
+export default function PrivateExchangeChat({ token, proposalId, canWrite, type = "rest", compact = false, ownChapa, counterpartChapa, onActivity }) {
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,14 +56,14 @@ export default function PrivateExchangeChat({ token, proposalId, canWrite, type 
       <p>Solo tú y el otro participante podéis leer estos mensajes. El acuerdo debe tramitarse después en el Portal CPE.</p></>}
     {loading ? <span>Cargando mensajes…</span> : messages.length ? <div className="rest-exchange-messages" aria-live="polite">
       {messages.map((message) => <div key={message.id} className={`rest-exchange-message${message.isOwn ? " is-own" : ""}`}>
-        <small>{message.isOwn ? "Tú" : message.senderName} · {new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(message.createdAt))}</small>
+        <small>{message.isOwn ? "Tú" : message.senderName}{(message.isOwn ? ownChapa : counterpartChapa) ? ` · ${message.isOwn ? ownChapa : counterpartChapa}` : ""} · {new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(message.createdAt))}</small>
         <span>{message.body}</span>
       </div>)}
     </div> : <span>Aún no hay mensajes. Puedes escribir para concretar los detalles.</span>}
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
     {canWrite && <form onSubmit={send}>
       <label htmlFor={`rest-message-${proposalId}`}>Mensaje</label>
-      <textarea id={`rest-message-${proposalId}`} value={body} maxLength={500} rows={3}
+      <textarea id={`rest-message-${proposalId}`} value={body} maxLength={500} rows={2}
         onChange={(event) => setBody(event.target.value)} placeholder="Escribe al compañero sobre esta propuesta…" />
       <button type="submit" disabled={sending || !body.trim()}>{sending ? "Enviando…" : "Enviar mensaje"}</button>
     </form>}

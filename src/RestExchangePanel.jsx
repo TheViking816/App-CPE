@@ -191,10 +191,10 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       </div>}
       {personal && proposals.filter((proposal) => proposal.status === "pending" && !proposal.isOwn).map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
         <span>{offer.kind === "give"
-          ? `${proposal.proposerName} quiere ${formatDay(offer.offeredDate)}.`
+          ? `${proposal.proposerName}${proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} quiere ${formatDay(offer.offeredDate)}.`
           : offer.kind === "want"
-            ? `${proposal.proposerName} ofrece ${formatDay(proposal.offeredDate)} para cedértelo.`
-            : `${proposal.proposerName} ofrece ${formatDay(proposal.offeredDate)} y quiere ${formatDay(offer.offeredDate)}.`}</span>
+            ? `${proposal.proposerName}${proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} ofrece ${formatDay(proposal.offeredDate)} para cedértelo.`
+            : `${proposal.proposerName}${proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} ofrece ${formatDay(proposal.offeredDate)} y quiere ${formatDay(offer.offeredDate)}.`}</span>
         <div>{chatButton(proposal)}<button type="button" disabled={busy} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: true }),
           "Acuerdo registrado. Falta tramitarlo en el portal oficial."
