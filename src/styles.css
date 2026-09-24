@@ -1846,10 +1846,13 @@ select {
 .portal-link-home strong { font-size: 18px; }
 .portal-link-home small { color: #dbeaff; font-size: 12px; font-weight: 600; }
 .portal-links-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.portal-link-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.portal-link-groups { display: grid; gap: 14px; }
 .portal-link-group { padding: 15px; border: 1px solid #dce5ee; border-radius: 14px; background: #fff; }
 .portal-link-group h2 { margin: 0 0 12px; color: var(--ink); font-size: 15px; }
-.portal-link-group .links-list { gap: 7px; }
+.portal-link-group .links-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+@media (max-width: 640px) {
+  .portal-link-group .links-list { grid-template-columns: minmax(0, 1fr); }
+}
 .portal-link-group .links-list form { margin: 0; }
 .portal-link-group .links-list button {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
