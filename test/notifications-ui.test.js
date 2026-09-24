@@ -11,8 +11,10 @@ test("el centro de novedades está disponible desde la campana y el menú", () =
   assert.match(navigationSource, /"novedades"/);
 });
 
-test("descansos y vacaciones abren el login estable si la sesion ha caducado", () => {
-  assert.equal((appSource.match(/href="https:\/\/portal\.cpevalencia\.com\/#User"/g) || []).length, 2);
+test("el acceso general abre la raíz del portal y no el fragmento User", () => {
+  assert.match(appSource, /href=\{PORTAL_HOME_URL\}/);
+  assert.doesNotMatch(appSource, /href="https:\/\/portal\.cpevalencia\.com\/#User"/);
+  assert.doesNotMatch(appSource, /Abre el portal e inicia sesión si te la solicita\./);
   assert.doesNotMatch(appSource, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/Prueba\.asp/);
   assert.doesNotMatch(appSource, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/src\/VacacionesC24UniVac\/VacacionesC24\.asp"/);
 });

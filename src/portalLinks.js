@@ -1,4 +1,4 @@
-export const PORTAL_HOME_URL = "https://portal.cpevalencia.com/#User";
+export const PORTAL_HOME_URL = "https://portal.cpevalencia.com/";
 export const NORAY_PILOT_CHAPA = "72683";
 
 // Only these standalone Noray iframe routes were verified without a Portal CPE session.

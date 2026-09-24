@@ -2682,7 +2682,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>
-      <a className="portal-official-action" href="https://portal.cpevalencia.com/#User" target="_blank" rel="noreferrer">
+      <a className="portal-official-action" href={PORTAL_HOME_URL} target="_blank" rel="noreferrer">
         Gestionar descansos en el Portal <ExternalLink size={15} />
       </a>
     </section>
@@ -3984,7 +3984,6 @@ function LinksPanel({ session }) {
       <a className="portal-link-home" href={PORTAL_HOME_URL} target="_blank" rel="noopener noreferrer">
         <span>
           <strong>Portal CPE</strong>
-          <small>Abre el portal e inicia sesión si te la solicita.</small>
         </span>
         <ExternalLink size={19} aria-hidden="true" />
       </a>

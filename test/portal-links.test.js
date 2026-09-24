@@ -14,5 +14,5 @@ test("solo aparecen los seis iframes autónomos verificados", () => {
 });
 
 test("el acceso principal abre el portal oficial", () => {
-  assert.equal(PORTAL_HOME_URL, "https://portal.cpevalencia.com/#User");
+  assert.equal(PORTAL_HOME_URL, "https://portal.cpevalencia.com/");
 });

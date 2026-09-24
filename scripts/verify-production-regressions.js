@@ -11,6 +11,7 @@ const payroll = read("src/payroll.js");
 const fullPartMerge = read("src/fullPartMerge.js");
 const styles = read("src/styles.css");
 const generalBoard = read("src/GeneralBoard.jsx");
+const portalLinks = read("src/portalLinks.js");
 
 if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_GIT_COMMIT_REF) {
   assert.ok(["main", "codex/rest-exchange"].includes(process.env.VERCEL_GIT_COMMIT_REF),
@@ -21,7 +22,8 @@ assert.match(app, /Acceso al portal/, "Falta el acceso dedicado a las claves del
 assert.match(app, /const credentialsOnly = view === "all"/, "Falta el aislamiento del formulario de claves.");
 assert.doesNotMatch(app, /Datos guardados del portal oficial/, "Ha reaparecido el acceso a claves en las pantallas de datos.");
 assert.doesNotMatch(app, />Cambiar acceso<\/button>/, "Ha reaparecido el botón de claves fuera de Ajustes.");
-assert.match(app, /href="https:\/\/portal\.cpevalencia\.com\/#User"/, "Descansos debe abrir el acceso estable del portal.");
+assert.match(app, /href=\{PORTAL_HOME_URL\}/, "Descansos debe abrir el acceso estable del portal.");
+assert.match(portalLinks, /PORTAL_HOME_URL = "https:\/\/portal\.cpevalencia\.com\/"/, "El acceso principal debe abrir la raíz del portal.");
 assert.match(app, /href="https:\/\/portal\.cpevalencia\.com\/#User,ViewNoray,16"/, "Vacaciones debe abrir el trámite oficial.");
 assert.doesNotMatch(app, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/Prueba\.asp/, "Descansos vuelve a depender de una sesion activa del portal.");
 assert.doesNotMatch(app, /href="https:\/\/portal\.cpevalencia\.com\/Noray\/src\/VacacionesC24UniVac\/VacacionesC24\.asp"/, "Vacaciones vuelve a depender de una sesion activa del portal.");
