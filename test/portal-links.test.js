@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "../src/portalLinks.js";
+import { NORAY_PILOT_CHAPA, PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "../src/portalLinks.js";
 
-test("los enlaces del portal están agrupados y no incluyen las antiguas apps externas", () => {
+test("solo aparecen los seis iframes autónomos verificados", () => {
   const links = PORTAL_LINK_GROUPS.flatMap((group) => group.links);
-  assert.equal(PORTAL_LINK_GROUPS.length, 4);
-  assert.equal(links.length, 13);
-  assert.equal(new Set(links.map((link) => link.url)).size, links.length);
-  assert.ok(links.every((link) => link.url.startsWith("https://portal.cpevalencia.com/#User,")));
-  assert.ok(links.some((link) => link.label === "Solicitar descansos" && link.url.endsWith(",16")));
-  assert.ok(links.some((link) => link.label === "Solicitud de vacaciones" && link.url.endsWith(",20")));
+  assert.equal(NORAY_PILOT_CHAPA, "72683");
+  assert.equal(PORTAL_LINK_GROUPS.length, 2);
+  assert.deepEqual(links.map((link) => link.section).sort(), [
+    "chapero", "chapero-especialidades", "donde-voy", "jornada-contratada",
+    "jornales", "mis-especialidades"
+  ].sort());
+  assert.ok(links.every((link) => !link.url && link.label));
 });
 
 test("el acceso principal abre el portal oficial", () => {

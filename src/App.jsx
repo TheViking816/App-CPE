@@ -7,7 +7,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
-import { PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
+import { NORAY_PILOT_CHAPA, PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -3974,7 +3974,7 @@ function PortalPanel({
   );
 }
 
-function LinksPanel() {
+function LinksPanel({ session }) {
   return (
     <section className="page-panel portal-links-panel">
       <div className="section-heading">
@@ -3988,29 +3988,27 @@ function LinksPanel() {
         </span>
         <ExternalLink size={19} aria-hidden="true" />
       </a>
-      <p className="portal-links-note">
-        El Portal CPE requiere su propia sesión. Si pide iniciar sesión o una sección queda en blanco, entra primero en «Portal CPE» y vuelve a abrir el enlace.
-      </p>
-      <div className="portal-link-groups">
-        {PORTAL_LINK_GROUPS.map((group) => (
-          <section className="portal-link-group" key={group.title}>
-            <h2>{group.title}</h2>
-            <div className="links-list">
-              {group.links.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span>{link.label}</span>
-                  <ExternalLink size={17} aria-hidden="true" />
-                </a>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+      {session?.chapa === NORAY_PILOT_CHAPA && !session.supportAccess && (
+        <div className="portal-link-groups">
+          {PORTAL_LINK_GROUPS.map((group) => (
+            <section className="portal-link-group" key={group.title}>
+              <h2>{group.title}</h2>
+              <div className="links-list">
+                {group.links.map((link) => (
+                  <form key={link.section} action="/api/noray-link" method="post" target="_blank" rel="noopener noreferrer">
+                    <input type="hidden" name="token" value={session.token} />
+                    <input type="hidden" name="section" value={link.section} />
+                    <button type="submit">
+                      <span>{link.label}</span>
+                      <ExternalLink size={17} aria-hidden="true" />
+                    </button>
+                  </form>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -4989,7 +4987,7 @@ export function App() {
             onCredentialsRequestChange={setPortalCredentialsRequested}
           />
         )}
-        {activeTab === "enlaces" && <LinksPanel />}
+        {activeTab === "enlaces" && <LinksPanel session={session} />}
         {activeTab === "foro" && <ForumPanel session={session} onLatestMessage={handleLatestForumMessage} />}
         {activeTab === "monitor" && isAdmin && <AdminMonitor session={session} />}
         {activeTab !== "foro" && <ContactFooter />}
