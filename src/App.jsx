@@ -136,7 +136,7 @@ const PORTAL_CREDENTIALS_KEY = "app-cpe-portal-credentials";
 const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
 const FORUM_LAST_READ_KEY = "app-cpe-forum-last-read";
-const FORUM_INTRO_SEEN_KEY = "app-cpe-forum-intro-seen";
+const LINKS_INTRO_SEEN_KEY = "app-cpe-links-intro-seen-v1";
 const DEFAULT_PORTAL_SYNC_SECONDS = 55;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
@@ -163,17 +163,17 @@ function markForumRead(chapa, messageId) {
   }
 }
 
-function hasSeenForumIntro(chapa) {
+function hasSeenLinksIntro(chapa) {
   try {
-    return localStorage.getItem(forumStorageKey(FORUM_INTRO_SEEN_KEY, chapa)) === "1";
+    return localStorage.getItem(forumStorageKey(LINKS_INTRO_SEEN_KEY, chapa)) === "1";
   } catch {
     return false;
   }
 }
 
-function markForumIntroSeen(chapa) {
+function markLinksIntroSeen(chapa) {
   try {
-    localStorage.setItem(forumStorageKey(FORUM_INTRO_SEEN_KEY, chapa), "1");
+    localStorage.setItem(forumStorageKey(LINKS_INTRO_SEEN_KEY, chapa), "1");
   } catch {
     // La tarjeta puede volver a aparecer si no hay almacenamiento disponible.
   }
@@ -1982,7 +1982,7 @@ function HomePanel({
   onSpecialtyChange,
   onLoadPortal,
   onNavigate,
-  showForumIntro,
+  showLinksIntro,
   displayName
 }) {
   const nearest = getNearestDoor(doors);
@@ -2005,13 +2005,13 @@ function HomePanel({
 
       {portalConnected === false && !portalCredentialsRejected && <PortalConnectCallout onConnect={onLoadPortal} />}
 
-      {showForumIntro && (
-        <button className="home-forum-callout" type="button" onClick={() => onNavigate("foro")}>
-          <span className="home-forum-icon"><MessageCircle size={23} /></span>
+      {showLinksIntro && (
+        <button className="home-links-callout" type="button" onClick={() => onNavigate("enlaces")}>
+          <span className="home-links-icon"><LinkIcon size={23} /></span>
           <span>
             <small>Nuevo en App CPE</small>
-            <strong>Foro</strong>
-            <span>Comparte avisos, dudas y comentarios con tus compañeros.</span>
+            <strong>Enlaces del portal</strong>
+            <span>Descubre los accesos rápidos a Consultas y Solicitudes.</span>
           </span>
           <ChevronRight size={21} />
         </button>
@@ -4397,7 +4397,7 @@ export function App() {
   const [notice, setNotice] = useState("");
   const [forumLatestId, setForumLatestId] = useState(0);
   const [forumHasUnread, setForumHasUnread] = useState(false);
-  const [showForumIntro, setShowForumIntro] = useState(false);
+  const [showLinksIntro, setShowLinksIntro] = useState(false);
   const [notifications, setNotifications] = useState({ rows: [], unread: 0 });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
@@ -4454,10 +4454,12 @@ export function App() {
   const navigateToTab = (tab) => {
     const nextTab = tabFromHash(hashForTab(tab));
     if (nextTab === "foro") {
-      markForumIntroSeen(session?.chapa);
-      setShowForumIntro(false);
       if (forumLatestId) markForumRead(session?.chapa, forumLatestId);
       setForumHasUnread(false);
+    }
+    if (nextTab === "enlaces") {
+      markLinksIntroSeen(session?.chapa);
+      setShowLinksIntro(false);
     }
     setMenuOpen(false);
     setActiveTab(nextTab);
@@ -4529,21 +4531,23 @@ export function App() {
 
   useEffect(() => {
     if (activeTab !== "foro" || !session?.chapa) return;
-    markForumIntroSeen(session.chapa);
-    setShowForumIntro(false);
     if (forumLatestId) markForumRead(session.chapa, forumLatestId);
     setForumHasUnread(false);
   }, [activeTab, forumLatestId, session?.chapa]);
 
   useEffect(() => {
+    if (activeTab !== "enlaces" || !session?.chapa) return;
+    markLinksIntroSeen(session.chapa);
+    setShowLinksIntro(false);
+  }, [activeTab, session?.chapa]);
+
+  useEffect(() => {
     if (!session?.token || !session?.chapa) {
       setForumLatestId(0);
       setForumHasUnread(false);
-      setShowForumIntro(false);
       return undefined;
     }
 
-    setShowForumIntro(!hasSeenForumIntro(session.chapa));
     let cancelled = false;
     const refreshForumStatus = async () => {
       try {
@@ -4567,6 +4571,12 @@ export function App() {
       window.removeEventListener("focus", refreshForumStatus);
     };
   }, [handleLatestForumMessage, session?.chapa, session?.token]);
+
+  useEffect(() => {
+    setShowLinksIntro(Boolean(
+      session?.token && session?.chapa && activeTab !== "enlaces" && !hasSeenLinksIntro(session.chapa)
+    ));
+  }, [activeTab, session?.chapa, session?.token]);
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -4935,7 +4945,7 @@ export function App() {
                 onSpecialtyChange={setActiveSpecialtyId}
                 onLoadPortal={connectPortal}
                 onNavigate={navigateToTab}
-                showForumIntro={showForumIntro}
+                showLinksIntro={showLinksIntro}
                 displayName={session.displayName}
               />
         )}

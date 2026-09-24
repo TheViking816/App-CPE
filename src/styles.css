@@ -2117,25 +2117,25 @@ select {
 .home-connect-callout strong { color: #7c3510; font-size: 15px; font-weight: 950; }
 .home-connect-callout > span > span { color: #8d5b37; font-size: 10px; font-weight: 700; line-height: 1.35; }
 
-.home-forum-callout {
+.home-links-callout {
   display: grid;
   grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
   width: 100%;
   padding: 14px;
-  border: 1px solid #8bd9d0;
+  border: 1px solid #a8c9ee;
   border-radius: 11px;
-  background: linear-gradient(135deg, #f1fffc, #e8f6fb);
+  background: linear-gradient(135deg, #f3f8ff, #e9f3ff);
   color: var(--ink);
   text-align: left;
-  box-shadow: 0 8px 20px rgba(10, 104, 111, .1);
+  box-shadow: 0 8px 20px rgba(27, 84, 151, .1);
 }
-.home-forum-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 10px; background: #0d6575; color: #fff; }
-.home-forum-callout > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
-.home-forum-callout small { color: #08756f; font-size: 9px; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
-.home-forum-callout strong { color: var(--navy); font-size: 15px; font-weight: 950; }
-.home-forum-callout > span > span { color: #477078; font-size: 10px; font-weight: 700; line-height: 1.35; }
+.home-links-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 10px; background: #1d5fa5; color: #fff; }
+.home-links-callout > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.home-links-callout small { color: #2563a4; font-size: 9px; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
+.home-links-callout strong { color: var(--navy); font-size: 15px; font-weight: 950; }
+.home-links-callout > span > span { color: #496787; font-size: 10px; font-weight: 700; line-height: 1.35; }
 
 .side-nav-trailing { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .side-nav-new-badge { padding: 4px 7px; border-radius: 999px; background: #f58220; color: #fff; font-size: 9px; font-weight: 950; letter-spacing: .03em; text-transform: uppercase; }
@@ -2263,9 +2263,9 @@ select {
 :root[data-theme="dark"] .home-connect-callout { border-color: #88501d; background: linear-gradient(135deg,#2b2118,#352313); }
 :root[data-theme="dark"] .home-connect-callout strong { color: #fdba74; }
 :root[data-theme="dark"] .home-connect-callout > span > span { color: #d4a574; }
-:root[data-theme="dark"] .home-forum-callout { border-color: #28736f; background: linear-gradient(135deg,#102c33,#10283a); }
-:root[data-theme="dark"] .home-forum-callout strong { color: #e8f8f6; }
-:root[data-theme="dark"] .home-forum-callout > span > span { color: #9fc8c8; }
+:root[data-theme="dark"] .home-links-callout { border-color: #315f90; background: linear-gradient(135deg,#142e4b,#10283a); }
+:root[data-theme="dark"] .home-links-callout strong { color: #e8f3ff; }
+:root[data-theme="dark"] .home-links-callout > span > span { color: #adc8e5; }
 :root[data-theme="dark"] .home-loading-skeleton span { border-color: #29435d; background: linear-gradient(100deg, #102238 25%, #18314b 42%, #102238 60%); background-size: 220% 100%; }
 :root[data-theme="dark"] .portal-template-lines i { background: #22384f; }
 
