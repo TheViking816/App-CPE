@@ -14,8 +14,8 @@ const generalBoard = read("src/GeneralBoard.jsx");
 const portalLinks = read("src/portalLinks.js");
 
 if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_GIT_COMMIT_REF) {
-  assert.ok(["main", "codex/rest-exchange"].includes(process.env.VERCEL_GIT_COMMIT_REF),
-    "Producción solo se puede construir desde main o la rama autorizada de intercambios.");
+  assert.ok(["main", "codex/rest-exchange", "codex/exchange-conversations"].includes(process.env.VERCEL_GIT_COMMIT_REF),
+    "Producción solo se puede construir desde main o una rama autorizada de intercambios.");
 }
 
 assert.match(app, /Acceso al portal/, "Falta el acceso dedicado a las claves del portal.");
