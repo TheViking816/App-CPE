@@ -3883,6 +3883,28 @@ select {
   background: #f4efff;
 }
 
+.portal-salary-alternative .portal-jornales-list article.is-training {
+  border-color: #16a34a;
+  background: linear-gradient(135deg, #fff 0%, #edfff3 100%);
+}
+
+.portal-salary-alternative .portal-jornales-list article.is-training::before {
+  background: #16a34a;
+  box-shadow: 0 0 0 1px #16a34a;
+}
+
+.portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date span,
+.portal-salary-alternative .portal-jornales-list article.is-training .is-training-amount {
+  color: #166534;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
 .portal-salary-alternative .portal-jornales-list article > * {
   position: relative;
   z-index: 1;
@@ -4602,6 +4624,23 @@ select {
   color: #e7e0ff;
   border-color: #59447f;
   background: #302549;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, #111f33 0%, #153524 100%);
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date {
+  color: #bbf7d0;
+  background: #163d29;
+}
+
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date span,
+:root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training .is-training-amount {
+  color: #bbf7d0;
+  border-color: #166534;
+  background: #123021;
 }
 .password-change-form { display: grid; gap: 12px; }
 .password-change-form label { display: grid; gap: 6px; color: var(--ink); font-size: 12px; font-weight: 900; }

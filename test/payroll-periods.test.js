@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildTrainingPayrollEntries,
   buildVacationPayrollEntries,
   enrichJornales,
   filterJornalesByPeriod,
@@ -10,9 +11,31 @@ import {
   selectPortalJornalesHistory,
   summarizeAnnualPayroll,
   summarizePayroll,
+  TRAINING_DAY_RATE,
   VACATION_DAY_RATE,
+  trainingPayrollEntriesForMonth,
   vacationPayrollEntriesForMonth
 } from "../src/payroll.js";
+
+test("los FM del calendario de 72668 suman 4 días y 242,72 € sin duplicarse", () => {
+  const days = [21, 22, 23, 24].map((day) => ({ day, code: "FM" }));
+  const entries = buildTrainingPayrollEntries([
+    { months: [{ year: 2026, month: 9, days }], trainingHistory: [{ year: 2026, month: 9, days }] },
+    { months: [{ year: 2026, month: 9, days }] }
+  ]);
+  const september = trainingPayrollEntriesForMonth(entries, "Septiembre de 2026");
+  const summary = summarizePayroll(september);
+  const annual = summarizeAnnualPayroll([], null, {}, [], [], {}, {}, entries);
+
+  assert.equal(entries.length, 4);
+  assert.equal(TRAINING_DAY_RATE, 60.68);
+  assert.equal(summary.trainingDays, 4);
+  assert.equal(summary.workCount, 0);
+  assert.equal(summary.secondHalf, 242.72);
+  assert.equal(Number(summary.total.toFixed(2)), 242.72);
+  assert.equal(annual.trainingDays, 4);
+  assert.equal(annual.total, 242.72);
+});
 
 const rows = [
   { dia: "01", payroll: { total: 100 } },

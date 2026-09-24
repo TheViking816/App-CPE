@@ -66,6 +66,7 @@ import {
   specialty
 } from "./censo.js";
 import {
+  buildTrainingPayrollEntries,
   buildVacationPayrollEntries,
   compareJornalesDescending,
   enrichJornales,
@@ -76,6 +77,7 @@ import {
   formatEuro,
   summarizeAnnualPayroll,
   summarizePayroll,
+  trainingPayrollEntriesForMonth,
   vacationPayrollEntriesForMonth
 } from "./payroll.js";
 import {
@@ -1809,8 +1811,9 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, o
           </button>
         </div>
         <div className="portal-month-breakdown">
-          <div><span>Jornales</span><strong>{rows.filter((item) => !item.isVacation).length}</strong></div>
+          <div><span>Jornales</span><strong>{rows.filter((item) => !item.isVacation && !item.isTraining).length}</strong></div>
           {rows.some((item) => item.isVacation) && <div><span>Días VA</span><strong>{rows.filter((item) => item.isVacation).length}</strong></div>}
+          {rows.some((item) => item.isTraining) && <div><span>Días FM</span><strong>{rows.filter((item) => item.isTraining).length}</strong></div>}
           <div><span>Bases</span><strong>{formatEuro(totals.base)}</strong></div>
           <div><span>Complementos</span><strong>{formatEuro(totals.complement)}</strong></div>
           {totals.meal > 0 && <div><span>Manutención dobles</span><strong>{formatEuro(totals.meal)}</strong></div>}
@@ -1824,12 +1827,12 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, o
           {rows.map((item, index) => (
             <article
               key={`${item.jornal || item.parte || item.dia}-${index}`}
-              className={item.isVacation ? "is-vacation" : undefined}
-              role={item.isVacation ? undefined : "button"}
-              tabIndex={item.isVacation ? undefined : 0}
-              aria-label={item.isVacation ? undefined : `Abrir jornal del ${item.dia || "día seleccionado"}`}
-              onClick={item.isVacation ? undefined : () => onOpenJornal?.(item)}
-              onKeyDown={item.isVacation ? undefined : (event) => {
+              className={item.isVacation ? "is-vacation" : item.isTraining ? "is-training" : undefined}
+              role={item.isVacation || item.isTraining ? undefined : "button"}
+              tabIndex={item.isVacation || item.isTraining ? undefined : 0}
+              aria-label={item.isVacation || item.isTraining ? undefined : `Abrir jornal del ${item.dia || "día seleccionado"}`}
+              onClick={item.isVacation || item.isTraining ? undefined : () => onOpenJornal?.(item)}
+              onKeyDown={item.isVacation || item.isTraining ? undefined : (event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   onOpenJornal?.(item);
@@ -1837,20 +1840,20 @@ function PortalMonthDetailModal({ month, irpfRate, onClose, onToggleRelayHour, o
               }}
             >
               <div className="portal-month-jornal-heading">
-                <span><b>{item.dia || "-"}</b><small>{item.isVacation ? "VA" : (item.payroll?.shift || "Jornal")}</small></span>
-                <div><strong>{item.isVacation ? "Vacaciones" : (item.especialidad || "Jornal")}</strong><small>{item.isVacation ? "Día de vacaciones retribuido" : [item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</small></div>
+                <span><b>{item.dia || "-"}</b><small>{item.isVacation ? "VA" : item.isTraining ? "FM" : (item.payroll?.shift || "Jornal")}</small></span>
+                <div><strong>{item.isVacation ? "Vacaciones" : item.isTraining ? "Formación" : (item.especialidad || "Jornal")}</strong><small>{item.isVacation ? "Día de vacaciones retribuido" : item.isTraining ? "Día de formación retribuido" : [item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</small></div>
                 <strong>{formatEuro(item.payroll?.total)}</strong>
               </div>
               <div className="portal-month-jornal-values">
-                <span>{item.isVacation ? "Importe" : "Base"} <b>{formatEuro(item.payroll?.base)}</b></span>
-                {!item.isVacation && <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>}
-                {!item.isVacation && item.payroll?.continuousDoubleMeal > 0 && (
+                <span>{item.isVacation || item.isTraining ? "Importe" : "Base"} <b>{formatEuro(item.payroll?.base)}</b></span>
+                {!item.isVacation && !item.isTraining && <span>Complemento <b>{formatEuro(item.payroll?.complement || 0)}</b></span>}
+                {!item.isVacation && !item.isTraining && item.payroll?.continuousDoubleMeal > 0 && (
                   <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>
                 )}
-                {!item.isVacation && item.payroll?.remate > 0 && (
+                {!item.isVacation && !item.isTraining && item.payroll?.remate > 0 && (
                   <span>Remate · {item.payroll.remateHours} {item.payroll.remateHours === 1 ? "hora" : "horas"} <b>{formatEuro(item.payroll.remate)}</b></span>
                 )}
-                {!item.isVacation && item.payroll?.primaEligible && (
+                {!item.isVacation && !item.isTraining && item.payroll?.primaEligible && (
                   <span className="is-premium-value">
                     <em className="portal-premium-label">{item.payroll?.primaSource === "manual" ? "Prima manual" : "Prima"}</em> <b className="portal-premium-amount">{item.payroll?.prima != null ? formatEuro(item.payroll.prima) : "Pendiente"}</b>
                   </span>
@@ -2886,6 +2889,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     () => buildVacationPayrollEntries([vacaciones, descansos]),
     [vacaciones, descansos]
   );
+  const trainingPayrollEntries = useMemo(
+    () => buildTrainingPayrollEntries([descansos, payload?.disponibilidad]),
+    [descansos, payload?.disponibilidad]
+  );
   const enrichedJornales = useMemo(() => [
     ...enrichJornales(
       jornales,
@@ -2896,8 +2903,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       remateHours,
       manualPremiums
     ),
-    ...vacationPayrollEntriesForMonth(vacationPayrollEntries, currentPayrollMonthLabel)
-  ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, remateHours, manualPremiums, vacationPayrollEntries]);
+    ...vacationPayrollEntriesForMonth(vacationPayrollEntries, currentPayrollMonthLabel),
+    ...trainingPayrollEntriesForMonth(trainingPayrollEntries, currentPayrollMonthLabel)
+  ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, remateHours, manualPremiums, vacationPayrollEntries, trainingPayrollEntries]);
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
   const showSalary = hasSalaryData(payload?.jornales, journalHistory, enrichedJornales);
   const annualPayroll = useMemo(
@@ -2908,9 +2916,10 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       vacationPayrollEntries,
       premiumHistory,
       remateHours,
-      manualPremiums
+      manualPremiums,
+      trainingPayrollEntries
     ),
-    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries, premiumHistory, remateHours, manualPremiums]
+    [journalHistory, payrollConfig, relayHours, vacationPayrollEntries, premiumHistory, remateHours, manualPremiums, trainingPayrollEntries]
   );
   const selectedAnnualMonth = useMemo(() => annualPayroll.months.find((month) => (
     `${month.year}-${month.month}` === selectedAnnualMonthKey
@@ -2938,11 +2947,13 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     : selectedPeriod === "first" ? "1a quincena" : "2a quincena";
   const selectedCountLabel = [
     selectedSummary.workCount > 0 ? `${selectedSummary.workCount} ${selectedSummary.workCount === 1 ? "jornal" : "jornales"}` : "",
-    selectedSummary.vacationDays > 0 ? `${selectedSummary.vacationDays} ${selectedSummary.vacationDays === 1 ? "día VA" : "días VA"}` : ""
+    selectedSummary.vacationDays > 0 ? `${selectedSummary.vacationDays} ${selectedSummary.vacationDays === 1 ? "día VA" : "días VA"}` : "",
+    selectedSummary.trainingDays > 0 ? `${selectedSummary.trainingDays} ${selectedSummary.trainingDays === 1 ? "día FM" : "días FM"}` : ""
   ].filter(Boolean).join(" + ");
   const annualCountLabel = [
     annualPayroll.count > 0 ? `${annualPayroll.count} jornales` : "",
-    annualPayroll.vacationDays > 0 ? `${annualPayroll.vacationDays} VA` : ""
+    annualPayroll.vacationDays > 0 ? `${annualPayroll.vacationDays} VA` : "",
+    annualPayroll.trainingDays > 0 ? `${annualPayroll.trainingDays} FM` : ""
   ].filter(Boolean).join(" + ");
 
   const toggleRelayHour = async (item, enabled) => {
@@ -3205,6 +3216,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                   <div className="portal-annual-kpis">
                     <div><span>Número de jornales</span><strong>{annualPayroll.count}</strong></div>
                     {annualPayroll.vacationDays > 0 && <div><span>Días de vacaciones</span><strong>{annualPayroll.vacationDays}</strong></div>}
+                    {annualPayroll.trainingDays > 0 && <div><span>Días de formación</span><strong>{annualPayroll.trainingDays}</strong></div>}
                     <div><span>Bruto anual</span><strong>{formatEuro(annualPayroll.total)}</strong></div>
                     <div><span>Media mensual</span><strong>{formatEuro(annualPayroll.activeMonths ? annualPayroll.total / annualPayroll.activeMonths : 0)}</strong></div>
                     <div><span>Neto anual</span><strong>{formatEuro(annualPayroll.total * (1 - irpfRate / 100))}</strong></div>
@@ -3299,6 +3311,26 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                       <em>Día de vacaciones retribuido</em>
                       <div className="portal-jornal-breakdown">
                         <span className="is-vacation-amount">Importe <b>{formatEuro(item.payroll?.total)}</b></span>
+                      </div>
+                    </div>
+                  </article>
+                );
+              }
+              if (item.isTraining) {
+                return (
+                  <article key={`${item.jornal}-${index}`} className="is-training">
+                    <div className="portal-jornal-date">
+                      <strong>{item.dia || "-"}</strong>
+                      <span>FM</span>
+                    </div>
+                    <div className="portal-jornal-content">
+                      <div className="portal-jornal-heading">
+                        <strong>Formación</strong>
+                        <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
+                      </div>
+                      <em>Día de formación retribuido</em>
+                      <div className="portal-jornal-breakdown">
+                        <span className="is-training-amount">Importe <b>{formatEuro(item.payroll?.total)}</b></span>
                       </div>
                     </div>
                   </article>
