@@ -43,7 +43,7 @@ export async function probeNoray({ rawUrl, browserType, httpFetch = fetch, write
       throw new Error("El navegador del runner no pudo abrir Noray");
     }
     const body = await page.locator("body").innerText({ timeout: 10000 }).catch(() => "");
-    const browserChallenge = isChallenge(new Headers(navigation?.headers() || {}), body);
+    const browserChallenge = isChallenge({ get: (name) => navigation?.headers()?.[name.toLowerCase()] || null }, body);
     write(`Navegador del runner: HTTP ${navigation?.status() || "sin respuesta"}; desafío Cloudflare: ${browserChallenge ? "sí" : "no"}`);
     if (browserChallenge) throw new Error("Cloudflare desafió al navegador del runner");
 
