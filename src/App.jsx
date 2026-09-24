@@ -7,6 +7,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
+import { openPortalSectionWindow, PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -3974,25 +3975,44 @@ function PortalPanel({
 }
 
 function LinksPanel() {
-  const links = [
-    { label: "Prevision", url: "https://noray.cpevalencia.com/PrevisionDemanda.asp" },
-    { label: "Portal CPE", url: "https://portal.cpevalencia.com/" },
-    { label: "App descansos", url: "https://descansos-cpe.vercel.app/dashboard" },
-    { label: "Sueldometro CPE", url: "https://misueldocpe.vercel.app/" }
-  ];
-
   return (
-    <section className="page-panel">
+    <section className="page-panel portal-links-panel">
       <div className="section-heading">
-        <p>Accesos rapidos</p>
-        <h1>Enlaces utiles</h1>
+        <p>Accesos rápidos</p>
+        <h1>Enlaces del portal</h1>
       </div>
-      <div className="links-list">
-        {links.map((link) => (
-          <a key={link.url} href={link.url} target="_blank" rel="noreferrer">
-            <span>{link.label}</span>
-            <ExternalLink size={18} />
-          </a>
+      <a className="portal-link-home" href={PORTAL_HOME_URL} target="portal-cpe" rel="noreferrer">
+        <span>
+          <strong>Portal CPE</strong>
+          <small>Abre el portal e inicia sesión si te la solicita.</small>
+        </span>
+        <ExternalLink size={19} aria-hidden="true" />
+      </a>
+      <p className="portal-links-note">
+        Los accesos usan la sesión del Portal CPE, independiente de la de esta app. Si una sección no carga directamente, abre primero «Portal CPE» y vuelve a pulsar el enlace.
+      </p>
+      <div className="portal-link-groups">
+        {PORTAL_LINK_GROUPS.map((group) => (
+          <section className="portal-link-group" key={group.title}>
+            <h2>{group.title}</h2>
+            <div className="links-list">
+              {group.links.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="portal-cpe"
+                  rel="noreferrer"
+                  onClick={(event) => {
+                    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    if (openPortalSectionWindow(link.url)) event.preventDefault();
+                  }}
+                >
+                  <span>{link.label}</span>
+                  <ExternalLink size={17} aria-hidden="true" />
+                </a>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </section>
