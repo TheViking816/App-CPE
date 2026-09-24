@@ -1,22 +1,5 @@
 export const PORTAL_HOME_URL = "https://portal.cpevalencia.com/#User";
 
-export function openPortalSectionWindow(url, browserWindow = window) {
-  const portalWindow = browserWindow.open(PORTAL_HOME_URL, "portal-cpe");
-  if (!portalWindow) return false;
-
-  // Loading a ViewNoray hash in a brand-new tab can leave the portal blank.
-  // Let its shell initialize first, then navigate the same tab to the section.
-  try { portalWindow.opener = null; } catch { /* Cross-origin window. */ }
-  browserWindow.setTimeout(() => {
-    try {
-      if (!portalWindow.closed) portalWindow.location.href = url;
-    } catch {
-      // The portal owns this tab; its own navigation remains available.
-    }
-  }, 1500);
-  return true;
-}
-
 const portalSection = (label, route) => ({
   label,
   url: `https://portal.cpevalencia.com/#${route}`

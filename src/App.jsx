@@ -7,7 +7,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
-import { openPortalSectionWindow, PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
+import { PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -3981,7 +3981,7 @@ function LinksPanel() {
         <p>Accesos rápidos</p>
         <h1>Enlaces del portal</h1>
       </div>
-      <a className="portal-link-home" href={PORTAL_HOME_URL} target="portal-cpe" rel="noreferrer">
+      <a className="portal-link-home" href={PORTAL_HOME_URL} target="_blank" rel="noopener noreferrer">
         <span>
           <strong>Portal CPE</strong>
           <small>Abre el portal e inicia sesión si te la solicita.</small>
@@ -3989,7 +3989,7 @@ function LinksPanel() {
         <ExternalLink size={19} aria-hidden="true" />
       </a>
       <p className="portal-links-note">
-        Los accesos usan la sesión del Portal CPE, independiente de la de esta app. Si una sección no carga directamente, abre primero «Portal CPE» y vuelve a pulsar el enlace.
+        El Portal CPE requiere su propia sesión. Si pide iniciar sesión o una sección queda en blanco, entra primero en «Portal CPE» y vuelve a abrir el enlace.
       </p>
       <div className="portal-link-groups">
         {PORTAL_LINK_GROUPS.map((group) => (
@@ -4000,12 +4000,8 @@ function LinksPanel() {
                 <a
                   key={link.url}
                   href={link.url}
-                  target="portal-cpe"
-                  rel="noreferrer"
-                  onClick={(event) => {
-                    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                    if (openPortalSectionWindow(link.url)) event.preventDefault();
-                  }}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <span>{link.label}</span>
                   <ExternalLink size={17} aria-hidden="true" />
