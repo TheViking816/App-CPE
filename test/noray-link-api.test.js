@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import handler from "../api/noray-link.js";
 
-test("abre vacaciones y excluir jornadas con un enlace personal generado por el servidor", async () => {
+test("abre las secciones Noray permitidas con un enlace personal generado por el servidor", async () => {
   const previousFetch = globalThis.fetch;
   const previousUrl = process.env.VITE_SUPABASE_URL;
   const previousKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -19,7 +19,8 @@ test("abre vacaciones y excluir jornadas con un enlace personal generado por el 
   };
 
   try {
-    for (const section of ["vacaciones", "excluir-jornadas"]) {
+    for (const section of ["vacaciones", "excluir-jornadas", "puntos-formacion",
+      "situacion-trabajador", "solicito-formacion"]) {
       const headers = {};
       const response = {
         statusCode: 0,
@@ -36,7 +37,8 @@ test("abre vacaciones y excluir jornadas con un enlace personal generado por el 
       assert.equal(headers["referrer-policy"], "no-referrer");
       assert.equal(headers["cache-control"], "private, no-store, max-age=0");
     }
-    assert.deepEqual(sections, ["vacaciones", "excluir-jornadas"]);
+    assert.deepEqual(sections, ["vacaciones", "excluir-jornadas", "puntos-formacion",
+      "situacion-trabajador", "solicito-formacion"]);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousUrl === undefined) delete process.env.VITE_SUPABASE_URL;

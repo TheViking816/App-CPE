@@ -7,9 +7,13 @@ test("aparecen los accesos Noray personales sin credenciales fijas", () => {
   assert.deepEqual(PORTAL_LINK_GROUPS.map((group) => group.title), ["Consultas", "Solicitudes"]);
   assert.deepEqual(links.map((link) => link.section), [
     "donde-voy", "jornales", "mis-especialidades", "disponibilidad12m", "puertas",
-    "chapero", "chapero-especialidades", "jornada-contratada", "dobles",
-    "vacaciones", "excluir-jornadas"
+    "chapero", "chapero-especialidades", "jornada-contratada", "puntos-formacion",
+    "dobles", "vacaciones", "excluir-jornadas", "situacion-trabajador",
+    "solicito-formacion"
   ]);
+  assert.deepEqual(PORTAL_LINK_GROUPS[0].links.slice(-1).map((link) => link.label), ["Puntos Formación"]);
+  assert.deepEqual(PORTAL_LINK_GROUPS[1].links.slice(-2).map((link) => link.label),
+    ["Jornada Flexible 48h", "Solicito Formación"]);
   assert.ok(links.every((link) => !link.url && link.label));
 });
 

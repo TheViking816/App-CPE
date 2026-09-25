@@ -12,7 +12,8 @@ export const PORTAL_LINK_GROUPS = [
       { label: "Puertas", section: "puertas" },
       { label: "Chapero", section: "chapero" },
       { label: "Chapero por especialidades", section: "chapero-especialidades" },
-      { label: "Contratación de jornada", section: "jornada-contratada" }
+      { label: "Contratación de jornada", section: "jornada-contratada" },
+      { label: "Puntos Formación", section: "puntos-formacion" }
     ]
   },
   {
@@ -20,7 +21,9 @@ export const PORTAL_LINK_GROUPS = [
     links: [
       { label: "Solicitar dobles y HS", section: "dobles" },
       { label: "Solicitud de vacaciones", section: "vacaciones" },
-      { label: "Excluir jornadas", section: "excluir-jornadas" }
+      { label: "Excluir jornadas", section: "excluir-jornadas" },
+      { label: "Jornada Flexible 48h", section: "situacion-trabajador" },
+      { label: "Solicito Formación", section: "solicito-formacion" }
     ]
   }
 ];

@@ -10,7 +10,10 @@ const SECTIONS = new Set([
   "mis-especialidades",
   "chapero",
   "chapero-especialidades",
-  "jornada-contratada"
+  "jornada-contratada",
+  "puntos-formacion",
+  "situacion-trabajador",
+  "solicito-formacion"
 ]);
 
 function requestBody(request) {
