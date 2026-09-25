@@ -10,6 +10,8 @@ const inbox = readFileSync(new URL("../src/ExchangeConversations.jsx", import.me
 const chat = readFileSync(new URL("../src/PrivateExchangeChat.jsx", import.meta.url), "utf8");
 const directChat = readFileSync(new URL("../src/DirectConversations.jsx", import.meta.url), "utf8");
 const directMigration = readFileSync(new URL("../supabase/migrations/20260925023759_hide_deleted_direct_conversations.sql", import.meta.url), "utf8");
+const supportDirectoryMigration = readFileSync(new URL("../supabase/migrations/20260925222249_allow_support_to_view_direct_directory.sql", import.meta.url), "utf8");
+const directChapasMigration = readFileSync(new URL("../supabase/migrations/20260925222501_add_chapas_to_direct_chat_tables.sql", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
 test("retirar una oferta conserva las propuestas y mensajes como historial", () => {
@@ -62,4 +64,37 @@ test("los chats privados vacíos no aparecen y se pueden ocultar sin borrar al o
   assert.doesNotMatch(directMigration, /delete from public\.app_cpe_direct_messages/);
   assert.match(directChat, /deleteDirectConversation\(/);
   assert.match(directChat, /setSelectedPerson\(\{ id, counterpartName:/);
+});
+
+test("la clave maestra ve el directorio sin acceder a los chats privados", () => {
+  assert.match(supportDirectoryMigration, /v_user := public\.app_cpe_user_from_token\(p_token\)/);
+  assert.match(supportDirectoryMigration, /v_user_id := private\.app_cpe_direct_actor\(p_token\)/);
+  assert.match(directChat, /!session\.supportAccess \? \[getDirectThreads/);
+  assert.match(directChat, /busy \|\| session\.supportAccess/);
+  assert.match(directChat, /disabled=\{busy \|\| session\.supportAccess\}/);
+});
+
+test("el administrador no publica su presencia y se identifica con una tarjeta Admin", () => {
+  assert.match(supportDirectoryMigration, /'isAdmin', u\.chapa = '72683'/);
+  assert.match(supportDirectoryMigration, /'isAdmin', other\.chapa = '72683'/);
+  assert.match(supportDirectoryMigration, /case when u\.chapa = '72683' then false/);
+  assert.match(supportDirectoryMigration, /case when other\.chapa = '72683' then false/);
+  assert.match(directChat, /person\.isAdmin \? <small className="direct-admin-badge">Admin<\/small>/);
+  assert.match(directChat, /thread\.isAdmin \? <small className="direct-admin-badge">Admin<\/small>/);
+});
+
+test("los DS de calendario anual solo muestran su código en el selector", () => {
+  assert.match(restPanel, /formatDay\(selectedCalendarRest\)\} · DS<\/option>/);
+  assert.doesNotMatch(restPanel, /· DS · calendario anual/);
+});
+
+test("las tres tablas de chats mantienen chapas legibles además de los IDs", () => {
+  for (const column of ["user_low_chapa", "user_high_chapa", "sender_chapa", "user_chapa"]) {
+    assert.match(directChapasMigration, new RegExp(`add column ${column} text`));
+    assert.match(directChapasMigration, new RegExp(`alter column ${column} set not null`));
+  }
+  assert.match(directChapasMigration, /before insert or update on public\.app_cpe_direct_conversations/);
+  assert.match(directChapasMigration, /before insert or update on public\.app_cpe_direct_messages/);
+  assert.match(directChapasMigration, /before insert or update on public\.app_cpe_direct_reads/);
+  assert.match(directChapasMigration, /after update of chapa on public\.app_cpe_users/);
 });

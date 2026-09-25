@@ -6250,6 +6250,8 @@ select {
 .direct-status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #9aaabd; vertical-align: 1px; }
 .direct-online { color: #15803d !important; }
 .direct-online .direct-status-dot { background: #22c55e; }
+.direct-admin-badge { display: inline-flex; align-self: start; width: fit-content; padding: 3px 8px; border-radius: 999px; background: #eaf3ff; color: #145a9d !important; font-size: 10px; font-weight: 900; }
+.direct-inbox-shell .exchange-inbox-row:disabled { opacity: 1; cursor: default; }
 .direct-inbox-shell .exchange-inbox-row-copy > strong { font-size: 13px; }
 .direct-inbox-messages { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-height: 310px; max-height: 520px; overflow-y: auto; padding: 18px; }
 .direct-inbox-messages > p { margin: auto; color: var(--muted); font-size: 12px; }

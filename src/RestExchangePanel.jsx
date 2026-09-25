@@ -250,7 +250,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       {kind !== "want" && <label>Tengo
         <select value={offeredDate} onChange={(event) => setOfferedDate(event.target.value)} required>
           <option value="">Selecciona un día</option>
-          {selectedCalendarRest && <option value={selectedCalendarRest}>{formatDay(selectedCalendarRest)} · DS · calendario anual</option>}
+          {selectedCalendarRest && <option value={selectedCalendarRest}>{formatDay(selectedCalendarRest)} · DS</option>}
           {days.rest.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)} · {day.code}</option>)}
         </select>
       </label>}

@@ -30,8 +30,9 @@ export default function DirectConversations({ session }) {
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setLoading(true);
     try {
-      const [nextPeople, nextThreads] = await Promise.all([
-        getDirectDirectory({ token: session.token }), getDirectThreads({ token: session.token })
+      const [nextPeople, nextThreads = []] = await Promise.all([
+        getDirectDirectory({ token: session.token }),
+        ...(!session.supportAccess ? [getDirectThreads({ token: session.token })] : [])
       ]);
       setPeople(nextPeople);
       setThreads(nextThreads);
@@ -41,7 +42,7 @@ export default function DirectConversations({ session }) {
     } finally {
       if (!quiet) setLoading(false);
     }
-  }, [session.token]);
+  }, [session.token, session.supportAccess]);
 
   useEffect(() => {
     reload();
@@ -83,10 +84,10 @@ export default function DirectConversations({ session }) {
     !normalizedSearch || `${thread.counterpartName} ${thread.counterpartChapa}`
       .toLocaleLowerCase("es-ES").includes(normalizedSearch)
   ), [threads, normalizedSearch]);
-  const onlineCount = people.filter((person) => person.online).length;
+  const onlineCount = people.filter((person) => person.online && !person.isAdmin).length;
 
   async function openPerson(person) {
-    if (busy) return;
+    if (busy || session.supportAccess) return;
     const existing = threads.find((thread) => thread.counterpartChapa === person.chapa);
     if (existing) {
       setSelectedId(existing.id);
@@ -101,7 +102,7 @@ export default function DirectConversations({ session }) {
       await reload({ quiet: true });
       setSelectedId(id);
       setSelectedPerson({ id, counterpartName: person.name,
-        counterpartChapa: person.chapa, online: person.online });
+        counterpartChapa: person.chapa, online: person.online, isAdmin: person.isAdmin });
       setListMode("threads");
       setError("");
     } catch (startError) {
@@ -151,23 +152,25 @@ export default function DirectConversations({ session }) {
       <div className="exchange-inbox-filters">
         <button type="button" className={listMode === "people" ? "is-active" : ""}
           onClick={() => setListMode("people")}>Usuarios <span>{people.length}</span></button>
-        <button type="button" className={listMode === "threads" ? "is-active" : ""}
-          onClick={() => setListMode("threads")}>Mis chats <span>{threads.length}</span></button>
+        {!session.supportAccess && <button type="button" className={listMode === "threads" ? "is-active" : ""}
+          onClick={() => setListMode("threads")}>Mis chats <span>{threads.length}</span></button>}
       </div>
       <label className="direct-inbox-search"><Search size={17} />
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar nombre o chapa" aria-label="Buscar compañero" />
       </label>
       <p className="direct-inbox-online-count">{onlineCount} en línea en los últimos 15 minutos</p>
+      {session.supportAccess && <p className="direct-inbox-online-count">Acceso de soporte: puedes consultar los usuarios, pero los chats privados requieren la sesión personal del trabajador.</p>}
       {loading ? <p className="exchange-inbox-empty">Cargando compañeros…</p>
         : listMode === "people" ? filteredPeople.length ? <div className="exchange-inbox-rows">
           {filteredPeople.map((person) => <button type="button" key={person.chapa}
             className={`exchange-inbox-row${selected?.counterpartChapa === person.chapa ? " is-selected" : ""}`}
-            onClick={() => openPerson(person)} disabled={busy}>
+            onClick={() => openPerson(person)} disabled={busy || session.supportAccess}>
             <span className="exchange-inbox-avatar"><UsersRound size={19} /></span>
             <span className="exchange-inbox-row-copy"><strong>{person.name} · {person.chapa}</strong>
-              <small className={person.online ? "direct-online" : ""}>
-                <i className="direct-status-dot" />{person.online ? "En línea" : "Desconectado"}</small></span>
+              {person.isAdmin ? <small className="direct-admin-badge">Admin</small>
+                : <small className={person.online ? "direct-online" : ""}>
+                  <i className="direct-status-dot" />{person.online ? "En línea" : "Desconectado"}</small>}</span>
           </button>)}
         </div> : <div className="exchange-inbox-empty">No hay compañeros que coincidan con la búsqueda.</div>
           : filteredThreads.length ? <div className="exchange-inbox-rows">
@@ -178,8 +181,9 @@ export default function DirectConversations({ session }) {
               <span className="exchange-inbox-row-copy">
                 <span className="exchange-inbox-row-top"><strong>{thread.counterpartName} · {thread.counterpartChapa}</strong>
                   <small>{when(thread.lastAt)}</small></span>
-                <small className={thread.online ? "direct-online" : ""}>
-                  <i className="direct-status-dot" />{thread.online ? "En línea" : "Desconectado"}</small>
+                {thread.isAdmin ? <small className="direct-admin-badge">Admin</small>
+                  : <small className={thread.online ? "direct-online" : ""}>
+                    <i className="direct-status-dot" />{thread.online ? "En línea" : "Desconectado"}</small>}
                 <span className="exchange-inbox-preview">{thread.lastMessage || "Aún no hay mensajes"}</span>
               </span>
               {Number(thread.unread) > 0 && <b className="exchange-inbox-count">{thread.unread}</b>}
@@ -194,8 +198,9 @@ export default function DirectConversations({ session }) {
             onClick={() => { setSelectedId(""); setSelectedPerson(null); }}><ArrowLeft size={19} /></button>
           <span className="exchange-inbox-avatar"><MessageCircle size={19} /></span>
           <div><strong>{selected.counterpartName} · {selected.counterpartChapa}</strong>
-            <small className={selected.online ? "direct-online" : ""}>
-              <i className="direct-status-dot" />{selected.online ? "En línea" : "Desconectado"}</small></div>
+            {selected.isAdmin ? <small className="direct-admin-badge">Admin</small>
+              : <small className={selected.online ? "direct-online" : ""}>
+                <i className="direct-status-dot" />{selected.online ? "En línea" : "Desconectado"}</small>}</div>
           {!EXCHANGE_PREVIEW_READ_ONLY && <button type="button" className="direct-inbox-delete"
             onClick={removeSelected} disabled={busy} title="Eliminar chat de mi lista">
             <Trash2 size={17} /><span>Eliminar</span></button>}
