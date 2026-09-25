@@ -141,6 +141,7 @@ const PORTAL_SYNC_TIMINGS_KEY = "app-cpe-portal-sync-timings";
 const PORTAL_ACTIVE_SYNC_KEY = "app-cpe-portal-active-sync";
 const FORUM_LAST_READ_KEY = "app-cpe-forum-last-read";
 const LINKS_INTRO_SEEN_KEY = "app-cpe-links-intro-seen-v1";
+const CONVERSATIONS_INTRO_SEEN_KEY = "app-cpe-conversations-intro-seen-v1";
 const DEFAULT_PORTAL_SYNC_SECONDS = 55;
 const PORTAL_ACTIVE_SYNC_MAX_AGE_MS = 30 * 60 * 1000;
 const SNAPSHOT_POLL_MS = 60_000;
@@ -180,6 +181,22 @@ function markLinksIntroSeen(chapa) {
     localStorage.setItem(forumStorageKey(LINKS_INTRO_SEEN_KEY, chapa), "1");
   } catch {
     // La tarjeta puede volver a aparecer si no hay almacenamiento disponible.
+  }
+}
+
+function hasSeenConversationsIntro(chapa) {
+  try {
+    return localStorage.getItem(forumStorageKey(CONVERSATIONS_INTRO_SEEN_KEY, chapa)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markConversationsIntroSeen(chapa) {
+  try {
+    localStorage.setItem(forumStorageKey(CONVERSATIONS_INTRO_SEEN_KEY, chapa), "1");
+  } catch {
+    // El aviso puede volver a aparecer si no hay almacenamiento disponible.
   }
 }
 
@@ -1989,6 +2006,7 @@ function HomePanel({
   onLoadPortal,
   onNavigate,
   showLinksIntro,
+  showConversationsIntro,
   displayName
 }) {
   const nearest = getNearestDoor(doors);
@@ -2010,6 +2028,18 @@ function HomePanel({
       </header>
 
       {portalConnected === false && !portalCredentialsRejected && <PortalConnectCallout onConnect={onLoadPortal} />}
+
+      {showConversationsIntro && (
+        <button className="home-links-callout home-conversations-callout" type="button" onClick={() => onNavigate("conversaciones")}>
+          <span className="home-links-icon home-conversations-icon"><MessageCircle size={23} /></span>
+          <span>
+            <small>Nuevo en App CPE</small>
+            <strong>Conversaciones</strong>
+            <span>Habla por privado con otros usuarios y sigue tus intercambios.</span>
+          </span>
+          <ChevronRight size={21} />
+        </button>
+      )}
 
       {showLinksIntro && (
         <button className="home-links-callout" type="button" onClick={() => onNavigate("enlaces")}>
@@ -4433,6 +4463,7 @@ export function App() {
   const [forumLatestId, setForumLatestId] = useState(0);
   const [forumHasUnread, setForumHasUnread] = useState(false);
   const [showLinksIntro, setShowLinksIntro] = useState(false);
+  const [showConversationsIntro, setShowConversationsIntro] = useState(false);
   const [notifications, setNotifications] = useState({ rows: [], unread: 0 });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
@@ -4498,6 +4529,10 @@ export function App() {
     if (nextTab === "enlaces") {
       markLinksIntroSeen(session?.chapa);
       setShowLinksIntro(false);
+    }
+    if (nextTab === "conversaciones") {
+      markConversationsIntroSeen(session?.chapa);
+      setShowConversationsIntro(false);
     }
     setMenuOpen(false);
     setActiveTab(nextTab);
@@ -4584,6 +4619,12 @@ export function App() {
   }, [activeTab, session?.chapa]);
 
   useEffect(() => {
+    if (activeTab !== "conversaciones" || !session?.chapa) return;
+    markConversationsIntroSeen(session.chapa);
+    setShowConversationsIntro(false);
+  }, [activeTab, session?.chapa]);
+
+  useEffect(() => {
     if (!session?.token || !session?.chapa) {
       setForumLatestId(0);
       setForumHasUnread(false);
@@ -4617,6 +4658,12 @@ export function App() {
   useEffect(() => {
     setShowLinksIntro(Boolean(
       session?.token && session?.chapa && activeTab !== "enlaces" && !hasSeenLinksIntro(session.chapa)
+    ));
+  }, [activeTab, session?.chapa, session?.token]);
+
+  useEffect(() => {
+    setShowConversationsIntro(Boolean(
+      session?.token && session?.chapa && activeTab !== "conversaciones" && !hasSeenConversationsIntro(session.chapa)
     ));
   }, [activeTab, session?.chapa, session?.token]);
 
@@ -5006,6 +5053,7 @@ export function App() {
                 onLoadPortal={connectPortal}
                 onNavigate={navigateToTab}
                 showLinksIntro={showLinksIntro}
+                showConversationsIntro={showConversationsIntro}
                 displayName={session.displayName}
               />
         )}

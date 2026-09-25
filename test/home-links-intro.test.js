@@ -11,3 +11,11 @@ test("el aviso de Inicio anuncia Enlaces a cada chapa sin depender del antiguo a
   assert.match(app, /markLinksIntroSeen\(session\.chapa\)/);
   assert.doesNotMatch(app, /showForumIntro|FORUM_INTRO_SEEN_KEY/);
 });
+
+test("Conversaciones muestra un aviso por chapa hasta la primera visita", () => {
+  assert.match(app, /CONVERSATIONS_INTRO_SEEN_KEY = "app-cpe-conversations-intro-seen-v1"/);
+  assert.match(app, /forumStorageKey\(CONVERSATIONS_INTRO_SEEN_KEY, chapa\)/);
+  assert.match(app, /showConversationsIntro &&[\s\S]*onNavigate\("conversaciones"\)/);
+  assert.match(app, /activeTab !== "conversaciones" && !hasSeenConversationsIntro\(session\.chapa\)/);
+  assert.match(app, /markConversationsIntroSeen\(session\.chapa\)/);
+});
