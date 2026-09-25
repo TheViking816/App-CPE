@@ -2321,7 +2321,10 @@ function DoorsPanel({
       <div className="section-heading">
         <p>{getSpecialtyKind(activeSpecialty) === "polivalencia" ? "Puertas de polivalencia" : "Puertas de turno"}</p>
         <h1>{getSpecialtyLabel(activeSpecialty)}</h1>
-        <span>Censo: {activeSpecialty.censo.length}</span>
+        <span>
+          Censo: {activeSpecialty.censo.length}
+          {user?.position ? ` · Tu posición: ${user.displayPosition || user.position}` : ""}
+        </span>
       </div>
       <MissingCensusPosition user={user} activeSpecialty={activeSpecialty} />
       <DoorsTable title="Laborables" doors={laborableDoors} tone="lab" />
