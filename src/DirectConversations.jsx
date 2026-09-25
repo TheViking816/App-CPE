@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, MessageCircle, Search, Trash2, UsersRound } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, MessageCircle, Search, Trash2, UsersRound } from "lucide-react";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import {
   deleteDirectConversation, getDirectDirectory, getDirectMessages, getDirectThreads, markDirectRead,
@@ -30,9 +30,9 @@ export default function DirectConversations({ session }) {
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setLoading(true);
     try {
-      const [nextPeople, nextThreads = []] = await Promise.all([
+      const [nextPeople, nextThreads] = await Promise.all([
         getDirectDirectory({ token: session.token }),
-        ...(!session.supportAccess ? [getDirectThreads({ token: session.token })] : [])
+        getDirectThreads({ token: session.token })
       ]);
       setPeople(nextPeople);
       setThreads(nextThreads);
@@ -57,12 +57,12 @@ export default function DirectConversations({ session }) {
     try {
       const next = await getDirectMessages({ token: session.token, conversationId: selectedId });
       setMessages(next);
-      await markDirectRead({ token: session.token, conversationId: selectedId });
+      if (!session.supportAccess) await markDirectRead({ token: session.token, conversationId: selectedId });
       reload({ quiet: true });
     } catch (loadError) {
       setError(loadError.message || "No se pudo cargar la conversación.");
     }
-  }, [selectedId, session.token, reload]);
+  }, [selectedId, session.token, session.supportAccess, reload]);
 
   useEffect(() => {
     setMessages([]);
@@ -79,7 +79,7 @@ export default function DirectConversations({ session }) {
   const normalizedSearch = search.trim().toLocaleLowerCase("es-ES");
   const filteredPeople = useMemo(() => people.filter((person) =>
     !normalizedSearch || `${person.name} ${person.chapa}`.toLocaleLowerCase("es-ES").includes(normalizedSearch)
-  ), [people, normalizedSearch]);
+  ).sort((a, b) => Number(Boolean(b.isAdmin)) - Number(Boolean(a.isAdmin))), [people, normalizedSearch]);
   const filteredThreads = useMemo(() => threads.filter((thread) =>
     !normalizedSearch || `${thread.counterpartName} ${thread.counterpartChapa}`
       .toLocaleLowerCase("es-ES").includes(normalizedSearch)
@@ -87,7 +87,7 @@ export default function DirectConversations({ session }) {
   const onlineCount = people.filter((person) => person.online && !person.isAdmin).length;
 
   async function openPerson(person) {
-    if (busy || session.supportAccess) return;
+    if (busy) return;
     const existing = threads.find((thread) => thread.counterpartChapa === person.chapa);
     if (existing) {
       setSelectedId(existing.id);
@@ -95,6 +95,7 @@ export default function DirectConversations({ session }) {
       setListMode("threads");
       return;
     }
+    if (session.supportAccess) return;
     if (EXCHANGE_PREVIEW_READ_ONLY) return;
     setBusy(true);
     try {
@@ -115,7 +116,7 @@ export default function DirectConversations({ session }) {
   async function send(event) {
     event.preventDefault();
     const message = body.trim();
-    if (!message || !selectedId || busy || EXCHANGE_PREVIEW_READ_ONLY) return;
+    if (!message || !selectedId || busy || session.supportAccess || EXCHANGE_PREVIEW_READ_ONLY) return;
     setBusy(true);
     try {
       await sendDirectMessage({ token: session.token, conversationId: selectedId, body: message });
@@ -130,7 +131,7 @@ export default function DirectConversations({ session }) {
   }
 
   async function removeSelected() {
-    if (!selectedId || busy || EXCHANGE_PREVIEW_READ_ONLY) return;
+    if (!selectedId || busy || session.supportAccess || EXCHANGE_PREVIEW_READ_ONLY) return;
     if (!window.confirm("¿Eliminar este chat de tu lista? La otra persona conservará sus mensajes.")) return;
     setBusy(true);
     try {
@@ -152,20 +153,21 @@ export default function DirectConversations({ session }) {
       <div className="exchange-inbox-filters">
         <button type="button" className={listMode === "people" ? "is-active" : ""}
           onClick={() => setListMode("people")}>Usuarios <span>{people.length}</span></button>
-        {!session.supportAccess && <button type="button" className={listMode === "threads" ? "is-active" : ""}
-          onClick={() => setListMode("threads")}>Mis chats <span>{threads.length}</span></button>}
+        <button type="button" className={listMode === "threads" ? "is-active" : ""}
+          onClick={() => setListMode("threads")}>{session.supportAccess ? "Chats" : "Mis chats"} <span>{threads.length}</span></button>
       </div>
       <label className="direct-inbox-search"><Search size={17} />
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar nombre o chapa" aria-label="Buscar compañero" />
       </label>
       <p className="direct-inbox-online-count">{onlineCount} en línea en los últimos 15 minutos</p>
-      {session.supportAccess && <p className="direct-inbox-online-count">Acceso de soporte: puedes consultar los usuarios, pero los chats privados requieren la sesión personal del trabajador.</p>}
+      {session.supportAccess && <p className="direct-inbox-online-count">Modo soporte · Chats de la chapa {session.chapa} · Solo lectura</p>}
       {loading ? <p className="exchange-inbox-empty">Cargando compañeros…</p>
         : listMode === "people" ? filteredPeople.length ? <div className="exchange-inbox-rows">
           {filteredPeople.map((person) => <button type="button" key={person.chapa}
             className={`exchange-inbox-row${selected?.counterpartChapa === person.chapa ? " is-selected" : ""}`}
-            onClick={() => openPerson(person)} disabled={busy || session.supportAccess}>
+            onClick={() => openPerson(person)}
+            disabled={busy || (session.supportAccess && !threads.some((thread) => thread.counterpartChapa === person.chapa))}>
             <span className="exchange-inbox-avatar"><UsersRound size={19} /></span>
             <span className="exchange-inbox-row-copy"><strong>{person.name} · {person.chapa}</strong>
               {person.isAdmin ? <small className="direct-admin-badge">Admin</small>
@@ -186,7 +188,7 @@ export default function DirectConversations({ session }) {
                     <i className="direct-status-dot" />{thread.online ? "En línea" : "Desconectado"}</small>}
                 <span className="exchange-inbox-preview">{thread.lastMessage || "Aún no hay mensajes"}</span>
               </span>
-              {Number(thread.unread) > 0 && <b className="exchange-inbox-count">{thread.unread}</b>}
+              {!session.supportAccess && Number(thread.unread) > 0 && <b className="exchange-inbox-count">{thread.unread}</b>}
             </button>)}
           </div> : <div className="exchange-inbox-empty"><MessageCircle size={30} />
             <strong>Aún no tienes chats</strong><span>Elige una persona para iniciar uno.</span></div>}
@@ -201,25 +203,35 @@ export default function DirectConversations({ session }) {
             {selected.isAdmin ? <small className="direct-admin-badge">Admin</small>
               : <small className={selected.online ? "direct-online" : ""}>
                 <i className="direct-status-dot" />{selected.online ? "En línea" : "Desconectado"}</small>}</div>
-          {!EXCHANGE_PREVIEW_READ_ONLY && <button type="button" className="direct-inbox-delete"
+          {!session.supportAccess && !EXCHANGE_PREVIEW_READ_ONLY && <button type="button" className="direct-inbox-delete"
             onClick={removeSelected} disabled={busy} title="Eliminar chat de mi lista">
             <Trash2 size={17} /><span>Eliminar</span></button>}
         </div>
         <div className="direct-inbox-messages" aria-live="polite">
           {messages.length ? messages.map((message) => <div key={message.id}
             className={`rest-exchange-message${message.isOwn ? " is-own" : ""}`}>
-            <small>{message.isOwn ? "Tú" : selected.counterpartName} · {when(message.createdAt)}</small>
+            <small>{message.isOwn
+              ? `${session.supportAccess ? session.displayName || "Usuario" : "Tú"} · ${session.chapa}`
+              : `${selected.counterpartName} · ${selected.counterpartChapa}`} · {when(message.createdAt)}</small>
             <span>{message.body}</span>
-          </div>) : <p>Aún no hay mensajes. Saluda a tu compañero.</p>}
+            {message.isOwn && <small className={`direct-message-receipt${message.readAt ? " is-read" : ""}`}
+              title={message.readAt ? `Leído ${when(message.readAt)}` : "Enviado; aún no leído"}>
+              {message.readAt ? <CheckCheck size={14} /> : <Check size={14} />}
+              {message.readAt ? "Leído" : "Enviado"}
+            </small>}
+          </div>) : <p>{session.supportAccess ? "No hay mensajes en este chat." : "Aún no hay mensajes. Saluda a tu compañero."}</p>}
         </div>
-        {!EXCHANGE_PREVIEW_READ_ONLY && <form className="direct-inbox-compose" onSubmit={send}>
+        {!session.supportAccess && !EXCHANGE_PREVIEW_READ_ONLY && <form className="direct-inbox-compose" onSubmit={send}>
           <label htmlFor="direct-chat-message">Mensaje privado</label>
           <textarea id="direct-chat-message" value={body} maxLength={500} rows={2}
             onChange={(event) => setBody(event.target.value)} placeholder="Escribe un mensaje…" />
           <button type="submit" disabled={busy || !body.trim()}>{busy ? "Enviando…" : "Enviar"}</button>
         </form>}
       </> : <div className="exchange-inbox-placeholder"><MessageCircle size={36} />
-        <strong>Elige a un compañero</strong><span>Puedes iniciar un chat privado con cualquier usuario registrado.</span>
+        <strong>{session.supportAccess ? "Elige un chat" : "Elige a un compañero"}</strong>
+        <span>{session.supportAccess
+          ? "Puedes revisar los mensajes sin enviarlos ni marcarlos como leídos."
+          : "Puedes iniciar un chat privado con cualquier usuario registrado."}</span>
       </div>}
     </div>
     {error && <p className="exchange-inbox-error" role="alert">{error}</p>}

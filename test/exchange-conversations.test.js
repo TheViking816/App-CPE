@@ -13,6 +13,7 @@ const directMigration = readFileSync(new URL("../supabase/migrations/20260925023
 const supportDirectoryMigration = readFileSync(new URL("../supabase/migrations/20260925222249_allow_support_to_view_direct_directory.sql", import.meta.url), "utf8");
 const directChapasMigration = readFileSync(new URL("../supabase/migrations/20260925222501_add_chapas_to_direct_chat_tables.sql", import.meta.url), "utf8");
 const recipientChapaMigration = readFileSync(new URL("../supabase/migrations/20260925224442_add_recipient_chapa_to_direct_messages.sql", import.meta.url), "utf8");
+const readReceiptsMigration = readFileSync(new URL("../supabase/migrations/20260925225217_direct_chat_read_receipts_and_support_review.sql", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
 test("retirar una oferta conserva las propuestas y mensajes como historial", () => {
@@ -67,12 +68,18 @@ test("los chats privados vacíos no aparecen y se pueden ocultar sin borrar al o
   assert.match(directChat, /setSelectedPerson\(\{ id, counterpartName:/);
 });
 
-test("la clave maestra ve el directorio sin acceder a los chats privados", () => {
+test("la clave maestra revisa chats sin enviar ni marcarlos como leídos", () => {
   assert.match(supportDirectoryMigration, /v_user := public\.app_cpe_user_from_token\(p_token\)/);
   assert.match(supportDirectoryMigration, /v_user_id := private\.app_cpe_direct_actor\(p_token\)/);
-  assert.match(directChat, /!session\.supportAccess \? \[getDirectThreads/);
-  assert.match(directChat, /busy \|\| session\.supportAccess/);
-  assert.match(directChat, /disabled=\{busy \|\| session\.supportAccess\}/);
+  assert.match(directChat, /getDirectThreads\(\{ token: session\.token \}\)/);
+  assert.match(directChat, /if \(!session\.supportAccess\) await markDirectRead/);
+  assert.match(directChat, /busy \|\| session\.supportAccess \|\| EXCHANGE_PREVIEW_READ_ONLY/);
+  assert.match(directChat, /!session\.supportAccess && !EXCHANGE_PREVIEW_READ_ONLY && <form/);
+  assert.match(readReceiptsMigration, /create table private\.app_cpe_direct_support_audit/);
+  assert.match(readReceiptsMigration, /on conflict \(session_hash, conversation_id\) do update/);
+  assert.match(readReceiptsMigration, /v_user := public\.app_cpe_user_from_token\(p_token\)/);
+  assert.match(readReceiptsMigration, /if coalesce\(v_is_support, false\) then/);
+  assert.doesNotMatch(readReceiptsMigration, /create or replace function public\.app_cpe_direct_send/);
 });
 
 test("el administrador no publica su presencia y se identifica con una tarjeta Admin", () => {
@@ -82,6 +89,14 @@ test("el administrador no publica su presencia y se identifica con una tarjeta A
   assert.match(supportDirectoryMigration, /case when other\.chapa = '72683' then false/);
   assert.match(directChat, /person\.isAdmin \? <small className="direct-admin-badge">Admin<\/small>/);
   assert.match(directChat, /thread\.isAdmin \? <small className="direct-admin-badge">Admin<\/small>/);
+  assert.match(readReceiptsMigration, /\(u\.chapa = '72683'\) desc/);
+  assert.match(directChat, /Boolean\(b\.isAdmin\)\) - Number\(Boolean\(a\.isAdmin\)\)/);
+});
+
+test("el tick de lectura usa la fecha del destinatario y no la del remitente", () => {
+  assert.match(readReceiptsMigration, /r\.user_id = case when c\.user_low_id = v_user\.id then c\.user_high_id else c\.user_low_id end/);
+  assert.match(readReceiptsMigration, /v_recipient_read_at >= messages\.created_at/);
+  assert.match(directChat, /message\.readAt \? <CheckCheck size=\{14\} \/> : <Check size=\{14\} \/>/);
 });
 
 test("los DS de calendario anual solo muestran su código en el selector", () => {

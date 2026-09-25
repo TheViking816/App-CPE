@@ -6255,6 +6255,8 @@ select {
 .direct-inbox-shell .exchange-inbox-row-copy > strong { font-size: 13px; }
 .direct-inbox-messages { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-height: 310px; max-height: 520px; overflow-y: auto; padding: 18px; }
 .direct-inbox-messages > p { margin: auto; color: var(--muted); font-size: 12px; }
+.direct-inbox-messages .direct-message-receipt { display: inline-flex; align-self: flex-end; align-items: center; gap: 3px; margin-top: 1px; color: #66788c; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.direct-inbox-messages .direct-message-receipt.is-read { color: #116cbd; }
 .direct-inbox-compose { display: grid; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--line); }
 .direct-inbox-compose label { font-size: 12px; font-weight: 800; }
 .direct-inbox-compose textarea { width: 100%; box-sizing: border-box; padding: 10px; resize: vertical; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); font: inherit; }
