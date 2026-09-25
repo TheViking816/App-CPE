@@ -3884,25 +3884,25 @@ select {
 }
 
 .portal-salary-alternative .portal-jornales-list article.is-training {
-  border-color: #16a34a;
-  background: linear-gradient(135deg, #fff 0%, #edfff3 100%);
+  border-color: #fb7185;
+  background: linear-gradient(135deg, #fff 0%, #fff1f2 100%);
 }
 
 .portal-salary-alternative .portal-jornales-list article.is-training::before {
-  background: #16a34a;
-  box-shadow: 0 0 0 1px #16a34a;
+  background: #f43f5e;
+  box-shadow: 0 0 0 1px #f43f5e;
 }
 
 .portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date {
-  color: #166534;
-  background: #dcfce7;
+  color: #9f1239;
+  background: #ffe4e6;
 }
 
 .portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date span,
 .portal-salary-alternative .portal-jornales-list article.is-training .is-training-amount {
-  color: #166534;
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  color: #9f1239;
+  border-color: #fda4af;
+  background: #fff1f2;
 }
 
 .portal-salary-alternative .portal-jornales-list article > * {
@@ -4627,20 +4627,20 @@ select {
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training {
-  border-color: #22c55e;
-  background: linear-gradient(135deg, #111f33 0%, #153524 100%);
+  border-color: #fb7185;
+  background: linear-gradient(135deg, #111f33 0%, #391826 100%);
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date {
-  color: #bbf7d0;
-  background: #163d29;
+  color: #fecdd3;
+  background: #4c1d2b;
 }
 
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training .portal-jornal-date span,
 :root[data-theme="dark"] .portal-salary-alternative .portal-jornales-list article.is-training .is-training-amount {
-  color: #bbf7d0;
-  border-color: #166534;
-  background: #123021;
+  color: #fecdd3;
+  border-color: #be123c;
+  background: #4c1d2b;
 }
 .password-change-form { display: grid; gap: 12px; }
 .password-change-form label { display: grid; gap: 6px; color: var(--ink); font-size: 12px; font-weight: 900; }
