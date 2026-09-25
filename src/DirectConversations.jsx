@@ -150,7 +150,7 @@ export default function DirectConversations({ session }) {
     <aside className={`exchange-inbox-list${selected ? " has-selection" : ""}`} aria-label="Compañeros y chats">
       <div className="exchange-inbox-filters">
         <button type="button" className={listMode === "people" ? "is-active" : ""}
-          onClick={() => setListMode("people")}>Personas <span>{people.length}</span></button>
+          onClick={() => setListMode("people")}>Usuarios <span>{people.length}</span></button>
         <button type="button" className={listMode === "threads" ? "is-active" : ""}
           onClick={() => setListMode("threads")}>Mis chats <span>{threads.length}</span></button>
       </div>
