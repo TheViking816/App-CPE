@@ -2684,7 +2684,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
           );
         })}
       </div>
-      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span><span><i className="is-requested" /> SL · Solicitado</span>{group && month.source === "company" && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span></div>
+      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span><span><i className="is-training" /> FM · Formación</span><span><i className="is-requested" /> SL · Solicitado</span>{group && month.source === "company" && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span></div>
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>
