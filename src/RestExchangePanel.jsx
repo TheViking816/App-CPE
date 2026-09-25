@@ -47,6 +47,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     [descansos, vacaciones, vacationEntries]);
   const restDates = useMemo(() => new Set(days.rest.map((item) => item.date)), [days.rest]);
   const workDates = useMemo(() => new Set(days.work.map((item) => item.date)), [days.work]);
+  const selectedCalendarRest = selectedDay?.source === "company" && selectedDay.code === "DS"
+    && !restDates.has(selectedDay.dateKey) ? selectedDay.dateKey : "";
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!session?.token) return;
@@ -75,7 +77,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     setError("");
     setNotice("");
     setTab("publish");
-    if (restDates.has(selectedDay.dateKey)) {
+    if (restDates.has(selectedDay.dateKey) || selectedCalendarRest) {
       setKind("swap");
       setOfferedDate(selectedDay.dateKey);
     } else if (workDates.has(selectedDay.dateKey)) {
@@ -83,7 +85,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       setWantedDate(selectedDay.dateKey);
     }
     panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selectedDay]);
+  }, [selectedDay, selectedCalendarRest]);
 
   async function mutate(action, successMessage) {
     if (EXCHANGE_PREVIEW_READ_ONLY) {
@@ -235,7 +237,9 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     {tab === "publish" && <form className="rest-exchange-form" onSubmit={publish}>
       {editingOfferId && <div className="rest-exchange-edit-heading"><strong>Editar publicación</strong><button type="button" className="rest-exchange-secondary" onClick={() => setEditingOfferId("")}>Cancelar edición</button></div>}
       {selectedDay && !restDates.has(selectedDay.dateKey) && !workDates.has(selectedDay.dateKey) &&
-        <p className="rest-exchange-note">El día seleccionado aún no consta como DS, FS o día disponible en el portal. Elige otro día de las listas.</p>}
+        <p className="rest-exchange-note">{selectedCalendarRest
+          ? "Este DS figura en el calendario anual del grupo. Para publicarlo, debe aparecer también en tu calendario personal sincronizado del portal."
+          : "El día seleccionado aún no consta como DS, FS o día disponible en el portal. Elige otro día de las listas."}</p>}
       <label>Quiero publicar
         <select value={kind} onChange={(event) => setKind(event.target.value)}>
           <option value="swap">Intercambiar un descanso</option>
@@ -246,6 +250,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       {kind !== "want" && <label>Tengo
         <select value={offeredDate} onChange={(event) => setOfferedDate(event.target.value)} required>
           <option value="">Selecciona un día</option>
+          {selectedCalendarRest && <option value={selectedCalendarRest}>{formatDay(selectedCalendarRest)} · DS · calendario anual</option>}
           {days.rest.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)} · {day.code}</option>)}
         </select>
       </label>}
@@ -255,7 +260,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           {days.work.map((day) => <option key={day.date} value={day.date}>{formatDay(day.date)}{day.code ? ` · ${day.code}` : ""}</option>)}
         </select>
       </label>}
-      <button type="submit" disabled={busy || loading}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
+      <button type="submit" disabled={busy || loading || (kind !== "want" && Boolean(selectedCalendarRest) && offeredDate === selectedCalendarRest)}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
     </form>}
     {tab === "board" && <div className="rest-exchange-list">
       {loading ? <p>Cargando publicaciones…</p> : board.length ? board.map((offer) => offerCard(offer)) : <p>No hay publicaciones abiertas todavía.</p>}

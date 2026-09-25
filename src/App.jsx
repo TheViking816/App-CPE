@@ -4,7 +4,7 @@ import { selectPremiumRowsForMonth } from "./portal-premium-period.js";
 import { hasSalaryData } from "./portal-salary-state.js";
 import { needsPortalSecurityKey } from "./portalSecurityNotice.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
-import { buildPersonalRestMonths, parseRestGroup } from "./restCalendar.js";
+import { buildPersonalRestMonths } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
 import ExchangeConversations, { conversationHash } from "./ExchangeConversations.jsx";
@@ -2473,8 +2473,14 @@ function PortalVacationPreview({ vacaciones, onDaySelect, selectedDay }) {
         cursor.setMonth(cursor.getMonth() + 1);
       }
     });
+    const today = new Date();
+    if (Number(vacaciones?.year) === today.getFullYear()
+      || [...byMonth.values()].some((month) => month.year === today.getFullYear())) {
+      const key = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      if (!byMonth.has(key)) byMonth.set(key, { key, year: today.getFullYear(), month: today.getMonth() + 1 });
+    }
     return [...byMonth.values()].sort((a, b) => a.key.localeCompare(b.key));
-  }, [periods]);
+  }, [periods, vacaciones?.year]);
   const [selectedMonthKey, setSelectedMonthKey] = useState("");
 
   useEffect(() => {
@@ -2495,6 +2501,7 @@ function PortalVacationPreview({ vacaciones, onDaySelect, selectedDay }) {
   const firstDay = new Date(selectedMonth.year, selectedMonth.month - 1, 1).getDay();
   const leadingBlanks = (firstDay + 6) % 7;
   const vacationDays = new Set();
+  const today = new Date();
   periods.forEach((period) => {
     const start = parsePortalDate(period.inicio);
     const end = parsePortalDate(period.fin);
@@ -2530,13 +2537,14 @@ function PortalVacationPreview({ vacaciones, onDaySelect, selectedDay }) {
           const day = index + 1;
           const isVacation = vacationDays.has(day);
           const dateKey = `${selectedMonth.year}-${String(selectedMonth.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const now = new Date();
           const canSelect = Boolean(onDaySelect) && new Date(selectedMonth.year, selectedMonth.month - 1, day)
-            >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            >= new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const isToday = selectedMonth.year === today.getFullYear() && selectedMonth.month === today.getMonth() + 1 && day === today.getDate();
           const DayTag = canSelect ? "button" : "span";
           return <DayTag type={canSelect ? "button" : undefined}
-            className={`${isVacation ? "is-vacation" : ""}${selectedDay?.dateKey === dateKey ? " is-selected" : ""}`}
+            className={`${isVacation ? "is-vacation" : ""}${isToday ? " is-today" : ""}${selectedDay?.dateKey === dateKey ? " is-selected" : ""}`}
             key={day}
+            aria-current={isToday ? "date" : undefined}
             onClick={canSelect ? () => onDaySelect({ dateKey, isVacation }) : undefined}
             aria-label={canSelect ? `${day} de ${MONTHS_ES[selectedMonth.month - 1]}: ${isVacation ? "vacaciones asignadas; ofrecer este día" : "quiero vacaciones este día"}` : undefined}>
             {day}{isVacation && <small>VA</small>}
@@ -2632,7 +2640,6 @@ function PortalExceptionsPreview({ exceptions }) {
 
 function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEntries = [], onDaySelect, selectedDay }) {
   const months = useMemo(() => buildPersonalRestMonths(descansos, vacaciones), [descansos, vacaciones]);
-  const group = parseRestGroup(descansos?.worker?.group);
   const vacationDates = useMemo(() => new Set(
     vacationEntries.map((item) => String(item?.payroll?.date || "")).filter(Boolean)
   ), [vacationEntries]);
@@ -2697,6 +2704,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
               type={onDaySelect ? "button" : undefined}
               key={day}
               className={`portal-day personal-rest-day is-${isVacation ? "vacation" : item.type || "ordinary"} ${isVacation ? "has-vacation" : ""} ${isToday ? "is-today" : ""} ${selectedDay?.dateKey === dateKey ? "is-selected" : ""}`}
+              aria-current={isToday ? "date" : undefined}
               style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
               onClick={onDaySelect ? () => onDaySelect({ dateKey, code: displayCode, source: month.source }) : undefined}
               aria-label={onDaySelect ? `${day} de ${MONTHS_ES[month.month - 1]}: ${displayCode || ({ rest: "descanso", week: "descanso", holiday: "festivo inhábil", requested: "lista de espera" }[item.type] || "día laborable")}. Ver opciones de intercambio` : undefined}
@@ -2715,7 +2723,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
           );
         })}
       </div>
-      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span><span><i className="is-training" /> FM · Formación</span><span><i className="is-requested" /> SL · Solicitado</span>{group && month.source === "company" && <span><i className="is-week" /> Semana {group.week === "v" ? "verde" : "naranja"}</span>}<span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span></div>
+      <div className="personal-rest-legend"><span><i className="is-rest" /> DS · Descanso</span><span><i className="is-festive" /> FS · Festivo</span><span><i className="is-training" /> FM · Formación</span><span><i className="is-requested" /> SL · Solicitado</span><span><i className="is-holiday" /> Festivo inhábil</span><span><i className="has-vacation" /> Vacaciones asignadas</span></div>
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
         Abrir Calendario Anual <ExternalLink size={15} />
       </a>

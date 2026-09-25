@@ -32,7 +32,7 @@ export function companyRestType(year, month, day, group) {
   if (calendar.holiday?.includes(day)) return "holiday";
   if (!group) return "";
   if (calendar[group.letter]?.includes(day) || calendar[`${group.letter}${group.week}`]?.includes(day)) return "rest";
-  if (calendar[group.week]?.includes(day)) return "week";
+  if (calendar[group.week]?.includes(day)) return "rest";
   return "";
 }
 
@@ -76,8 +76,9 @@ export function buildPersonalRestMonths(descansos, vacaciones, now = new Date())
       const dateKey = `${key}-${String(day).padStart(2, "0")}`;
       const portal = portalByDay.get(day);
       const companyType = companyRestType(month.year, month.month, day, group);
-      const code = String(portal?.code || "").toUpperCase();
-      const type = code ? ({ DS: "rest", FS: "festive", FH: "holiday", VA: "portal-vacation", SL: "requested", PA: "permission", FM: "training" }[code] || "other")
+      const portalCode = String(portal?.code || "").toUpperCase();
+      const code = month.portal ? portalCode : companyType === "rest" ? "DS" : "";
+      const type = portalCode ? ({ DS: "rest", FS: "festive", FH: "holiday", VA: "portal-vacation", SL: "requested", PA: "permission", FM: "training" }[portalCode] || "other")
         : month.portal ? "" : companyType;
       return { day, dateKey, code, type, vacation: vacationDays.has(dateKey), position: "" };
     });

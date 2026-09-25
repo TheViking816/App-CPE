@@ -5980,6 +5980,13 @@ select {
   box-shadow: inset 0 -3px 0 #8b5cf6;
 }
 
+.portal-vacation-calendar > :is(span, button).is-today {
+  border-color: #ea580c;
+  box-shadow: inset 0 0 0 2px #ea580c, 0 0 0 2px #ffedd5;
+  color: #9a3412;
+  font-weight: 950;
+}
+
 .portal-vacation-calendar > button { cursor: pointer; }
 .portal-vacation-calendar > button:hover { border-color: #8b5cf6; }
 .portal-vacation-calendar > button.is-selected { outline: 2px solid #7c3aed; outline-offset: 1px; }
@@ -6159,7 +6166,6 @@ select {
 .personal-rest-navigation select { flex: 1; padding: 0 10px; }
 .portal-day.personal-rest-day.is-rest { border-color: #93c5fd; background: #dbeafe; }
 .portal-day.personal-rest-day.is-festive { border-color: #2dd4bf; background: #ccfbf1; }
-.portal-day.personal-rest-day.is-week { border-color: #86c98a; background: #def4db; }
 .portal-day.personal-rest-day.is-holiday { border-color: #aeb4bb; background: #e5e7eb; }
 .portal-day.personal-rest-day.is-requested { border-color: #facc15; background: #fef08a; }
 .portal-day.personal-rest-day.is-permission { border-color: #818cf8; background: #e0e7ff; }
@@ -6167,6 +6173,8 @@ select {
 .portal-day.personal-rest-day.is-portal-vacation { border-color: #60a5fa; background: #dbeafe; }
 .portal-day.personal-rest-day.is-other { border-color: #94a3b8; background: #e2e8f0; }
 .portal-day.personal-rest-day.has-vacation { border-color: #8b5cf6; background: #faf5ff; box-shadow: inset 0 0 0 1px #8b5cf6; }
+.portal-day.personal-rest-day.is-today { border-color: #ea580c; box-shadow: inset 0 0 0 2px #ea580c, 0 0 0 2px #ffedd5; }
+.portal-day.personal-rest-day.is-today span { color: #9a3412; font-size: 13px; }
 .portal-day.personal-rest-day strong { text-align: center; overflow-wrap: anywhere; }
 .portal-day.personal-rest-day[type="button"] { width: 100%; padding: 0; color: var(--ink); font: inherit; cursor: pointer; }
 .portal-day.personal-rest-day[type="button"]:hover { border-color: #3b82f6; box-shadow: 0 2px 9px rgba(37, 99, 235, .16); }
@@ -6175,7 +6183,6 @@ select {
 .personal-rest-legend { display: flex; flex-wrap: wrap; gap: 7px 13px; margin: 11px 0 4px; color: var(--muted); font-size: 11px; font-weight: 750; }
 .personal-rest-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .personal-rest-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #dbeafe; }
-.personal-rest-legend i.is-week { background: #def4db; }
 .personal-rest-legend i.is-festive { background: #ccfbf1; border: 1px solid #2dd4bf; }
 .personal-rest-legend i.is-holiday { background: #e5e7eb; }
 .personal-rest-legend i.has-vacation { background: #f5f3ff; border: 2px solid #8b5cf6; }
@@ -6935,6 +6942,17 @@ select {
   border-color: #a78bfa;
   background: rgba(124, 58, 237, 0.22);
   box-shadow: inset 0 0 0 1px #a78bfa;
+}
+
+:root[data-theme="dark"] .portal-day.personal-rest-day.is-today,
+:root[data-theme="dark"] .portal-vacation-calendar > :is(span, button).is-today {
+  border-color: #fb923c;
+  box-shadow: inset 0 0 0 2px #fb923c, 0 0 0 2px #7c2d12;
+}
+
+:root[data-theme="dark"] .portal-day.personal-rest-day.is-today span,
+:root[data-theme="dark"] .portal-vacation-calendar > :is(span, button).is-today {
+  color: #fdba74;
 }
 
 :root[data-theme="dark"] .personal-rest-navigation button,
