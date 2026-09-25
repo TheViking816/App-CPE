@@ -41,14 +41,6 @@ Install-AppTask "App CPE - Laborables 14-45" (New-CalendarAction "Normal") @(
   New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek $mondayToFriday -At "14:45"
 ) "14:45 de lunes a viernes laborables; se omiten festivos y visperas."
 
-# La contratación definitiva de 20-02 y la primera jornada del día siguiente
-# puede publicarse después de la lectura de las 14:45. Esta segunda pasada
-# sustituye la anticipada por los partes definitivos y permite cruzar Turno y
-# Bolsa dentro del mismo barco, parte y especialidad.
-Install-AppTask "App CPE - Laborables 15-00" (New-CalendarAction "Normal") @(
-  New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek $mondayToFriday -At "15:00"
-) "15:00 de lunes a viernes laborables; recoge la contratación definitiva posterior a las 14:45."
-
 $remaining2026Eves = @([datetime]"2026-10-08", [datetime]"2026-12-07", [datetime]"2026-12-24")
 $reduced1145 = @(
   New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek Saturday -At "11:45"
@@ -79,4 +71,4 @@ Install-AppTask "App CPE - Cambio de mes 00-15" (New-CalendarAction "MonthRollov
   New-ScheduledTaskTrigger -Daily -At "00:15"
 ) "Una vez al mes renueva el mes actual y el siguiente para todos los perfiles."
 
-Write-Host "Programacion App CPE instalada: ocho tareas definitivas."
+Write-Host "Programacion App CPE instalada: siete tareas definitivas; la ultima lectura laborable es a las 14:45."
