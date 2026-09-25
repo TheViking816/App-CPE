@@ -1625,7 +1625,7 @@ function ProfileSettingsModal({ session, onClose, onSave }) {
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
             />
-            <small>Se mostrará en Inicio y junto a tus mensajes del foro.</small>
+            <small>Se mostrará en Inicio, chats, intercambios y el foro.</small>
           </label>
           <label className="profile-privacy-toggle">
             <input
