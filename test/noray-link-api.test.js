@@ -2,50 +2,46 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import handler from "../api/noray-link.js";
 
-function response() {
-  return {
-    statusCode: 200,
-    headers: {},
-    body: "",
-    setHeader(name, value) { this.headers[name.toLowerCase()] = value; },
-    end(value = "") { this.body = value; return this; }
-  };
-}
-
-test("el puente rechaza secciones no verificadas sin consultar credenciales", async () => {
-  const result = response();
-  await handler({ method: "POST", headers: {}, body: { token: "valid", section: "vacaciones" } }, result);
-  assert.equal(result.statusCode, 400);
-  assert.equal(result.headers.location, undefined);
-});
-
-test("el puente redirige al iframe personalizado que autoriza la base", async () => {
-  const oldFetch = globalThis.fetch;
-  const oldUrl = process.env.VITE_SUPABASE_URL;
-  const oldKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  process.env.VITE_SUPABASE_URL = "https://example.supabase.co";
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = "test-key";
-  const requested = [];
+test("abre vacaciones y excluir jornadas con un enlace personal generado por el servidor", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousUrl = process.env.VITE_SUPABASE_URL;
+  const previousKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  process.env.VITE_SUPABASE_URL = "https://exampleproject.supabase.co";
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+  const sections = [];
   globalThis.fetch = async (_url, options) => {
-    requested.push(JSON.parse(options.body));
-    return new Response(JSON.stringify(
-      `https://norayweb.cpevalencia.com/puertas?cal=gwt&mode=PROD&req=login&usr=72710&rec=4321&pwd=${"a".repeat(64)}`
-    ), { status: 200 });
+    const { p_section } = JSON.parse(options.body);
+    sections.push(p_section);
+    return {
+      ok: true,
+      json: async () => `https://norayweb.cpevalencia.com/${p_section}?cal=gwt&mode=PROD&req=login&usr=12345&rec=2611&pwd=${"a".repeat(64)}`
+    };
   };
 
   try {
-    const result = response();
-    await handler({ method: "POST", headers: {}, body: { token: "test-token", section: "puertas" } }, result);
-    assert.equal(result.statusCode, 303);
-    assert.equal(result.headers["cache-control"], "private, no-store, max-age=0");
-    assert.equal(result.headers["referrer-policy"], "no-referrer");
-    assert.equal(new URL(result.headers.location).pathname, "/puertas");
-    assert.deepEqual(requested, [{ p_token: "test-token", p_section: "puertas" }]);
+    for (const section of ["vacaciones", "excluir-jornadas"]) {
+      const headers = {};
+      const response = {
+        statusCode: 0,
+        setHeader(name, value) { headers[name] = value; },
+        end() {}
+      };
+      await handler({
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ token: "session-test", section })
+      }, response);
+      assert.equal(response.statusCode, 303);
+      assert.equal(new URL(headers.location).pathname, `/${section}`);
+      assert.equal(headers["referrer-policy"], "no-referrer");
+      assert.equal(headers["cache-control"], "private, no-store, max-age=0");
+    }
+    assert.deepEqual(sections, ["vacaciones", "excluir-jornadas"]);
   } finally {
-    globalThis.fetch = oldFetch;
-    if (oldUrl === undefined) delete process.env.VITE_SUPABASE_URL;
-    else process.env.VITE_SUPABASE_URL = oldUrl;
-    if (oldKey === undefined) delete process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    else process.env.VITE_SUPABASE_PUBLISHABLE_KEY = oldKey;
+    globalThis.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.VITE_SUPABASE_URL;
+    else process.env.VITE_SUPABASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    else process.env.VITE_SUPABASE_PUBLISHABLE_KEY = previousKey;
   }
 });

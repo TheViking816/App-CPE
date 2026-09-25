@@ -18,7 +18,9 @@ export const PORTAL_LINK_GROUPS = [
   {
     title: "Solicitudes",
     links: [
-      { label: "Solicitar dobles y HS", section: "dobles" }
+      { label: "Solicitar dobles y HS", section: "dobles" },
+      { label: "Solicitud de vacaciones", section: "vacaciones" },
+      { label: "Excluir jornadas", section: "excluir-jornadas" }
     ]
   }
 ];

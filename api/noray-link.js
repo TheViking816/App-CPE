@@ -2,6 +2,8 @@ const NORAY_ORIGIN = "https://norayweb.cpevalencia.com";
 const SECTIONS = new Set([
   "disponibilidad12m",
   "dobles",
+  "vacaciones",
+  "excluir-jornadas",
   "puertas",
   "jornales",
   "donde-voy",
