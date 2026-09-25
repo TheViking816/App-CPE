@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarDays, Inbox, MessageCircle, Sun } from "lucide-react";
 import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
+import DirectConversations from "./DirectConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { getExchangeThreads, markExchangeThreadRead } from "./supabaseClient.js";
 
@@ -47,6 +48,7 @@ function threadStatus(thread) {
 }
 
 export default function ExchangeConversations({ session }) {
+  const [mode, setMode] = useState(() => selectionFromHash() ? "exchange" : "direct");
   const [threads, setThreads] = useState([]);
   const [selectedKey, setSelectedKey] = useState(selectionFromHash);
   const [filter, setFilter] = useState("active");
@@ -67,15 +69,20 @@ export default function ExchangeConversations({ session }) {
   }, [session.token]);
 
   useEffect(() => {
+    if (mode !== "exchange") return undefined;
     reload();
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") reload({ quiet: true });
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [reload]);
+  }, [reload, mode]);
 
   useEffect(() => {
-    const onHash = () => setSelectedKey(selectionFromHash());
+    const onHash = () => {
+      const selection = selectionFromHash();
+      setSelectedKey(selection);
+      if (selection) setMode("exchange");
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -105,11 +112,18 @@ export default function ExchangeConversations({ session }) {
   return <section className="exchange-inbox">
     <header className="exchange-inbox-header">
       <div><span>Entre compañeros</span><h1>Conversaciones</h1>
-        <p>Tus propuestas de descansos y vacaciones en un solo lugar.</p></div>
+        <p>Habla con otros usuarios y consulta tus propuestas de intercambio.</p></div>
       {unreadCount > 0 && <b className="exchange-inbox-unread">{unreadCount} sin leer</b>}
     </header>
+    <nav className="direct-inbox-main-tabs" aria-label="Tipos de conversación">
+      <button type="button" className={mode === "direct" ? "is-active" : ""}
+        onClick={() => { setMode("direct"); window.location.hash = "#/conversaciones"; }}>
+        Chats entre usuarios</button>
+      <button type="button" className={mode === "exchange" ? "is-active" : ""}
+        onClick={() => setMode("exchange")}>Intercambios</button>
+    </nav>
     {EXCHANGE_PREVIEW_READ_ONLY && <p className="exchange-inbox-preview-note">Vista previa en modo consulta: puedes revisar las conversaciones, pero los mensajes nuevos están desactivados para proteger producción.</p>}
-    <div className="exchange-inbox-shell">
+    {mode === "direct" ? <DirectConversations session={session} /> : <div className="exchange-inbox-shell">
       <aside className={`exchange-inbox-list${selected ? " has-selection" : ""}`} aria-label="Lista de conversaciones">
         <div className="exchange-inbox-filters">
           <button type="button" className={filter === "active" ? "is-active" : ""}
@@ -164,6 +178,6 @@ export default function ExchangeConversations({ session }) {
         </> : <div className="exchange-inbox-placeholder"><MessageCircle size={36} />
           <strong>Elige una conversación</strong><span>Tu historial queda aquí aunque se retire una oferta.</span></div>}
       </div>
-    </div>
+    </div>}
   </section>;
 }

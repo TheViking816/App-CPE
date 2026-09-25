@@ -153,6 +153,57 @@ export async function getExchangeThreads({ token }) {
   return data || [];
 }
 
+export async function touchDirectPresence({ token }) {
+  if (!supabase || !token) return false;
+  const { data, error } = await supabase.rpc("app_cpe_direct_touch", { p_token: token });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function getDirectDirectory({ token }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_directory", { p_token: token });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getDirectThreads({ token }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_threads", { p_token: token });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function startDirectConversation({ token, chapa }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_start", {
+    p_token: token, p_chapa: chapa
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getDirectMessages({ token, conversationId }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_messages", {
+    p_token: token, p_conversation_id: conversationId
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function sendDirectMessage({ token, conversationId, body }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_send", {
+    p_token: token, p_conversation_id: conversationId, p_body: body
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function markDirectRead({ token, conversationId }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_mark_read", {
+    p_token: token, p_conversation_id: conversationId
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function markExchangeThreadRead({ token, type, proposalId }) {
   const { data, error } = await supabase.rpc("app_cpe_exchange_mark_read", {
     p_token: token, p_type: type, p_proposal_id: proposalId

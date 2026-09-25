@@ -112,6 +112,7 @@ import {
   setUserManualPremium,
   trackPageVisit,
   touchPortalActivity,
+  touchDirectPresence,
   trackUsageEvent,
   updateUserIrpf,
   updateActivationEmail,
@@ -4767,6 +4768,24 @@ export function App() {
         .catch(() => {});
     }
   }, [session?.chapa, session?.supportAccess, session?.token]);
+
+  useEffect(() => {
+    if (!session?.token || session.supportAccess) return undefined;
+    const touch = () => {
+      if (document.visibilityState === "visible") {
+        touchDirectPresence({ token: session.token }).catch(() => {});
+      }
+    };
+    touch();
+    const timer = window.setInterval(touch, 4 * 60_000);
+    document.addEventListener("visibilitychange", touch);
+    window.addEventListener("focus", touch);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", touch);
+      window.removeEventListener("focus", touch);
+    };
+  }, [session?.token, session?.supportAccess]);
 
   useEffect(() => {
     if (!session?.token) {
