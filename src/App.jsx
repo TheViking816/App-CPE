@@ -7,7 +7,7 @@ import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import { buildPersonalRestMonths } from "./restCalendar.js";
 import RestExchangePanel from "./RestExchangePanel.jsx";
 import VacationExchangePanel from "./VacationExchangePanel.jsx";
-import ExchangeConversations, { conversationHash } from "./ExchangeConversations.jsx";
+import ExchangeConversations, { conversationHash, directConversationHash } from "./ExchangeConversations.jsx";
 import { PORTAL_HOME_URL, PORTAL_LINK_GROUPS } from "./portalLinks.js";
 import {
   BriefcaseBusiness,
@@ -2007,7 +2007,9 @@ function HomePanel({
   onNavigate,
   showLinksIntro,
   showConversationsIntro,
-  displayName
+  displayName,
+  conversationNotifications,
+  onOpenNotification
 }) {
   const nearest = getNearestDoor(doors);
   const firstName = preferredFirstName(displayName, portalSnapshot);
@@ -2051,6 +2053,25 @@ function HomePanel({
           </span>
           <ChevronRight size={21} />
         </button>
+      )}
+
+      {conversationNotifications.length > 0 && (
+        <section className="home-section-block home-conversation-alerts" aria-label="Mensajes sin leer">
+          <div className="home-section-heading">
+            <span><MessageCircle size={18} /> Mensajes sin leer <b>{conversationNotifications.length}</b></span>
+            <button type="button" onClick={() => onNavigate("novedades")}>Ver todas <ChevronRight size={16} /></button>
+          </div>
+          <div className="home-conversation-alert-list">
+            {conversationNotifications.slice(0, 3).map((item) => (
+              <button key={item.id} type="button" className="home-conversation-alert" onClick={() => onOpenNotification(item)}>
+                <span className="home-conversation-alert-icon"><MessageCircle size={20} /></span>
+                <span><strong>{item.title}</strong><small>{item.body}</small></span>
+                <time>{notificationTime(item.createdAt)}</time>
+                <ChevronRight size={17} />
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="home-section-block">
@@ -4340,6 +4361,7 @@ const NOTIFICATION_TYPES = {
   vacation_proposal: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   vacation_response: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   vacation_message: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
+  direct_message: { label: "Chat privado", Icon: MessageCircle, tone: "chat" },
   vacations_changed: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   exceptions_changed: { label: "Excepciones", Icon: CalendarOff, tone: "exceptions" }
 };
@@ -4522,7 +4544,7 @@ export function App() {
       setActiveTab(allowedTab);
       const canonicalHash = hashForTab(allowedTab);
       if (window.location.hash !== canonicalHash
-        && !/^#\/conversaciones\/(rest|vacation)\/[0-9a-f-]{36}$/i.test(window.location.hash)) {
+        && !/^#\/conversaciones\/(rest|vacation|direct)\/[0-9a-f-]{36}$/i.test(window.location.hash)) {
         window.history.replaceState(null, "", canonicalHash);
       }
     };
@@ -4582,7 +4604,7 @@ export function App() {
       return undefined;
     }
     refreshNotifications();
-    const timer = window.setInterval(() => refreshNotifications({ quiet: true }), 60_000);
+    const timer = window.setInterval(() => refreshNotifications({ quiet: true }), 15_000);
     const onVisible = () => document.visibilityState === "visible" && refreshNotifications({ quiet: true });
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -4600,8 +4622,10 @@ export function App() {
       }));
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => refreshNotifications({ quiet: true }));
     }
-    if (["rest_message", "vacation_message"].includes(item.eventType) && item.metadata?.proposalId) {
-      window.location.hash = conversationHash(item.eventType === "rest_message" ? "rest" : "vacation", item.metadata.proposalId);
+    if (item.eventType === "direct_message" && item.metadata?.conversationId) {
+      window.location.hash = directConversationHash(item.metadata.conversationId);
+    } else if (/^(rest|vacation)_(message|proposal|response)$/.test(item.eventType) && item.metadata?.proposalId) {
+      window.location.hash = conversationHash(item.eventType.startsWith("rest_") ? "rest" : "vacation", item.metadata.proposalId);
     } else {
       navigateToTab(item.targetTab || "novedades");
     }
@@ -5066,6 +5090,11 @@ export function App() {
                 showLinksIntro={showLinksIntro}
                 showConversationsIntro={showConversationsIntro}
                 displayName={session.displayName}
+                conversationNotifications={(notifications.rows || []).filter((item) => !item.readAt && [
+                  "direct_message", "rest_message", "vacation_message", "rest_proposal", "rest_response",
+                  "vacation_proposal", "vacation_response"
+                ].includes(item.eventType))}
+                onOpenNotification={openNotification}
               />
         )}
         {activeTab === "contratacion" && <ContractingPanel snapshot={portalSnapshot} currentTime={currentTime} portalConnected={portalConnected} portalCredentialsRejected={portalSyncStatus === "credentials_error"} onLoadPortal={connectPortal} />}

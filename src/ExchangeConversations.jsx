@@ -6,9 +6,14 @@ import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { getExchangeThreads, markExchangeThreadRead } from "./supabaseClient.js";
 
 const THREAD_HASH = /^#\/conversaciones\/(rest|vacation)\/([0-9a-f-]{36})$/i;
+const DIRECT_HASH = /^#\/conversaciones\/direct\/([0-9a-f-]{36})$/i;
 
 export function conversationHash(type, proposalId) {
   return `#/conversaciones/${type}/${proposalId}`;
+}
+
+export function directConversationHash(conversationId) {
+  return `#/conversaciones/direct/${conversationId}`;
 }
 
 function selectionFromHash() {
@@ -48,7 +53,7 @@ function threadStatus(thread) {
 }
 
 export default function ExchangeConversations({ session }) {
-  const [mode, setMode] = useState("exchange");
+  const [mode, setMode] = useState(() => DIRECT_HASH.test(window.location.hash) ? "direct" : "exchange");
   const [threads, setThreads] = useState([]);
   const [selectedKey, setSelectedKey] = useState(selectionFromHash);
   const [filter, setFilter] = useState("active");
@@ -82,6 +87,7 @@ export default function ExchangeConversations({ session }) {
       const selection = selectionFromHash();
       setSelectedKey(selection);
       if (selection) setMode("exchange");
+      else if (DIRECT_HASH.test(window.location.hash)) setMode("direct");
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);

@@ -19,7 +19,7 @@ export default function DirectConversations({ session }) {
   const [threads, setThreads] = useState([]);
   const [listMode, setListMode] = useState("people");
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(() => window.location.hash.match(/^#\/conversaciones\/direct\/([0-9a-f-]{36})$/i)?.[1] || "");
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState("");
@@ -51,6 +51,15 @@ export default function DirectConversations({ session }) {
     }, 30_000);
     return () => window.clearInterval(timer);
   }, [reload]);
+
+  useEffect(() => {
+    const onHash = () => {
+      const id = window.location.hash.match(/^#\/conversaciones\/direct\/([0-9a-f-]{36})$/i)?.[1];
+      if (id) { setSelectedId(id); setListMode("threads"); }
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   const loadMessages = useCallback(async () => {
     if (!selectedId) return;

@@ -14,6 +14,8 @@ const supportDirectoryMigration = readFileSync(new URL("../supabase/migrations/2
 const directChapasMigration = readFileSync(new URL("../supabase/migrations/20260925222501_add_chapas_to_direct_chat_tables.sql", import.meta.url), "utf8");
 const recipientChapaMigration = readFileSync(new URL("../supabase/migrations/20260925224442_add_recipient_chapa_to_direct_messages.sql", import.meta.url), "utf8");
 const readReceiptsMigration = readFileSync(new URL("../supabase/migrations/20260925225217_direct_chat_read_receipts_and_support_review.sql", import.meta.url), "utf8");
+const directNotificationsMigration = readFileSync(new URL("../supabase/migrations/20260925230315_notify_direct_messages.sql", import.meta.url), "utf8");
+const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
 test("retirar una oferta conserva las propuestas y mensajes como historial", () => {
@@ -53,9 +55,20 @@ test("las ofertas y propuestas identifican con chapa al compañero antes del acu
 });
 
 test("Intercambios se abre primero y los chats entre usuarios se llaman privados", () => {
-  assert.match(inbox, /useState\("exchange"\)/);
+  assert.match(inbox, /DIRECT_HASH\.test\(window\.location\.hash\) \? "direct" : "exchange"/);
   assert.ok(inbox.indexOf('>Intercambios</button>') < inbox.indexOf('Chats privados</button>'));
   assert.doesNotMatch(inbox, /Chats entre usuarios/);
+});
+
+test("el chat privado avisa al destinatario y el aviso abre su conversación desde Inicio", () => {
+  assert.match(directNotificationsMigration, /after insert on public\.app_cpe_direct_messages/);
+  assert.match(directNotificationsMigration, /join public\.app_cpe_users recipient/);
+  assert.match(directNotificationsMigration, /on conflict \(chapa, event_type, entity_key, change_hash\) do nothing/);
+  assert.match(directNotificationsMigration, /where user_id = v_user_id and event_type = 'direct_message'/);
+  assert.match(app, /home-conversation-alerts/);
+  assert.match(app, /directConversationHash\(item\.metadata\.conversationId\)/);
+  assert.match(inbox, /DIRECT_HASH\.test\(window\.location\.hash\)/);
+  assert.match(directChat, /setSelectedId\(id\); setListMode\("threads"\)/);
 });
 
 test("los chats privados vacíos no aparecen y se pueden ocultar sin borrar al otro usuario", () => {
