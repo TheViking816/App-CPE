@@ -517,7 +517,7 @@ export function parseDescansos(html = "", now = new Date()) {
   const worker = {
     chapa: normalizeChapa(expectedChapa || workerMatch?.[1] || ""),
     name: normalizePortalPersonName(workerMatch?.[expectedChapa ? 1 : 2] || ""),
-    professionalGroup: pageText.match(/Grupo\s+Profesional:\s*([^\n|]+)/i)?.[1]?.trim() || "",
+    professionalGroup: pageText.match(/Grupo\s+Profesional\s*:\s*([^\n|]*?)(?=\s+(?:Grupo\s+de\s+Descanso|Descansos\s+mes|Calendario)\b|[\n|]|$)/i)?.[1]?.trim() || "",
     group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([ABC]\s*-\s*[VN])/i)?.[1]?.trim() || "",
     currentMonthRest: Number(pageText.match(/Descansos\s+mes\s+actual:\s*\((\d+)\)/i)?.[1] || 0),
     nextMonthRest: Number(pageText.match(/Descansos\s+proximo\s+mes:\s*\((\d+)\)/i)?.[1] || 0)
@@ -527,7 +527,7 @@ export function parseDescansos(html = "", now = new Date()) {
   // IT aparece en trabajadores pendientes de formación. Aunque el portal no
   // documenta todavía su significado, es un estado válido del calendario y
   // debe cerrar la lectura igual que DS, SL, FS o VA.
-  const restCodePriority = { "": 0, SL: 1, DS: 2, FS: 2, VA: 3, IT: 4 };
+  const restCodePriority = { "": 0, SL: 1, DS: 2, FS: 2, VA: 3, FM: 4, IT: 4 };
   const ensureMonth = (year, month) => {
     const key = `${year}-${String(month).padStart(2, "0")}`;
     if (!monthsByKey.has(key)) {
@@ -547,7 +547,7 @@ export function parseDescansos(html = "", now = new Date()) {
     return monthsByKey.get(key);
   };
 
-  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA|IT)?\s*<\/a>/gi)) {
+  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA|FM|IT)?\s*<\/a>/gi)) {
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
@@ -577,6 +577,17 @@ export function parseDescansos(html = "", now = new Date()) {
       acc[code] = (acc[code] || 0) + 1;
       return acc;
     }, {})
+  };
+}
+
+export function mergeRestWorkerMetadata(currentWorker = {}, previousWorker = {}) {
+  const current = currentWorker || {};
+  const previous = previousWorker || {};
+  return {
+    ...current,
+    name: cleanText(current.name) || cleanText(previous.name),
+    group: cleanText(current.group) || cleanText(previous.group),
+    professionalGroup: cleanText(current.professionalGroup) || cleanText(previous.professionalGroup)
   };
 }
 
@@ -3763,8 +3774,12 @@ async function main() {
       "descansos",
       () => collectDescansos(page),
       existingSnapshot?.payload?.descansos,
-      { worker: { chapa: portalUser, name: "", group: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
+      { worker: { chapa: portalUser, name: "", group: "", professionalGroup: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
       hasMonths
+    );
+    descansos.worker = mergeRestWorkerMetadata(
+      descansos.worker,
+      existingSnapshot?.payload?.descansos?.worker
     );
     if (portalIdentity.recognized) {
       descansos.worker = {

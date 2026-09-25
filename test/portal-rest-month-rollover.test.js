@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   hasCurrentRestMonthWindow,
+  mergeRestWorkerMetadata,
   parseDescansos,
   restMonthWindow,
   selectCurrentRestMonths
@@ -67,6 +68,27 @@ test("IT se guarda como estado válido y completa la ventana mensual", () => {
   assert.equal(parsed.months[0].days.find(({ day }) => day === 20).code, "IT");
   assert.equal(parsed.months[1].days.find(({ day }) => day === 1).code, "IT");
   assert.equal(parsed.totals.IT, 2);
+});
+
+test("FM se guarda junto a IT sin perder los grupos del trabajador", () => {
+  const parsed = parseDescansos([
+    "<div>Grupo Profesional: (G-DA ) - solo RTT<br>Grupo de Descanso 2026: C - N</div>",
+    restLink(2026, 9, 21, "FM"),
+    restLink(2026, 9, 22, "IT"),
+    restLink(2026, 10, 1, "DS")
+  ].join(""), new Date("2026-09-25T10:00:00.000Z"));
+
+  assert.equal(parsed.worker.professionalGroup, "(G-DA ) - solo RTT");
+  assert.equal(parsed.worker.group, "C - N");
+  assert.equal(parsed.months[0].days[20].code, "FM");
+  assert.equal(parsed.months[0].days[21].code, "IT");
+});
+
+test("una lectura parcial no borra los grupos confirmados previamente", () => {
+  assert.deepEqual(mergeRestWorkerMetadata(
+    { name: "", group: "B - N", professionalGroup: "" },
+    { name: "Nombre anterior", group: "A - V", professionalGroup: "GRUPO III" }
+  ), { name: "Nombre anterior", group: "B - N", professionalGroup: "GRUPO III" });
 });
 
 test("no acepta como completa una lectura antigua de agosto y septiembre", () => {
