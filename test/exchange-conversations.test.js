@@ -12,6 +12,7 @@ const directChat = readFileSync(new URL("../src/DirectConversations.jsx", import
 const directMigration = readFileSync(new URL("../supabase/migrations/20260925023759_hide_deleted_direct_conversations.sql", import.meta.url), "utf8");
 const supportDirectoryMigration = readFileSync(new URL("../supabase/migrations/20260925222249_allow_support_to_view_direct_directory.sql", import.meta.url), "utf8");
 const directChapasMigration = readFileSync(new URL("../supabase/migrations/20260925222501_add_chapas_to_direct_chat_tables.sql", import.meta.url), "utf8");
+const recipientChapaMigration = readFileSync(new URL("../supabase/migrations/20260925224442_add_recipient_chapa_to_direct_messages.sql", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
 test("retirar una oferta conserva las propuestas y mensajes como historial", () => {
@@ -97,4 +98,12 @@ test("las tres tablas de chats mantienen chapas legibles además de los IDs", ()
   assert.match(directChapasMigration, /before insert or update on public\.app_cpe_direct_messages/);
   assert.match(directChapasMigration, /before insert or update on public\.app_cpe_direct_reads/);
   assert.match(directChapasMigration, /after update of chapa on public\.app_cpe_users/);
+});
+
+test("cada mensaje guarda la chapa del otro participante como destinatario", () => {
+  assert.match(recipientChapaMigration, /add column recipient_chapa text/);
+  assert.match(recipientChapaMigration, /when c\.user_low_id = new\.sender_id then c\.user_high_id/);
+  assert.match(recipientChapaMigration, /when c\.user_high_id = new\.sender_id then c\.user_low_id/);
+  assert.match(recipientChapaMigration, /alter column recipient_chapa set not null/);
+  assert.match(recipientChapaMigration, /and \(c\.user_low_id = new\.id or c\.user_high_id = new\.id\)/);
 });
