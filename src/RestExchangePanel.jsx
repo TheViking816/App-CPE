@@ -238,7 +238,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       {editingOfferId && <div className="rest-exchange-edit-heading"><strong>Editar publicación</strong><button type="button" className="rest-exchange-secondary" onClick={() => setEditingOfferId("")}>Cancelar edición</button></div>}
       {selectedDay && !restDates.has(selectedDay.dateKey) && !workDates.has(selectedDay.dateKey) &&
         <p className="rest-exchange-note">{selectedCalendarRest
-          ? "Este DS figura en el calendario anual del grupo. Para publicarlo, debe aparecer también en tu calendario personal sincronizado del portal."
+          ? "Este DS aún no consta en tu calendario personal del portal. Podrás publicarlo cuando se sincronice."
           : "El día seleccionado aún no consta como DS, FS o día disponible en el portal. Elige otro día de las listas."}</p>}
       <label>Quiero publicar
         <select value={kind} onChange={(event) => setKind(event.target.value)}>

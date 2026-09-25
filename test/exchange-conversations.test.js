@@ -85,7 +85,7 @@ test("el administrador no publica su presencia y se identifica con una tarjeta A
 
 test("los DS de calendario anual solo muestran su código en el selector", () => {
   assert.match(restPanel, /formatDay\(selectedCalendarRest\)\} · DS<\/option>/);
-  assert.doesNotMatch(restPanel, /· DS · calendario anual/);
+  assert.doesNotMatch(restPanel, /calendario anual/i);
 });
 
 test("las tres tablas de chats mantienen chapas legibles además de los IDs", () => {
