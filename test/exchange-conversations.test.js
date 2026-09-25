@@ -8,6 +8,8 @@ const vacationPanel = readFileSync(new URL("../src/VacationExchangePanel.jsx", i
 const chapaMigration = readFileSync(new URL("../supabase/migrations/20260924220710_exchange_chapa_in_names.sql", import.meta.url), "utf8");
 const inbox = readFileSync(new URL("../src/ExchangeConversations.jsx", import.meta.url), "utf8");
 const chat = readFileSync(new URL("../src/PrivateExchangeChat.jsx", import.meta.url), "utf8");
+const directChat = readFileSync(new URL("../src/DirectConversations.jsx", import.meta.url), "utf8");
+const directMigration = readFileSync(new URL("../supabase/migrations/20260925023759_hide_deleted_direct_conversations.sql", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
 test("retirar una oferta conserva las propuestas y mensajes como historial", () => {
@@ -44,4 +46,20 @@ test("las ofertas y propuestas identifican con chapa al compañero antes del acu
   assert.match(chapaMigration, /app_cpe_exchange_threads\(text\)/);
   assert.match(chapaMigration, /app_cpe_rest_exchange_list\(text\)/);
   assert.match(chapaMigration, /app_cpe_vacation_exchange_list\(text\)/);
+});
+
+test("Intercambios se abre primero y los chats entre usuarios se llaman privados", () => {
+  assert.match(inbox, /useState\("exchange"\)/);
+  assert.ok(inbox.indexOf('>Intercambios</button>') < inbox.indexOf('Chats privados</button>'));
+  assert.doesNotMatch(inbox, /Chats entre usuarios/);
+});
+
+test("los chats privados vacíos no aparecen y se pueden ocultar sin borrar al otro usuario", () => {
+  assert.match(directMigration, /and m\.id is not null/);
+  assert.match(directMigration, /m\.created_at > r\.hidden_at/);
+  assert.match(directMigration, /create function public\.app_cpe_direct_delete/);
+  assert.match(directMigration, /c\.user_low_id = v_user_id or c\.user_high_id = v_user_id/);
+  assert.doesNotMatch(directMigration, /delete from public\.app_cpe_direct_messages/);
+  assert.match(directChat, /deleteDirectConversation\(/);
+  assert.match(directChat, /setSelectedPerson\(\{ id, counterpartName:/);
 });

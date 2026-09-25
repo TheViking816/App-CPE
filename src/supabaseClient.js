@@ -204,6 +204,14 @@ export async function markDirectRead({ token, conversationId }) {
   return data;
 }
 
+export async function deleteDirectConversation({ token, conversationId }) {
+  const { data, error } = await supabase.rpc("app_cpe_direct_delete", {
+    p_token: token, p_conversation_id: conversationId
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function markExchangeThreadRead({ token, type, proposalId }) {
   const { data, error } = await supabase.rpc("app_cpe_exchange_mark_read", {
     p_token: token, p_type: type, p_proposal_id: proposalId

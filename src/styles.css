@@ -6247,6 +6247,9 @@ select {
 .direct-inbox-compose textarea { width: 100%; box-sizing: border-box; padding: 10px; resize: vertical; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); font: inherit; }
 .direct-inbox-compose button { justify-self: end; min-width: 100px; min-height: 36px; border: 0; border-radius: 8px; background: #1764ad; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .direct-inbox-compose button:disabled { opacity: .55; cursor: default; }
+.direct-inbox-delete { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: none; min-height: 34px; margin-left: auto; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: #b42318; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.direct-inbox-delete:disabled { opacity: .55; cursor: default; }
+@media (max-width: 420px) { .direct-inbox-delete span { display: none; } }
 .exchange-inbox-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
 .exchange-inbox-header span { color: #1764ad; font-size: 11px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
 .exchange-inbox-header h1 { margin: 4px 0; font-size: clamp(24px, 4vw, 32px); }

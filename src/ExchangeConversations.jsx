@@ -48,7 +48,7 @@ function threadStatus(thread) {
 }
 
 export default function ExchangeConversations({ session }) {
-  const [mode, setMode] = useState(() => selectionFromHash() ? "exchange" : "direct");
+  const [mode, setMode] = useState("exchange");
   const [threads, setThreads] = useState([]);
   const [selectedKey, setSelectedKey] = useState(selectionFromHash);
   const [filter, setFilter] = useState("active");
@@ -116,11 +116,11 @@ export default function ExchangeConversations({ session }) {
       {unreadCount > 0 && <b className="exchange-inbox-unread">{unreadCount} sin leer</b>}
     </header>
     <nav className="direct-inbox-main-tabs" aria-label="Tipos de conversación">
-      <button type="button" className={mode === "direct" ? "is-active" : ""}
-        onClick={() => { setMode("direct"); window.location.hash = "#/conversaciones"; }}>
-        Chats entre usuarios</button>
       <button type="button" className={mode === "exchange" ? "is-active" : ""}
         onClick={() => setMode("exchange")}>Intercambios</button>
+      <button type="button" className={mode === "direct" ? "is-active" : ""}
+        onClick={() => { setMode("direct"); window.location.hash = "#/conversaciones"; }}>
+        Chats privados</button>
     </nav>
     {EXCHANGE_PREVIEW_READ_ONLY && <p className="exchange-inbox-preview-note">Vista previa en modo consulta: puedes revisar las conversaciones, pero los mensajes nuevos están desactivados para proteger producción.</p>}
     {mode === "direct" ? <DirectConversations session={session} /> : <div className="exchange-inbox-shell">

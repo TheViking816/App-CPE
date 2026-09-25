@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, MessageCircle, Search, UsersRound } from "lucide-react";
+import { ArrowLeft, MessageCircle, Search, Trash2, UsersRound } from "lucide-react";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import {
-  getDirectDirectory, getDirectMessages, getDirectThreads, markDirectRead,
+  deleteDirectConversation, getDirectDirectory, getDirectMessages, getDirectThreads, markDirectRead,
   sendDirectMessage, startDirectConversation
 } from "./supabaseClient.js";
 
@@ -20,6 +20,7 @@ export default function DirectConversations({ session }) {
   const [listMode, setListMode] = useState("people");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [selectedPerson, setSelectedPerson] = useState(null);
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
@@ -72,7 +73,8 @@ export default function DirectConversations({ session }) {
     return () => window.clearInterval(timer);
   }, [selectedId, loadMessages]);
 
-  const selected = threads.find((thread) => thread.id === selectedId);
+  const selected = threads.find((thread) => thread.id === selectedId)
+    || (selectedPerson?.id === selectedId ? selectedPerson : null);
   const normalizedSearch = search.trim().toLocaleLowerCase("es-ES");
   const filteredPeople = useMemo(() => people.filter((person) =>
     !normalizedSearch || `${person.name} ${person.chapa}`.toLocaleLowerCase("es-ES").includes(normalizedSearch)
@@ -88,6 +90,7 @@ export default function DirectConversations({ session }) {
     const existing = threads.find((thread) => thread.counterpartChapa === person.chapa);
     if (existing) {
       setSelectedId(existing.id);
+      setSelectedPerson(null);
       setListMode("threads");
       return;
     }
@@ -97,6 +100,8 @@ export default function DirectConversations({ session }) {
       const id = await startDirectConversation({ token: session.token, chapa: person.chapa });
       await reload({ quiet: true });
       setSelectedId(id);
+      setSelectedPerson({ id, counterpartName: person.name,
+        counterpartChapa: person.chapa, online: person.online });
       setListMode("threads");
       setError("");
     } catch (startError) {
@@ -118,6 +123,24 @@ export default function DirectConversations({ session }) {
       setError("");
     } catch (sendError) {
       setError(sendError.message || "No se pudo enviar el mensaje.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeSelected() {
+    if (!selectedId || busy || EXCHANGE_PREVIEW_READ_ONLY) return;
+    if (!window.confirm("¿Eliminar este chat de tu lista? La otra persona conservará sus mensajes.")) return;
+    setBusy(true);
+    try {
+      await deleteDirectConversation({ token: session.token, conversationId: selectedId });
+      setSelectedId("");
+      setSelectedPerson(null);
+      setMessages([]);
+      await reload({ quiet: true });
+      setError("");
+    } catch (deleteError) {
+      setError(deleteError.message || "No se pudo eliminar el chat.");
     } finally {
       setBusy(false);
     }
@@ -150,7 +173,7 @@ export default function DirectConversations({ session }) {
           : filteredThreads.length ? <div className="exchange-inbox-rows">
             {filteredThreads.map((thread) => <button type="button" key={thread.id}
               className={`exchange-inbox-row${selectedId === thread.id ? " is-selected" : ""}`}
-              onClick={() => setSelectedId(thread.id)}>
+              onClick={() => { setSelectedPerson(null); setSelectedId(thread.id); }}>
               <span className="exchange-inbox-avatar"><MessageCircle size={19} /></span>
               <span className="exchange-inbox-row-copy">
                 <span className="exchange-inbox-row-top"><strong>{thread.counterpartName} · {thread.counterpartChapa}</strong>
@@ -168,11 +191,14 @@ export default function DirectConversations({ session }) {
       {selected ? <>
         <div className="exchange-inbox-detail-head">
           <button type="button" className="exchange-inbox-back" aria-label="Volver a la lista"
-            onClick={() => setSelectedId("")}><ArrowLeft size={19} /></button>
+            onClick={() => { setSelectedId(""); setSelectedPerson(null); }}><ArrowLeft size={19} /></button>
           <span className="exchange-inbox-avatar"><MessageCircle size={19} /></span>
           <div><strong>{selected.counterpartName} · {selected.counterpartChapa}</strong>
             <small className={selected.online ? "direct-online" : ""}>
               <i className="direct-status-dot" />{selected.online ? "En línea" : "Desconectado"}</small></div>
+          {!EXCHANGE_PREVIEW_READ_ONLY && <button type="button" className="direct-inbox-delete"
+            onClick={removeSelected} disabled={busy} title="Eliminar chat de mi lista">
+            <Trash2 size={17} /><span>Eliminar</span></button>}
         </div>
         <div className="direct-inbox-messages" aria-live="polite">
           {messages.length ? messages.map((message) => <div key={message.id}
