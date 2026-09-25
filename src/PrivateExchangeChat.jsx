@@ -53,7 +53,7 @@ export default function PrivateExchangeChat({ token, proposalId, canWrite, type 
 
   return <section className="rest-exchange-chat" aria-label="Conversación privada de la propuesta">
     {!compact && <><strong>Conversación privada</strong>
-      <p>Solo tú y el otro participante podéis leer estos mensajes. El acuerdo debe tramitarse después en el Portal CPE.</p></>}
+      <p>Solo tú y el otro participante podéis leer estos mensajes. El acuerdo debe tramitarse después en el Portal SEVASA.</p></>}
     {loading ? <span>Cargando mensajes…</span> : messages.length ? <div className="rest-exchange-messages" aria-live="polite">
       {messages.map((message) => <div key={message.id} className={`rest-exchange-message${message.isOwn ? " is-own" : ""}`}>
         <small>{message.isOwn ? "Tú" : message.senderName}{(message.isOwn ? ownChapa : counterpartChapa) ? ` · ${message.isOwn ? ownChapa : counterpartChapa}` : ""} · {new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(message.createdAt))}</small>

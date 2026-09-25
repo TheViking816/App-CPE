@@ -163,7 +163,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
         <div><small>Tengo · {dateRangeKeys(offer.offeredStart, offer.offeredEnd).length} días</small><strong>{formatRange(offer.offeredStart, offer.offeredEnd)}</strong></div>
         <div><small>Quiero</small><strong>{formatRange(offer.wantedStart, offer.wantedEnd)}</strong></div>
       </div>
-      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente del Portal CPE" : "Abierto"}</span>}
+      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente del Portal SEVASA" : "Abierto"}</span>}
       {offer.status === "open" && !offer.isOwn && !minePending && <div className="rest-exchange-actions">
         <button type="button" disabled={busy || !canRespond} onClick={() => mutate(
           () => proposeVacationExchange({ token: session.token, offerId: offer.id }),
@@ -189,7 +189,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
           <div>{chatButton(proposal)}
             <button type="button" disabled={busy} onClick={() => mutate(
               () => decideVacationExchange({ token: session.token, proposalId: proposal.id, accept: true }),
-              "Acuerdo registrado. Falta tramitarlo y confirmarlo en el Portal CPE."
+              "Acuerdo registrado. Falta tramitarlo y confirmarlo en el Portal SEVASA."
             )}>Aceptar</button>
             <button type="button" className="rest-exchange-secondary" disabled={busy} onClick={() => mutate(
               () => decideVacationExchange({ token: session.token, proposalId: proposal.id, accept: false }),
@@ -202,7 +202,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
         <span>{counterpartName(offer, proposal)} ofrece {formatRange(offer.isOwn ? offer.wantedStart : offer.offeredStart, offer.isOwn ? offer.wantedEnd : offer.offeredEnd)} y quiere {formatRange(offer.isOwn ? offer.offeredStart : offer.wantedStart, offer.isOwn ? offer.offeredEnd : offer.wantedEnd)}.</span>
         <span>En «Solicitud Vacaciones → Intercambio», indica CEDO: {formatRange(offer.isOwn ? offer.offeredStart : offer.wantedStart, offer.isOwn ? offer.offeredEnd : offer.wantedEnd)}; CAMBIO CON: chapa {proposal.counterpartChapa}; ME CEDE: {formatRange(offer.isOwn ? offer.wantedStart : offer.offeredStart, offer.isOwn ? offer.wantedEnd : offer.offeredEnd)}.</span>
         <span>El acuerdo en esta app no cambia tus vacaciones. Tramitadlo y comprobad su confirmación en el portal.</span>
-        <a href="https://portal.cpevalencia.com/#User,ViewNoray,16" target="_blank" rel="noreferrer">Abrir intercambio en el Portal CPE ↗</a>
+        <a href="https://portal.cpevalencia.com/#User,ViewNoray,16" target="_blank" rel="noreferrer">Abrir intercambio en el Portal SEVASA ↗</a>
         {chatButton(proposal)}
       </div>)}
     </article>;
@@ -211,7 +211,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
   return <section className="rest-exchange-panel vacation-exchange-panel" ref={panelRef}>
     {EXCHANGE_PREVIEW_READ_ONLY && <p className="rest-exchange-note">Vista previa en modo consulta. No se guardarán cambios en las ofertas.</p>}
     <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambiar vacaciones</h2></div></div>
-    <p className="rest-exchange-intro">Publica un día suelto o un periodo seguido que tengas asignado y el periodo de igual duración que prefieres. El acuerdo se tramita y confirma en el Portal CPE.</p>
+    <p className="rest-exchange-intro">Publica un día suelto o un periodo seguido que tengas asignado y el periodo de igual duración que prefieres. El acuerdo se tramita y confirma en el Portal SEVASA.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""}

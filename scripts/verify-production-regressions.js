@@ -18,7 +18,7 @@ if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_GIT_COMMIT_REF
     "Producción solo se puede construir desde main o una rama autorizada de intercambios.");
 }
 
-assert.match(app, /Acceso al portal/, "Falta el acceso dedicado a las claves del portal.");
+assert.match(app, /Claves del portal/, "Falta el acceso dedicado a las claves del portal.");
 assert.match(app, /const credentialsOnly = view === "all"/, "Falta el aislamiento del formulario de claves.");
 assert.doesNotMatch(app, /Datos guardados del portal oficial/, "Ha reaparecido el acceso a claves en las pantallas de datos.");
 assert.doesNotMatch(app, />Cambiar acceso<\/button>/, "Ha reaparecido el botón de claves fuera de Ajustes.");

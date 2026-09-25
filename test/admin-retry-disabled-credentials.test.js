@@ -34,7 +34,7 @@ test("una contraseña rechazada no puede volver a encolarse hasta que cambie", (
 });
 
 test("la aplicación avisa del rechazo y abre el formulario para cambiar la contraseña", () => {
-  assert.match(app, /Revisa tu contraseña del Portal CPE/);
+  assert.match(app, /Revisa tu contraseña del Portal SEVASA/);
   assert.match(app, /Cambiar contraseña/);
   assert.match(app, /portalSyncStatus === "credentials_error" && activeTab !== "portal"/);
   assert.match(app, /setShowCredentials\(true\)/);

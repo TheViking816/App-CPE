@@ -14,14 +14,14 @@ test("Novedades queda únicamente en la campana superior", () => {
 
 test("el acceso al portal se gestiona únicamente desde Ajustes", () => {
   assert.doesNotMatch(navBlock, /id: "portal"/);
-  assert.match(settingsBlock, /Acceso al portal/);
+  assert.match(settingsBlock, /Claves del portal/);
   assert.doesNotMatch(app, /Datos guardados del portal oficial/);
   assert.doesNotMatch(app, />Cambiar acceso<\/button>/);
 });
 
-test("Acceso al portal muestra solo el formulario de credenciales", () => {
+test("Claves del portal muestra solo el formulario de credenciales", () => {
   assert.match(app, /const credentialsOnly = view === "all"/);
   assert.match(app, /useState\(credentialsOnly \|\| Boolean\(openCredentialsOnLoad\)\)/);
-  assert.match(app, /setShowCredentials\(credentialsOnly \|\| !data\?\.payload \|\| rejectedCredentials\)/);
+  assert.match(app, /setShowCredentials\(credentialsOnly \|\| \(!data\?\.payload && !rejectedCredentials\)\)/);
   assert.match(app, /\{!credentialsOnly && \(syncingPortal && !snapshot\?\.payload/);
 });

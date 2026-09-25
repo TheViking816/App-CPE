@@ -795,7 +795,7 @@ function SideMenu({ open, activeTab, theme, isAdmin, forumHasUnread, onClose, on
           <p>Ajustes</p>
           <button type="button" onClick={() => { onProfileOpen(); onClose(); }}><UserRound size={19} /><span>Nombre y privacidad</span><ChevronRight size={17} /></button>
           <button type="button" onClick={() => { onSettingsOpen(); onClose(); }}><Settings size={19} /><span>Cambiar contraseña</span><ChevronRight size={17} /></button>
-          <button type="button" onClick={() => { onPortalAccessOpen(); onClose(); }}><Lock size={19} /><span>Acceso al portal</span><ChevronRight size={17} /></button>
+          <button type="button" onClick={() => { onPortalAccessOpen(); onClose(); }}><Lock size={19} /><span>Claves del portal</span><ChevronRight size={17} /></button>
           <button type="button" onClick={onThemeToggle}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}<span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span><ChevronRight size={17} /></button>
           <button className="side-delete-account" type="button" onClick={() => { onDeleteAccountOpen(); onClose(); }}><Trash2 size={19} /><span>Eliminar mi cuenta</span><ChevronRight size={17} /></button>
           <button className="side-logout" type="button" onClick={onLogout}><LogOut size={19} /><span>Cerrar sesión</span></button>
@@ -830,7 +830,7 @@ function InboxModal({ messages, onClose }) {
             {rows.map((message) => (
               <button className={message.read ? "is-read" : "is-unread"} key={message.id} type="button" onClick={() => setSelectedMessage(message)}>
                 <span><Mail size={17} /></span>
-                <div><strong>{message.title}</strong><small>{message.sender || "Portal CPE"}</small></div>
+                <div><strong>{message.title}</strong><small>{message.sender || "Portal SEVASA"}</small></div>
                 <time>{message.date}<small>{message.time}</small></time>
                 <ChevronRight size={17} />
               </button>
@@ -841,7 +841,7 @@ function InboxModal({ messages, onClose }) {
           <div className="portal-message-detail" role="dialog" aria-modal="true" aria-labelledby="portal-message-title">
             <header>
               <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Volver a la bandeja"><ChevronRight size={20} /></button>
-              <div><small>{selectedMessage.sender || "Portal CPE"}</small><h3 id="portal-message-title">{selectedMessage.title}</h3></div>
+              <div><small>{selectedMessage.sender || "Portal SEVASA"}</small><h3 id="portal-message-title">{selectedMessage.title}</h3></div>
               <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Cerrar mensaje"><X size={20} /></button>
             </header>
             <p className="portal-message-date">{selectedMessage.date} · {selectedMessage.time}</p>
@@ -1950,7 +1950,7 @@ function PortalConnectCallout({ compact = false, onConnect }) {
       <span className="home-connect-icon"><RefreshCw size={22} /></span>
       <span>
         <small>Activa toda la aplicación</small>
-        <strong>Conecta tu Portal CPE</strong>
+        <strong>Conecta tu Portal SEVASA</strong>
         <span>Introduce tu contraseña del portal de SEVASA para cargar contratación, sueldo, descansos, excepciones y vacaciones.</span>
       </span>
       <ChevronRight size={21} />
@@ -1963,7 +1963,7 @@ function PortalCredentialsRejectedCallout({ onChangePassword }) {
     <section className="portal-credentials-rejected" role="alert">
       <CircleAlert size={25} />
       <div>
-        <strong>Revisa tu contraseña del Portal CPE</strong>
+        <strong>Revisa tu contraseña del Portal SEVASA</strong>
         <span>El portal oficial ha rechazado la contraseña guardada. Cámbiala para verificarla y reactivar tus actualizaciones.</span>
       </div>
       <button type="button" onClick={onChangePassword}>Cambiar contraseña</button>
@@ -2777,7 +2777,7 @@ function PortalFeatureTemplate({ view = "all" }) {
         {template.labels.map((label, index) => <div key={label}><span>{label}</span><strong>{index === 0 && view === "salary" ? "--,-- €" : "--"}</strong></div>)}
       </div>
       <div className="portal-template-lines"><i /><i /><i /></div>
-      <small className="portal-template-note"><Lock size={14} /> Los datos aparecerán después de conectar el Portal CPE.</small>
+      <small className="portal-template-note"><Lock size={14} /> Los datos aparecerán después de conectar el Portal SEVASA.</small>
     </section>
   );
 }
@@ -3919,7 +3919,7 @@ function PortalPanel({
 
   const syncRemaining = Math.max(0, Math.ceil(syncEstimateRef.current - syncElapsed));
   const panelCopy = {
-    all: { eyebrow: "Ajustes", title: "Acceso al portal" },
+    all: { eyebrow: "Ajustes", title: "Claves del portal" },
     salary: { eyebrow: "Jornales y salario", title: "Sueldómetro" },
     rests: { eyebrow: "Calendario personal", title: "Descansos" },
     exceptions: { eyebrow: "Bolsa anual", title: "Excepciones" },
@@ -3960,7 +3960,7 @@ function PortalPanel({
       {showCredentials && (
         <>
           {!credentialsOnly && <p className="portal-first-sync-note">
-            Introduce tus datos de acceso para conectar tu cuenta con el Portal CPE.
+            Introduce tus datos de acceso para conectar tu cuenta con el Portal SEVASA.
           </p>}
 
           <section ref={credentialsRef} className="portal-security-card">
@@ -4097,7 +4097,7 @@ function LinksPanel({ session }) {
       </div>
       <a className="portal-link-home" href={PORTAL_HOME_URL} target="_blank" rel="noopener noreferrer">
         <span>
-          <strong>Portal CPE</strong>
+          <strong>Portal SEVASA</strong>
         </span>
         <ExternalLink size={19} aria-hidden="true" />
       </a>

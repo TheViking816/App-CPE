@@ -8,7 +8,7 @@ const settingsBlock = app.match(/<section className="side-menu-settings">([\s\S]
 
 test("las claves del portal se gestionan solo desde Ajustes", () => {
   assert.doesNotMatch(navBlock, /id: "portal"/);
-  assert.match(settingsBlock, /Acceso al portal/);
+  assert.match(settingsBlock, /Claves del portal/);
   assert.doesNotMatch(app, /Datos guardados del portal oficial/);
   assert.doesNotMatch(app, />Cambiar acceso<\/button>/);
   assert.match(app, /const credentialsOnly = view === "all"/);

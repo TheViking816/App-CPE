@@ -216,7 +216,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
               ? offer.isOwn ? `${name} quiere ${formatDay(offer.offeredDate)}.` : `${name} ofrece ${formatDay(offer.offeredDate)}.`
               : offer.isOwn ? `${name} ofrece ${formatDay(proposal.offeredDate)}.` : `${name} quiere ${formatDay(offer.wantedDate)}.`}</span>
           <span>{procedure.instruction}</span>
-          <span>El acuerdo aquí no modifica el calendario oficial. Comprueba el estado de la petición en el Portal CPE.</span>
+          <span>El acuerdo aquí no modifica el calendario oficial. Comprueba el estado de la petición en el Portal SEVASA.</span>
           <a href={procedure.url} target="_blank" rel="noreferrer">{procedure.label} ↗</a>
           {chatButton(proposal)}
         </div>;
