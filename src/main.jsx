@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.jsx";
+import { createVersionMonitor } from "./versionMonitor.js";
 import "./styles.css";
 
 createRoot(document.getElementById("root")).render(
@@ -9,26 +10,21 @@ createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
+const versionMonitor = createVersionMonitor({
+  currentVersion: __APP_CPE_BUILD_ID__,
+  baseUrl: import.meta.env.BASE_URL
+});
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    let refreshing = false;
-    const forceReload = (version = "controller") => {
-      if (refreshing) return;
-      const reloadKey = `app-cpe-reloaded-${version}`;
-      if (sessionStorage.getItem(reloadKey)) return;
-      sessionStorage.setItem(reloadKey, "1");
-      refreshing = true;
-      window.location.reload();
-    };
-
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20260925-monitor-conversations-2");
+      void versionMonitor.check();
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
-      if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
+      if (event.data?.type === "APP_CPE_FORCE_RELOAD") void versionMonitor.check();
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260925-monitor-conversations-2`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20260925-auto-update-bootstrap`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });
