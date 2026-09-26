@@ -8,7 +8,7 @@ test("aparecen los accesos Noray personales sin credenciales fijas", () => {
   assert.deepEqual(links.map((link) => link.section), [
     "donde-voy", "jornales", "mis-especialidades", "disponibilidad12m", "puertas",
     "chapero", "chapero-especialidades", "jornada-contratada", "puntos-formacion",
-    "dobles", "vacaciones", "excluir-jornadas", "situacion-trabajador",
+    "dobles", "vacaciones", "excepciones-pedidas", "excluir-jornadas", "situacion-trabajador",
     "solicito-formacion"
   ]);
   assert.deepEqual(PORTAL_LINK_GROUPS[0].links.slice(-1).map((link) => link.label), ["Puntos Formación"]);

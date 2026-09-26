@@ -3,6 +3,7 @@ const SECTIONS = new Set([
   "disponibilidad12m",
   "dobles",
   "vacaciones",
+  "excepciones-pedidas",
   "excluir-jornadas",
   "puertas",
   "jornales",

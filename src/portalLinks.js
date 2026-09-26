@@ -21,6 +21,7 @@ export const PORTAL_LINK_GROUPS = [
     links: [
       { label: "Solicitar dobles y HS", section: "dobles" },
       { label: "Solicitud de vacaciones", section: "vacaciones" },
+      { label: "Pedir Excepciones", section: "excepciones-pedidas" },
       { label: "Excluir jornadas", section: "excluir-jornadas" },
       { label: "Jornada Flexible 48h", section: "situacion-trabajador" },
       { label: "Solicito Formación", section: "solicito-formacion" }

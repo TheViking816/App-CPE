@@ -20,7 +20,7 @@ test("abre las secciones Noray permitidas con un enlace personal generado por el
 
   try {
     for (const section of ["vacaciones", "excluir-jornadas", "puntos-formacion",
-      "situacion-trabajador", "solicito-formacion"]) {
+      "situacion-trabajador", "solicito-formacion", "excepciones-pedidas"]) {
       const headers = {};
       const response = {
         statusCode: 0,
@@ -38,7 +38,7 @@ test("abre las secciones Noray permitidas con un enlace personal generado por el
       assert.equal(headers["cache-control"], "private, no-store, max-age=0");
     }
     assert.deepEqual(sections, ["vacaciones", "excluir-jornadas", "puntos-formacion",
-      "situacion-trabajador", "solicito-formacion"]);
+      "situacion-trabajador", "solicito-formacion", "excepciones-pedidas"]);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousUrl === undefined) delete process.env.VITE_SUPABASE_URL;
