@@ -1,0 +1,29 @@
+body { margin: 0; background: #f4f8f7; }
+.design-message { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 32px)); padding: 20px; border-radius: 15px; background: #173a44; color: white; box-shadow: 0 10px 50px #0003; font-size: 13px; line-height: 1.6; z-index: 10; }
+.design-message button { display: block; margin-top: 12px; padding: 8px 14px; border: 0; border-radius: 7px; cursor: pointer; }
+.design-page { min-height: 100vh; background: #f4f8f7; font-family: Inter, "Segoe UI", sans-serif; color: #142f40; }
+.design-page[data-design="b"] { background: #f8f7f4; }
+.design-top { height: 88px; padding: 0 max(24px, calc((100% - 1120px) / 2)); display: flex; align-items: center; gap: 18px; background: #fff; border-bottom: 1px solid #e0e8e7; }
+.design-brand { display: flex; align-items: center; gap: 11px; color: #153b43; text-decoration: none; font-weight: 750; font-size: 21px; }
+.design-brand small { display: block; font-size: 7px; letter-spacing: .16em; margin-top: 3px; }
+.design-badge { margin-left: auto; border: 1px solid #dbe5e3; padding: 7px 11px; border-radius: 20px; font-size: 10px; color: #697d80; font-weight: 500; }
+.design-theme { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid #dbe5e3; background: transparent; color: #45666b; cursor: pointer; }
+.design-main { max-width: 1040px; margin: auto; padding: 38px 28px 25px; }
+.design-review { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 32px; }
+.design-review span { font-size: 9px; letter-spacing: .15em; font-weight: 650; color: #748588; }
+.design-review h1 { font-size: 27px; line-height: 1.3; margin: 4px 0; letter-spacing: -.035em; }
+.design-review p { font-size: 12px; color: #738389; margin: 0; font-weight: 400; }
+.design-review a { display: flex; align-items: center; gap: 7px; white-space: nowrap; text-decoration: none; font-size: 11px; font-weight: 600; color: #315b61; border-bottom: 1px solid #aec4c1; padding: 6px 0; }
+.design-sections { display: flex; gap: 23px; margin-bottom: 30px; }
+.design-sections button { border: 0; background: transparent; color: #77878c; font-size: 12px; padding: 8px 0; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 650; }
+.design-sections button[aria-pressed="true"] { color: #183c43; border-bottom-color: #183c43; }
+.design-footer { margin-top: 40px; padding-top: 22px; border-top: 1px solid #dde5e4; font-size: 10px; line-height: 1.9; color: #718488; text-align: center; font-weight: 400; }
+:root[data-theme="dark"] .design-page { background: #0e1d24; color: #e1edf0; }
+:root[data-theme="dark"] .design-top { background: #14262e; border-color: #30434b; }
+:root[data-theme="dark"] .design-brand, :root[data-theme="dark"] .design-review a, :root[data-theme="dark"] .design-sections button[aria-pressed="true"] { color: #b0ded8; }
+@media (max-width: 600px) {
+ .design-top { height: 70px; padding: 0 20px; gap: 10px; }
+ .design-brand { font-size: 19px; }.design-badge { font-size: 8px; max-width: 110px; text-align: center; padding: 6px 8px; }
+ .design-main { padding: 25px 18px; }.design-review { margin-bottom: 20px; gap: 15px; }.design-review h1 { font-size: 24px; }.design-review p { max-width: 190px; line-height: 1.5; font-size: 11px; }.design-review a { font-size: 10px; }
+ .design-sections { margin-bottom: 25px; }
+}

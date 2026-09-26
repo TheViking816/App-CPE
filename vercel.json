@@ -1,7 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "buildCommand": "npx vite build --config vite.design.config.js",
+  "outputDirectory": "design-dist",
   "framework": "vite",
+  "rewrites": [{ "source": "/", "destination": "/design.html" }],
   "installCommand": "npm ci",
   "env": {
     "VITE_BASE_PATH": "/"
