@@ -4,7 +4,7 @@ const year = next.getFullYear(), month = next.getMonth() + 1;
 export const day = (n) => `${year}-${String(month).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
 export const session = { token: "visual-demo-only", chapa: "72000" };
 export const descansos = { worker: { group: "A - V" }, months: [{ year, month, days: Array.from({ length: 28 }, (_, i) => ({ day: i + 1, code: [4, 9, 15, 22].includes(i + 1) ? "DS" : i === 19 ? "FS" : "" })) }] };
-export const vacaciones = { rows: [{ inicio: `05/${month}/${year}`, fin: `11/${month}/${year}` }] };
+export const vacaciones = { recognized: true, year, totalDays: 7, rows: [{ inicio: `05/${String(month).padStart(2, "0")}/${year}`, fin: `11/${String(month).padStart(2, "0")}/${year}`, dias: 7 }] };
 const base = { status: "open", professionalGroup: "CONDUCTOR 1a", ownerGroup: "A - V", restGroup: "A - V", createdAt: new Date().toISOString() };
 export async function getRestExchange() { return { offers: [
   { ...base, id: "r1", kind: "swap", ownerName: "ÁLEX MARTÍNEZ", ownerChapa: "72000", isOwn: true, offeredDate: day(4), wantedDate: day(12) },
