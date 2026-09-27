@@ -1,3 +1,4 @@
+import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
 import { conversationHash } from "./ExchangeConversations.jsx";
@@ -146,6 +147,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const board = offers.filter((offer) => offer.status === "open"
     && (!offer.offeredDate || offer.offeredDate >= today)
     && (!offer.wantedDate || offer.wantedDate >= today));
+  const { filters, setFilters, visible } = useExchangeFilters(board, false);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
@@ -264,8 +266,9 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       </label>}
       <button type="submit" disabled={busy || loading || (kind !== "want" && Boolean(selectedCalendarRest) && offeredDate === selectedCalendarRest)}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
     </form>}
+    {tab === "board" && <ExchangeFilters offers={board} filters={filters} setFilters={setFilters} count={visible.length} vacation={false} />}
     {tab === "board" && <div className="rest-exchange-list">
-      {loading ? <p>Cargando publicaciones…</p> : board.length ? board.map((offer) => offerCard(offer)) : <p>No hay publicaciones abiertas todavía.</p>}
+      {loading ? <p>Cargando publicaciones…</p> : visible.length ? visible.map((offer) => offerCard(offer)) : <p>{board.length ? "No hay ofertas que coincidan con estos filtros." : "No hay publicaciones abiertas todavía."}</p>}
     </div>}
     {tab === "mine" && <div className="rest-exchange-list">
       {loading ? <p>Cargando acuerdos…</p> : mine.length ? mine.map((offer) => offerCard(offer, true)) : <p>Aún no tienes publicaciones ni propuestas.</p>}

@@ -1,3 +1,4 @@
+import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
@@ -141,6 +142,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
   const today = todayKey();
   const board = offers.filter((offer) => offer.status === "open"
     && offer.offeredStart >= today && offer.wantedStart >= today);
+  const { filters, setFilters, visible } = useExchangeFilters(board, true);
   const mine = recentPersonalOffers(offers, proposals);
 
   function offerCard(offer, personal = false) {
@@ -239,8 +241,9 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
       <p className="rest-exchange-note">Para un día suelto, indica la misma fecha en «desde» y «hasta». Solo puedes ofrecer vacaciones asignadas en tu portal.</p>
       <button type="submit" disabled={busy || loading}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
     </form>}
+    {tab === "board" && <ExchangeFilters offers={board} filters={filters} setFilters={setFilters} count={visible.length} vacation={true} />}
     {tab === "board" && <div className="rest-exchange-list">
-      {loading ? <p>Cargando publicaciones…</p> : board.length ? board.map((offer) => offerCard(offer)) : <p>No hay publicaciones abiertas todavía.</p>}
+      {loading ? <p>Cargando publicaciones…</p> : visible.length ? visible.map((offer) => offerCard(offer)) : <p>{board.length ? "No hay ofertas que coincidan con estos filtros." : "No hay publicaciones abiertas todavía."}</p>}
     </div>}
     {tab === "mine" && <div className="rest-exchange-list">
       {loading ? <p>Cargando gestiones…</p> : mine.length ? mine.map((offer) => offerCard(offer, true)) : <p>Aún no tienes publicaciones ni propuestas.</p>}
