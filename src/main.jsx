@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.jsx";
 import { createVersionMonitor } from "./versionMonitor.js";
 import "./styles.css";
+import "./exchangeRedesign.css";
+import "./exchangeThemeA.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

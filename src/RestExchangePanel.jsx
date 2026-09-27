@@ -1,8 +1,10 @@
+import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
 import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
+import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -145,6 +147,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const board = offers.filter((offer) => offer.status === "open"
     && (!offer.offeredDate || offer.offeredDate >= today)
     && (!offer.wantedDate || offer.wantedDate >= today));
+  const { filters, setFilters, visible } = useExchangeFilters(board, false);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
@@ -156,8 +159,9 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       onClick={() => { window.location.hash = conversationHash("rest", proposal.id); }}>
       Abrir conversación
     </button>;
-    return <article className="rest-exchange-offer" key={offer.id}>
+    return <article className="rest-exchange-offer" key={offer.id} data-kind={offer.kind}>
       <div className="rest-exchange-offer-head">
+        <ExchangeAvatar name={offer.ownerName} />
         <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
         {(offer.professionalGroup || offer.ownerGroup) && <div className="rest-exchange-offer-groups">
           {offer.professionalGroup && <small>Grupo profesional: {offer.professionalGroup}</small>}
@@ -165,8 +169,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
         </div>}
       </div>
       <div className="rest-exchange-dates">
-        {offer.offeredDate && <div><small>Ofrece</small><strong>{formatDay(offer.offeredDate)}</strong></div>}
-        {offer.wantedDate && <div><small>Busca</small><strong>{formatDay(offer.wantedDate)}</strong></div>}
+        {offer.offeredDate && <div><small>Ofrece</small><ExchangeDate start={offer.offeredDate} /></div>}
+        {offer.wantedDate && <div><small>Busca</small><ExchangeDate start={offer.wantedDate} /></div>}
       </div>
       {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente de tramitar en el portal" : "Abierto"}</span>}
       {offer.status === "open" && !offer.isOwn && !myProposal && <div className="rest-exchange-actions">
@@ -224,13 +228,13 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     </article>;
   }
 
-  return <section className="rest-exchange-panel" ref={panelRef}>
+  return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     {EXCHANGE_PREVIEW_READ_ONLY && <p className="rest-exchange-note">Vista previa en modo consulta. No se guardarán cambios en las ofertas.</p>}
-    <div className="rest-exchange-heading"><div><p>Entre compañeros</p><h2>Intercambios y cesiones</h2></div></div>
+    <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
     <p className="rest-exchange-intro">Publica un DS o FS, busca el día que necesitas y acordadlo aquí. El cambio solo será efectivo cuando lo tramitéis en el portal oficial.</p>
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
-        <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{label}</button>)}
+        <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}</button>)}
     </div>
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
     {notice && <p className="rest-exchange-notice" role="status">{notice}</p>}
@@ -262,8 +266,9 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       </label>}
       <button type="submit" disabled={busy || loading || (kind !== "want" && Boolean(selectedCalendarRest) && offeredDate === selectedCalendarRest)}>{busy ? "Guardando…" : editingOfferId ? "Guardar cambios" : "Publicar en el tablón"}</button>
     </form>}
+    {tab === "board" && <ExchangeFilters offers={board} filters={filters} setFilters={setFilters} count={visible.length} vacation={false} />}
     {tab === "board" && <div className="rest-exchange-list">
-      {loading ? <p>Cargando publicaciones…</p> : board.length ? board.map((offer) => offerCard(offer)) : <p>No hay publicaciones abiertas todavía.</p>}
+      {loading ? <p>Cargando publicaciones…</p> : visible.length ? visible.map((offer) => offerCard(offer)) : <p>{board.length ? "No hay ofertas que coincidan con estos filtros." : "No hay publicaciones abiertas todavía."}</p>}
     </div>}
     {tab === "mine" && <div className="rest-exchange-list">
       {loading ? <p>Cargando acuerdos…</p> : mine.length ? mine.map((offer) => offerCard(offer, true)) : <p>Aún no tienes publicaciones ni propuestas.</p>}
