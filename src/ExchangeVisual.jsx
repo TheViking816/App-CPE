@@ -5,12 +5,13 @@ export function ExchangeDate({ start, end }) {
   const first = new Date(`${start}T12:00:00`);
   const last = end && end !== start ? new Date(`${end}T12:00:00`) : null;
   const month = (date) => new Intl.DateTimeFormat("es-ES", { month: "short" }).format(date).replace(".", "");
+  const weekday = (date) => new Intl.DateTimeFormat("es-ES", { weekday: "long" }).format(date);
   return <span className="exchange-date-display">
     <time dateTime={start}>{first.getDate()}{last && <><em>—</em>{last.getDate()}</>}</time>
     <span>{last && last.getFullYear() !== first.getFullYear()
       ? `${month(first)} ${first.getFullYear()} – ${month(last)} ${last.getFullYear()}`
       : `${month(first)}${last && last.getMonth() !== first.getMonth() ? ` – ${month(last)}` : ""} ${first.getFullYear()}`}</span>
-    <small>{last ? "Periodo de vacaciones" : new Intl.DateTimeFormat("es-ES", { weekday: "long" }).format(first)}</small>
+    <small>{last ? `${weekday(first)} → ${weekday(last)}` : weekday(first)}</small>
   </span>;
 }
 

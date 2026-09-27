@@ -1,18 +1,24 @@
 /* The surrounding screen uses the original app CSS without overrides. */
 /* A: dense offer cards, without hiding participant or date information. */
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-list { gap:10px; }
-.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer { padding:13px; gap:10px; border-radius:12px; }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer { --offer-color:#1769cf; padding:13px; gap:10px; border-radius:12px; border:2px solid #a9c9ed; border-left:5px solid var(--offer-color); background:linear-gradient(110deg,#f3f8ff,var(--card) 65%); box-shadow:0 3px 9px #123c6810; }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer[data-kind="give"] { --offer-color:#00826a; border-color:#8ed6c5; border-left-color:var(--offer-color); background:linear-gradient(110deg,#effbf7,var(--card) 65%); }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer[data-kind="want"] { --offer-color:#bb650b; border-color:#eac28e; border-left-color:var(--offer-color); background:linear-gradient(110deg,#fff7eb,var(--card) 65%); }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer[data-kind="vacation"] { --offer-color:#7642ce; border-color:#cbb3ee; border-left-color:var(--offer-color); background:linear-gradient(110deg,#f6f0ff,var(--card) 65%); }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer-head > div > span { color:var(--offer-color); }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer-head { grid-template-columns:30px minmax(0,1fr); gap:6px 9px; }
 .contextual-preview[data-design="a"] .exchange-avatar { width:30px; height:30px; font-size:14px !important; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer-head > div { gap:2px; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer-head strong { font-size:13px; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer-groups { gap:3px 8px; padding:0; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-offer-groups small { border:0; padding:0; font-size:10px; }
-.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-dates > div { padding:8px 10px; gap:3px; border-radius:8px; }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-dates > div { padding:8px 10px; gap:3px; border-radius:8px; background:#deebff; border:1px solid #b4d0f6; }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-dates > div:nth-child(2) { background:#dff5f2; border-color:#a2d9d0; }
+.contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-dates > div:nth-child(2) > small { color:#12695c; }
 .contextual-preview[data-design="a"] .exchange-date-display { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 5px; }
 .contextual-preview[data-design="a"] .exchange-date-display time { font-size:22px; }
 .contextual-preview[data-design="a"] .exchange-date-display > span { font-size:11px; }
-.contextual-preview[data-design="a"] .exchange-date-display > small { display:none; }
+.contextual-preview[data-design="a"] .exchange-date-display > small { display:block; flex-basis:100%; color:#3d5470; font-size:10px; font-weight:650; line-height:1.25; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-dates::after { width:24px; height:24px; border-width:3px; font-size:12px; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-manage { padding-top:8px; gap:7px; }
 .contextual-preview[data-design="a"] .exchange-redesign .rest-exchange-secondary { min-height:34px; padding:6px 10px; font-size:11px; }
