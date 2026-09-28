@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { syncOutcome } from "./portal-sync-outcome.js";
+import { CLOUDFLARE_RESTART_EXIT_CODE, PortalCloudflareRestartError } from "./portal-cloudflare-restart.js";
+import { PORTAL_PENDING_MESSAGE_EXIT_CODE, PortalPendingMessageError } from "./portal-pending-message.js";
 import {
   resolveSupabaseAdminKey,
   supabaseAdminHeaders,
@@ -79,7 +82,7 @@ async function closeSnapshotWithError(job, message) {
             inProgress: false,
             failed: true,
             partial: true,
-            stage: "No se pudo conectar con el portal",
+            stage: "Sincronizacion no completada",
             error: message,
           },
         },
@@ -161,6 +164,8 @@ async function runSync(job) {
     child.on("error", reject);
     child.on("exit", (code) => {
       if (code === 0) resolve();
+      else if (code === CLOUDFLARE_RESTART_EXIT_CODE) reject(new PortalCloudflareRestartError());
+      else if (code === PORTAL_PENDING_MESSAGE_EXIT_CODE) reject(new PortalPendingMessageError());
       else {
         const safeDiagnostic = redact(diagnostic.trim());
         if (safeDiagnostic) process.stderr.write(`${safeDiagnostic}\n`);
@@ -176,6 +181,8 @@ async function runSync(job) {
 
 function publicErrorMessage(error) {
   const message = error instanceof Error ? error.message : "Error desconocido";
+  if (error?.code === "PORTAL_PENDING_MESSAGE") return message;
+  if (message.startsWith("Lectura parcial:")) return message;
   if (/usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(message)) {
     return "Usuario o contraseña del portal oficial incorrectos.";
   }
@@ -185,24 +192,6 @@ function publicErrorMessage(error) {
   return (
     "La actualización no se ha completado. Se volverá a intentar en la próxima sincronización."
   );
-}
-
-function isRejectedPortalCredentials(message) {
-  return /usuario\s+o\s+contrase(?:n|ñ)a\s+del\s+portal\s+oficial\s+incorrectos/i.test(String(message || ""));
-}
-
-async function hasRejectedCredentialsNotice(chapa) {
-  try {
-    const rows = await supabaseRequest(
-      `/rest/v1/app_cpe_activation_email_outbox?select=id&chapa=eq.${encodeURIComponent(chapa)}&kind=eq.portal_credentials_rejected&limit=1`,
-    );
-    return Boolean(rows?.length);
-  } catch (error) {
-    // Fail closed: if deduplication cannot be checked, suppress another email
-    // rather than risk spamming the user.
-    console.warn("No se pudo comprobar el aviso previo de credenciales; se suprime el reenvío.");
-    return true;
-  }
 }
 
 async function clearRejectedCredentialsNotice(chapa) {
@@ -272,9 +261,19 @@ async function main() {
 
   try {
     await runSync(job);
+    let completionMessage = "Portal sincronizado";
+    if (job.request_kind !== "document") {
+      const snapshots = await supabaseRequest(`/rest/v1/app_cpe_portal_snapshots?select=payload&chapa=eq.${encodeURIComponent(job.chapa)}&limit=1`);
+      const sync = snapshots?.[0]?.payload?.sync;
+      const outcome = syncOutcome(sync);
+      if (outcome.failed) {
+        throw new Error("Lectura parcial: " + outcome.errorMessage);
+      }
+      completionMessage = outcome.message;
+    }
     await updateJob({
       status: "completed",
-      message: "Portal sincronizado",
+      message: completionMessage,
       portal_password: null,
       security_key: null,
       finished_at: new Date().toISOString(),
@@ -286,13 +285,15 @@ async function main() {
     });
     await sendActivationEmails().catch(() => {});
   } catch (error) {
-    let message = publicErrorMessage(error);
-    if (isRejectedPortalCredentials(message) && await hasRejectedCredentialsNotice(job.chapa)) {
-      // The database email trigger only reacts to the canonical rejection
-      // wording. Use a neutral status after the first notice to avoid rearming
-      // the same outbox row and sending spam on every automatic retry.
-      message = "Las claves del Portal siguen pendientes de corrección; el usuario ya fue avisado.";
+    if (error?.code === "CLOUDFLARE_RESTART") {
+      // The parent worker requeues every still-running job, retaining the
+      // temporary credentials. Do not turn this into a failed 2-minute retry.
+      throw error;
     }
+    let message = publicErrorMessage(error);
+    // Keep the canonical rejection wording on every failed job. The database
+    // trigger uses it to pause synchronization, while the unique outbox row
+    // still prevents duplicate notices.
     await updateJob({
       status: "failed",
       message,
@@ -307,5 +308,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : "Error desconocido");
-  process.exitCode = 1;
+  process.exitCode = error?.code === "CLOUDFLARE_RESTART" ? CLOUDFLARE_RESTART_EXIT_CODE
+    : error?.code === "PORTAL_PENDING_MESSAGE" ? PORTAL_PENDING_MESSAGE_EXIT_CODE : 1;
 });

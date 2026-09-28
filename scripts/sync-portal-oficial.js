@@ -1,9 +1,13 @@
 import fs from "node:fs/promises";
+import { isPremiumCredentialNotice, isExplicitSectionFailure } from "./portal-sync-outcome.js";
+import { readPortalSectionWithRetry } from "./portal-section-retry.js";
+import { hasAuthoritativeNoAssignments } from "./portal-assignment-empty.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import {
   assignmentDetailScore,
+  applyAssignmentDetail,
   isAssignmentDetailComplete,
   parseAssignmentDetailFromTables,
   parseAssignmentDetailFromText,
@@ -11,14 +15,21 @@ import {
   parseAssignmentsFromText
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
-import { buildPortalNotifications } from "./portal-notifications.js";
-import { parseExceptions } from "./portal-exceptions.js";
+import { readAvailabilityDom } from "./portal-availability.js";
+import { mergeTrainingHistory } from "./portal-training-history.js";
+import { CLOUDFLARE_RESTART_EXIT_CODE, isVisiblePortalChallenge, PortalCloudflareRestartError } from "./portal-cloudflare-restart.js";
+import { PORTAL_PENDING_MESSAGE_EXIT_CODE, PortalPendingMessageError, hasPendingPortalMessageHeading } from "./portal-pending-message.js";
+import { buildPortalNotifications, filterPreviouslyAnnouncedPremiums } from "./portal-notifications.js";
+import { mapNorayExceptions, preserveUsedExceptions } from "./portal-exceptions.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
-import { assignmentsFromCurrentJournals } from "./portal-current-assignments.js";
+import { mapNorayJournalRows, mapNorayRequestedDoubles } from "./portal-noray-current.js";
+import { activateMenuItem, hasLoadedMenuFrameText } from "./portal-menu-navigation.js";
+import { mergeNorayLiquidations } from "./noray-jornales.js";
+import { assignmentsFromCurrentJournals, reconcileAnticipatedAssignmentsWithJournals } from "./portal-current-assignments.js";
 import { normalizePortalPart } from "../src/portalRowIdentity.js";
+import { containsAllSavedPortalRows } from "./portal-collection-completeness.js";
 import {
-  buildRequestedDoubles,
   cleanMessageBodyText,
   extractAddedMessageText,
   isCompleteRequestedDoublesWindow,
@@ -34,6 +45,7 @@ const rootDir = path.resolve(__dirname, "..");
 const privateDataDir = path.join(rootDir, "data", "portal-oficial");
 const defaultProjectRef = "wvwdiywtlbffumshbboa";
 const PORTAL_URL = "https://portal.cpevalencia.com/#User";
+const WHERE_AM_I_FRAME_PATTERN = /DondeVoy\.asp|norayweb\.cpevalencia\.com\/donde-voy/i;
 const STATUS_PATH = path.join(privateDataDir, "portal-sync-status.json");
 
 const portalUser = normalizeChapa(process.env.CPE_PORTAL_USER || process.env.CPE_USER);
@@ -85,6 +97,23 @@ export function premiumMonthsToRead({
     ? availableMonths
     : availableMonths.filter((month) => month === currentMonth || !saved.has(month)))
     .filter((month) => month !== parsedCurrentMonth);
+}
+
+export function pendingPremiumPeriods(history, year, month) {
+  const periods = new Map();
+  for (const period of history || []) {
+    const y = Number(period?.year);
+    const m = Number(period?.month);
+    if (!Number.isInteger(y) || y < 2000 || !Number.isInteger(m) || m < 1 || m > 12
+      || y * 12 + m >= year * 12 + month) continue;
+    // An empty production cell can mean a job without a premium, not an unpaid premium.
+    const pending = (period.rows || []).some((row) =>
+      row.produccionEstado === "pending"
+      || (!["verified", "paid"].includes(row.produccionEstado)
+        && /[1-9]/.test(String(row.produccion || ""))));
+    if (pending) periods.set(`${y}-${m}`, { year: y, month: m });
+  }
+  return [...periods.values()].sort((a, b) => b.year - a.year || b.month - a.month);
 }
 
 export function isPayrollWithinLastMonths(payroll, now = new Date(), monthCount = 12) {
@@ -189,10 +218,13 @@ function normalizePortalPersonName(value = "") {
 
 export function parsePortalIdentity(value = "", expectedChapa = portalUser) {
   const chapa = String(expectedChapa || "").replace(/\D/g, "").slice(-5);
-  if (!chapa) return { chapa: "", name: "", recognized: false };
+  if (!chapa) return { chapa: "", name: "", givenName: "", recognized: false };
   const match = cleanText(value).match(new RegExp(`\\b${chapa}\\b\\s*-\\s*([^|\\n]{3,100}?)(?=\\s+(?:Finalizar\\s+sesi[oó]n|Consultas|Solicitudes)\\b|$)`, "i"));
-  const name = normalizePortalPersonName(match?.[1] || "");
-  return { chapa, name, recognized: Boolean(name) };
+  const rawName = cleanText(match?.[1] || "");
+  const comma = rawName.match(/^([^,]{2,}),\s*(.{2,})$/);
+  const name = normalizePortalPersonName(rawName);
+  const givenName = cleanText(comma?.[2] || "");
+  return { chapa, name, givenName, recognized: Boolean(name) };
 }
 
 export function parseUserSpecialties(html = "") {
@@ -202,21 +234,56 @@ export function parseUserSpecialties(html = "") {
     && /\b(?:TU|TP)\b/.test(normalized);
   if (!recognized) return { recognized: false, specialties: [], polyvalences: [], ids: [] };
 
-  const taggedIds = [];
   const taggedDefinitions = [
+    ["mafis", null, /\bMAFIS\b/],
+    ["apoyo-operacion", null, /APOYO\s+OPERACION/],
     ["clasificador", "clasificador", /CLASIFICADOR/],
     ["conductor-1a", "pol-conductor-1a", /CONDUCTOR\s+1(?:A|ª)/],
     ["conductor-2a", "pol-conductor-2a", /CONDUCTOR\s+2(?:A|ª)/],
     ["trastainers-rtt", null, /TRASTAINERS?\s+RTT/],
+    ["container", null, /\bCONTAINERS?\b/],
+    [null, "pol-reserva-g-iv", /RESERVA\s+G(?:RUPO)?\s*IV/],
+    [null, "pol-capataz", /\bCAPATAZ\b/],
+    [null, "pol-sobordista", /\bSOBORDISTA\b/],
+    [null, "pol-elevadoras", /\bELEVADORAS?\b/],
     [null, "pol-especialista", /ESPECIALISTA/],
     [null, "pol-trincador", /TRINCADOR(?:ES)?/],
     [null, "pol-trinca-coches", /TRINCA(?:\s+DE)?\s+COCHES/]
   ];
+
+  const specialtyIdFor = (name, tag) => {
+    const normalizedName = cleanText(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const normalizedTag = cleanText(tag).toUpperCase();
+    for (const [tuId, tpId, pattern] of taggedDefinitions) {
+      if (!pattern.test(normalizedName)) continue;
+      return normalizedTag === "TU" ? tuId : normalizedTag === "TP" ? tpId : null;
+    }
+    return null;
+  };
+
+  // The current portal renders a real Codigo/Nombre/Tipo table. Reading each
+  // row atomically prevents a stale or hidden portal view from pairing a
+  // specialty name with a TU/TP label that belongs to a different row.
+  const tableIds = [];
+  for (const cells of parseDetailedRowsFromTable(html)) {
+    const values = cells.map((cell) => cleanText(cell.value));
+    const tagIndex = values.findIndex((value) => /^(?:TU|TP)$/i.test(value));
+    if (tagIndex < 0) continue;
+    const name = values.slice(0, tagIndex).reverse().find((value) => /[A-ZÁÉÍÓÚÑ]/i.test(value) && !/^\d+$/.test(value));
+    const id = specialtyIdFor(name, values[tagIndex]);
+    if (id) tableIds.push(id);
+  }
+
+  const taggedIds = tableIds.length ? tableIds : [];
+  if (!tableIds.length) {
+    // Compatibility with the older portal markup, where every entry was a
+    // plain block instead of a table.
   for (const [tuId, tpId, pattern] of taggedDefinitions) {
     const match = normalized.match(new RegExp(`${pattern.source}[\\s|:;-]{0,30}\\b(TU|TP)\\b`, "i"));
     const tag = match?.[1];
     const id = tag === "TU" ? tuId : tag === "TP" ? tpId : null;
     if (id) taggedIds.push(id);
+  }
   }
 
   const taggedSpecialties = taggedIds.filter((id) => !id.startsWith("pol-"));
@@ -390,6 +457,12 @@ function parseAssignmentDetail(html = "") {
   return parseAssignmentDetailFromTables([parseRowsFromTable(html)], textFromHtml(html));
 }
 
+function bestAssignmentDetail(rows, pageText) {
+  const fromTable = parseAssignmentDetailFromTables([rows], pageText);
+  const fromText = parseAssignmentDetailFromText(pageText);
+  return assignmentDetailScore(fromText) >= assignmentDetailScore(fromTable) ? fromText : fromTable;
+}
+
 function parseVacaciones(html = "") {
   return parseVacacionesFromRows(parseRowsFromTable(html), textFromHtml(html));
 }
@@ -432,12 +505,16 @@ export function parseDescansos(html = "", now = new Date()) {
   const worker = {
     chapa: normalizeChapa(expectedChapa || workerMatch?.[1] || ""),
     name: normalizePortalPersonName(workerMatch?.[expectedChapa ? 1 : 2] || ""),
-    group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([^\n|]+)/i)?.[1]?.trim() || "",
+    professionalGroup: pageText.match(/Grupo\s+Profesional\s*:\s*([^\n|]*?)(?=\s+(?:Grupo\s+de\s+Descanso|Descansos\s+mes|Calendario)\b|[\n|]|$)/i)?.[1]?.trim() || "",
+    group: pageText.match(/Grupo\s+de\s+Descanso\s+\d{4}:\s*([ABC]\s*-\s*[VN])/i)?.[1]?.trim() || "",
     currentMonthRest: Number(pageText.match(/Descansos\s+mes\s+actual:\s*\((\d+)\)/i)?.[1] || 0),
     nextMonthRest: Number(pageText.match(/Descansos\s+proximo\s+mes:\s*\((\d+)\)/i)?.[1] || 0)
   };
 
   const monthsByKey = new Map();
+  // La misma fecha puede figurar varias veces en el HTML. Conserva el estado
+  // más informativo, incluido IT, sin perder FM durante esta lectura.
+  const restCodePriority = { "": 0, SL: 1, DS: 2, FS: 2, VA: 3, FM: 4, IT: 4 };
   const ensureMonth = (year, month) => {
     const key = `${year}-${String(month).padStart(2, "0")}`;
     if (!monthsByKey.has(key)) {
@@ -457,14 +534,16 @@ export function parseDescansos(html = "", now = new Date()) {
     return monthsByKey.get(key);
   };
 
-  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA)?\s*<\/a>/gi)) {
+  for (const match of html.matchAll(/<a\b[^>]*href=["']javascript:selFecha\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)["'][^>]*>\s*(DS|SL|FS|VA|FM|IT)?\s*<\/a>/gi)) {
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
     const code = String(match[4] || "").toUpperCase();
     const monthData = ensureMonth(year, month);
     const dayData = monthData.days[day - 1];
-    if (dayData) dayData.code = code;
+    if (dayData && (restCodePriority[code] || 0) >= (restCodePriority[dayData.code] || 0)) {
+      dayData.code = code;
+    }
   }
 
   const parsedMonths = [...monthsByKey.values()]
@@ -485,6 +564,17 @@ export function parseDescansos(html = "", now = new Date()) {
       acc[code] = (acc[code] || 0) + 1;
       return acc;
     }, {})
+  };
+}
+
+export function mergeRestWorkerMetadata(currentWorker = {}, previousWorker = {}) {
+  const current = currentWorker || {};
+  const previous = previousWorker || {};
+  return {
+    ...current,
+    name: cleanText(current.name) || cleanText(previous.name),
+    group: cleanText(current.group) || cleanText(previous.group),
+    professionalGroup: cleanText(current.professionalGroup) || cleanText(previous.professionalGroup)
   };
 }
 
@@ -543,13 +633,23 @@ export function parsePrimas(html = "") {
 
 const protectedCollectionKeys = ["rows", "months", "history", "rules"];
 
-export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false } = {}) {
+export function wouldEraseStoredCollection(value, fallback, { allowCollectionShrink = false, rowsAreComplete = null } = {}) {
   if (allowCollectionShrink) return false;
-  return protectedCollectionKeys.some((key) => (
-    Array.isArray(fallback?.[key])
-    && fallback[key].length > 0
-    && (!Array.isArray(value?.[key]) || value[key].length < fallback[key].length)
-  ));
+  const period = (label) => String(label || "").trim().toLocaleLowerCase("es");
+  const nextMonth = period(value?.monthLabel);
+  const previousMonth = period(fallback?.monthLabel);
+  const differentMonth = value?.recognized && nextMonth && previousMonth && nextMonth !== previousMonth;
+  const matchingHistory = differentMonth
+    ? fallback?.history?.find((entry) => period(entry?.monthLabel) === nextMonth)
+    : null;
+  return protectedCollectionKeys.some((key) => {
+    const saved = key === "rows" && differentMonth ? matchingHistory?.rows : fallback?.[key];
+    if (!Array.isArray(saved) || saved.length < 1) return false;
+    const next = value?.[key];
+    if (!Array.isArray(next)) return true;
+    if (key === "rows" && rowsAreComplete) return !rowsAreComplete(next, saved);
+    return next.length < saved.length;
+  });
 }
 
 async function writeStatus(status) {
@@ -806,11 +906,11 @@ async function readAssignmentDetailViaDesktopWhereAmI(sourcePage, assignment) {
         [...row.cells].map((cell) => cell.innerText || "")
       ))).catch(() => []);
       const pageText = await frame.locator("body").innerText().catch(() => "");
-      if (!diagnosticLogged && /DondeVoy\.asp/i.test(frame.url()) && rows.length) {
+      if (!diagnosticLogged && WHERE_AM_I_FRAME_PATTERN.test(frame.url()) && rows.length) {
         diagnosticLogged = true;
         console.log(`[parte-dom-rows] ${JSON.stringify(rows.slice(0, 80))}`);
       }
-      const parsed = parseAssignmentDetailFromTables([rows], pageText);
+      const parsed = bestAssignmentDetail(rows, pageText);
       const score = assignmentDetailScore(parsed);
       if (score > bestScore) {
         best = parsed;
@@ -829,7 +929,9 @@ async function readAssignmentDetailViaDesktopWhereAmI(sourcePage, assignment) {
 async function readAssignmentDetailViaMenu(page, assignment) {
   await openPortalHash(page, "User");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
-  const listFrame = await waitForFrame(page, /DondeVoy\.asp/i, 12000);
+  const listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 12000);
+  await expandWhereAmIAssignment(listFrame, assignment);
+  await page.waitForTimeout(350);
   const part = String(assignment.parte || "").trim();
   const partCandidates = listFrame.locator("a, button, [role=button], [onclick], td, span")
     .filter({ hasText: part });
@@ -839,7 +941,8 @@ async function readAssignmentDetailViaMenu(page, assignment) {
   for (let index = 0; index < count; index += 1) {
     const candidate = partCandidates.nth(index);
     const text = cleanText(await candidate.innerText().catch(() => ""));
-    if (text !== part || !await candidate.isVisible().catch(() => false)) continue;
+    const normalizedCandidatePart = text.replace(/\s+--.*$/, "").trim();
+    if (normalizedCandidatePart !== part || !await candidate.isVisible().catch(() => false)) continue;
     clickedTarget = await candidate.evaluate((node) => {
       const actionable = node.matches("a, button, [role=button], [onclick]") ? node : null
         || node.querySelector?.("a, button, [role=button], [onclick]")
@@ -858,6 +961,18 @@ async function readAssignmentDetailViaMenu(page, assignment) {
     clicked = Boolean(clickedTarget?.clicked);
     if (clicked) break;
   }
+  if (!clicked) {
+    const exactCandidates = listFrame.getByText(part, { exact: true });
+    const exactCount = Math.min(await exactCandidates.count().catch(() => 0), 20);
+    for (let index = 0; index < exactCount; index += 1) {
+      const candidate = exactCandidates.nth(index);
+      if (!await candidate.isVisible().catch(() => false)) continue;
+      clicked = await candidate.click({ noWaitAfter: true }).then(() => true).catch(async () => (
+        candidate.evaluate((node) => { node.click(); return true; }).catch(() => false)
+      ));
+      if (clicked) break;
+    }
+  }
   if (!clicked) throw new Error(`No se pudo abrir el parte ${part} desde ¿Dónde voy?.`);
   await page.waitForTimeout(1000);
   const deadline = Date.now() + 20000;
@@ -873,7 +988,7 @@ async function readAssignmentDetailViaMenu(page, assignment) {
           [...row.cells].map((cell) => cell.innerText || "")
         ))).catch(() => []);
         const pageText = await frame.locator("body").innerText().catch(() => "");
-        const parsed = parseAssignmentDetailFromTables([rows], pageText);
+        const parsed = bestAssignmentDetail(rows, pageText);
         if (String(parsed.parte || "") !== part) continue;
         const score = assignmentDetailScore(parsed);
         if (score > bestScore) {
@@ -956,49 +1071,31 @@ async function readAssignmentDetailViaContractings(sourcePage, assignment) {
   return best;
 }
 
-async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
+async function readAnticipatedAssignmentDetailViaMenu(sourcePage, assignment) {
   await openPortalHash(sourcePage, "User");
-  await sourcePage.waitForTimeout(1200);
+  await openMenu(sourcePage, "Consultas", "¿Dónde voy? - Orden Servicio");
+  const listFrame = await waitForFrame(sourcePage, WHERE_AM_I_FRAME_PATTERN, 12000);
+  if (!await expandWhereAmIAssignment(listFrame, assignment)) {
+    throw new Error(`No se encontro la jornada anticipada ${cleanText(assignment?.fecha)} ${cleanText(assignment?.jornada)}.`);
+  }
+  await sourcePage.waitForTimeout(350);
 
-  const dateMatch = cleanText(assignment?.fecha || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  const dateTokens = dateMatch
-    ? [
-        `${Number(dateMatch[1])}/${dateMatch[2].padStart(2, "0")}`,
-        `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}`
-      ]
-    : [];
+  const links = listFrame.getByText(/^\s*ANTICIPADA\s*$/i);
+  const count = Math.min(await links.count().catch(() => 0), 20);
   let clicked = false;
-
-  for (const frame of sourcePage.frames()) {
-    const candidates = frame.locator("a, button, [role=button], [onclick], tr, td, div, span")
-      .filter({ hasText: /anticipada/i });
-    const count = Math.min(await candidates.count().catch(() => 0), 100);
-    const visible = [];
-    for (let index = 0; index < count; index += 1) {
-      const candidate = candidates.nth(index);
-      if (!await candidate.isVisible().catch(() => false)) continue;
-      const text = cleanText(await candidate.innerText().catch(() => ""));
-      if (!/anticipada/i.test(text) || text.length > 220) continue;
-      const normalizedText = text.replace(/\s+/g, "");
-      const hasExpectedDate = dateTokens.length === 0
-        || dateTokens.some((token) => normalizedText.includes(token.replace(/\s+/g, "")));
-      if (hasExpectedDate) visible.push({ candidate, length: text.length });
-    }
-    visible.sort((left, right) => left.length - right.length);
-    for (const item of visible) {
-      clicked = await item.candidate.evaluate((node) => {
-        const actionable = node.closest("a, button, [role=button], [onclick]")
-          || node.querySelector?.("a, button, [role=button], [onclick]")
-          || node.parentElement?.closest("a, button, [role=button], [onclick], tr")
-          || node;
-        actionable.click();
-        return true;
-      }).catch(() => false);
-      if (clicked) break;
-    }
+  for (let index = 0; index < count; index += 1) {
+    const link = links.nth(index);
+    if (!await link.isVisible().catch(() => false)) continue;
+    clicked = await link.evaluate((node) => {
+      const actionable = node.closest("a, button, [role=button], [onclick]")
+        || node.parentElement?.closest("a, button, [role=button], [onclick]")
+        || node;
+      actionable.click();
+      return true;
+    }).catch(() => false);
     if (clicked) break;
   }
-  if (!clicked) throw new Error("No se encontro la tarjeta de contratacion anticipada en la portada.");
+  if (!clicked) throw new Error("No se encontro el enlace ANTICIPADA dentro de la jornada desplegada.");
 
   const deadline = Date.now() + 20000;
   let best = { recognized: false, specialties: [] };
@@ -1011,7 +1108,7 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
           [...row.cells].map((cell) => cell.innerText || "")
         ))).catch(() => []);
         const pageText = await frame.locator("body").innerText().catch(() => "");
-        const parsed = parseAssignmentDetailFromTables([rows], pageText);
+        const parsed = bestAssignmentDetail(rows, pageText);
         const score = assignmentDetailScore(parsed);
         if (score > bestScore) {
           best = parsed;
@@ -1020,19 +1117,23 @@ async function readAssignmentDetailViaHomeCard(sourcePage, assignment) {
         }
       }
     }
-    if (best.recognized && Date.now() - lastImprovementAt >= 2500) return best;
+    if (best.recognized && normalizePortalPart(best.parte) === "CA" && Date.now() - lastImprovementAt >= 2500) return best;
     await sourcePage.waitForTimeout(200);
+  }
+  if (!best.recognized || normalizePortalPart(best.parte) !== "CA") {
+    throw new Error("El enlace ANTICIPADA se pulso, pero no abrio un equipo reconocible.");
   }
   return best;
 }
 
 async function readPortalAuthState(page) {
-  const roots = [page, ...page.frames()];
+  const roots = [page, ...page.frames().filter((frame) => frame !== page.mainFrame())];
   const textParts = [];
   let loginVisible = false;
   let authenticatedControlVisible = false;
 
   for (const root of roots) {
+    if (root !== page && !await isVisiblePortalFrame(root)) continue;
     const text = await root.locator("body").innerText().catch(() => "");
     if (text) textParts.push(text);
 
@@ -1066,13 +1167,39 @@ async function readPortalAuthState(page) {
   return loginVisible ? "login" : "pending";
 }
 
+async function isVisiblePortalFrame(frame) {
+  const element = await frame.frameElement().catch(() => null);
+  return element ? element.isVisible().catch(() => false) : false;
+}
+
+async function hasUnacceptedPortalMessage(page) {
+  for (const root of [page, ...page.frames().filter((frame) => frame !== page.mainFrame())]) {
+    if (root !== page && !await isVisiblePortalFrame(root)) continue;
+    const body = await root.locator("body").innerText({ timeout: 1200 }).catch(() => "");
+    if (!hasPendingPortalMessageHeading(body)) continue;
+    const acceptButton = root.getByRole("button", { name: /^Aceptar$/i }).first();
+    if (await acceptButton.isVisible().catch(() => false)) return true;
+    if (await root.locator('input[value="Aceptar" i]:visible').first().isVisible().catch(() => false)) return true;
+  }
+  return false;
+}
+
+async function assertNoUnacceptedPortalMessage(page) {
+  if (await hasUnacceptedPortalMessage(page)) throw new PortalPendingMessageError();
+}
+
 async function waitForPortalEntry(page, timeout = PORTAL_ENTRY_TIMEOUT_MS) {
   const deadline = Date.now() + timeout;
   let state = "pending";
+  let challengeSince = 0;
 
   while (Date.now() < deadline) {
     state = await readPortalAuthState(page);
     if (state === "authenticated" || state === "login" || state === "rejected") return state;
+    if (state === "security_challenge") {
+      challengeSince ||= Date.now();
+      if (Date.now() - challengeSince >= 3000) return state;
+    } else challengeSince = 0;
     await page.waitForTimeout(250);
   }
 
@@ -1082,10 +1209,15 @@ async function waitForPortalEntry(page, timeout = PORTAL_ENTRY_TIMEOUT_MS) {
 async function waitForPortalAuthState(page, timeout = 20000) {
   const deadline = Date.now() + timeout;
   let state = "pending";
+  let challengeSince = 0;
 
   while (Date.now() < deadline) {
     state = await readPortalAuthState(page);
     if (state === "authenticated" || state === "rejected") return state;
+    if (state === "security_challenge") {
+      challengeSince ||= Date.now();
+      if (Date.now() - challengeSince >= 3000) return state;
+    } else challengeSince = 0;
     await page.waitForTimeout(250);
   }
 
@@ -1117,7 +1249,10 @@ async function login(page, attempt = 0) {
 
   let entryState = await waitForPortalEntry(page);
   if (entryState === "authenticated") {
-    if (authenticatedForPortalUser) return;
+    if (authenticatedForPortalUser) {
+      await assertNoUnacceptedPortalMessage(page);
+      return;
+    }
     const loggedOut = await logoutExistingPortalSession(page);
     if (!loggedOut) {
       throw new Error("No se pudo cerrar la sesion anterior del portal de forma segura.");
@@ -1130,8 +1265,7 @@ async function login(page, attempt = 0) {
     entryState = await waitForPortalEntry(page);
   }
   if (entryState === "security_challenge") {
-    if (attempt < 1) return login(page, attempt + 1);
-    throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
+    throw new PortalCloudflareRestartError();
   }
 
   if (!portalUser || !portalPassword) {
@@ -1146,7 +1280,7 @@ async function login(page, attempt = 0) {
   if (!loginForm) {
     const state = await readPortalAuthState(page);
     if (state === "security_challenge") {
-      throw new Error("El portal oficial ha bloqueado temporalmente la lectura automatica. Vuelve a intentarlo en unos minutos.");
+      throw new PortalCloudflareRestartError();
     }
     if (attempt < 1) return login(page, attempt + 1);
     throw new Error("El portal oficial no ha mostrado el formulario de acceso. Vuelve a intentarlo.");
@@ -1161,11 +1295,13 @@ async function login(page, attempt = 0) {
   const state = await waitForPortalAuthState(page);
   if (state === "authenticated") {
     authenticatedForPortalUser = true;
+    await assertNoUnacceptedPortalMessage(page);
     return;
   }
   if (state === "rejected") {
     throw new Error("Usuario o contrasena del portal oficial incorrectos.");
   }
+  if (state === "security_challenge") throw new PortalCloudflareRestartError();
   if (attempt < 1) return login(page, attempt + 1);
   throw new Error("El portal oficial no confirmo el inicio de sesion a tiempo. Vuelve a intentarlo.");
 }
@@ -1179,12 +1315,43 @@ async function openMenu(page, group, text, framePattern) {
     await login(page);
   }
   await ensureExpanded(page, group, text);
-  const item = await findMenuItem(page, text, 10000);
-  if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
-  await item.scrollIntoViewIfNeeded();
-  await item.click({ timeout: 10000 });
-  await page.waitForTimeout(1200);
-  if (framePattern) await waitForFrame(page, framePattern);
+  const expectedFrame = framePattern || ({
+    "¿Dónde voy? - Orden Servicio": WHERE_AM_I_FRAME_PATTERN,
+    "Mis especialidades": /norayweb\.cpevalencia\.com\/mis-especialidades/i,
+    "Solicitud Vacaciones": /VacacionesC24\.asp/i
+  })[text];
+  const initialFrames = new Set(portalContentFrameUrls(page));
+  const waitForLoaded = async (timeout) => {
+    const deadline = Date.now() + timeout;
+    do {
+      if (expectedFrame) {
+        const frame = findFrame(page, expectedFrame);
+        if (frame && hasLoadedMenuFrameText(await frame.locator("body").innerText().catch(() => ""), text)) return true;
+      }
+      if (!expectedFrame && portalContentFrameUrls(page).some((url) => !initialFrames.has(url))) return true;
+      if (Date.now() < deadline) await page.waitForTimeout(100);
+    } while (Date.now() < deadline);
+    return false;
+  };
+  let clickCount = 0;
+  const click = async () => {
+    if (clickCount > 0) console.log(`Menu ${group} / ${text}: primer clic sin vista; repitiendo clic.`);
+    const item = await findMenuItem(page, text, 2000);
+    if (!item) throw new Error(`No se encontro la opcion visible: ${text}`);
+    await item.scrollIntoViewIfNeeded();
+    await item.click({ timeout: 10000 });
+    clickCount += 1;
+  };
+  const attempts = await activateMenuItem({ click, waitForLoaded });
+  if (!attempts && expectedFrame) throw new Error(`No se cargo la pantalla esperada: ${expectedFrame}`);
+}
+
+function portalContentFrameUrls(page) {
+  return page.frames().map((frame) => frame.url()).filter((url) => (
+    /^https?:\/\//i.test(url)
+    && !/^https:\/\/portal\.cpevalencia\.com\/?(?:#.*)?$/i.test(url)
+    && !/\/pdfjs\//i.test(url)
+  ));
 }
 
 function findFrame(page, pattern) {
@@ -1433,15 +1600,84 @@ async function collectJornales(page, previous = null, { currentOnly = false, for
 
 async function collectJornalesWithFreshSession(page, previous = null, options = {}) {
   try {
-    return await collectJornales(page, previous, options);
+    return await collectNorayJornales(page, previous, options);
   } catch (firstError) {
+    if (firstError?.code === "PORTAL_PENDING_MESSAGE") throw firstError;
     console.warn(
       `El portal devolvio los jornales vacios; renovando la sesion una sola vez. ${firstError instanceof Error ? firstError.message : ""}`
     );
     await page.context().clearCookies();
     await login(page);
-    return collectJornales(page, previous, { ...options, forceMenu: true });
+    return collectNorayJornales(page, previous, options);
   }
+}
+
+async function readNorayMonth(frame, auth, year, month, premiums = false) {
+  const base = await norayGet(frame, `/api/v1/jornales/${auth.rec}/${year}/${month}?incluir_en_curso=false`, auth.intranetToken);
+  let vigente = { jornales: [] };
+  try {
+    vigente = await norayGet(frame, `/api/v1/jornales-vigentes/${auth.rec}/${year}/${month}`, auth.localToken);
+  } catch (error) {
+    if (!/HTTP (403|404)/.test(String(error?.message))) throw error;
+  }
+  let baseRows = base?.jornales || [];
+  if (premiums && year >= 2024) {
+    try {
+      const current = await norayGet(frame, `/api/v1/jornales/${auth.rec}/${year}/${month}/liquidacion-en-curso`, auth.intranetToken);
+      baseRows = mergeNorayLiquidations(baseRows, current?.liquidaciones, year);
+      // Los jornales recientes pueden estar solo en vigentes. La liquidacion
+      // en curso debe unirse tambien a esa lista antes de combinar ambas.
+      vigente = {
+        ...vigente,
+        jornales: mergeNorayLiquidations(vigente?.jornales, current?.liquidaciones, year)
+      };
+    } catch (error) {
+      if (!/HTTP (403|404)/.test(String(error?.message))) throw error;
+    }
+  }
+  return {
+    year, month, monthLabel: `${MONTH_NAMES_ES[month - 1]} de ${year}`,
+    rows: mapNorayJournalRows(baseRows, vigente?.jornales, { premiums })
+  };
+}
+
+async function collectNorayJornales(page, previous = null, { currentOnly = false } = {}) {
+  await assertNoUnacceptedPortalMessage(page);
+  const frame = await openNorayFrame(page, 1, "/jornales");
+  try {
+    return await collectNorayJornalesFromFrame(frame, previous, currentOnly);
+  } finally {
+    await frame.page().close().catch(() => {});
+  }
+}
+
+async function collectNorayJornalesFromFrame(frame, previous, currentOnly) {
+  const auth = await norayAccess(frame);
+  const now = new Date();
+  const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
+  const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  const history = new Map((previous?.history || []).filter((item) => Number(item.year) === year)
+    .map((item) => [Number(item.month), item]));
+  const refresh = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
+  const months = currentOnly ? [currentMonth] : Array.from({ length: currentMonth }, (_, index) => index + 1)
+    .filter((month) => month === currentMonth || refresh || !history.has(month));
+  let fresh = 0;
+  const historyWarnings = [];
+  for (const month of prioritizePortalMonths(months, currentMonth)) {
+    try {
+      const period = await readNorayMonth(frame, auth, year, month);
+      history.set(month, period);
+      fresh += 1;
+      console.log(`Jornales ${period.monthLabel}: ${period.rows.length}.`);
+    } catch (error) {
+      historyWarnings.push(`${MONTH_NAMES_ES[month - 1]} de ${year}: ${error.message}`);
+      if (month === currentMonth) throw error;
+    }
+  }
+  if (!fresh) throw new Error("Noray no actualizo ningun periodo de jornales");
+  const current = history.get(currentMonth);
+  return { recognized: true, year, monthLabel: current.monthLabel, rows: current.rows,
+    history: [...history.values()].sort((a, b) => a.month - b.month), historyWarnings };
 }
 
 async function collectDescansos(page) {
@@ -1485,6 +1721,30 @@ async function collectDescansos(page) {
   throw new Error("El calendario no incluye el mes actual y el siguiente. Se conservaran los ultimos datos disponibles.");
 }
 
+async function collectDisponibilidad(page) {
+  // A fresh portal entry is required after visiting legacy ASP pages: changing
+  // only the hash on the existing GWT page can leave the Noray iframe blank.
+  const availabilityPage = await page.context().newPage();
+  try {
+    await availabilityPage.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await availabilityPage.waitForTimeout(800);
+    await availabilityPage.goto("https://portal.cpevalencia.com/#User,ViewNoray,3", {
+      waitUntil: "domcontentloaded", timeout: 30000
+    });
+    const deadline = Date.now() + 12000;
+    while (Date.now() < deadline) {
+      for (const frame of availabilityPage.frames()) {
+        const result = await frame.evaluate(readAvailabilityDom).catch(() => []);
+        if (result.length >= 8) return { recognized: true, months: result };
+      }
+      await availabilityPage.waitForTimeout(400);
+    }
+  } finally {
+    await availabilityPage.close().catch(() => {});
+  }
+  throw new Error("El portal no devolvio los calendarios de disponibilidad de los ultimos 12 meses.");
+}
+
 async function collectSl(page) {
   await openMenu(page, "Consultas", "Consulta posicion SL", /MostrarSL\.asp/i);
   const parsed = await waitForParsedContent(
@@ -1515,7 +1775,11 @@ async function collectUserSpecialties(page) {
 }
 
 async function openPortalHash(page, hash) {
-  await login(page);
+  // Once this worker has authenticated the current chapa, avoid reopening the
+  // login entry point before every assignment. The legacy portal can interpret
+  // those repeated reloads as automated traffic and show a security challenge
+  // before we get to the anticipated-contract tab.
+  if (!authenticatedForPortalUser) await login(page);
   const target = `https://portal.cpevalencia.com/#${hash}`;
   await page.goto(target, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForTimeout(1200);
@@ -1904,45 +2168,129 @@ async function collectPayrollDocumentFiles(page, rows, documentId) {
   console.log(`Documentos de nomina leidos: ${documents.length}.`);
 }
 
-async function collectExceptions(page) {
-  const readCurrentScreen = async () => {
-    const deadline = Date.now() + 12000;
-    let bestResult = parseExceptions("");
-    let bestScore = 0;
-    let recognizedAt = 0;
+async function openNorayFrame(page, hash, pathname) {
+  // A new tab is necessary here: after a legacy GWT/ASP page, even reloading
+  // #User in the same tab can leave ViewNoray's iframe permanently blank.
+  const norayPage = await page.context().newPage();
+  try {
+    await norayPage.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await norayPage.waitForTimeout(800);
+    await assertNoUnacceptedPortalMessage(norayPage);
+    await norayPage.goto(`https://portal.cpevalencia.com/#User,ViewNoray,${hash}`, {
+      waitUntil: "domcontentloaded", timeout: 30000
+    });
+    const deadline = Date.now() + 18000;
+    let wrongScreenSince = 0;
+    let lastMessageCheck = 0;
     while (Date.now() < deadline) {
-      for (const frame of page.frames()) {
-        await frame.locator('input[type="checkbox"]').evaluateAll((inputs) => {
-          inputs.forEach((input) => {
-            if (input.checked) input.setAttribute("data-app-cpe-checked", "true");
-          });
-        }).catch(() => {});
-        const result = parseExceptions(await frame.content().catch(() => ""));
-        const score = (result.recognized ? 1000 : 0) + (result.rows?.length || 0);
-        if (score > bestScore) {
-          bestResult = result;
-          bestScore = score;
-          recognizedAt = result.recognized ? Date.now() : 0;
+      const frame = norayPage.frames().find((candidate) => {
+        try {
+          const url = new URL(candidate.url());
+          return url.hostname === "norayweb.cpevalencia.com" && url.pathname === pathname;
+        } catch { return false; }
+      });
+      if (frame) return frame;
+      if (Date.now() - lastMessageCheck >= 1000) {
+        await assertNoUnacceptedPortalMessage(norayPage);
+        lastMessageCheck = Date.now();
+      }
+      if (pathname === "/dobles" || pathname === "/excepciones-pedidas") {
+        const otherNorayFrame = norayPage.frames().find((candidate) => {
+          try { return new URL(candidate.url()).hostname === "norayweb.cpevalencia.com"; }
+          catch { return false; }
+        });
+        if (otherNorayFrame) {
+          if (!wrongScreenSince) wrongScreenSince = Date.now();
+          if (Date.now() - wrongScreenSince >= 1500) {
+            throw new Error(`ViewNoray,${hash} abrio ${new URL(otherNorayFrame.url()).pathname} en lugar de ${pathname}`);
+          }
+        } else {
+          wrongScreenSince = 0;
         }
       }
-      if (bestResult.recognized && recognizedAt && Date.now() - recognizedAt >= 600) return bestResult;
-      await page.waitForTimeout(200);
+      await norayPage.waitForTimeout(250);
     }
-    return bestResult;
-  };
-
-  try {
-    await openPortalHash(page, "User,ViewNoray,17");
-    const directResult = await readCurrentScreen();
-    if (directResult.recognized) return directResult;
-  } catch {
-    // The menu fallback covers portal route changes and older sessions.
+    if (pathname === "/jornales") {
+      // Some accounts fail to mount the Jornales UI although their Noray
+      // session is valid. Any authenticated Noray frame can call the same API.
+      const fallbackPage = await page.context().newPage();
+      let fallbackAccepted = false;
+      try {
+        await fallbackPage.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await fallbackPage.waitForTimeout(800);
+        await fallbackPage.goto("https://portal.cpevalencia.com/#User,ViewNoray,2", {
+          waitUntil: "domcontentloaded", timeout: 30000
+        });
+        const fallbackDeadline = Date.now() + 10000;
+        while (Date.now() < fallbackDeadline) {
+          const fallbackFrame = fallbackPage.frames().find((candidate) => {
+            try {
+              const url = new URL(candidate.url());
+              return url.hostname === "norayweb.cpevalencia.com" && url.pathname === "/mis-especialidades";
+            } catch { return false; }
+          });
+          if (fallbackFrame) {
+            fallbackAccepted = true;
+            await norayPage.close().catch(() => {});
+            return fallbackFrame;
+          }
+          await fallbackPage.waitForTimeout(250);
+        }
+      } finally {
+        if (!fallbackAccepted) await fallbackPage.close().catch(() => {});
+      }
+    }
+  } catch (error) {
+    await norayPage.close().catch(() => {});
+    throw error;
   }
+  await norayPage.close().catch(() => {});
+  throw new Error(`La pantalla Noray ${pathname} no quedo disponible`);
+}
 
-  await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
-  const menuResult = await readCurrentScreen();
-  if (menuResult.recognized) return menuResult;
-  throw new Error("No se pudo leer la Bolsa de Excepciones. Se conservaran los ultimos datos disponibles.");
+async function norayAccess(frame) {
+  const auth = await frame.evaluate(async () => {
+    const query = new URLSearchParams(window.location.search.replace(/&amp;/g, "&"));
+    const rec = Number(query.get("rec"));
+    if (!rec || !query.get("usr") || !query.get("pwd")) return null;
+    const response = await fetch("/api/v1/auth/validar-acceso", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usr: query.get("usr"), rec, pwd: query.get("pwd") })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return { rec, localToken: data.local_access_token, intranetToken: data.intranet_access_token, available: data.intranet_available };
+  }).catch(() => null);
+  if (!auth?.rec || !auth.localToken || !auth.intranetToken || auth.available === false) {
+    throw new Error("Noray no confirmo el acceso a la intranet");
+  }
+  return auth;
+}
+
+async function norayGet(frame, path, token) {
+  const result = await frame.evaluate(async ({ path, token }) => {
+    const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+    return { status: response.status, data: await response.json().catch(() => null) };
+  }, { path, token });
+  if (result.status !== 200) throw new Error(`Noray ${path.split("?")[0]}: HTTP ${result.status}`);
+  return result.data;
+}
+
+async function collectExceptions(page) {
+  const frame = await openNorayFrame(page, 19, "/excepciones-pedidas");
+  try {
+    const auth = await norayAccess(frame);
+    const year = new Date().getFullYear();
+    const bag = await norayGet(frame, `/api/v1/excepciones-pedidas/${auth.rec}/bolsa/${year}`, auth.intranetToken);
+    const months = [];
+    for (let month = 1; month <= 12; month += 1) {
+      months.push(await norayGet(frame, `/api/v1/excepciones-pedidas/${auth.rec}/mes/${year}/${month}`, auth.intranetToken));
+    }
+    return mapNorayExceptions({ bag, months, year, chapa: portalUser });
+  } finally {
+    await frame.page().close().catch(() => {});
+  }
 }
 
 async function getStoredPayrollDocumentIds() {
@@ -2011,75 +2359,30 @@ async function restoreSecurePayrollList(page) {
   return (await extractPayrollRowsFromDom(page)).length > 0;
 }
 
-async function findDoublesSelector(page) {
-  return waitForFrameAndLocator(
-    page,
-    (frame) => frame.locator('input[name="fecha"]:visible, input[id*="fecha" i]:visible'),
-    12000
-  );
-}
-
-async function extractCheckedDoubles(frame, date) {
-  const holiday = await frame.locator("body").innerText().then((text) => /D[IÃ]A\s+FESTIVO/i.test(text)).catch(() => false);
-  const selections = await frame.locator('input[type="checkbox"]:checked').evaluateAll((checkboxes, isHoliday) => checkboxes.map((input) => {
-    const row = input.closest("tr");
-    const table = input.closest("table");
-    const cell = input.closest("td,th");
-    if (!row || !table || !cell) return null;
-    const cellIndex = [...row.cells].indexOf(cell);
-    const specialty = row.cells[0]?.innerText || "";
-    const previousRows = [...table.rows].slice(0, [...table.rows].indexOf(row)).reverse();
-    const journey = previousRows
-      .map((headerRow) => headerRow.cells[cellIndex]?.innerText?.trim() || "")
-      .find((value) => /^\d{2}\s*\/\s*\d{2}$/.test(value)) || "";
-    return { specialty, journey, holiday: isHoliday };
-  }).filter(Boolean), holiday);
-  return buildRequestedDoubles(date, selections);
-}
-
-async function waitForDoublesResult(frame, date, timeoutMs = 15000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (frame.isDetached()) break;
-    const matrixSize = await frame.locator('input[type="checkbox"]').count().catch(() => 0);
-    if (matrixSize > 0) {
-      // The selector page has no checkboxes. Seeing the matrix proves that the
-      // portal finished the query for this date, even when none are checked.
-      await frame.waitForTimeout(250);
-      return matrixSize;
-    }
-    await frame.waitForTimeout(150);
-  }
-  throw new Error(`El portal no termino de cargar los dobles del ${date}.`);
-}
-
 async function collectRequestedDoubles(page) {
-  await openPortalHash(page, "User,Request,,,");
-  await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
-  let selector = await findDoublesSelector(page);
-  if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
+  const frame = await openNorayFrame(page, 17, "/dobles");
+  try {
+    return await collectRequestedDoublesFromFrame(frame);
+  } finally {
+    await frame.page().close().catch(() => {});
+  }
+}
 
-  const dates = upcomingMadridDates();
+async function collectRequestedDoublesFromFrame(frame) {
+  const auth = await norayAccess(frame);
+  // The portal allows requests through today + 14 days, inclusive.
+  const dates = upcomingMadridDates(new Date(), 15);
+  const journeys = (await norayGet(frame, "/api/v1/dobles/jornadas", auth.intranetToken))?.jornadas || [];
   const rows = [];
   const queriedDates = [];
-  for (const date of dates) {
-    const { frame, locator: dateInput } = selector;
-    const selectorUrl = frame.url();
-    await dateInput.fill(date);
-    const submit = frame.locator('input[type="submit"][value="Solicitar" i], button:has-text("Solicitar")').first();
-    if (!await submit.isVisible().catch(() => false)) {
-      throw new Error("No se encontro el boton para consultar los dobles.");
-    }
-    await Promise.all([
-      frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => null),
-      submit.click({ timeout: 10000 })
-    ]);
-    await waitForDoublesResult(frame, date);
-    rows.push(...await extractCheckedDoubles(frame, date));
-    queriedDates.push(date);
-    await frame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
-    selector = await findDoublesSelector(page);
-    if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
+  const periods = [...new Set(dates.map((date) => `${date.slice(6)}-${date.slice(3, 5)}`))];
+  console.log(`Dobles: calendario ${dates[0]} a ${dates.at(-1)} (${periods.length} mes${periods.length === 1 ? "" : "es"}).`);
+  for (const period of periods) {
+    const [year, month] = period.split("-").map(Number);
+    const calendar = await norayGet(frame, `/api/v1/dobles/${auth.rec}/mes/${year}/${month}`, auth.intranetToken);
+    const periodDates = dates.filter((date) => Number(date.slice(3, 5)) === month && Number(date.slice(6)) === year);
+    rows.push(...mapNorayRequestedDoubles(calendar, periodDates, journeys));
+    queriedDates.push(...periodDates);
   }
 
   console.log(`Dobles solicitados leidos: ${rows.length}.`);
@@ -2184,18 +2487,97 @@ async function collectPayrolls(page) {
   throw new Error("No se pudo leer la lista de Nómina electrónica.");
 }
 
+async function expandWhereAmISections(frame) {
+  const headerPattern = /^\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}\s*\/\s*\d{1,2}\s*h\s*$/i;
+  const candidates = frame.locator(
+    'button, [role="button"], [onclick], summary, [data-bs-toggle="collapse"], .accordion-header, .accordion-button'
+  );
+  const count = Math.min(await candidates.count().catch(() => 0), 80);
+  let expanded = 0;
+  for (let index = 0; index < count; index += 1) {
+    const candidate = candidates.nth(index);
+    if (!await candidate.isVisible().catch(() => false)) continue;
+    const text = cleanText(await candidate.innerText().catch(() => ""));
+    if (!headerPattern.test(text)) continue;
+    const ariaExpanded = await candidate.getAttribute("aria-expanded").catch(() => null);
+    const className = await candidate.getAttribute("class").catch(() => "") || "";
+    if (ariaExpanded === "true" || /\bshow\b/.test(className) && !/\bcollapsed\b/.test(className)) continue;
+    await candidate.click({ noWaitAfter: true }).catch(async () => {
+      await candidate.evaluate((node) => node.click()).catch(() => null);
+    });
+    expanded += 1;
+    await frame.waitForTimeout(250);
+  }
+  return expanded;
+}
+
+async function expandWhereAmIAssignment(frame, assignment) {
+  const dateMatch = cleanText(assignment?.fecha).match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  const shiftMatch = cleanText(assignment?.jornada).match(/(\d{1,2})\s*(?:A|-|–|\/)\s*(\d{1,2})/i);
+  const shortDate = dateMatch
+    ? `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}/${dateMatch[3].slice(-2)}`
+    : "";
+  const compactShift = shiftMatch
+    ? `${shiftMatch[1].padStart(2, "0")}/${shiftMatch[2].padStart(2, "0")}h`
+    : "";
+  if (!shortDate || !compactShift) return false;
+  const candidates = frame.locator(
+    'button, [role="button"], [onclick], summary, [data-bs-toggle="collapse"], .accordion-header, .accordion-button'
+  );
+  const count = Math.min(await candidates.count().catch(() => 0), 80);
+  for (let index = 0; index < count; index += 1) {
+    const candidate = candidates.nth(index);
+    if (!await candidate.isVisible().catch(() => false)) continue;
+    const text = cleanText(await candidate.innerText().catch(() => ""));
+    if (!text.includes(shortDate) || !text.replace(/\s+/g, "").includes(compactShift)) continue;
+    if (await candidate.getAttribute("aria-expanded").catch(() => null) !== "true") {
+      await candidate.click({ noWaitAfter: true }).catch(async () => {
+        await candidate.evaluate((node) => node.click()).catch(() => null);
+      });
+      await frame.waitForTimeout(350);
+    }
+    return true;
+  }
+  return false;
+}
+
 async function collectAssignmentsViaMenu(page) {
   await assignmentNavigationState(page, "menu-before");
   await openMenu(page, "Consultas", "¿Dónde voy? - Orden Servicio");
   await assignmentNavigationState(page, "menu-after-click");
+  const listFrame = await waitForFrame(page, WHERE_AM_I_FRAME_PATTERN, 12000);
+  const initialText = await listFrame.locator("body").innerText().catch(() => "");
+  if (hasAuthoritativeNoAssignments(initialText)) {
+    await page.waitForTimeout(800);
+    const confirmedText = await listFrame.locator("body").innerText().catch(() => "");
+    if (hasAuthoritativeNoAssignments(confirmedText)) {
+      console.log("Donde voy: el portal confirma cero asignaciones para este trabajador.");
+      return { recognized: true, rows: [] };
+    }
+  }
+  const hasCollapsedCards = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}\s*\/\s*\d{1,2}\s*h\b/i.test(initialText);
+  if (hasCollapsedCards) {
+    const expanded = await expandWhereAmISections(listFrame);
+    if (expanded) console.log(`Donde voy: ${expanded} jornada(s) desplegadas para leer sus partes.`);
+    const deadline = Date.now() + 8000;
+    let best = { recognized: true, rows: [] };
+    while (Date.now() < deadline) {
+      const pageText = await listFrame.locator("body").innerText().catch(() => "");
+      const parsed = parseAssignmentsFromText(pageText);
+      if ((parsed.rows?.length || 0) > (best.rows?.length || 0)) best = parsed;
+      if (best.rows.length > 0) return best;
+      await page.waitForTimeout(200);
+    }
+    throw new Error("La nueva vista de Donde voy mostraba jornadas, pero no se pudo leer ningun parte.");
+  }
   const result = await waitForParsedFrame(
     page,
-    /DondeVoy\.asp/i,
+    WHERE_AM_I_FRAME_PATTERN,
     parseAssignments,
     (parsed) => parsed.rows?.length || 0,
     8000
   );
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
   throw new Error("No se pudo leer la contratacion actual. Se conservaran los ultimos datos disponibles.");
 }
 
@@ -2207,7 +2589,7 @@ async function collectAssignmentsViaContractings(page) {
     (parsed) => parsed.rows?.length || 0,
     10000
   );
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
 
   for (const frame of page.frames()) {
     const textResult = parseAssignmentsFromText(await frame.locator("body").innerText().catch(() => ""));
@@ -2293,7 +2675,7 @@ async function collectAssignmentsViaContractings(page) {
       10000
     );
   }
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
   throw new Error("La vista actual de Jornadas contratadas no devolvio ninguna contratacion.");
 }
 
@@ -2306,26 +2688,43 @@ async function collectVacacionesViaMenu(page) {
     (parsed) => parsed.rows?.length || 0,
     8000
   );
-  if (result.recognized && result.rows?.length) return result;
+  if (result.recognized && Array.isArray(result.rows)) return result;
   throw new Error("No se pudo leer la solicitud de vacaciones. Se conservaran los ultimos datos disponibles.");
 }
 
 async function enrichAssignmentsWithDetails(page, result, previousResult) {
+  const assignmentIdentity = (item) => [
+    cleanText(item?.fecha),
+    cleanText(item?.jornada).replace(/\s+/g, ""),
+    cleanText(item?.empresa),
+    cleanText(item?.buque),
+    cleanText(item?.especialidad)
+  ].join("|");
   const previousByPart = new Map((previousResult?.rows || [])
     .filter((item) => item.parte && item.detail?.recognized)
     .map((item) => [String(item.parte), item.detail]));
+  const previousByAssignment = new Map((previousResult?.rows || [])
+    .filter((item) => item.detail?.recognized)
+    .map((item) => [assignmentIdentity(item), item.detail]));
   const rows = [...(result?.rows || [])];
+  const processingOrder = rows
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => (
+      Number(normalizePortalPart(right.item.parte) === "CA")
+      - Number(normalizePortalPart(left.item.parte) === "CA")
+    ));
   console.log(`Completando el equipo de ${rows.length} parte(s) desde Jornadas contratadas...`);
-  for (let index = 0; index < rows.length; index += 1) {
-    const item = rows[index];
-    let detail = previousByPart.get(String(item.parte)) || null;
+  for (const { item, index } of processingOrder) {
+    let detail = previousByPart.get(String(item.parte))
+      || previousByAssignment.get(assignmentIdentity(item))
+      || null;
     try {
       let freshDetail;
       if (normalizePortalPart(item.parte) === "CA") {
         try {
-          freshDetail = await readAssignmentDetailViaHomeCard(page, item);
-        } catch (homeCardError) {
-          console.log(`Parte ${item.parte}: la tarjeta de portada no respondio. ${homeCardError instanceof Error ? homeCardError.message : ""}`);
+          freshDetail = await readAnticipatedAssignmentDetailViaMenu(page, item);
+        } catch (anticipatedLinkError) {
+          console.log(`Parte ${item.parte}: no se pudo abrir desde Donde voy. ${anticipatedLinkError instanceof Error ? anticipatedLinkError.message : ""}`);
           freshDetail = await readAssignmentDetailViaContractings(page, item);
         }
       } else {
@@ -2344,29 +2743,42 @@ async function enrichAssignmentsWithDetails(page, result, previousResult) {
       console.log(`Parte ${item.parte}: no se pudo leer el detalle. ${error instanceof Error ? error.message : "Error desconocido"}`);
       // Keep the previous detail when the legacy portal fails to open a part.
     }
-    if (detail) rows[index] = { ...item, detail };
+    if (detail) rows[index] = applyAssignmentDetail(item, detail);
   }
 
   return { ...result, rows };
 }
 
 async function collectAssignments(page, previousResult) {
-  const result = await collectAssignmentsViaMenu(page);
+  let result;
+  try {
+    result = await collectAssignmentsViaMenu(page);
+  } catch (firstError) {
+    console.warn(`Donde voy no se abrio en la pestaña actual; reintentando en una pestaña limpia. ${firstError.message}`);
+    const freshPage = await page.context().newPage();
+    try {
+      await freshPage.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+      result = await collectAssignmentsViaMenu(freshPage);
+    } finally {
+      await freshPage.close().catch(() => {});
+    }
+  }
   console.log(`[contratacion:donde-voy-result] ${JSON.stringify({ recognized: result.recognized, rows: result.rows?.length || 0 })}`);
   return await enrichAssignmentsWithDetails(page, result, previousResult);
 }
 
 async function completeAssignmentsFromJournals(page, assignments, journals) {
-  const candidates = assignmentsFromCurrentJournals(journals, assignments);
-  if (!candidates.length) return assignments;
+  const reconciled = reconcileAnticipatedAssignmentsWithJournals(journals, assignments);
+  const candidates = assignmentsFromCurrentJournals(journals, reconciled);
+  if (!candidates.length) return reconciled;
   const enriched = await enrichAssignmentsWithDetails(
     page,
     { recognized: true, rows: candidates },
-    assignments
+    reconciled
   );
   return {
     recognized: true,
-    rows: [...(assignments?.rows || []), ...(enriched.rows || [])]
+    rows: [...(reconciled?.rows || []), ...(enriched.rows || [])]
   };
 }
 
@@ -2379,7 +2791,7 @@ async function collectVacaciones(page) {
       (parsed) => parsed.rows?.length || 0,
       8000
     );
-    if (result.recognized && result.rows?.length) return result;
+    if (result.recognized && Array.isArray(result.rows)) return result;
   } catch {
     // The menu fallback handles portal-side route changes.
   }
@@ -2388,62 +2800,60 @@ async function collectVacaciones(page) {
 
 async function collectPrimas(page, previous = null) {
   if (!portalSecurityKey) return { locked: true, rows: [] };
-  await openMenu(page, "Consultas", "Consulta de Primas Productividad");
-  const securityControl = await waitForFrameAndLocator(
-    page,
-    (frame) => frame.getByRole("button", { name: /Validar/i }),
-    10000
-  );
+  const frame = await openNorayFrame(page, 1, "/jornales");
+  try {
+    return await collectNorayPrimasFromFrame(frame, previous);
+  } finally {
+    await frame.page().close().catch(() => {});
+  }
+}
 
-  if (!securityControl) {
-    const alreadyLoaded = await waitForParsedPrimasContent(page, 3000);
-    if ((alreadyLoaded.rows || []).some((row) => row.jornal)) {
-      return collectPrimasHistory(page, alreadyLoaded, previous);
+async function collectNorayPrimasFromFrame(frame, previous) {
+  const auth = await norayAccess(frame);
+  const verified = await frame.evaluate(async ({ token, securityKey }) => {
+    const response = await fetch("/api/v1/security-pass/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ security_pass: securityKey })
+    });
+    if (!response.ok) return false;
+    const result = await response.json();
+    return result?.success === true && Boolean(result?.local_access_token);
+  }, { token: auth.localToken, securityKey: portalSecurityKey });
+  if (!verified) throw new Error("La clave de seguridad de primas no fue validada");
+  const now = new Date();
+  const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
+  const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  const history = new Map((previous?.history || [])
+    .map((period) => [`${Number(period.year)}-${Number(period.month)}`, period]));
+  const refresh = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
+  const months = Array.from({ length: currentMonth }, (_, index) => index + 1)
+    .filter((month) => month === currentMonth || (!fastMode && (refresh || !history.has(`${year}-${month}`))));
+  const periods = new Map(prioritizePortalMonths(months, currentMonth)
+    .map((month) => [`${year}-${month}`, { year, month }]));
+  if (!fastMode) {
+    for (const period of pendingPremiumPeriods([...history.values()], year, currentMonth)) {
+      periods.set(`${period.year}-${period.month}`, period);
     }
-    const now = new Date();
-    const year = Number(process.env.CPE_PORTAL_HISTORY_YEAR || now.getFullYear());
-    const month = year === now.getFullYear() ? now.getMonth() + 1 : 12;
-    const current = await readPrimasPeriod(
-      page.context(),
-      "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp",
-      month,
-      year
-    );
-    return collectPrimasHistory(page, { ...current, locked: false, recognized: true }, previous);
   }
-
-  const securityInput = securityControl.frame
-    .locator('input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([role="presentation"]):not([tabindex="-1"]):visible')
-    .first();
-  await securityInput.click();
-  await securityInput.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
-  await securityInput.pressSequentially(portalSecurityKey, { delay: 80 });
-  await securityInput.press("Tab");
-  await securityControl.locator.click({ noWaitAfter: true });
-
-  const invalidKey = await waitForFrameAndLocator(
-    page,
-    (frame) => frame.getByText(/La clave de seguridad es incorrecta/i),
-    3000
-  );
-  if (invalidKey) {
-    throw new Error("La clave de seguridad de primas es incorrecta. Revisa los datos de acceso e intentalo de nuevo.");
+  const historyWarnings = [];
+  for (const { year: periodYear, month } of periods.values()) {
+    try {
+      const period = await readNorayMonth(frame, auth, periodYear, month, true);
+      const saved = history.get(`${periodYear}-${month}`);
+      if (!containsAllSavedPortalRows(period.rows, saved?.rows || [], { premiumOnly: true })) {
+        throw new Error("Lectura parcial de primas; se conserva el periodo anterior");
+      }
+      history.set(`${periodYear}-${month}`, period);
+      console.log(`Primas ${period.monthLabel}: ${period.rows.length}.`);
+    } catch (error) {
+      historyWarnings.push(`${MONTH_NAMES_ES[month - 1]} de ${periodYear}: ${error.message}`);
+      if (periodYear === year && month === currentMonth && !history.has(`${year}-${month}`)) throw error;
+    }
   }
-
-  const accept = await waitForFrameLocator(
-    page,
-    (frame) => frame.getByRole("button", { name: /Aceptar/i }),
-    8000
-  );
-  if (accept) {
-    await accept.click({ noWaitAfter: true });
-  }
-
-  const result = await waitForParsedPrimasContent(page, 15000);
-  if (result.locked) {
-    throw new Error("La clave de seguridad de primas no fue validada.");
-  }
-  return collectPrimasHistory(page, result, previous);
+  const current = history.get(`${year}-${currentMonth}`);
+  return { recognized: true, locked: false, year, monthLabel: current?.monthLabel || "",
+    rows: current?.rows || [], history: [...history.values()].sort((a, b) => a.year - b.year || a.month - b.month), historyWarnings };
 }
 
 async function collectPrimasHistory(page, currentResult, previous = null) {
@@ -2452,19 +2862,29 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
   const currentMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
   const previousHistory = Array.isArray(previous?.history)
     ? previous.history.filter((period) => (
-        Number(period?.year) === year
+        Number(period?.year) >= 2000
+        && Number(period?.year) <= year
         && Number(period?.month) >= 1
-        && Number(period?.month) <= currentMonth
+        && Number(period?.month) <= (Number(period?.year) === year ? currentMonth : 12)
         && Array.isArray(period?.rows)
       ))
     : [];
-  const historyByMonth = new Map(previousHistory.map((period) => [Number(period.month), period]));
+  const periodKey = (y, m) => `${Number(y)}-${Number(m)}`;
+  const historyByMonth = new Map(previousHistory.map((period) => [periodKey(period.year, period.month), period]));
+  let loadedMonth = 0;
   const normalizedCurrentLabel = cleanText(currentResult?.monthLabel).toLocaleLowerCase("es");
   const parsedCurrentMonth = MONTH_NAMES_ES.findIndex((monthName) => (
     normalizedCurrentLabel.includes(monthName.toLocaleLowerCase("es"))
   )) + 1;
-  if (parsedCurrentMonth > 0 && jornalesPeriodMatches(currentResult?.monthLabel, parsedCurrentMonth, year)) {
-    historyByMonth.set(parsedCurrentMonth, {
+  if (parsedCurrentMonth > 0 && currentResult?.recognized
+    && jornalesPeriodMatches(currentResult?.monthLabel, parsedCurrentMonth, year)
+    && containsAllSavedPortalRows(
+      currentResult.rows || [],
+      historyByMonth.get(periodKey(year, parsedCurrentMonth))?.rows || [],
+      { premiumOnly: true }
+    )) {
+    loadedMonth = parsedCurrentMonth;
+    historyByMonth.set(periodKey(year, parsedCurrentMonth), {
       year,
       month: parsedCurrentMonth,
       monthLabel: currentResult.monthLabel,
@@ -2475,28 +2895,37 @@ async function collectPrimasHistory(page, currentResult, previous = null) {
   const refreshFullHistory = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_REFRESH_HISTORY || "");
   const monthsToRead = premiumMonthsToRead({
     currentMonth,
-    parsedCurrentMonth,
+    parsedCurrentMonth: loadedMonth,
     fast: fastMode,
     refreshFullHistory,
-    savedMonths: [...historyByMonth.keys()]
+    savedMonths: [...historyByMonth.values()].filter((period) => Number(period.year) === year).map((period) => Number(period.month))
   });
+  const periodsToRead = new Map(monthsToRead.map((month) => [periodKey(year, month), { year, month }]));
+  for (const period of pendingPremiumPeriods([...historyByMonth.values()], year, currentMonth)) {
+    if (period.year === year && period.month === loadedMonth) continue;
+    periodsToRead.set(periodKey(period.year, period.month), period);
+  }
   const selectorUrl = "https://portal.cpevalencia.com/Noray/SelDatJorPrimas.asp";
   const periodWarnings = [];
 
-  for (const month of monthsToRead) {
+  for (const { year: periodYear, month } of periodsToRead.values()) {
     try {
-      const period = await readPrimasPeriod(page.context(), selectorUrl, month, year);
-      historyByMonth.set(month, period);
+      const period = await readPrimasPeriod(page.context(), selectorUrl, month, periodYear);
+      const saved = historyByMonth.get(periodKey(periodYear, month));
+      if (!containsAllSavedPortalRows(period.rows, saved?.rows || [], { premiumOnly: true })) {
+        throw new Error("Lectura parcial de primas; se conserva el periodo anterior.");
+      }
+      historyByMonth.set(periodKey(periodYear, month), period);
       console.log(`Primas ${period.monthLabel}: ${period.rows.length}.`);
     } catch (error) {
-      const warning = `${MONTH_NAMES_ES[month - 1]} de ${year}: ${error instanceof Error ? error.message : "lectura fallida"}`;
+      const warning = `${MONTH_NAMES_ES[month - 1]} de ${periodYear}: ${error instanceof Error ? error.message : "lectura fallida"}`;
       periodWarnings.push(warning);
       console.warn(`No se actualizaron las primas de ${warning}`);
     }
   }
 
-  const history = [...historyByMonth.values()].sort((left, right) => Number(left.month) - Number(right.month));
-  const current = historyByMonth.get(currentMonth)
+  const history = [...historyByMonth.values()].sort((left, right) => Number(left.year) - Number(right.year) || Number(left.month) - Number(right.month));
+  const current = historyByMonth.get(periodKey(year, currentMonth))
     || (Array.isArray(currentResult?.rows) ? currentResult : null)
     || (Array.isArray(previous?.rows) ? previous : null)
     || { monthLabel: "", rows: [] };
@@ -2515,6 +2944,58 @@ async function upsertSupabase(snapshot) {
   if (!supabaseServiceRole) return;
   const table = portalSnapshotChannel ? "app_cpe_portal_preview_snapshots" : "app_cpe_portal_snapshots";
   const conflict = portalSnapshotChannel ? "channel,chapa" : "chapa";
+  const shouldReplaceMainSnapshot = !portalSnapshotChannel
+    && snapshot?.payload?.asignaciones?.recognized === true
+    && Array.isArray(snapshot.payload.asignaciones.rows);
+
+  // The production database can still have the legacy preservation trigger,
+  // which concatenates an authoritative assignment reading with the previous
+  // one. Replace the single snapshot row when assignments are complete so the
+  // portal's specialty and worker order is stored verbatim.
+  if (shouldReplaceMainSnapshot) {
+    const baseUrl = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}`;
+    const existingResponse = await fetch(
+      `${baseUrl}?select=id,chapa,source,payload,updated_at,created_at&chapa=eq.${encodeURIComponent(snapshot.chapa)}&limit=1`,
+      { headers: supabaseAdminHeaders(supabaseServiceRole) }
+    );
+    if (!existingResponse.ok) {
+      throw new Error(`Supabase lectura previa HTTP ${existingResponse.status}: ${await existingResponse.text()}`);
+    }
+    const existing = (await existingResponse.json())?.[0];
+    if (existing?.id) {
+      const deleteResponse = await fetch(`${baseUrl}?id=eq.${encodeURIComponent(existing.id)}`, {
+        method: "DELETE",
+        headers: supabaseAdminHeaders(supabaseServiceRole, { Prefer: "return=representation" })
+      });
+      if (!deleteResponse.ok) {
+        throw new Error(`Supabase reemplazo HTTP ${deleteResponse.status}: ${await deleteResponse.text()}`);
+      }
+      const replacement = {
+        ...existing,
+        chapa: snapshot.chapa,
+        source: snapshot.source,
+        payload: snapshot.payload,
+        updated_at: snapshot.updatedAt
+      };
+      const insertResponse = await fetch(baseUrl, {
+        method: "POST",
+        headers: supabaseAdminHeaders(supabaseServiceRole, {
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        }),
+        body: JSON.stringify(replacement)
+      });
+      if (!insertResponse.ok) {
+        await fetch(baseUrl, {
+          method: "POST",
+          headers: supabaseAdminHeaders(supabaseServiceRole, { "Content-Type": "application/json" }),
+          body: JSON.stringify(existing)
+        }).catch(() => {});
+        throw new Error(`Supabase insercion HTTP ${insertResponse.status}: ${await insertResponse.text()}`);
+      }
+      return;
+    }
+  }
   const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/${table}?on_conflict=${conflict}`, {
     method: "POST",
     headers: supabaseAdminHeaders(supabaseServiceRole, {
@@ -2603,7 +3084,13 @@ async function updateUserSpecialtiesFromPortal(userSpecialties) {
 
 async function recordPortalNotifications(previousPayload, nextPayload) {
   if (!supabaseServiceRole || portalSnapshotChannel || !previousPayload || !nextPayload) return;
-  const notifications = buildPortalNotifications(previousPayload, nextPayload);
+  let notifications = buildPortalNotifications(previousPayload, nextPayload);
+  if (notifications.some((item) => item.eventType === "new_premium")) {
+    const url = `${resolveSupabaseUrl(supabaseUrl)}/rest/v1/app_cpe_user_notifications?select=metadata&chapa=eq.${encodeURIComponent(portalUser)}&event_type=eq.new_premium&order=created_at.desc&limit=1000`;
+    const existingResponse = await fetch(url, { headers: supabaseAdminHeaders(supabaseServiceRole) });
+    if (!existingResponse.ok) throw new Error(`Supabase primas anunciadas HTTP ${existingResponse.status}: ${await existingResponse.text()}`);
+    notifications = filterPreviouslyAnnouncedPremiums(notifications, await existingResponse.json());
+  }
   if (!notifications.length) return;
   const response = await fetch(`${resolveSupabaseUrl(supabaseUrl)}/rest/v1/rpc/app_cpe_record_portal_notifications`, {
     method: "POST",
@@ -2630,12 +3117,33 @@ async function openPortalBrowserSession() {
     };
   }
 
+  const preferencesPath = path.join(profileDir, "Default", "Preferences");
+  let preferences = {};
+  try {
+    preferences = JSON.parse(await fs.readFile(preferencesPath, "utf8"));
+  } catch {
+    preferences = {};
+  }
+  preferences.credentials_enable_service = false;
+  preferences.profile = {
+    ...(preferences.profile || {}),
+    password_manager_enabled: false,
+    password_manager_leak_detection: false
+  };
+  await fs.mkdir(path.dirname(preferencesPath), { recursive: true });
+  await fs.writeFile(preferencesPath, JSON.stringify(preferences), "utf8");
+
   const launchOptions = {
     headless,
     viewport: { width: 1500, height: 1100 },
     locale: "es-ES",
     timezoneId: "Europe/Madrid",
-    args: ["--disable-blink-features=AutomationControlled"]
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--disable-features=PasswordLeakDetection,LeakDetectionUnauthenticated",
+      "--disable-save-password-bubble",
+      "--disable-session-crashed-bubble"
+    ]
   };
   if (browserChannel && browserChannel !== "bundled") launchOptions.channel = browserChannel;
 
@@ -2662,6 +3170,32 @@ async function main() {
     || context.pages()[0]
     || await context.newPage();
   let latestProgressSnapshot = null;
+  let cloudflareDetected = false;
+  let challengeObservations = 0;
+  let challengeScanInProgress = false;
+  const challengeMonitor = setInterval(async () => {
+    if (challengeScanInProgress || cloudflareDetected) return;
+    challengeScanInProgress = true;
+    try {
+      const portalPages = context.pages().filter((candidate) => candidate.url().startsWith("https://portal.cpevalencia.com"));
+      const challengeFrames = (await Promise.all(portalPages.flatMap((candidate) => candidate.frames())
+        .map(async (frame) => {
+          if (frame !== frame.page().mainFrame() && !await isVisiblePortalFrame(frame)) return null;
+          const text = await frame.locator("body").innerText({ timeout: 1200 }).catch(() => "");
+          return isVisiblePortalChallenge(text) ? frame : null;
+        }))).filter(Boolean);
+      challengeObservations = challengeFrames.length ? challengeObservations + 1 : 0;
+      if (challengeObservations >= 2) {
+        cloudflareDetected = true;
+        console.warn(`[portal-sync] Verificacion visible en ${safePortalLocation(challengeFrames[0].url())}; se detiene solo esta lectura.`);
+        await browserSession.close().catch(() => {});
+      }
+    } catch {
+      // A navigation in progress can briefly hide the document body.
+    } finally {
+      challengeScanInProgress = false;
+    }
+  }, 1500);
 
   try {
     const updatedAt = new Date().toISOString();
@@ -2739,40 +3273,81 @@ async function main() {
       return;
     }
     const sectionWarnings = [];
+    const sectionErrors = [];
+    const sectionNotices = [];
     let freshSections = 0;
     const readSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
+      const sectionStartedAt = Date.now();
       console.log(`Leyendo ${name}...`);
-      try {
-        const value = await reader();
-        if ((!isMeaningful || isMeaningful(value)) && !wouldEraseStoredCollection(value, fallback, options)) {
-          freshSections += 1;
-          console.log(`${name} actualizado.`);
-          return value;
+      const outcome = await readPortalSectionWithRetry(reader, {
+        shouldRetry: (error) => error?.code !== "PORTAL_PENDING_MESSAGE",
+        isAcceptable: (value) => (
+          (!isMeaningful || isMeaningful(value))
+          && !wouldEraseStoredCollection(value, fallback, options)
+        ),
+        onRetry: async () => {
+          console.warn(`${name} quedo vacio o incompleto en el primer intento; se abre de nuevo.`);
+          await page.waitForTimeout(500);
         }
+      });
+      if (outcome.ok) {
+        sectionErrors.push(...(outcome.value?.historyWarnings || []));
+        freshSections += 1;
+        console.log(`${name} actualizado${outcome.attempts > 1 ? " en el segundo intento" : ""} (${((Date.now() - sectionStartedAt) / 1000).toFixed(1)} s).`);
+        return outcome.value;
+      }
+      if (outcome.error?.code === "PORTAL_PENDING_MESSAGE") throw outcome.error;
+      if (!outcome.error) {
         const message = `${name} devolvio una respuesta incompleta; se conservan los datos anteriores.`;
         sectionWarnings.push(message);
         console.warn(message);
-      } catch (error) {
-        const message = `${name} no se pudo actualizar; se conservan los datos anteriores. ${error instanceof Error ? error.message : ""}`.trim();
+      } else {
+        const message = `${name} no se pudo actualizar; se conservan los datos anteriores. ${outcome.error instanceof Error ? outcome.error.message : ""}`.trim();
+        sectionErrors.push(message);
         sectionWarnings.push(message);
         console.warn(message);
       }
       return isMeaningful(fallback) ? fallback : emptyValue;
     };
     const readOptionalSection = async (name, reader, fallback, emptyValue, isMeaningful, options = {}) => {
+      const sectionStartedAt = Date.now();
       console.log(`Leyendo ${name}...`);
-      try {
-        const value = await reader();
-        if (isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options)) {
-          freshSections += 1;
-          console.log(`${name} actualizado.`);
-          return value;
+      const isLockedWithoutKey = (value) => value?.locked && !portalSecurityKey && /primas|nomina/.test(name);
+      const outcome = await readPortalSectionWithRetry(reader, {
+        isAcceptable: (value) => isLockedWithoutKey(value) || (
+          isMeaningful(value) && !wouldEraseStoredCollection(value, fallback, options)
+        ),
+        shouldRetry: (error) => error?.code !== "PORTAL_PENDING_MESSAGE"
+          && (!error || !isPremiumCredentialNotice(error instanceof Error ? error.message : error)),
+        onRetry: async () => {
+          console.warn(`${name} quedo vacio o incompleto en el primer intento; se abre de nuevo.`);
+          await page.waitForTimeout(500);
         }
+      });
+      if (outcome.ok) {
+        const value = outcome.value;
+        if (value?.locked && !portalSecurityKey && /primas|nomina/.test(name)) {
+          sectionNotices.push("Primas y nominas pendientes de introducir la clave de seguridad.");
+          return isMeaningful(fallback) ? fallback : emptyValue;
+        }
+        sectionErrors.push(...(value?.historyWarnings || []));
+        freshSections += 1;
+        console.log(`${name} actualizado${outcome.attempts > 1 ? " en el segundo intento" : ""} (${((Date.now() - sectionStartedAt) / 1000).toFixed(1)} s).`);
+        return value;
+      }
+      if (outcome.error?.code === "PORTAL_PENDING_MESSAGE") throw outcome.error;
+      if (!outcome.error) {
         const message = `${name} no devolvio datos; se conserva la ultima lectura disponible.`;
         sectionWarnings.push(message);
         console.warn(message);
-      } catch (error) {
-        const message = `${name} no se pudo actualizar. ${error instanceof Error ? error.message : ""}`.trim();
+      } else {
+        const message = `${name} no se pudo actualizar. ${outcome.error instanceof Error ? outcome.error.message : ""}`.trim();
+        if (isPremiumCredentialNotice(message)) {
+          sectionNotices.push("Clave de primas incorrecta: primas y nominas pendientes de actualizar; se conservan los datos guardados.");
+          console.warn(message);
+          return isMeaningful(fallback) ? fallback : emptyValue;
+        }
+        if (isExplicitSectionFailure(message)) sectionErrors.push(message);
         sectionWarnings.push(message);
         console.warn(message);
       }
@@ -2834,7 +3409,8 @@ async function main() {
       },
       existingSnapshot?.payload?.jornales,
       { monthLabel: "", rows: [] },
-      hasJournalData
+      hasJournalData,
+      { rowsAreComplete: (nextRows, savedRows) => containsAllSavedPortalRows(nextRows, savedRows) }
     );
     if (!jornalesUpdatedThisRun || !hasJournalData(jornales)) {
       throw new Error("El portal no actualizo los jornales; la sincronizacion no se marcara como completada.");
@@ -2883,18 +3459,33 @@ async function main() {
       "descansos",
       () => collectDescansos(page),
       existingSnapshot?.payload?.descansos,
-      { worker: { chapa: portalUser, name: "", group: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
+      { worker: { chapa: portalUser, name: "", group: "", professionalGroup: "", currentMonthRest: 0, nextMonthRest: 0 }, months: [], totals: {} },
       hasMonths
     );
-    if (portalIdentity.recognized && !cleanText(descansos?.worker?.name)) {
+    descansos.worker = mergeRestWorkerMetadata(
+      descansos.worker,
+      existingSnapshot?.payload?.descansos?.worker
+    );
+    if (portalIdentity.recognized) {
       descansos.worker = {
         ...(descansos.worker || {}),
         chapa: portalIdentity.chapa,
-        name: portalIdentity.name
+        name: cleanText(descansos?.worker?.name) || portalIdentity.name,
+        givenName: portalIdentity.givenName
       };
     }
+    descansos.trainingHistory = mergeTrainingHistory(existingSnapshot?.payload?.descansos, descansos);
     await publishProgress("descansos", descansos, "Descansos cargados");
-    const excepciones = await readOptionalSection(
+    const disponibilidad = await readOptionalSection(
+      "disponibilidad de los ultimos 12 meses",
+      () => collectDisponibilidad(page),
+      existingSnapshot?.payload?.disponibilidad,
+      { recognized: false, months: [] },
+      (value) => Boolean(value?.recognized && value.months?.length),
+      { allowCollectionShrink: true }
+    );
+    await publishProgress("disponibilidad", disponibilidad, "Historial de disponibilidad cargado");
+    const excepcionesLeidas = await readOptionalSection(
       "bolsa de excepciones",
       () => collectExceptions(page),
       existingSnapshot?.payload?.excepciones,
@@ -2902,13 +3493,18 @@ async function main() {
       hasExceptionData,
       { allowCollectionShrink: true }
     );
+    const excepciones = preserveUsedExceptions(
+      existingSnapshot?.payload?.excepciones,
+      excepcionesLeidas
+    );
     await publishProgress("excepciones", excepciones, "Excepciones cargadas");
     const vacaciones = await readOptionalSection(
       "vacaciones",
       () => collectVacaciones(page),
       existingSnapshot?.payload?.vacaciones,
       { recognized: false, year: null, initialMonth: "", totalDays: 0, rows: [] },
-      hasVacationData
+      hasVacationData,
+      { allowCollectionShrink: true }
     );
     await publishProgress("vacaciones", vacaciones, "Vacaciones cargadas");
     const nominas = portalRequestKind === "history"
@@ -2956,6 +3552,7 @@ async function main() {
       jornales,
       asignaciones,
       descansos,
+      disponibilidad,
       especialidades,
       excepciones,
       sl,
@@ -2969,7 +3566,11 @@ async function main() {
         partial: sectionWarnings.length > 0,
         freshSections,
         warnings: sectionWarnings,
+        notices: [...new Set(sectionNotices)],
+        errors: [...sectionErrors],
         ...(portalRequestKind === "history"
+          && sectionNotices.length === 0
+          && sectionWarnings.length === 0
           && hasJournalData(jornales)
           && hasPremiumData(primas)
           && nominas?.recognized
@@ -3015,6 +3616,7 @@ async function main() {
     });
     console.log(`OK: portal oficial sincronizado para ${portalUser}`);
   } catch (error) {
+    const effectiveError = cloudflareDetected ? new PortalCloudflareRestartError() : error;
     if (latestProgressSnapshot) {
       latestProgressSnapshot.payload.sync = {
         ...(latestProgressSnapshot.payload.sync || {}),
@@ -3023,7 +3625,7 @@ async function main() {
         partial: true,
         warnings: [
           ...(latestProgressSnapshot.payload.sync?.warnings || []),
-          sanitizePortalError(error instanceof Error ? error.message : "Error desconocido")
+          sanitizePortalError(effectiveError instanceof Error ? effectiveError.message : "Error desconocido")
         ]
       };
       await upsertSupabase(latestProgressSnapshot).catch(() => {});
@@ -3032,11 +3634,12 @@ async function main() {
       ok: false,
       chapa: portalUser || null,
       updatedAt: new Date().toISOString(),
-      message: sanitizePortalError(error instanceof Error ? error.message : "Error desconocido")
+      message: sanitizePortalError(effectiveError instanceof Error ? effectiveError.message : "Error desconocido")
     });
-    throw error;
+    throw effectiveError;
   } finally {
-    await browserSession.close();
+    clearInterval(challengeMonitor);
+    await browserSession.close().catch(() => {});
   }
 }
 
@@ -3045,6 +3648,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     .then(() => process.exit(0))
     .catch((error) => {
       console.error(sanitizePortalError(error instanceof Error ? error.message : "Error desconocido"));
-      process.exit(1);
+      process.exit(error?.code === "CLOUDFLARE_RESTART" ? CLOUDFLARE_RESTART_EXIT_CODE
+        : error?.code === "PORTAL_PENDING_MESSAGE" ? PORTAL_PENDING_MESSAGE_EXIT_CODE : 1);
     });
 }

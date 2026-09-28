@@ -17,7 +17,7 @@ export function normalizeBolsaChapa(value) {
 
 function cleanName(value) {
   const name = String(value || "")
-    .replace(/^\s*(?:bsa|nbs)\s+/i, "")
+    .replace(/^\s*(?:bsa|nbs|dbs)\s+/i, "")
     .replace(/\s+/g, " ")
     .trim();
   return name.length >= 2 && !INVALID_NAMES.test(name) ? name : "";

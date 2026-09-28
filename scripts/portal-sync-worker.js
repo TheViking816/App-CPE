@@ -3,6 +3,8 @@ import path from "node:path";
 import { chromium } from "playwright";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { syncBolsaWorkerDirectory } from "./bolsa-worker-directory.js";
+import { CLOUDFLARE_RESTART_EXIT_CODE } from "./portal-cloudflare-restart.js";
+import { PORTAL_PENDING_MESSAGE_EXIT_CODE, PortalPendingMessageError } from "./portal-pending-message.js";
 
 const projectRef = "wvwdiywtlbffumshbboa";
 const supabaseUrl = resolveSupabaseUrl(process.env.CPE_SUPABASE_URL);
@@ -17,6 +19,10 @@ const parallelProfileRoot = String(process.env.CPE_PORTAL_WORKER_PROFILE_ROOT ||
 const portalCdpEndpoint = String(process.env.CPE_PORTAL_CDP_ENDPOINT || "").trim();
 const workerOnce = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_ONCE || "");
 const workerDrain = /^(1|true|yes)$/i.test(process.env.CPE_PORTAL_WORKER_DRAIN || "");
+const jobMaxRuntimeMs = Math.max(
+  2 * 60 * 1000,
+  Number(process.env.CPE_PORTAL_JOB_MAX_RUNTIME_MS || 15 * 60 * 1000)
+);
 // Cloudflare injects challenge-platform/cf-chl script references into normal
 // authorized pages too. Only visible challenge-page signals should invalidate
 // an otherwise valid portal session.
@@ -26,6 +32,14 @@ let stopping = false;
 let gatewayBrowser = null;
 let gatewayStartPromise = null;
 let lastGeneralBoardBatchKey = "";
+let cloudflareRestartRequested = false;
+const activeChildren = new Set();
+
+function requestCloudflareRestart(job, slot) {
+  if (cloudflareRestartRequested) return;
+  cloudflareRestartRequested = true;
+  console.warn(`[portal-worker:${slot}] ${job.chapa} solicito reinicio por verificacion del portal. Los demas lectores terminaran antes de reintentar el pendiente.`);
+}
 
 function resolveSupabaseUrl(value) {
   const normalized = String(value || projectRef).replace(/\r|\n/g, "").trim().split(/\s+/)[0];
@@ -47,6 +61,7 @@ async function request(path, options = {}) {
 }
 
 async function claimNextBatch() {
+  await recoverStaleRunningJobs();
   await failQueuedJobsWithoutCredentials();
   const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&requested_at=lte.${encodeURIComponent(new Date().toISOString())}&order=requested_at.asc&limit=${batchSize}`);
   if (!jobs?.length) return [];
@@ -63,6 +78,18 @@ async function claimNextBatch() {
     })
   });
   return claimed || [];
+}
+
+async function recoverStaleRunningJobs() {
+  const cutoff = new Date(Date.now() - jobMaxRuntimeMs).toISOString();
+  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa&status=eq.running&portal_password=not.is.null&started_at=lt.${encodeURIComponent(cutoff)}`);
+  if (!jobs?.length) return;
+
+  await requeueRunningJobs(
+    jobs,
+    "Reanudada automaticamente: la ejecucion anterior dejo de responder"
+  );
+  console.warn(`[portal-worker] Recuperados ${jobs.length} trabajos bloqueados en running.`);
 }
 
 async function nextDelayedJobWaitMs() {
@@ -93,11 +120,14 @@ function runGeneralBoard(job, clearanceCookies = []) {
         CPE_PORTAL_CLEARANCE_COOKIES: JSON.stringify(clearanceCookies)
       }
     });
+    activeChildren.add(child);
     child.once("error", (error) => {
+      activeChildren.delete(child);
       console.error("[portal-worker:tablon] No se pudo iniciar:", error.message);
       resolve(false);
     });
     child.once("exit", (code) => {
+      activeChildren.delete(child);
       console.log(`[portal-worker:tablon] finalizo con codigo ${code}`);
       resolve(code === 0);
     });
@@ -239,17 +269,31 @@ function runJob(job, slot, clearanceCookies = []) {
           : (profileDir ? { CPE_PORTAL_PROFILE_DIR: profileDir } : {}))
       }
     });
-    child.on("error", async (error) => {
-      console.error(`[portal-worker:${slot}] No se pudo iniciar ${job.id}:`, error);
-      await failRunningJob(job.id, "No se pudo iniciar el proceso de lectura").catch((failure) => {
-        console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
-      });
-      resolve();
-    });
-    child.on("exit", async (code) => {
+    activeChildren.add(child);
+    let settled = false;
+    let timeout;
+
+    const finish = async (code, failureMessage = "") => {
+      if (settled) return;
+      settled = true;
+      activeChildren.delete(child);
+      clearTimeout(timeout);
       console.log(`[portal-worker:${slot}] ${job.id} finalizo con codigo ${code}`);
-      if (code !== 0) {
-        await failRunningJob(job.id, `El proceso de lectura termino con codigo ${code}`).catch((failure) => {
+      if (code === CLOUDFLARE_RESTART_EXIT_CODE) {
+        requestCloudflareRestart(job, slot);
+        resolve();
+        return;
+      }
+      if (code === PORTAL_PENDING_MESSAGE_EXIT_CODE) {
+        await failRunningJob(job.id, new PortalPendingMessageError().message).catch((failure) => {
+          console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
+        });
+        console.log(`[portal-worker:${slot}] ${job.chapa}: mensaje pendiente; sin reintento en esta sincronizacion.`);
+        resolve();
+        return;
+      }
+      if (failureMessage || code !== 0) {
+        await failRunningJob(job.id, failureMessage || `El proceso de lectura termino con codigo ${code}`).catch((failure) => {
           console.error(`[portal-worker:${slot}] No se pudo cerrar ${job.id}:`, failure);
         });
         await scheduleAutomaticRetry(job).catch((failure) => {
@@ -257,8 +301,31 @@ function runJob(job, slot, clearanceCookies = []) {
         });
       }
       resolve();
+    };
+
+    timeout = setTimeout(() => {
+      terminateChildTree(child);
+      void finish(null, `La lectura supero ${Math.round(jobMaxRuntimeMs / 60000)} minutos y se cerro para evitar un bloqueo`);
+    }, jobMaxRuntimeMs);
+
+    child.once("error", (error) => {
+      console.error(`[portal-worker:${slot}] No se pudo iniciar ${job.id}:`, error);
+      void finish(null, "No se pudo iniciar el proceso de lectura");
     });
+    child.once("exit", (code) => { void finish(code); });
   });
+}
+
+function terminateChildTree(child) {
+  if (!child?.pid || child.exitCode !== null) return;
+  if (process.platform === "win32") {
+    spawn("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+      windowsHide: true
+    }).once("error", () => { child.kill(); });
+    return;
+  }
+  child.kill("SIGKILL");
 }
 
 async function scheduleAutomaticRetry(job) {
@@ -312,16 +379,13 @@ async function workerLoop() {
             if (!await gatewayAuthorizationIsValid()) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
               console.warn("[portal-worker] Tanda devuelta a la cola: Chrome necesita completar la verificacion de Cloudflare.");
-              if (workerOnce || workerDrain) return;
-              await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 30000)));
-              continue;
+              return CLOUDFLARE_RESTART_EXIT_CODE;
             }
             clearanceCookies = await gatewayClearanceCookies();
             if (!clearanceCookies.some((cookie) => cookie.name === "cf_clearance")) {
               await requeueRunningJobs(jobs, "En cola; Chrome necesita verificacion de Cloudflare");
               console.warn("[portal-worker] Tanda devuelta a la cola: falta autorizacion de Cloudflare.");
-              if (workerOnce || workerDrain) return;
-              continue;
+              return CLOUDFLARE_RESTART_EXIT_CODE;
             }
           }
           const boardJob = jobs.find((job) => job.trigger_source === "worker_manual_all");
@@ -335,6 +399,10 @@ async function workerLoop() {
             ...jobs.map((job, index) => runJob(job, index + 1, clearanceCookies)),
             boardPromise
           ]);
+          if (cloudflareRestartRequested) {
+            await requeueRunningJobs(jobs, "En cola; reiniciando el worker tras la verificacion de Cloudflare");
+            return CLOUDFLARE_RESTART_EXIT_CODE;
+          }
           await syncBolsaWorkerDirectory().catch((error) => {
             console.warn(`[portal-worker:nombres-bolsa] No se pudo actualizar el directorio: ${error instanceof Error ? error.message : error}`);
           });
@@ -359,7 +427,7 @@ async function workerLoop() {
       }
     } catch (error) {
       console.error("[portal-worker]", error);
-      if (workerDrain) return;
+      if (workerDrain || workerOnce) throw error;
       await new Promise((resolve) => setTimeout(resolve, Math.max(pollMs, 5000)));
     }
   }
@@ -368,13 +436,13 @@ async function workerLoop() {
 async function main() {
   if (!serviceRole) throw new Error("Missing CPE_SUPABASE_SECRET_KEY or CPE_SUPABASE_SERVICE_ROLE");
   console.log(`[portal-worker] Escuchando ${supabaseUrl} cada ${pollMs} ms en tandas de hasta ${batchSize}`);
-  await workerLoop();
+  return workerLoop();
 }
 
 process.on("SIGTERM", () => { stopping = true; });
 process.on("SIGINT", () => { stopping = true; });
 main()
-  .then(() => process.exit(0))
+  .then((code) => process.exit(code || 0))
   .catch((error) => {
     console.error(error);
     process.exit(1);

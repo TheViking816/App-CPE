@@ -36,6 +36,40 @@ test("el gateway abre Chrome visible sin indicadores inseguros", () => {
   assert.doesNotMatch(gatewaySource, /AutomationControlled/);
 });
 
+test("los perfiles automatizados desactivan los avisos nativos de contrasenas filtradas", () => {
+  assert.match(syncSource, /credentials_enable_service = false/);
+  assert.match(syncSource, /password_manager_enabled: false/);
+  assert.match(syncSource, /password_manager_leak_detection: false/);
+  assert.match(syncSource, /PasswordLeakDetection,LeakDetectionUnauthenticated/);
+  assert.match(gatewaySource, /PasswordLeakDetection,LeakDetectionUnauthenticated/);
+  assert.match(syncSource, /--disable-save-password-bubble/);
+  assert.match(syncSource, /--disable-session-crashed-bubble/);
+  assert.match(gatewaySource, /--disable-save-password-bubble/);
+  assert.match(gatewaySource, /--disable-session-crashed-bubble/);
+});
+
+test("si el gateway queda en Cloudflare se cierra solo el Chrome dedicado y se reinicia", () => {
+  assert.match(gatewaySource, /function Stop-DedicatedGatewayChrome/);
+  assert.match(gatewaySource, /\.CommandLine\.Contains\(\$profileArgument\)/);
+  assert.match(gatewaySource, /Stop-DedicatedGatewayChrome/);
+  assert.match(gatewaySource, /El Chrome gateway existente no responde correctamente/);
+});
+
+test("el recargador no acepta una pagina de Cloudflare como autorizacion valida", () => {
+  assert.match(gatewayReloadSource, /ok: state === "portal"/);
+  assert.match(gatewayReloadSource, /if \(state === "challenge"\) process\.exitCode = 3/);
+});
+
+test("el perfil del gateway desactiva el gestor de contrasenas antes de arrancar", () => {
+  assert.match(gatewaySource, /function Set-GatewayProfilePreferences/);
+  assert.match(gatewaySource, /credentials_enable_service/);
+  assert.match(gatewaySource, /credentials_enable_autosignin/);
+  assert.match(gatewaySource, /password_manager_enabled/);
+  assert.match(gatewaySource, /password_manager_leak_detection/);
+  assert.match(gatewaySource, /exit_type/);
+  assert.match(gatewaySource, /exited_cleanly/);
+});
+
 test("el gateway realiza una recarga real y espera a que aparezca portal o Cloudflare", () => {
   assert.match(gatewaySource, /reload-cloudflare-gateway\.js/);
   assert.match(gatewaySource, /Invoke-VerifiedPortalReload/);
@@ -101,7 +135,8 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.match(persistentRunnerSource, /ValidateRange\(1024, 65535\)/);
   assert.match(workerSource, /gatewayAuthorizationIsValid/);
   assert.match(workerSource, /\(response\?\.status\(\) \|\| 0\) === 403/);
-  assert.match(workerSource, /Math\.max\(pollMs, 30000\)/);
+  assert.match(workerSource, /return CLOUDFLARE_RESTART_EXIT_CODE/);
+  assert.match(batchRunnerSource, /Cloudflare interrumpio la tanda\. Reiniciando Chrome y Ejecutar pendientes/);
   assert.match(poolSource, /if \(!ok\) process\.exitCode = 3/);
   assert.match(workerSource, /startGatewayBrowser/);
   assert.match(workerSource, /El Chrome gateway se cerro; se abrira de nuevo automaticamente/);
@@ -109,6 +144,15 @@ test("el worker permanente arranca y utiliza el Chrome gateway", () => {
   assert.doesNotMatch(gatewaySource, /Start-PortalWorkerIfAvailable|Start-ScheduledTask/);
   assert.match(workerInstallerSource, /Disable-ScheduledTask -TaskName \$taskName/);
   assert.doesNotMatch(workerInstallerSource, /Start-ScheduledTask -TaskName \$taskName/);
+});
+
+test("una verificacion de un lector no interrumpe los demas de la tanda", () => {
+  const restartHandler = workerSource.split("function requestCloudflareRestart(")[1]?.split("function resolveSupabaseUrl(")[0] || "";
+  assert.match(restartHandler, /cloudflareRestartRequested = true/);
+  assert.doesNotMatch(restartHandler, /terminateChildTree|stopping = true/);
+  assert.match(workerSource, /if \(code === CLOUDFLARE_RESTART_EXIT_CODE\) \{\s*requestCloudflareRestart\(job, slot\);\s*resolve\(\);\s*return;/);
+  assert.match(workerSource, /await Promise\.all\(\[\s*\.\.\.jobs\.map/);
+  assert.match(syncSource, /isVisiblePortalFrame\(frame\)/);
 });
 
 test("el acceso de pendientes usa el mismo Chrome instalado que el gateway", () => {
@@ -132,15 +176,15 @@ test("cada tanda recarga y valida Cloudflare antes de abrir perfiles de usuarios
   assert.ok(workerPosition > clearancePosition);
 });
 
-test("el worker reclama la cola antes de validar y el acceso prepara Chrome para procesar solo pendientes", () => {
+test("el worker reclama la cola antes de validar y el acceso procesa solo pendientes", () => {
   const claimPosition = workerSource.indexOf("const jobs = await claimNextBatch()");
   const authorizationPosition = workerSource.indexOf("if (!await gatewayAuthorizationIsValid())", claimPosition);
   assert.ok(claimPosition >= 0);
   assert.ok(authorizationPosition > claimPosition);
   assert.match(pendingShortcutSource, /Actualizar pendientes App CPE\.lnk/);
   assert.match(pendingShortcutSource, /run-pending-sync\.ps1/);
-  assert.match(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
-  assert.match(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
+  assert.doesNotMatch(pendingRunnerSource, /start-cloudflare-gateway\.ps1/);
+  assert.doesNotMatch(pendingRunnerSource, /Start-Sleep -Seconds \$WarmupSeconds/);
   assert.match(pendingRunnerSource, /WarmupSeconds = 20/);
   assert.match(pendingRunnerSource, /-WarmupSeconds \$WarmupSeconds/);
   assert.match(pendingRunnerSource, /run-cloudflare-gateway-batch\.ps1/);

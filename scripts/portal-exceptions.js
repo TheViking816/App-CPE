@@ -44,6 +44,85 @@ export const EXCEPTION_RULES = [
   "Se deben solicitar, modificar o eliminar con al menos dos días laborables de antelación desde que se publique la contratación."
 ];
 
+export function mapNorayExceptions({ bag, months, year, chapa }) {
+  if (!bag || !Array.isArray(bag.utilizadas) || !Array.isArray(months)
+    || months.length !== 12 || months.some((period, index) =>
+      !Array.isArray(period?.dias) || Number(period.anyo) !== Number(year) || Number(period.mes) !== index + 1)) {
+    throw new Error("La bolsa de excepciones de Noray no devolvio el año completo");
+  }
+  const used = new Set(bag.utilizadas.map((item) => `${item.fecha}|${item.label}`));
+  const rows = new Map();
+  for (const period of months) {
+    for (const day of period.dias) {
+      const date = `${year}-${String(period.mes).padStart(2, "0")}-${String(day.dia).padStart(2, "0")}`;
+      for (const item of day.jornadas || []) {
+        const shift = cleanText(item.label);
+        const key = `${date}|${shift}`;
+        rows.set(key, {
+          chapa: String(chapa || ""), worker: "", date, shift, requestedAt: "",
+          status: Number(item.estado_revision) === 1 ? "Aceptada"
+            : Number(item.estado_revision) === 2 ? "Denegada" : "Pendiente",
+          used: Boolean(item.utilizada) || used.has(key)
+        });
+      }
+    }
+  }
+  for (const item of bag.utilizadas) {
+    const date = normalizePortalDate(item.fecha);
+    const shift = cleanText(item.label);
+    if (!date || !shift) continue;
+    const key = `${date}|${shift}`;
+    rows.set(key, { chapa: String(chapa || ""), worker: "", date, shift, requestedAt: "",
+      status: "Aceptada", ...rows.get(key), used: true });
+  }
+  const maxAnnual = Math.max(1, Number(bag.maximo) || 15);
+  const usedTotal = Math.max(Number(bag.total) || 0, bag.utilizadas.length);
+  return { recognized: true, year: Number(year), maxAnnual, usedTotal,
+    remaining: Math.max(0, maxAnnual - usedTotal), rows: [...rows.values()], rules: EXCEPTION_RULES };
+}
+
+function exceptionRowKey(row = {}) {
+  const shift = cleanText(row.shift);
+  const shiftDigits = shift.replace(/\D/g, "");
+  return [row.chapa, row.date, shiftDigits.length === 4 ? shiftDigits : shift]
+    .map((value) => cleanText(value)).join("|");
+}
+
+export function preserveUsedExceptions(existing, incoming) {
+  if (!incoming) return existing;
+  if (!existing || !incoming.recognized) return incoming;
+
+  const existingYear = Number(existing.year) || 0;
+  const incomingYear = Number(incoming.year) || 0;
+  if (existingYear && incomingYear && existingYear !== incomingYear) return incoming;
+
+  const previousUsed = new Map(
+    (Array.isArray(existing.rows) ? existing.rows : [])
+      .filter((row) => row?.used)
+      .map((row) => [exceptionRowKey(row), row])
+  );
+  const rows = (Array.isArray(incoming.rows) ? incoming.rows : []).map((row) => {
+    const saved = previousUsed.get(exceptionRowKey(row));
+    if (!saved) return row;
+    previousUsed.delete(exceptionRowKey(row));
+    return { ...row, used: true };
+  });
+  rows.push(...previousUsed.values());
+
+  const maxAnnual = Math.max(1, Number(incoming.maxAnnual) || Number(existing.maxAnnual) || 15);
+  const usedTotal = Math.max(
+    Number(existing.usedTotal) || 0,
+    Number(incoming.usedTotal) || 0,
+    rows.filter((row) => row?.used).length
+  );
+  return {
+    ...incoming,
+    rows,
+    usedTotal,
+    remaining: Math.max(0, maxAnnual - usedTotal)
+  };
+}
+
 export function parseExceptions(html = "") {
   const source = String(html || "");
   const pageText = cleanText(source);

@@ -45,11 +45,40 @@ function journalKey(item) {
 
 function premiumKey(item) {
   const row = item.row || {};
-  return [item.period, row.dia, row.parte, row.jornada, row.especialidad, row.tipo].map(clean).join("|");
+  return premiumIdentity({ period: item.period, day: row.dia, part: row.parte, shift: row.jornada });
+}
+
+function premiumIdentity({ period, day, part, shift } = {}) {
+  const label = clean(period).toLocaleLowerCase("es-ES");
+  const numeric = label.match(/\b(0?[1-9]|1[0-2])\s*[\/-]\s*(20\d{2})\b/);
+  const namedMonth = MONTHS.findIndex((month) => label.includes(month));
+  const year = label.match(/\b(20\d{2})\b/)?.[1];
+  const month = numeric ? Number(numeric[1]) : namedMonth >= 0 ? namedMonth + 1 : 0;
+  const canonicalPeriod = month && year ? `${year}-${String(month).padStart(2, "0")}` : label;
+  const canonicalDay = clean(day).replace(/[^0-9]/g, "").padStart(2, "0");
+  const canonicalPart = clean(part).replace(/[^0-9]/g, "");
+  const canonicalShift = clean(shift).replace(/[^0-9]/g, "");
+  return [canonicalPeriod, canonicalDay, canonicalPart || canonicalShift].join("|");
+}
+
+export function filterPreviouslyAnnouncedPremiums(notifications, existingNotifications) {
+  const announced = new Set((existingNotifications || []).map((row) => {
+    const metadata = row?.metadata || {};
+    return premiumIdentity({ period: metadata.period, day: metadata.day, part: metadata.part });
+  }));
+  return notifications.filter((row) => row.eventType !== "new_premium" || !announced.has(premiumIdentity(row.metadata)));
 }
 
 function premiumAmount(row) {
   return clean(row?.produccion || row?.prima || row?.importe);
+}
+
+function comparableAmount(value) {
+  const raw = clean(value).replace(/[^0-9,.-]/g, "");
+  if (!raw) return "";
+  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount.toFixed(2) : clean(value);
 }
 
 function meaningfulAmount(value) {
@@ -174,15 +203,24 @@ export function buildPortalNotifications(previousPayload, nextPayload, { now = n
 
   if (previousPayload?.primas?.recognized && !previousPayload?.primas?.locked && nextPayload?.primas?.recognized && !nextPayload?.primas?.locked) {
     const previous = new Map(periodRows(previousPayload.primas).map((item) => [premiumKey(item), premiumAmount(item.row)]));
-    for (const item of periodRows(nextPayload.primas)) {
+    const nextPremiums = periodRows(nextPayload.primas);
+    const previousAmountCount = [...previous.values()].filter(meaningfulAmount).length;
+    const newlyVisible = nextPremiums.filter((item) => {
+      const key = premiumKey(item);
+      return meaningfulAmount(premiumAmount(item.row)) && !meaningfulAmount(previous.get(key));
+    });
+    // Una lectura incompleta de Noray puede dejar temporalmente las primas
+    // vacias. Al recuperar el mes entero, no son primas recien publicadas.
+    const recoveringBulk = newlyVisible.length >= 2 && newlyVisible.length > previousAmountCount;
+    for (const item of nextPremiums) {
       const key = premiumKey(item);
       const amount = premiumAmount(item.row);
       if (!meaningfulAmount(amount)) continue;
       const row = item.row || {};
       const common = { part: clean(row.parte), amount, previousAmount: clean(previous.get(key)), day: clean(row.dia), period: clean(item.period) };
-      if (!previous.has(key) || !meaningfulAmount(previous.get(key))) {
+      if ((!previous.has(key) || !meaningfulAmount(previous.get(key))) && !recoveringBulk) {
         result.push(notification("new_premium", "Nueva prima", [row.parte && `Parte ${clean(row.parte)}`, amount].filter(Boolean).join(" · "), key, "sueldometro", common));
-      } else if (clean(previous.get(key)) !== amount) {
+      } else if (meaningfulAmount(previous.get(key)) && comparableAmount(previous.get(key)) !== comparableAmount(amount)) {
         result.push(notification("premium_modified", "Prima modificada", `${clean(previous.get(key))} → ${amount}${row.parte ? ` · Parte ${clean(row.parte)}` : ""}`, key, "sueldometro", common));
       }
     }

@@ -27,8 +27,52 @@ if (-not (Test-Path -LiteralPath $verifiedReloadScript)) {
 function Invoke-VerifiedPortalReload {
   & node $verifiedReloadScript "http://127.0.0.1:$Port"
   if ($LASTEXITCODE -ne 0) {
-    throw "Chrome esta abierto, pero el portal no respondio despues de recargarlo."
+    throw "Chrome esta abierto, pero el portal no quedo autorizado despues de recargarlo."
   }
+}
+
+function Stop-DedicatedGatewayChrome {
+  $profileArgument = "--user-data-dir=$ProfilePath"
+  $processes = Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -and $_.CommandLine.Contains($profileArgument) }
+  foreach ($process in $processes) {
+    Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+  $deadline = (Get-Date).AddSeconds(10)
+  do {
+    Start-Sleep -Milliseconds 250
+    try { $null = Invoke-RestMethod -Uri $versionUrl -TimeoutSec 1 } catch { return }
+  } while ((Get-Date) -lt $deadline)
+}
+
+function Set-JsonProperty([object]$Target, [string]$Name, [object]$Value) {
+  if ($Target.PSObject.Properties.Name -contains $Name) {
+    $Target.$Name = $Value
+  } else {
+    $Target | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
+  }
+}
+
+function Set-GatewayProfilePreferences {
+  $defaultProfilePath = Join-Path $ProfilePath "Default"
+  $preferencesPath = Join-Path $defaultProfilePath "Preferences"
+  New-Item -ItemType Directory -Path $defaultProfilePath -Force | Out-Null
+  $preferences = [PSCustomObject]@{}
+  if (Test-Path -LiteralPath $preferencesPath) {
+    try { $preferences = Get-Content -LiteralPath $preferencesPath -Raw | ConvertFrom-Json } catch {}
+  }
+  if (-not $preferences) { $preferences = [PSCustomObject]@{} }
+  Set-JsonProperty $preferences "credentials_enable_service" $false
+  Set-JsonProperty $preferences "credentials_enable_autosignin" $false
+  if (-not ($preferences.PSObject.Properties.Name -contains "profile") -or -not $preferences.profile) {
+    Set-JsonProperty $preferences "profile" ([PSCustomObject]@{})
+  }
+  Set-JsonProperty $preferences.profile "password_manager_enabled" $false
+  Set-JsonProperty $preferences.profile "password_manager_leak_detection" $false
+  Set-JsonProperty $preferences.profile "exit_type" "Normal"
+  Set-JsonProperty $preferences.profile "exited_cleanly" $true
+  $json = $preferences | ConvertTo-Json -Depth 100 -Compress
+  [System.IO.File]::WriteAllText($preferencesPath, $json, [System.Text.UTF8Encoding]::new($false))
 }
 
 function Open-PortalGatewayTab {
@@ -64,9 +108,13 @@ try {
   Invoke-VerifiedPortalReload
   Write-Host "Gateway Chrome ya disponible en el puerto $Port. Portal recargado y comprobado para renovar Cloudflare."
   exit 0
-} catch {}
+} catch {
+  Write-Host "El Chrome gateway existente no responde correctamente; se cierra y se abre de nuevo." -ForegroundColor Yellow
+  Stop-DedicatedGatewayChrome
+}
 
 New-Item -ItemType Directory -Path $ProfilePath -Force | Out-Null
+Set-GatewayProfilePreferences
 $arguments = @(
   "--remote-debugging-address=127.0.0.1",
   "--remote-debugging-port=$Port",
@@ -74,6 +122,9 @@ $arguments = @(
   "--profile-directory=Default",
   "--no-first-run",
   "--no-default-browser-check",
+  "--disable-features=PasswordLeakDetection,LeakDetectionUnauthenticated,PasswordCheck,PasswordManagerOnboarding",
+  "--disable-save-password-bubble",
+  "--disable-session-crashed-bubble",
   $PortalUrl
 )
 
