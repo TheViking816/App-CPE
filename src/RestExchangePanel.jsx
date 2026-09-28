@@ -1,6 +1,7 @@
 import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canRespondToRestOffer, confirmedRestExchangeDays, restPortalProcedure } from "./restExchange.js";
+import { madridTodayKey, restOfferExpired } from "./exchangeDeadline.js";
 import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
@@ -26,11 +27,6 @@ function formatDay(value) {
   const [year, month, day] = String(value).split("-").map(Number);
   return new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric" })
     .format(new Date(year, month - 1, day));
-}
-
-function todayKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 export default function RestExchangePanel({ session, descansos, vacaciones, vacationEntries = [], selectedDay }) {
@@ -112,6 +108,9 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
     event.preventDefault();
     const giving = kind !== "want" ? offeredDate : null;
     const needing = kind !== "give" ? wantedDate : null;
+    const today = madridTodayKey();
+    if ((giving && giving <= today) || (needing && needing <= today))
+      return setError("Las dos fechas deben ser posteriores a hoy. El intercambio se cierra al comenzar cualquiera de los días.");
     if (giving && !restDates.has(giving)) return setError("Elige un DS o FS confirmado en tu portal.");
     if (needing && !workDates.has(needing)) return setError("Elige un día disponible para solicitar en tu calendario del portal.");
     if ((kind === "swap" && (!giving || !needing || giving === needing))
@@ -143,15 +142,15 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   }
 
   const offers = data.offers || [];
-  const today = todayKey();
+  const today = madridTodayKey();
   const board = offers.filter((offer) => offer.status === "open"
-    && (!offer.offeredDate || offer.offeredDate >= today)
-    && (!offer.wantedDate || offer.wantedDate >= today));
+    && !restOfferExpired(offer, today));
   const { filters, setFilters, visible } = useExchangeFilters(board, false);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
   function offerCard(offer, personal = false) {
+    const expired = offer.status === "open" && restOfferExpired(offer, today);
     const proposals = proposalsByOffer(offer.id);
     const myProposal = proposals.find((proposal) => proposal.isOwn && ["pending", "accepted"].includes(proposal.status));
     const canRespond = canRespondToRestOffer(offer, restDates, workDates);
@@ -172,8 +171,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
         {offer.offeredDate && <div><small>Ofrece</small><ExchangeDate start={offer.offeredDate} /></div>}
         {offer.wantedDate && <div><small>Busca</small><ExchangeDate start={offer.wantedDate} /></div>}
       </div>
-      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente de tramitar en el portal" : "Abierto"}</span>}
-      {offer.status === "open" && !offer.isOwn && !myProposal && <div className="rest-exchange-actions">
+      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente de tramitar en el portal" : expired ? "Caducada" : "Abierto"}</span>}
+      {offer.status === "open" && !expired && !offer.isOwn && !myProposal && <div className="rest-exchange-actions">
         <button type="button" disabled={busy || !canRespond} onClick={() => mutate(
           () => proposeRestExchange({ token: session.token, offerId: offer.id,
             offeredDate: offer.kind === "give" ? null : offer.wantedDate }),
@@ -184,7 +183,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           : "No tienes el día solicitado como DS o FS confirmado."}</small>}
       </div>}
       {offer.isOwn && offer.status === "open" && <div className="rest-exchange-manage">
-        <button type="button" className="rest-exchange-secondary" disabled={busy || proposals.some((proposal) => proposal.status === "pending")}
+        <button type="button" className="rest-exchange-secondary" disabled={busy || expired || proposals.some((proposal) => proposal.status === "pending")}
           onClick={() => editOffer(offer)}>Editar</button>
         <button type="button" className="rest-exchange-secondary" disabled={busy}
           onClick={() => mutate(() => cancelRestExchange({ token: session.token, offerId: offer.id }), "Publicación eliminada.")}>Eliminar</button>
@@ -201,7 +200,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
           : offer.kind === "want"
             ? `${proposal.proposerName}${proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} ofrece ${formatDay(proposal.offeredDate)} para cedértelo.`
             : `${proposal.proposerName}${proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} ofrece ${formatDay(proposal.offeredDate)} y quiere ${formatDay(offer.offeredDate)}.`}</span>
-        <div>{chatButton(proposal)}<button type="button" disabled={busy} onClick={() => mutate(
+        <div>{chatButton(proposal)}<button type="button" disabled={busy || expired} onClick={() => mutate(
           () => decideRestExchange({ token: session.token, proposalId: proposal.id, accept: true }),
           "Acuerdo registrado. Falta tramitarlo en el portal oficial."
         )}>Aceptar</button><button type="button" className="rest-exchange-secondary" disabled={busy} onClick={() => mutate(

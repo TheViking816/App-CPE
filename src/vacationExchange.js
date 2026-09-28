@@ -1,3 +1,5 @@
+import { vacationOfferExpired } from "./exchangeDeadline.js";
+
 function portalDateKey(value) {
   const match = String(value || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!match) return "";
@@ -28,6 +30,7 @@ export function assignedVacationDays(vacaciones) {
 
 export function canRespondToVacationOffer(offer, assignedDays) {
   if (offer.status !== "open" || offer.isOwn) return false;
+  if (vacationOfferExpired(offer)) return false;
   const offered = dateRangeKeys(offer.offeredStart, offer.offeredEnd);
   const wanted = dateRangeKeys(offer.wantedStart, offer.wantedEnd);
   return offered.length > 0 && offered.length === wanted.length

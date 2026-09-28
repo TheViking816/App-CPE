@@ -22,12 +22,12 @@ test("only portal DS and FS may be offered; blank and SL may be requested but FH
 });
 
 test("responding requires a confirmed reciprocal day and a requestable day for any received rest", () => {
-  const rest = new Set(["2026-09-24"]);
-  const work = new Set(["2026-09-23"]);
-  assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", offeredDate: "2026-09-23", wantedDate: "2026-09-24" }, rest, work), true);
-  assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", offeredDate: "2026-09-24", wantedDate: "2026-09-23" }, rest, work), false);
-  assert.equal(canRespondToRestOffer({ kind: "give", status: "open", offeredDate: "2026-09-24" }, rest, work), false);
-  assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", isOwn: true, offeredDate: "2026-09-23", wantedDate: "2026-09-24" }, rest, work), false);
+  const rest = new Set(["2099-01-24"]);
+  const work = new Set(["2099-01-23"]);
+  assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", offeredDate: "2099-01-23", wantedDate: "2099-01-24" }, rest, work), true);
+  assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", offeredDate: "2099-01-24", wantedDate: "2099-01-23" }, rest, work), false);
+  assert.equal(canRespondToRestOffer({ kind: "give", status: "open", offeredDate: "2099-01-24" }, rest, work), false);
+  assert.equal(canRespondToRestOffer({ kind: "swap", status: "open", isOwn: true, offeredDate: "2099-01-23", wantedDate: "2099-01-24" }, rest, work), false);
 });
 
 test("official rest procedures use the corresponding portal form and each party's dates", () => {

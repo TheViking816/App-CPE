@@ -5,16 +5,12 @@ import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
 import { assignedVacationDays, canRespondToVacationOffer, dateRangeKeys, vacationSelectionPatch } from "./vacationExchange.js";
+import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
 import {
   cancelVacationExchange, decideVacationExchange, getVacationExchange,
   proposeVacationExchange, publishVacationExchange, updateVacationExchange,
   withdrawVacationExchange
 } from "./supabaseClient.js";
-
-function todayKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
 
 function formatDay(value) {
   if (!value) return "—";
@@ -100,6 +96,11 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
 
   function publish(event) {
     event.preventDefault();
+    const today = madridTodayKey();
+    if (offeredStart <= today || wantedStart <= today) {
+      setError("Los dos periodos deben comenzar después de hoy.");
+      return;
+    }
     const offered = dateRangeKeys(offeredStart, offeredEnd);
     const wanted = dateRangeKeys(wantedStart, wantedEnd);
     if (!offered.length || offered.length !== wanted.length) {
@@ -139,13 +140,14 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
 
   const offers = data.offers || [];
   const proposals = data.proposals || [];
-  const today = todayKey();
+  const today = madridTodayKey();
   const board = offers.filter((offer) => offer.status === "open"
-    && offer.offeredStart >= today && offer.wantedStart >= today);
+    && !vacationOfferExpired(offer, today));
   const { filters, setFilters, visible } = useExchangeFilters(board, true);
   const mine = recentPersonalOffers(offers, proposals);
 
   function offerCard(offer, personal = false) {
+    const expired = offer.status === "open" && vacationOfferExpired(offer, today);
     const related = proposals.filter((proposal) => proposal.offerId === offer.id);
     const minePending = related.find((proposal) => proposal.isOwn && proposal.status === "pending");
     const canRespond = canRespondToVacationOffer(offer, assignedDays);
@@ -167,8 +169,8 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
         <div><small>Tengo · {dateRangeKeys(offer.offeredStart, offer.offeredEnd).length} días</small><ExchangeDate start={offer.offeredStart} end={offer.offeredEnd} /></div>
         <div><small>Quiero</small><ExchangeDate start={offer.wantedStart} end={offer.wantedEnd} /></div>
       </div>
-      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente del Portal SEVASA" : "Abierto"}</span>}
-      {offer.status === "open" && !offer.isOwn && !minePending && <div className="rest-exchange-actions">
+      {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente del Portal SEVASA" : expired ? "Caducada" : "Abierto"}</span>}
+      {offer.status === "open" && !expired && !offer.isOwn && !minePending && <div className="rest-exchange-actions">
         <button type="button" disabled={busy || !canRespond} onClick={() => mutate(
           () => proposeVacationExchange({ token: session.token, offerId: offer.id }),
           "Propuesta enviada. El autor recibirá una notificación."
@@ -176,7 +178,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
         {!canRespond && <small>Para responder, debes tener asignado el periodo que busca y no tener vacaciones en el que ofrece.</small>}
       </div>}
       {offer.isOwn && offer.status === "open" && <div className="rest-exchange-manage">
-        <button type="button" className="rest-exchange-secondary" disabled={busy || related.some((p) => p.status === "pending")}
+        <button type="button" className="rest-exchange-secondary" disabled={busy || expired || related.some((p) => p.status === "pending")}
           onClick={() => editOffer(offer)}>Editar</button>
         <button type="button" className="rest-exchange-secondary" disabled={busy}
           onClick={() => mutate(() => cancelVacationExchange({ token: session.token, offerId: offer.id }),
@@ -191,7 +193,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
         .map((proposal) => <div className="rest-exchange-proposal" key={proposal.id}>
           <span>{proposal.proposerName}{proposal.counterpartChapa ? ` · ${proposal.counterpartChapa}` : ""} ofrece {formatRange(offer.wantedStart, offer.wantedEnd)} y quiere {formatRange(offer.offeredStart, offer.offeredEnd)}.</span>
           <div>{chatButton(proposal)}
-            <button type="button" disabled={busy} onClick={() => mutate(
+            <button type="button" disabled={busy || expired} onClick={() => mutate(
               () => decideVacationExchange({ token: session.token, proposalId: proposal.id, accept: true }),
               "Acuerdo registrado. Falta tramitarlo y confirmarlo en el Portal SEVASA."
             )}>Aceptar</button>
