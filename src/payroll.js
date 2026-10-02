@@ -1,4 +1,5 @@
 import REMATE_SALARY_DATA from "../assets/remates-salariales.json" with { type: "json" };
+import MANUAL_PREMIUM_RATES from "../assets/manual-premium-rates.json" with { type: "json" };
 import { canonicalPortalPart, normalizeReservePortalRow } from "./portalRowIdentity.js";
 
 const VALENCIA_HOLIDAYS_2026 = new Set([
@@ -335,7 +336,7 @@ function getSpecialtyKey(specialty = "") {
   return normalized.replace(/\s+/g, "_");
 }
 
-function getMonthKey(monthLabel = "") {
+export function getMonthKey(monthLabel = "") {
   const { month, year } = parseMonthLabel(monthLabel);
   return `${year}-${pad(month)}`;
 }
@@ -524,6 +525,23 @@ function getRateKey(dateString, shift, holidaySet) {
   return dayType;
 }
 
+export function getManualMovementPremium(dateString, shift, movements, payrollConfig = null) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateString)) || !Number.isInteger(Number(movements)) || Number(movements) < 0) return null;
+  const holidays = payrollConfig?.holidays
+    ? new Set(payrollConfig.holidays.filter((item) => item.enabled !== false).map((item) => item.holiday_date || item.holidayDate))
+    : VALENCIA_HOLIDAYS_2026;
+  const rateKey = getRateKey(dateString, shift, holidays);
+  const suffix = {
+    FESTIVO_TO_LABORABLE: "FEST-LAB",
+    FESTIVO_TO_FESTIVO: "FEST-FEST",
+    LABORABLE_TO_FESTIVO: "LAB-FEST"
+  }[rateKey] || rateKey;
+  const rates = MANUAL_PREMIUM_RATES[`${shift}_${suffix}`];
+  if (!rates) return null;
+  const rate = Number(movements) < 120 ? rates[0] : rates[1];
+  return { amount: Number((Number(movements) * rate).toFixed(2)), rate, dayType: suffix };
+}
+
 function getRemateRateKey(dateString, shift, holidaySet) {
   if (shift === "06-12") return isHoliday(dateString, holidaySet) ? "FESTIVO" : "LABORABLE";
   if (shift !== "18-00" && shift !== "19-01") return getRateKey(dateString, shift, holidaySet);
@@ -625,7 +643,8 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const remateRate = getRemateRate(date, shift, jornal.especialidad, holidaySet);
     const remateKey = getRelayHourKey(jornal, date, shift);
     const manualPremiumKey = remateKey;
-    const savedManualPremium = manualPremiums?.[manualPremiumKey];
+    const savedManualPremium = manualPremiums?.[manualPremiumKey]
+      ?? (jornal.manualPremiumAmount == null ? null : { amount: jornal.manualPremiumAmount });
     const parsedManualPremium = Number(savedManualPremium?.amount);
     const hasManualPremium = manualPremiumEligible && savedManualPremium != null && Number.isFinite(parsedManualPremium);
     const manualPrima = hasManualPremium ? Number(parsedManualPremium.toFixed(2)) : null;
@@ -789,6 +808,60 @@ export function selectPortalJornalesHistory(jornales = null, primas = null) {
   const portalHistory = Array.isArray(jornales?.history) ? jornales.history : [];
   if (portalHistory.length > 0) return portalHistory;
   return Array.isArray(primas?.history) ? primas.history : [];
+}
+
+// A manual estimate stays separate from the official snapshot. Once the portal
+// has the same date and shift, its row wins and the estimate is not counted twice.
+export function mergeManualSalaryJornales(officialRows = [], entries = [], monthLabel = "") {
+  const { year, month } = parseMonthLabel(monthLabel);
+  const rows = [...(Array.isArray(officialRows) ? officialRows : [])];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const date = String(entry?.date || "");
+    if (!date.startsWith(`${year}-${pad(month)}-`)) continue;
+    const shift = parseShift(entry?.shift);
+    if (!shift) continue;
+    const day = Number(date.slice(-2));
+    const officialIndex = rows.findIndex((row) => Number(row?.dia) === day && parseShift(row?.jornada) === shift);
+    const premium = entry.premiumAmount == null ? null : Number(entry.premiumAmount);
+    if (officialIndex >= 0) {
+      rows[officialIndex] = { ...rows[officialIndex], manualEntryId: entry.id, manualPremiumAmount: premium };
+      continue;
+    }
+    rows.push({
+      jornal: `MANUAL-${date}-${shift}`,
+      parte: entry.part || "",
+      dia: pad(day),
+      jornada: shift,
+      payrollGroup: entry.group || "II",
+      especialidad: entry.specialty || "",
+      empresa: entry.company || "",
+      buque: entry.vessel || "",
+      operacion: entry.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "ESTIBA",
+      manualEntryId: entry.id,
+      manualOnly: true,
+      manualPremiumAmount: premium
+    });
+  }
+  return rows;
+}
+
+export function mergeManualSalaryHistory(history = [], entries = []) {
+  const periods = (Array.isArray(history) ? history : []).map((period) => ({ ...period }));
+  const byMonth = new Set(periods.map((period) => `${period.year}-${pad(period.month)}`));
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const match = String(entry?.date || "").match(/^(\d{4})-(\d{2})-\d{2}$/);
+    if (!match) continue;
+    const key = `${match[1]}-${match[2]}`;
+    if (byMonth.has(key)) continue;
+    byMonth.add(key);
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    periods.push({ year, month, monthLabel: `${Object.keys(MONTHS_ES).find((name) => MONTHS_ES[name] === month)} de ${year}`, rows: [] });
+  }
+  return periods.map((period) => ({
+    ...period,
+    rows: mergeManualSalaryJornales(period.rows, entries, period.monthLabel)
+  }));
 }
 
 function premiumRowsForMonth(premiumHistory, month) {

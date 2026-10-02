@@ -456,6 +456,29 @@ export async function setUserManualPremium({ token, jornalKey, amount = null, po
   return data;
 }
 
+export async function getManualSalaryJornals({ token }) {
+  if (!supabase || !token) return [];
+  const { data, error } = await supabase.rpc("app_cpe_get_manual_salary_jornals", { p_token: token });
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function saveManualSalaryJornal({ token, entry }) {
+  const { data, error } = await supabase.rpc("app_cpe_save_manual_salary_jornal", {
+    p_token: token, p_entry: entry
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteManualSalaryJornal({ token, id }) {
+  const { data, error } = await supabase.rpc("app_cpe_delete_manual_salary_jornal", {
+    p_token: token, p_id: id
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function loadPayrollConfig() {
   if (!supabase) return null;
 

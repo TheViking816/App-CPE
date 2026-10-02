@@ -71,6 +71,10 @@ import {
   compareJornalesDescending,
   enrichJornales,
   filterJornalesByPeriod,
+  getManualMovementPremium,
+  getMonthKey,
+  mergeManualSalaryHistory,
+  mergeManualSalaryJornales,
   mergeUpcomingAssignmentsIntoJornales,
   selectPortalJornales,
   selectPortalJornalesHistory,
@@ -96,6 +100,7 @@ import {
   getUserRelayHours,
   getUserRemateHours,
   getUserManualPremiums,
+  getManualSalaryJornals,
   loginUser,
   markUserNotificationsRead,
   queuePendingPortalActivation,
@@ -110,6 +115,8 @@ import {
   setUserRelayHour,
   setUserRemateHours,
   setUserManualPremium,
+  saveManualSalaryJornal,
+  deleteManualSalaryJornal,
   trackPageVisit,
   touchPortalActivity,
   touchDirectPresence,
@@ -1312,6 +1319,8 @@ function AssignmentDetailModal({ assignment, currentChapa, onClose }) {
 function PortalJornalDetailModal({
   jornal,
   onClose,
+  onEditManualJornal,
+  onDeleteManualJornal,
   onSetRemateHours,
   savingRemateKey,
   remateError,
@@ -1390,6 +1399,10 @@ function PortalJornalDetailModal({
             </div>
           )}
         </div>
+        {onEditManualJornal && <div className="manual-jornal-detail-actions">
+          <button type="button" onClick={onEditManualJornal}>Editar datos manuales</button>
+          <button type="button" onClick={onDeleteManualJornal}>Eliminar entrada manual</button>
+        </div>}
         {payroll.manualPremiumEligible && (
           <div className={`portal-manual-premium${payroll.manualPremiumConflict ? " has-conflict" : ""}`}>
             <div className="portal-manual-premium-heading">
@@ -2782,38 +2795,133 @@ function PortalFeatureTemplate({ view = "all" }) {
   );
 }
 
+function ManualSalaryJornalForm({ entry, defaults, payrollConfig, onClose, onSave }) {
+  const localToday = () => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  };
+  const [form, setForm] = useState(() => ({
+    date: entry?.date || localToday(), shift: entry?.shift || "",
+    group: entry?.group || defaults?.group || "II",
+    operationType: entry?.operationType || defaults?.operationType || "ESTIBA",
+    specialty: entry?.specialty || defaults?.specialty || "",
+    company: entry?.company || "", part: entry?.part || "", vessel: entry?.vessel || "",
+    premiumMode: entry?.premiumMode || "none",
+    premiumAmount: entry?.premiumMode === "direct" ? String(entry.premiumAmount ?? "") : "",
+    movements: entry?.movements == null ? "" : String(entry.movements)
+  }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const update = (key, value) => { setForm((current) => ({ ...current, [key]: value })); setError(""); };
+  const movementPremium = form.shift && form.date
+    ? getManualMovementPremium(form.date, form.shift, Number(form.movements), payrollConfig)
+    : null;
+  const directAmount = Number(String(form.premiumAmount).replace(",", "."));
+  const premiumAmount = form.premiumMode === "movements" ? movementPremium?.amount
+    : form.premiumMode === "direct" && form.premiumAmount !== "" ? directAmount : null;
+  const preview = form.date && form.shift
+    ? enrichJornales([{
+      dia: form.date.slice(-2), jornada: form.shift, payrollGroup: form.group,
+      especialidad: form.specialty, operacion: form.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "ESTIBA",
+      jornal: `MANUAL-${form.date}-${form.shift}`, manualPremiumAmount: premiumAmount
+    }], [], `${form.date.slice(5, 7)}/${form.date.slice(0, 4)}`, payrollConfig)[0]?.payroll
+    : null;
+  const save = async (event) => {
+    event.preventDefault();
+    if (!form.date || !form.shift) { setError("Elige fecha y jornada."); return; }
+    if (!preview?.base) { setError("No hay tarifa base para esa fecha, jornada y grupo. Revisa la selección."); return; }
+    if (form.premiumMode !== "none" && !preview.primaEligible) {
+      setError("Esta operación y puesto no admiten prima de producción en el cálculo actual."); return;
+    }
+    if (form.premiumMode === "movements" && (!movementPremium || !form.movements || !Number.isInteger(Number(form.movements)) || Number(form.movements) < 0)) {
+      setError("Indica los movimientos. Si no hay tarifa para esta jornada, usa prima en euros."); return;
+    }
+    if (form.premiumMode === "direct" && (form.premiumAmount === "" || !Number.isFinite(directAmount) || directAmount < 0 || directAmount > 99999.99)) {
+      setError("Introduce una prima válida en euros."); return;
+    }
+    setSaving(true);
+    try {
+      await onSave({
+        ...form,
+        premiumAmount,
+        movements: form.premiumMode === "movements" ? Number(form.movements) : null,
+        movementRate: form.premiumMode === "movements" ? movementPremium.rate : null
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError.message || "No se pudo guardar el jornal.");
+    } finally { setSaving(false); }
+  };
+  return <div className="portal-jornal-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="manual-jornal-modal" role="dialog" aria-modal="true" aria-label="Añadir jornal manual">
+      <header><div><small>Sueldómetro · estimación</small><h2>{entry ? "Editar jornal manual" : "Añadir jornal manual"}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
+      <p className="manual-jornal-intro">Añádelo sin esperar al worker. Fecha y jornada son obligatorias; parte, empresa y buque son opcionales.</p>
+      <form onSubmit={save}>
+        <div className="manual-jornal-grid">
+          <label>Fecha *<input type="date" required value={form.date} disabled={Boolean(entry)} onChange={(event) => update("date", event.target.value)} /></label>
+          <label>Jornada *<select required value={form.shift} disabled={Boolean(entry)} onChange={(event) => update("shift", event.target.value)}><option value="">Selecciona jornada</option>{["02-08","08-14","14-20","18-00","19-01","20-02"].map((shift) => <option key={shift}>{shift}</option>)}</select></label>
+          <label>Grupo profesional<select value={form.group} onChange={(event) => update("group", event.target.value)}>{["I","II","III","IV"].map((group) => <option key={group} value={group}>Grupo {group}</option>)}</select></label>
+          <label>Tipo de operación<select value={form.operationType} onChange={(event) => update("operationType", event.target.value)}><option value="ESTIBA">Estiba</option><option value="RECEPCION_ENTREGA">Recepción / entrega</option></select></label>
+          <label className="manual-jornal-wide">Puesto o especialidad (opcional)<input value={form.specialty} maxLength={100} onChange={(event) => update("specialty", event.target.value)} placeholder="Ej. Conductor 1ª, clasificador…" /></label>
+          <label>Empresa (opcional)<input value={form.company} maxLength={150} onChange={(event) => update("company", event.target.value)} /></label>
+          <label>Parte (opcional)<input value={form.part} maxLength={30} onChange={(event) => update("part", event.target.value)} /></label>
+          <label className="manual-jornal-wide">Buque (opcional)<input value={form.vessel} maxLength={150} onChange={(event) => update("vessel", event.target.value)} /></label>
+        </div>
+        <div className="manual-jornal-premium"><strong>Prima de producción</strong><small>Puedes añadirla después de terminar la jornada.</small>
+          {preview && !preview.primaEligible && <small>Para recepción/entrega solo se aplica prima en puestos manipuladores, igual que en el Sueldómetro actual.</small>}
+          <div className="manual-jornal-mode" role="group" aria-label="Cómo calcular la prima">
+            {[["none","Pendiente"],["movements","Por movimientos"],["direct","Importe en euros"]].map(([value,label]) => <button key={value} type="button" className={form.premiumMode === value ? "is-active" : ""} onClick={() => update("premiumMode", value)}>{label}</button>)}
+          </div>
+          {form.premiumMode === "movements" && <label>Movimientos<input type="number" min="0" max="100000" step="1" value={form.movements} onChange={(event) => update("movements", event.target.value)} />{movementPremium ? <small>{movementPremium.dayType} · {movementPremium.rate.toFixed(3)} €/mov. · Prima calculada {formatEuro(movementPremium.amount)}</small> : <small>No hay coeficiente para esta jornada; introduce la prima en euros.</small>}</label>}
+          {form.premiumMode === "direct" && <label>Prima bruta (€)<input inputMode="decimal" value={form.premiumAmount} onChange={(event) => update("premiumAmount", event.target.value.replace(/[^0-9.,]/g, ""))} placeholder="Ej. 75,50" /></label>}
+        </div>
+        <div className="manual-jornal-preview"><span>Estimación bruta</span><strong>{formatEuro(preview?.total || 0)}</strong><small>Base {formatEuro(preview?.base || 0)} · Complemento {formatEuro(preview?.complement || 0)} · Prima {formatEuro(preview?.prima || 0)}</small></div>
+        {error && <p className="manual-jornal-error" role="alert">{error}</p>}
+        <footer><button type="button" onClick={onClose}>Cancelar</button><button type="submit" disabled={saving}>{saving ? "Guardando…" : "Guardar jornal"}</button></footer>
+      </form>
+    </section>
+  </div>;
+}
+
 function PortalResultPreview({ snapshot, session, view = "all", onSessionChange, onRequestSecurityKey, hideSyncFailure = false }) {
-  const payload = snapshot?.payload || null;
+  const today = new Date();
+  const fallbackMonthLabel = `${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
+  const payload = snapshot?.payload || (view === "salary" ? { jornales: { monthLabel: fallbackMonthLabel, year: today.getFullYear(), rows: [] } } : null);
+  const [manualSalaryJornals, setManualSalaryJornals] = useState([]);
+  const [manualJornalEditor, setManualJornalEditor] = useState(null);
+  const [manualJornalError, setManualJornalError] = useState("");
   const latestPrimas = payload?.primas?.rows || [];
   const premiumHistory = Array.isArray(payload?.primas?.history) ? payload.primas.history : [];
-  const currentPayrollMonthLabel = payload?.jornales?.monthLabel
-    || (!payload?.primas?.locked && latestPrimas.length > 0 ? payload?.primas?.monthLabel : "");
+  const officialMonthLabel = payload?.jornales?.monthLabel
+    || (!payload?.primas?.locked && latestPrimas.length > 0 ? payload?.primas?.monthLabel : "") || fallbackMonthLabel;
+  const latestManualMonth = manualSalaryJornals.map((entry) => String(entry.date || "").slice(0, 7)).sort().at(-1);
+  const currentPayrollMonthLabel = latestManualMonth && latestManualMonth > getMonthKey(officialMonthLabel)
+    ? `${latestManualMonth.slice(5, 7)}/${latestManualMonth.slice(0, 4)}` : officialMonthLabel;
   const primas = useMemo(() => selectPremiumRowsForMonth(payload?.primas, currentPayrollMonthLabel), [payload?.primas, currentPayrollMonthLabel]);
-  const portalJornales = selectPortalJornales(payload?.jornales, payload?.primas);
-  const jornales = useMemo(() => mergeUpcomingAssignmentsIntoJornales(
-    portalJornales,
-    payload?.asignaciones?.rows,
-    currentPayrollMonthLabel
-  ), [currentPayrollMonthLabel, payload?.asignaciones?.rows, portalJornales]);
+  const portalJornales = getMonthKey(currentPayrollMonthLabel) === getMonthKey(officialMonthLabel)
+    ? selectPortalJornales(payload?.jornales, payload?.primas) : [];
+  const jornales = useMemo(() => mergeManualSalaryJornales(mergeUpcomingAssignmentsIntoJornales(
+    portalJornales, payload?.asignaciones?.rows, currentPayrollMonthLabel
+  ), manualSalaryJornals, currentPayrollMonthLabel), [currentPayrollMonthLabel, payload?.asignaciones?.rows, portalJornales, manualSalaryJornals]);
   const journalHistory = useMemo(() => {
     const savedHistory = selectPortalJornalesHistory(payload?.jornales, payload?.primas);
     if (Array.isArray(savedHistory) && savedHistory.length > 0) {
       const currentLabel = String(payload?.jornales?.monthLabel || currentPayrollMonthLabel).trim().toLocaleLowerCase("es");
-      return savedHistory.map((period) => (
+      return mergeManualSalaryHistory(savedHistory.map((period) => (
         String(period?.monthLabel || "").trim().toLocaleLowerCase("es") === currentLabel
           ? { ...period, rows: jornales }
           : period
-      ));
+      )), manualSalaryJornals);
     }
-    if (!jornales.length) return [];
+    if (!jornales.length && !manualSalaryJornals.length) return [];
 
-    return [{
+    return mergeManualSalaryHistory([{
       year: new Date().getFullYear(),
       month: new Date().getMonth() + 1,
-      monthLabel: payload?.jornales?.monthLabel || "Mes actual",
+      monthLabel: currentPayrollMonthLabel,
       rows: jornales
-    }];
-  }, [currentPayrollMonthLabel, jornales, payload?.jornales, payload?.primas]);
+    }], manualSalaryJornals);
+  }, [currentPayrollMonthLabel, jornales, payload?.jornales, payload?.primas, manualSalaryJornals]);
   const descansos = payload?.descansos || null;
   const hasDescansos = Array.isArray(descansos?.months) && descansos.months.length > 0;
   const allSlRows = payload?.sl?.rows || [];
@@ -2857,6 +2965,20 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const vacacionesRef = useRef(null);
   const nominasRef = useRef(null);
   const irpfStorageKey = snapshot?.chapa ? `app-cpe-irpf-${snapshot.chapa}` : "";
+
+  const reloadManualSalaryJornals = useCallback(async () => {
+    const rows = await getManualSalaryJornals({ token: session.token });
+    setManualSalaryJornals(rows);
+    return rows;
+  }, [session.token]);
+
+  useEffect(() => {
+    let active = true;
+    getManualSalaryJornals({ token: session.token })
+      .then((rows) => { if (active) setManualSalaryJornals(rows); })
+      .catch((requestError) => { if (active) setManualJornalError(requestError.message || "No se pudieron cargar los jornales manuales."); });
+    return () => { active = false; };
+  }, [session.token]);
 
   useEffect(() => {
     let active = true;
@@ -2970,7 +3092,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     ...trainingPayrollEntriesForMonth(trainingPayrollEntries, currentPayrollMonthLabel)
   ], [jornales, primas, currentPayrollMonthLabel, payrollConfig, relayHours, remateHours, manualPremiums, vacationPayrollEntries, trainingPayrollEntries]);
   const payrollSummary = useMemo(() => summarizePayroll(enrichedJornales), [enrichedJornales]);
-  const showSalary = hasSalaryData(payload?.jornales, journalHistory, enrichedJornales);
+  const showSalary = view === "salary" || hasSalaryData(payload?.jornales, journalHistory, enrichedJornales);
   const annualPayroll = useMemo(
     () => summarizeAnnualPayroll(
       journalHistory,
@@ -3018,6 +3140,29 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     annualPayroll.vacationDays > 0 ? `${annualPayroll.vacationDays} VA` : "",
     annualPayroll.trainingDays > 0 ? `${annualPayroll.trainingDays} FM` : ""
   ].filter(Boolean).join(" + ");
+
+  const saveManualJornal = async (entry) => {
+    setManualJornalError("");
+    await saveManualSalaryJornal({ token: session.token, entry });
+    const existing = enrichedJornales.find((item) => item.payroll?.date === entry.date && item.payroll?.shift === entry.shift);
+    const premiumKey = existing?.payroll?.manualPremiumKey;
+    if (premiumKey && manualPremiums[premiumKey] != null) {
+      await setUserManualPremium({ token: session.token, jornalKey: premiumKey, amount: null, portalAmount: null });
+      setManualPremiums((current) => { const next = { ...current }; delete next[premiumKey]; return next; });
+    }
+    await reloadManualSalaryJornals();
+  };
+
+  const removeManualJornal = async (item) => {
+    if (!item?.manualEntryId || !window.confirm("¿Eliminar este jornal manual? Si el portal ya lo ha publicado, el jornal oficial seguirá visible.")) return;
+    try {
+      await deleteManualSalaryJornal({ token: session.token, id: item.manualEntryId });
+      await reloadManualSalaryJornals();
+      setSelectedJornal(null);
+    } catch (requestError) {
+      setManualJornalError(requestError.message || "No se pudo eliminar el jornal.");
+    }
+  };
 
   const toggleRelayHour = async (item, enabled) => {
     const jornalKey = item.payroll?.relayHourKey;
@@ -3075,6 +3220,24 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       return;
     }
 
+    if (item.manualEntryId) {
+      const entry = manualSalaryJornals.find((row) => row.id === item.manualEntryId);
+      if (!entry) return;
+      setSavingPremiumKey(jornalKey);
+      setManualPremiumError("");
+      try {
+        await saveManualSalaryJornal({ token: session.token, entry: { ...entry, premiumMode: "direct", premiumAmount: normalizedAmount } });
+        if (manualPremiums[jornalKey] != null) {
+          await setUserManualPremium({ token: session.token, jornalKey, amount: null, portalAmount: null });
+          setManualPremiums((current) => { const next = { ...current }; delete next[jornalKey]; return next; });
+        }
+        await reloadManualSalaryJornals();
+      } catch (requestError) {
+        setManualPremiumError(requestError.message || "No se pudo guardar la prima.");
+      } finally { setSavingPremiumKey(""); }
+      return;
+    }
+
     const previous = manualPremiums[jornalKey];
     const nextRecord = {
       amount: Number(normalizedAmount.toFixed(2)),
@@ -3110,6 +3273,20 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
     const previous = manualPremiums[jornalKey];
     setManualPremiumError("");
     setSavingPremiumKey(jornalKey);
+    if (item.manualEntryId) {
+      const entry = manualSalaryJornals.find((row) => row.id === item.manualEntryId);
+      try {
+        if (entry) {
+          await saveManualSalaryJornal({ token: session.token, entry: { ...entry, premiumMode: "none", premiumAmount: null, movements: null, movementRate: null } });
+          await reloadManualSalaryJornals();
+        }
+        if (previous != null) await setUserManualPremium({ token: session.token, jornalKey, amount: null, portalAmount: null });
+        setManualPremiums((current) => { const next = { ...current }; delete next[jornalKey]; return next; });
+      } catch (requestError) {
+        setManualPremiumError(requestError.message || "No se pudo recuperar la prima del portal.");
+      } finally { setSavingPremiumKey(""); }
+      return;
+    }
     setManualPremiums((current) => {
       const next = { ...current };
       delete next[jornalKey];
@@ -3208,13 +3385,18 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "salary") && showSalary && (
         <section className="portal-salary-section portal-salary-alternative">
+          {view === "salary" && <div className="manual-jornal-action">
+            <div><strong>¿Falta un jornal?</strong><span>Añádelo ahora; si el portal lo carga después, se mostrará una sola vez.</span></div>
+            <button type="button" onClick={() => setManualJornalEditor("new")}>+ Añadir jornal</button>
+          </div>}
+          {manualJornalError && <p className="manual-jornal-error" role="alert">{manualJornalError}</p>}
           <div className="portal-salary-hero">
             <div className="portal-salary-hero-heading">
               <div className="portal-salary-title">
                 <span className="portal-salary-icon"><WalletCards size={22} /></span>
                 <div>
                   <small>Extracto salarial</small>
-                  <strong>{payload.jornales?.monthLabel || "Ultimo mes"}</strong>
+                  <strong>{currentPayrollMonthLabel}</strong>
                 </div>
               </div>
               <span className="portal-salary-period">{selectedPeriodLabel}</span>
@@ -3266,7 +3448,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
               <button type="button" onClick={() => setAnnualExpanded((current) => !current)} aria-expanded={annualExpanded}>
                 <span>
                   <CalendarRange size={20} />
-                  <span><small>Resumen anual</small><strong>{payload.jornales?.year || new Date().getFullYear()}</strong></span>
+                  <span><small>Resumen anual</small><strong>{currentPayrollMonthLabel.slice(-4) || payload.jornales?.year || new Date().getFullYear()}</strong></span>
                 </span>
                 <span className="portal-annual-total">
                   <strong>{annualCountLabel || "Sin conceptos"}</strong>
@@ -3420,7 +3602,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                   </div>
                   <div className="portal-jornal-content">
                     <div className="portal-jornal-heading">
-                      <strong>{item.especialidad || "Jornal"}</strong>
+                      <strong>{item.especialidad || "Jornal"}{item.manualOnly && <span className="manual-jornal-tag">Manual</span>}</strong>
                       <strong className="portal-jornal-total">{formatEuro(item.payroll?.total)}</strong>
                     </div>
                     <em className="portal-jornal-destination">{[item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(" · ")}</em>
@@ -3539,6 +3721,11 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
         <PortalJornalDetailModal
           jornal={activeSelectedJornal}
           onClose={() => setSelectedJornal(null)}
+          onEditManualJornal={activeSelectedJornal.manualEntryId ? () => {
+            setManualJornalEditor(manualSalaryJornals.find((row) => row.id === activeSelectedJornal.manualEntryId) || null);
+            setSelectedJornal(null);
+          } : undefined}
+          onDeleteManualJornal={activeSelectedJornal.manualEntryId ? () => removeManualJornal(activeSelectedJornal) : undefined}
           onSetRemateHours={updateRemateHours}
           savingRemateKey={savingRemateKey}
           remateError={remateError}
@@ -3548,6 +3735,18 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
           premiumError={manualPremiumError}
         />
       )}
+      {manualJornalEditor && <ManualSalaryJornalForm
+        key={manualJornalEditor === "new" ? "new" : manualJornalEditor.id}
+        entry={manualJornalEditor === "new" ? null : manualJornalEditor}
+        defaults={{
+          group: portalJornales[0]?.payrollGroup || "II",
+          specialty: portalJornales[0]?.especialidad || "",
+          operationType: /RECEPCION|ENTREGA/i.test(portalJornales[0]?.operacion || "") ? "RECEPCION_ENTREGA" : "ESTIBA"
+        }}
+        payrollConfig={payrollConfig}
+        onClose={() => setManualJornalEditor(null)}
+        onSave={saveManualJornal}
+      />}
       {selectedPayroll && (
         <PayrollDocumentErrorBoundary onClose={() => setSelectedPayroll(null)}>
           <PayrollDocumentModal payroll={selectedPayroll} session={session} onClose={() => setSelectedPayroll(null)} />
@@ -4046,13 +4245,13 @@ function PortalPanel({
         </section>
       )}
 
-      {!credentialsOnly && (syncingPortal && !snapshot?.payload ? (
+      {!credentialsOnly && (view !== "salary" && syncingPortal && !snapshot?.payload ? (
         <div className="portal-empty-state">
           <RefreshCw className="is-spinning" size={26} />
           <strong>Conectado con el portal</strong>
           <span>Los primeros datos aparecerán aquí en unos segundos mientras continúa la lectura.</span>
         </div>
-      ) : loading && !snapshot?.payload ? (
+      ) : view !== "salary" && loading && !snapshot?.payload ? (
         <div className="portal-empty-state">
           <Clock3 size={26} />
           <strong>Cargando portal</strong>
