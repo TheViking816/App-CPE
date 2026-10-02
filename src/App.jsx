@@ -2906,9 +2906,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const journalHistory = useMemo(() => {
     const savedHistory = selectPortalJornalesHistory(payload?.jornales, payload?.primas);
     if (Array.isArray(savedHistory) && savedHistory.length > 0) {
-      const currentLabel = String(payload?.jornales?.monthLabel || currentPayrollMonthLabel).trim().toLocaleLowerCase("es");
+      const currentMonthKey = getMonthKey(currentPayrollMonthLabel);
       return mergeManualSalaryHistory(savedHistory.map((period) => (
-        String(period?.monthLabel || "").trim().toLocaleLowerCase("es") === currentLabel
+        getMonthKey(period?.monthLabel || "") === currentMonthKey
           ? { ...period, rows: jornales }
           : period
       )), manualSalaryJornals);
