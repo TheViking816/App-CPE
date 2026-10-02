@@ -9,6 +9,7 @@ export const PORTAL_LINK_GROUPS = [
       { label: "Jornales y primas", section: "jornales" },
       { label: "Mis especialidades", section: "mis-especialidades" },
       { label: "Disponibilidad · últimos 12 meses", section: "disponibilidad12m" },
+      { label: "Disponibilidades", section: "descansos" },
       { label: "Puertas", section: "puertas" },
       { label: "Chapero", section: "chapero" },
       { label: "Chapero por especialidades", section: "chapero-especialidades" },

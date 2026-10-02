@@ -1,6 +1,7 @@
 const NORAY_ORIGIN = "https://norayweb.cpevalencia.com";
 const SECTIONS = new Set([
   "disponibilidad12m",
+  "descansos",
   "dobles",
   "vacaciones",
   "excepciones-pedidas",

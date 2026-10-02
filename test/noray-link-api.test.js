@@ -19,7 +19,7 @@ test("abre las secciones Noray permitidas con un enlace personal generado por el
   };
 
   try {
-    for (const section of ["vacaciones", "excluir-jornadas", "puntos-formacion",
+    for (const section of ["descansos", "vacaciones", "excluir-jornadas", "puntos-formacion",
       "situacion-trabajador", "solicito-formacion", "excepciones-pedidas"]) {
       const headers = {};
       const response = {
@@ -37,7 +37,7 @@ test("abre las secciones Noray permitidas con un enlace personal generado por el
       assert.equal(headers["referrer-policy"], "no-referrer");
       assert.equal(headers["cache-control"], "private, no-store, max-age=0");
     }
-    assert.deepEqual(sections, ["vacaciones", "excluir-jornadas", "puntos-formacion",
+    assert.deepEqual(sections, ["descansos", "vacaciones", "excluir-jornadas", "puntos-formacion",
       "situacion-trabajador", "solicito-formacion", "excepciones-pedidas"]);
   } finally {
     globalThis.fetch = previousFetch;
