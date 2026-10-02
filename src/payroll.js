@@ -836,7 +836,7 @@ export function mergeManualSalaryJornales(officialRows = [], entries = [], month
       especialidad: entry.specialty || "",
       empresa: entry.company || "",
       buque: entry.vessel || "",
-      operacion: entry.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "ESTIBA",
+      operacion: entry.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "SERVICIO PÚBLICO",
       manualEntryId: entry.id,
       manualOnly: true,
       manualPremiumAmount: premium

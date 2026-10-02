@@ -2822,7 +2822,7 @@ function ManualSalaryJornalForm({ entry, defaults, payrollConfig, onClose, onSav
   const preview = form.date && form.shift
     ? enrichJornales([{
       dia: form.date.slice(-2), jornada: form.shift, payrollGroup: form.group,
-      especialidad: form.specialty, operacion: form.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "ESTIBA",
+      especialidad: form.specialty, operacion: form.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "SERVICIO PÚBLICO",
       jornal: `MANUAL-${form.date}-${form.shift}`, manualPremiumAmount: premiumAmount
     }], [], `${form.date.slice(5, 7)}/${form.date.slice(0, 4)}`, payrollConfig)[0]?.payroll
     : null;
@@ -2855,13 +2855,12 @@ function ManualSalaryJornalForm({ entry, defaults, payrollConfig, onClose, onSav
   return <div className="portal-jornal-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="manual-jornal-modal" role="dialog" aria-modal="true" aria-label="Añadir jornal manual">
       <header><div><small>Sueldómetro · estimación</small><h2>{entry ? "Editar jornal manual" : "Añadir jornal manual"}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
-      <p className="manual-jornal-intro">Añádelo sin esperar al worker. Fecha y jornada son obligatorias; parte, empresa y buque son opcionales.</p>
       <form onSubmit={save}>
         <div className="manual-jornal-grid">
           <label>Fecha *<input type="date" required value={form.date} disabled={Boolean(entry)} onChange={(event) => update("date", event.target.value)} /></label>
           <label>Jornada *<select required value={form.shift} disabled={Boolean(entry)} onChange={(event) => update("shift", event.target.value)}><option value="">Selecciona jornada</option>{["02-08","08-14","14-20","18-00","19-01","20-02"].map((shift) => <option key={shift}>{shift}</option>)}</select></label>
           <label>Grupo profesional<select value={form.group} onChange={(event) => update("group", event.target.value)}>{["I","II","III","IV"].map((group) => <option key={group} value={group}>Grupo {group}</option>)}</select></label>
-          <label>Tipo de operación<select value={form.operationType} onChange={(event) => update("operationType", event.target.value)}><option value="ESTIBA">Estiba</option><option value="RECEPCION_ENTREGA">Recepción / entrega</option></select></label>
+          <label>Tipo de operación<select value={form.operationType} onChange={(event) => update("operationType", event.target.value)}><option value="ESTIBA">Servicio público</option><option value="RECEPCION_ENTREGA">Recepción / entrega</option></select></label>
           <label className="manual-jornal-wide">Puesto o especialidad (opcional)<input value={form.specialty} maxLength={100} onChange={(event) => update("specialty", event.target.value)} placeholder="Ej. Conductor 1ª, clasificador…" /></label>
           <label>Empresa (opcional)<input value={form.company} maxLength={150} onChange={(event) => update("company", event.target.value)} /></label>
           <label>Parte (opcional)<input value={form.part} maxLength={30} onChange={(event) => update("part", event.target.value)} /></label>
@@ -3385,10 +3384,6 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "salary") && showSalary && (
         <section className="portal-salary-section portal-salary-alternative">
-          {view === "salary" && <div className="manual-jornal-action">
-            <div><strong>¿Falta un jornal?</strong><span>Añádelo ahora; si el portal lo carga después, se mostrará una sola vez.</span></div>
-            <button type="button" onClick={() => setManualJornalEditor("new")}>+ Añadir jornal</button>
-          </div>}
           {manualJornalError && <p className="manual-jornal-error" role="alert">{manualJornalError}</p>}
           <div className="portal-salary-hero">
             <div className="portal-salary-hero-heading">
@@ -3647,6 +3642,9 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
                 </article>
               );
             })}
+          </div>}
+          {view === "salary" && <div className="manual-jornal-add">
+            <button type="button" onClick={() => setManualJornalEditor("new")} aria-label="Añadir jornal manual" title="Añadir jornal manual">+</button>
           </div>}
         </section>
       )}
