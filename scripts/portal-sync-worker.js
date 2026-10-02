@@ -53,21 +53,10 @@ async function request(path, options = {}) {
 async function claimNextBatch() {
   await recoverStaleRunningJobs();
   await failQueuedJobsWithoutCredentials();
-  const jobs = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind&status=eq.queued&portal_password=not.is.null&requested_at=lte.${encodeURIComponent(new Date().toISOString())}&order=requested_at.asc&limit=${batchSize}`);
-  if (!jobs?.length) return [];
-
-  const ids = jobs.map((job) => encodeURIComponent(job.id)).join(",");
-  const claimed = await request(`/rest/v1/app_cpe_portal_sync_jobs?select=id,chapa,trigger_source,requested_at,request_kind,portal_password&id=in.(${ids})&status=eq.queued`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      status: "running",
-      started_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
-      message: "Lectura iniciada"
-    })
+  return await request("/rest/v1/rpc/app_cpe_claim_eligible_portal_sync_jobs", {
+    method: "POST",
+    body: JSON.stringify({ p_limit: batchSize })
   });
-  return claimed || [];
 }
 
 async function recoverStaleRunningJobs() {
@@ -83,9 +72,12 @@ async function recoverStaleRunningJobs() {
 }
 
 async function nextDelayedJobWaitMs() {
-  const jobs = await request("/rest/v1/app_cpe_portal_sync_jobs?select=requested_at&status=eq.queued&portal_password=not.is.null&order=requested_at.asc&limit=1");
-  if (!jobs?.length) return null;
-  const requestedAt = new Date(jobs[0].requested_at).getTime();
+  const nextAt = await request("/rest/v1/rpc/app_cpe_next_eligible_portal_sync_at", {
+    method: "POST",
+    body: "{}"
+  });
+  if (!nextAt) return null;
+  const requestedAt = new Date(nextAt).getTime();
   if (!Number.isFinite(requestedAt)) return null;
   return Math.max(0, requestedAt - Date.now());
 }

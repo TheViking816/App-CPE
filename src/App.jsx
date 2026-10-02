@@ -4844,11 +4844,6 @@ export function App() {
         metadata: { specialties: getEffectiveSpecialtyIds(session) }
       });
     }
-    if (session.token && !session.supportAccess) {
-      touchPortalActivity({ token: session.token })
-        .then((status) => setPortalRefreshQueued(Boolean(status?.refreshQueued)))
-        .catch(() => {});
-    }
   }, [session?.chapa, session?.supportAccess, session?.token]);
 
   useEffect(() => {
@@ -4856,6 +4851,11 @@ export function App() {
     const touch = () => {
       if (document.visibilityState === "visible") {
         touchDirectPresence({ token: session.token }).catch(() => {});
+        touchPortalActivity({ token: session.token })
+          .then((status) => {
+            if (status?.refreshQueued) setPortalRefreshQueued(true);
+          })
+          .catch(() => {});
       }
     };
     touch();

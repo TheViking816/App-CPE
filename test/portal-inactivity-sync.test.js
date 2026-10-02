@@ -18,7 +18,7 @@ test("las cuentas se pausan tras siete días sin borrar datos ni credenciales", 
   assert.match(migration, /last_app_seen_at < now\(\) - interval '7 days'/);
   assert.match(migration, /config\.sync_status = 'active'/);
   assert.doesNotMatch(migration, /delete from public\.app_cpe_portal_auto_sync[\s\S]*inactivity_7_days/);
-  assert.match(appSource, /if \(session\.token\) touchPortalActivity/);
+  assert.match(appSource, /if \(!session\?\.token \|\| session\.supportAccess\) return undefined;[\s\S]*?visibilityState === "visible"[\s\S]*?touchPortalActivity/);
 });
 
 test("el usuario puede reactivar su propia cola desde la aplicación", () => {

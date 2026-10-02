@@ -21,4 +21,4 @@ if (!response.ok) throw new Error(`Supabase HTTP ${response.status}: ${await res
 const result = await response.json();
 const modeLabel = fullHistory ? "carga completa anual" : "actualizacion del mes actual";
 console.log(`Modo: ${modeLabel}.`);
-console.log(`Trabajos encolados: ${Number(result?.queued || 0)}. Ya ejecutandose: ${Number(result?.skipped || 0)}.`);
+console.log(`Trabajos encolados: ${Number(result?.queued || 0)}. Ya ejecutandose: ${Number(result?.skipped || 0)}. Nuevas pausas por inactividad: ${Number(result?.paused || 0)}.`);
