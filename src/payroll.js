@@ -151,7 +151,7 @@ function toYmd(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function isHoliday(dateString, holidaySet = VALENCIA_HOLIDAYS_2026) {
+export function isHoliday(dateString, holidaySet = VALENCIA_HOLIDAYS_2026) {
   const date = parseLocalDate(dateString);
   return date.getDay() === 0 || holidaySet.has(dateString);
 }

@@ -1,3 +1,5 @@
+import { isHoliday } from "../src/payroll.js";
+
 // These readers run inside Noray's iframe through Playwright frame.evaluate.
 // Keep them self-contained: functions sent to the browser cannot use imports.
 export function readNorayDoublesCalendarDom() {
@@ -93,8 +95,7 @@ export function mapNorayDoublesMonth(calendar, details = []) {
     if (detail.rows.length !== doubleCount || foundRelay !== relayCount) {
       throw new Error(`Dobles: los indicadores y casillas no coinciden para ${date}`);
     }
-    const holiday = [0, 6].includes(new Date(`${calendar.year}-${String(calendar.month).padStart(2, "0")}-${String(day.day).padStart(2, "0")}T12:00:00Z`).getUTCDay())
-      || day.code === "FS";
+    const holiday = isHoliday(`${calendar.year}-${String(calendar.month).padStart(2, "0")}-${String(day.day).padStart(2, "0")}`);
     for (const row of detail.rows) rows.push({ date, specialty: row.specialty, journey: row.journey, holiday });
     if (detail.relay.meal) relayHours.push({ date, period: "Comida", journey: "14/15", holiday });
     if (detail.relay.dinner) relayHours.push({ date, period: "Cena", journey: "20/21", holiday });

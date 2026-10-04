@@ -1,3 +1,5 @@
+import { isHoliday } from "./payroll.js";
+
 export function groupUpcomingDoubles(rows = []) {
   const grouped = new Map();
   rows.forEach((request) => {
@@ -11,7 +13,9 @@ export function groupUpcomingDoubles(rows = []) {
     dateKey,
     requests,
     startsAt: requests[0].startsAt,
-    holiday: requests.some((request) => request.holiday),
+    holiday: /^\d{2}\/\d{2}\/\d{4}$/.test(dateKey)
+      ? isHoliday(`${dateKey.slice(6)}-${dateKey.slice(3, 5)}-${dateKey.slice(0, 2)}`)
+      : false,
     contractedCount: requests.filter((request) => request.contracted).length
   }));
 }

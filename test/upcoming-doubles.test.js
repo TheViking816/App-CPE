@@ -27,6 +27,20 @@ test("identifica hoy, mañana y el día de la semana", () => {
   assert.equal(upcomingDoubleDayLabel(new Date(2026, 8, 21, 8), now), "Lunes");
 });
 
+test("corrige el indicador festivo de snapshots antiguos en la vista", () => {
+  const groups = groupUpcomingDoubles([9, 10, 11, 12].map((day) => ({
+    date: `${String(day).padStart(2, "0")}/10/2026`,
+    startsAt: new Date(2026, 9, day, 20),
+    holiday: day === 10 || day === 11
+  })));
+  assert.deepEqual(groups.map(({ dateKey, holiday }) => [dateKey, holiday]), [
+    ["09/10/2026", true],
+    ["10/10/2026", false],
+    ["11/10/2026", true],
+    ["12/10/2026", true]
+  ]);
+});
+
 test("marca como contratada la especialidad asignada para la misma fecha y jornada", () => {
   const rows = markContractedUpcomingDoubles([
     { date: "20/09/2026", specialty: "22 - TRASTAINERS RTT", journey: "20/02" },

@@ -54,6 +54,26 @@ test("does not overwrite saved dobles when a day or modal is incomplete", () => 
   assert.throws(() => mapNorayDoublesMonth(calendar, []), /calendario de dobles incompleto/i);
 });
 
+test("festivo distingue el sabado 10 de los festivos 9 y 12 de octubre", () => {
+  const calendar = octoberCalendar();
+  for (const day of [9, 10, 11, 12]) {
+    calendar.days[day - 1].badges = [{ title: "20 A 02 H.", count: 1 }];
+  }
+  const details = [9, 10, 11, 12].map((day) => ({
+    recognized: true,
+    date: `${String(day).padStart(2, "0")}/10/2026`,
+    rows: [{ specialty: "CONDUCTOR 1a", journey: "20/02" }],
+    relay: { meal: false, dinner: false }
+  }));
+  const result = mapNorayDoublesMonth(calendar, details);
+  assert.deepEqual(result.rows.map(({ date, holiday }) => [date, holiday]), [
+    ["09/10/2026", true],
+    ["10/10/2026", false],
+    ["11/10/2026", true],
+    ["12/10/2026", true]
+  ]);
+});
+
 test("normalizes a single-digit modal date before matching its calendar day", () => {
   const previousDocument = globalThis.document;
   globalThis.document = {
