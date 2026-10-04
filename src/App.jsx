@@ -4560,9 +4560,11 @@ const NOTIFICATION_TYPES = {
   rest_proposal: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
   rest_response: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
   rest_message: { label: "Intercambios", Icon: CalendarDays, tone: "rests" },
+  rest_offer_published: { label: "Tablón de descansos", Icon: CalendarDays, tone: "rests" },
   vacation_proposal: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   vacation_response: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   vacation_message: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
+  vacation_offer_published: { label: "Tablón de vacaciones", Icon: Sun, tone: "holidays" },
   direct_message: { label: "Chat privado", Icon: MessageCircle, tone: "chat" },
   vacations_changed: { label: "Vacaciones", Icon: Sun, tone: "holidays" },
   exceptions_changed: { label: "Excepciones", Icon: CalendarOff, tone: "exceptions" }
@@ -4597,6 +4599,7 @@ function NotificationsPanel({ notifications, loading, error, onOpen, onMarkAll }
     if (filter === "unread") return !item.readAt;
     if (filter === "journals") return item.eventType === "new_journal";
     if (filter === "payments") return ["new_premium", "premium_modified", "new_payroll"].includes(item.eventType);
+    if (filter === "board") return ["rest_offer_published", "vacation_offer_published"].includes(item.eventType);
     return true;
   });
   const groups = [];
@@ -4610,13 +4613,13 @@ function NotificationsPanel({ notifications, loading, error, onOpen, onMarkAll }
   return (
     <section className="notifications-page">
       <header className="notifications-hero">
-        <div><small>Cambios del portal</small><h1>Centro de novedades</h1><p>Jornales, primas, nóminas y calendarios actualizados.</p></div>
+        <div><small>Todo al día</small><h1>Centro de novedades</h1><p>Cambios del portal y nuevas ofertas de intercambios y cesiones.</p></div>
         {notifications?.unread > 0 && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}
       </header>
       <div className="notifications-filters" role="tablist" aria-label="Filtrar novedades">
         {[
           ["all", "Todas"], ["unread", `Sin leer${notifications?.unread ? ` ${notifications.unread}` : ""}`],
-          ["journals", "Jornales"], ["payments", "Pagos"]
+          ["journals", "Jornales"], ["payments", "Pagos"], ["board", "Tablón"]
         ].map(([id, label]) => <button key={id} type="button" className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{label}</button>)}
       </div>
       {loading ? <div className="notifications-state"><LoaderCircle className="is-spinning" size={24} /><strong>Cargando novedades…</strong></div>
