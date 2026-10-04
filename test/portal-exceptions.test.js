@@ -1,6 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseExceptions, preserveUsedExceptions } from "../scripts/portal-exceptions.js";
+import { mapNorayExceptions, parseExceptions, preserveUsedExceptions } from "../scripts/portal-exceptions.js";
+
+test("lee el calendario anual de Pedir Excepciones", () => {
+  const months = Array.from({ length: 12 }, (_, index) => ({ anyo: 2026, mes: index + 1, dias: [] }));
+  months[8].dias.push({ dia: 7, jornadas: [{ label: "14/20", estado_revision: 1, utilizada: false }] });
+  const result = mapNorayExceptions({
+    bag: { total: 1, maximo: 15, utilizadas: [{ fecha: "2026-09-28", label: "14/20" }] },
+    months, year: 2026, chapa: "72683"
+  });
+  assert.equal(result.recognized, true);
+  assert.equal(result.usedTotal, 1);
+  assert.equal(result.remaining, 14);
+  assert.deepEqual(result.rows.map(({ date, shift, used }) => [date, shift, used]), [
+    ["2026-09-07", "14/20", false], ["2026-09-28", "14/20", true]
+  ]);
+});
 
 test("lee la bolsa de excepciones y distingue las jornadas utilizadas", () => {
   const html = `

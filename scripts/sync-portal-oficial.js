@@ -17,18 +17,21 @@ import {
 } from "./portal-assignments.js";
 import { parseVacacionesFromRows } from "./portal-vacations.js";
 import { buildPortalNotifications } from "./portal-notifications.js";
-import { parseExceptions, preserveUsedExceptions } from "./portal-exceptions.js";
+import { mapNorayExceptions, preserveUsedExceptions } from "./portal-exceptions.js";
+import {
+  mapNorayDoublesMonth,
+  readNorayDoublesCalendarDom,
+  readNorayDoublesModalDom
+} from "./portal-noray-doubles-dom.js";
 import { resolveSupabaseAdminKey, supabaseAdminHeaders } from "./supabase-admin.js";
 import { mergeAssignmentsIntoPortalJornales } from "./portal-journal-merge.js";
 import { assignmentsFromCurrentJournals } from "./portal-current-assignments.js";
 import { normalizePortalPart } from "../src/portalRowIdentity.js";
 import { containsAllSavedPortalRows } from "./portal-collection-completeness.js";
 import {
-  buildRequestedDoubles,
   cleanMessageBodyText,
   extractAddedMessageText,
   isCompleteRequestedDoublesWindow,
-  isAuthoritativeEmptyDoublesResult,
   limitRecentPortalRows,
   parseMessagesHtml,
   parsePayrollsHtml,
@@ -2243,52 +2246,85 @@ async function collectPayrollDocumentFiles(page, rows, documentId) {
   console.log(`Documentos de nomina leidos: ${documents.length}.`);
 }
 
-async function collectExceptions(page) {
-  const readCurrentScreen = async (timeout = 12000) => {
-    const deadline = Date.now() + timeout;
-    let bestResult = parseExceptions("");
-    let bestScore = 0;
-    let recognizedAt = 0;
-    while (Date.now() < deadline) {
-      for (const frame of page.frames()) {
-        await frame.locator('input[type="checkbox"]').evaluateAll((inputs) => {
-          inputs.forEach((input) => {
-            if (input.checked) input.setAttribute("data-app-cpe-checked", "true");
-          });
-        }).catch(() => {});
-        const result = parseExceptions(await frame.content().catch(() => ""));
-        const score = (result.recognized ? 1000 : 0) + (result.rows?.length || 0);
-        if (score > bestScore) {
-          bestResult = result;
-          bestScore = score;
-          recognizedAt = result.recognized ? Date.now() : 0;
-        }
-      }
-      if (bestResult.recognized && recognizedAt && Date.now() - recognizedAt >= 600) return bestResult;
-      await page.waitForTimeout(200);
-    }
-    return bestResult;
-  };
-
+async function openRequestedNorayFrame(page, hash, pathname) {
+  // Legacy GWT pages sometimes leave Noray's iframe blank in the current tab.
+  const norayPage = await page.context().newPage();
   try {
-    // The recording shows ViewNoray 17 consistently blank until the real menu
-    // item is clicked. Use that reliable route first and retain the hash only
-    // as a compatibility fallback for older portal sessions.
-    await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
-    const menuResult = await readCurrentScreen(1800);
-    if (menuResult.recognized) return menuResult;
-    console.warn("Bolsa de Excepciones sigue en blanco; se repite el clic del menu.");
-    await openMenu(page, "Solicitudes", "Bolsa de Excepciones");
-    const retryMenuResult = await readCurrentScreen(5000);
-    if (retryMenuResult.recognized) return retryMenuResult;
-  } catch {
-    // The direct hash fallback below covers temporary menu failures.
+    await norayPage.goto(PORTAL_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    const state = await waitForPortalAuthState(norayPage, 20000);
+    if (state !== "authenticated") throw new Error(`Noray: el portal no esta preparado (${state}).`);
+    await norayPage.goto(`https://portal.cpevalencia.com/#User,ViewNoray,${hash}`, {
+      waitUntil: "domcontentloaded", timeout: 30000
+    });
+    const deadline = Date.now() + 18000;
+    let wrongScreenSince = 0;
+    while (Date.now() < deadline) {
+      const norayFrames = norayPage.frames().filter((candidate) => {
+        try { return new URL(candidate.url()).hostname === "norayweb.cpevalencia.com"; }
+        catch { return false; }
+      });
+      const frame = norayFrames.find((candidate) => new URL(candidate.url()).pathname === pathname);
+      if (frame) return frame;
+      if (norayFrames.length) {
+        if (!wrongScreenSince) wrongScreenSince = Date.now();
+        if (Date.now() - wrongScreenSince >= 1500) {
+          throw new Error(`ViewNoray,${hash} abrio ${new URL(norayFrames[0].url()).pathname} en lugar de ${pathname}`);
+        }
+      } else {
+        wrongScreenSince = 0;
+      }
+      await norayPage.waitForTimeout(250);
+    }
+    throw new Error(`La pantalla Noray ${pathname} no quedo disponible`);
+  } catch (error) {
+    await norayPage.close().catch(() => {});
+    throw error;
   }
+}
 
-  await openPortalHash(page, "User,ViewNoray,17");
-  const directResult = await readCurrentScreen(2500);
-  if (directResult.recognized) return directResult;
-  throw new Error("No se pudo leer la Bolsa de Excepciones. Se conservaran los ultimos datos disponibles.");
+async function norayAccess(frame) {
+  const auth = await frame.evaluate(async () => {
+    const query = new URLSearchParams(window.location.search.replace(/&amp;/g, "&"));
+    const rec = Number(query.get("rec"));
+    if (!rec || !query.get("usr") || !query.get("pwd")) return null;
+    const response = await fetch("/api/v1/auth/validar-acceso", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usr: query.get("usr"), rec, pwd: query.get("pwd") })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return { rec, localToken: data.local_access_token, intranetToken: data.intranet_access_token, available: data.intranet_available };
+  }).catch(() => null);
+  if (!auth?.rec || !auth.localToken || !auth.intranetToken || auth.available === false) {
+    throw new Error("Noray no confirmo el acceso a la intranet");
+  }
+  return auth;
+}
+
+async function norayGet(frame, path, token) {
+  const result = await frame.evaluate(async ({ path, token }) => {
+    const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+    return { status: response.status, data: await response.json().catch(() => null) };
+  }, { path, token });
+  if (result.status !== 200) throw new Error(`Noray ${path.split("?")[0]}: HTTP ${result.status}`);
+  return result.data;
+}
+
+async function collectExceptions(page) {
+  const frame = await openRequestedNorayFrame(page, 21, "/excepciones-pedidas");
+  try {
+    const auth = await norayAccess(frame);
+    const year = new Date().getFullYear();
+    const bag = await norayGet(frame, `/api/v1/excepciones-pedidas/${auth.rec}/bolsa/${year}`, auth.intranetToken);
+    const months = [];
+    for (let month = 1; month <= 12; month += 1) {
+      months.push(await norayGet(frame, `/api/v1/excepciones-pedidas/${auth.rec}/mes/${year}/${month}`, auth.intranetToken));
+    }
+    return mapNorayExceptions({ bag, months, year, chapa: portalUser });
+  } finally {
+    await frame.page().close().catch(() => {});
+  }
 }
 
 async function getStoredPayrollDocumentIds() {
@@ -2357,95 +2393,58 @@ async function restoreSecurePayrollList(page) {
   return (await extractPayrollRowsFromDom(page)).length > 0;
 }
 
-async function findDoublesSelector(page) {
-  return waitForFrameAndLocator(
-    page,
-    (frame) => frame.locator('input[name="fecha"]:visible, input[id*="fecha" i]:visible'),
-    12000
-  );
-}
-
-async function extractCheckedDoubles(frame, date) {
-  const holiday = await frame.locator("body").innerText().then((text) => /D[IÃ]A\s+FESTIVO/i.test(text)).catch(() => false);
-  const selections = await frame.locator('input[type="checkbox"]:checked').evaluateAll((checkboxes, isHoliday) => checkboxes.map((input) => {
-    const row = input.closest("tr");
-    const table = input.closest("table");
-    const cell = input.closest("td,th");
-    if (!row || !table || !cell) return null;
-    const cellIndex = [...row.cells].indexOf(cell);
-    const specialty = row.cells[0]?.innerText || "";
-    const previousRows = [...table.rows].slice(0, [...table.rows].indexOf(row)).reverse();
-    const journey = previousRows
-      .map((headerRow) => headerRow.cells[cellIndex]?.innerText?.trim() || "")
-      .find((value) => /^\d{2}\s*\/\s*\d{2}$/.test(value)) || "";
-    return { specialty, journey, holiday: isHoliday };
-  }).filter(Boolean), holiday);
-  return buildRequestedDoubles(date, selections);
-}
-
-async function waitForDoublesResult(page, originalFrame, date, timeoutMs = 15000) {
-  const deadline = Date.now() + timeoutMs;
-  let emptyResultSeenAt = 0;
-  while (Date.now() < deadline) {
-    const frames = [...new Set([originalFrame, ...page.frames()])];
-    for (const frame of frames) {
-      if (!frame || frame.isDetached()) continue;
-      const matrixSize = await frame.locator('input[type="checkbox"]').count().catch(() => 0);
-      if (matrixSize > 0) {
-        await frame.waitForTimeout(250);
-        return frame;
-      }
-      const pageText = await frame.locator("body").innerText().catch(() => "");
-      if (isAuthoritativeEmptyDoublesResult(pageText)) {
-        if (!emptyResultSeenAt) emptyResultSeenAt = Date.now();
-        // Give a result matrix time to populate before accepting a genuinely
-        // empty day. This avoids mistaking an intermediate paint for zero rows.
-        if (Date.now() - emptyResultSeenAt >= 1000) return frame;
-      }
-    }
-    await page.waitForTimeout(150);
-  }
-  throw new Error(`El portal no termino de cargar los dobles del ${date}.`);
-}
-
 async function collectRequestedDoubles(page) {
-  await openMenu(page, "Solicitudes", "Solicitar Dobles por Especialidad");
-  let selector = await findDoublesSelector(page);
-  if (!selector) throw new Error("No se cargo el selector de Solicitar Dobles.");
-
-  const dates = upcomingMadridDates();
-  const rows = [];
-  const queriedDates = [];
-  for (const date of dates) {
-    const { frame, locator: dateInput } = selector;
-    const selectorUrl = frame.url();
-    await dateInput.fill(date);
-    const submit = frame.locator('input[type="submit"][value="Solicitar" i], button:has-text("Solicitar")').first();
-    if (!await submit.isVisible().catch(() => false)) {
-      throw new Error("No se encontro el boton para consultar los dobles.");
+  const frame = await openRequestedNorayFrame(page, 19, "/dobles");
+  try {
+    const today = upcomingMadridDates(new Date(), 1)[0];
+    const currentMonth = Number(today.slice(3, 5));
+    const currentYear = Number(today.slice(6));
+    let calendar = null;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      calendar = await frame.evaluate(readNorayDoublesCalendarDom).catch(() => null);
+      if (calendar?.month && calendar.days?.length >= 28) break;
+      await frame.page().waitForTimeout(250);
     }
-    await Promise.all([
-      frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => null),
-      submit.click({ timeout: 10000 })
-    ]);
-    const resultFrame = await waitForDoublesResult(page, frame, date);
-    rows.push(...await extractCheckedDoubles(resultFrame, date));
-    queriedDates.push(date);
-    await resultFrame.goto(selectorUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
-    selector = await findDoublesSelector(page);
-    if (!selector) throw new Error(`No se pudo continuar la consulta de dobles tras ${date}.`);
+    if (calendar?.month !== currentMonth || calendar?.year !== currentYear) {
+      await frame.getByRole("button", { name: "Hoy" }).click();
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        calendar = await frame.evaluate(readNorayDoublesCalendarDom).catch(() => null);
+        if (calendar?.month === currentMonth && calendar?.year === currentYear && calendar.days?.length >= 28) break;
+        await frame.page().waitForTimeout(250);
+      }
+    }
+    if (calendar?.month !== currentMonth || calendar?.year !== currentYear) {
+      throw new Error("Dobles: el calendario no muestra el mes actual");
+    }
+    const details = [];
+    const daysWithRequests = calendar.days.filter((day) => day.badges?.some((badge) => badge.count > 0));
+    console.log(`Dobles: ${calendar.monthLabel}, ${daysWithRequests.length} dia(s) con solicitudes.`);
+    for (const day of daysWithRequests) {
+      const date = `${String(day.day).padStart(2, "0")}/${String(calendar.month).padStart(2, "0")}/${calendar.year}`;
+      await frame.locator("div.cursor-pointer").nth(day.domIndex).click();
+      try {
+        await frame.locator("h3").filter({ hasText: "Dobles -" }).waitFor({ timeout: 5000 });
+        let detail = null;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          detail = await frame.evaluate(readNorayDoublesModalDom).catch(() => null);
+          if (detail?.recognized && detail.date === date) break;
+          await frame.page().waitForTimeout(250);
+        }
+        if (!detail?.recognized || detail.date !== date) {
+          throw new Error(`Dobles: no se pudo leer el detalle de ${date}`);
+        }
+        details.push(detail);
+      } finally {
+        await frame.getByRole("button", { name: "Cancelar" }).click({ force: true });
+        await frame.locator("h3").filter({ hasText: "Dobles -" }).waitFor({ state: "hidden", timeout: 3000 });
+      }
+    }
+    const result = mapNorayDoublesMonth(calendar, details);
+    console.log(`Dobles leidos: ${result.rows.length}; horas de relevo: ${result.relayHours.length}; calendario: ${result.calendarDays.length} dias.`);
+    return result;
+  } finally {
+    await frame.page().close().catch(() => {});
   }
-
-  console.log(`Dobles solicitados leidos: ${rows.length}.`);
-  return {
-    recognized: true,
-    complete: queriedDates.length === dates.length,
-    windowDays: dates.length,
-    startDate: dates[0] || null,
-    endDate: dates.at(-1) || null,
-    queriedDates,
-    rows
-  };
 }
 
 async function findVisiblePayrollSecurityControl(page) {

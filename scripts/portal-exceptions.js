@@ -44,8 +44,49 @@ export const EXCEPTION_RULES = [
   "Se deben solicitar, modificar o eliminar con al menos dos días laborables de antelación desde que se publique la contratación."
 ];
 
+export function mapNorayExceptions({ bag, months, year, chapa }) {
+  if (!bag || !Array.isArray(bag.utilizadas) || !Array.isArray(months)
+    || months.length !== 12 || months.some((period, index) =>
+      !Array.isArray(period?.dias) || Number(period.anyo) !== Number(year) || Number(period.mes) !== index + 1)) {
+    throw new Error("La bolsa de excepciones de Noray no devolvio el año completo");
+  }
+  const used = new Set(bag.utilizadas.map((item) => `${item.fecha}|${item.label}`));
+  const rows = new Map();
+  for (const period of months) {
+    for (const day of period.dias) {
+      const date = `${year}-${String(period.mes).padStart(2, "0")}-${String(day.dia).padStart(2, "0")}`;
+      for (const item of day.jornadas || []) {
+        const shift = cleanText(item.label);
+        const key = `${date}|${shift}`;
+        rows.set(key, {
+          chapa: String(chapa || ""), worker: "", date, shift, requestedAt: "",
+          status: Number(item.estado_revision) === 1 ? "Aceptada"
+            : Number(item.estado_revision) === 2 ? "Denegada" : "Pendiente",
+          used: Boolean(item.utilizada) || used.has(key)
+        });
+      }
+    }
+  }
+  for (const item of bag.utilizadas) {
+    const date = normalizePortalDate(item.fecha);
+    const shift = cleanText(item.label);
+    if (!date || !shift) continue;
+    const key = `${date}|${shift}`;
+    rows.set(key, { chapa: String(chapa || ""), worker: "", date, shift, requestedAt: "",
+      status: "Aceptada", ...rows.get(key), used: true });
+  }
+  const maxAnnual = Math.max(1, Number(bag.maximo) || 15);
+  const usedTotal = Math.max(Number(bag.total) || 0, bag.utilizadas.length);
+  return { recognized: true, year: Number(year), maxAnnual, usedTotal,
+    remaining: Math.max(0, maxAnnual - usedTotal), rows: [...rows.values()], rules: EXCEPTION_RULES };
+}
+
 function exceptionRowKey(row = {}) {
-  return [row.chapa, row.date, row.shift, row.requestedAt].map((value) => cleanText(value)).join("|");
+  const shiftMatch = cleanText(row.shift).match(/(\d{1,2})\D+(\d{1,2})/);
+  const shift = shiftMatch
+    ? `${shiftMatch[1].padStart(2, "0")}/${shiftMatch[2].padStart(2, "0")}`
+    : cleanText(row.shift);
+  return [row.chapa, row.date, shift].map((value) => cleanText(value)).join("|");
 }
 
 export function preserveUsedExceptions(existing, incoming) {

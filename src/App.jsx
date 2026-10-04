@@ -1111,14 +1111,19 @@ function UpcomingDoubles({ snapshot, currentTime }) {
   const [showAllDates, setShowAllDates] = useState(false);
   const rows = useMemo(() => {
     const now = new Date(currentTime || Date.now());
-    const requested = (snapshot?.payload?.dobles?.rows || [])
-      .map((request) => ({ ...request, startsAt: upcomingDoubleStart(request) }))
+    const dobles = snapshot?.payload?.dobles || {};
+    const requested = (dobles.rows || [])
+      .map((request) => ({ ...request, kind: "double", startsAt: upcomingDoubleStart(request) }))
       .filter((request) => request.startsAt && request.startsAt > now)
       .sort((a, b) => a.startsAt - b.startsAt);
-    return markContractedUpcomingDoubles(
+    const contractedDoubles = markContractedUpcomingDoubles(
       requested,
       currentAssignmentsFromSnapshot(snapshot, currentTime)
     );
+    const relay = (dobles.relayHours || [])
+      .map((request) => ({ ...request, kind: "relay", startsAt: upcomingDoubleStart(request) }))
+      .filter((request) => request.startsAt && request.startsAt > now);
+    return [...contractedDoubles, ...relay].sort((a, b) => a.startsAt - b.startsAt);
   }, [snapshot, currentTime]);
   const groups = useMemo(() => groupUpcomingDoubles(rows), [rows]);
   const visibleGroups = showAllDates ? groups : groups.slice(0, 3);
@@ -1137,7 +1142,7 @@ function UpcomingDoubles({ snapshot, currentTime }) {
     <section className={`upcoming-doubles-card${rows.length ? "" : " is-empty"}`}>
       <header>
         <span className="portal-personal-icon is-doubles"><CalendarCheck2 size={21} /></span>
-        <div><small>Próximas solicitudes</small><strong>Dobles solicitados</strong></div>
+        <div><small>Próximas solicitudes</small><strong>Dobles y horas de relevo</strong></div>
         <b>{rows.length}</b>
       </header>
       {rows.length ? (
@@ -1165,10 +1170,10 @@ function UpcomingDoubles({ snapshot, currentTime }) {
                 </button>
                 <div className="portal-double-requests">
                   {group.requests.map((request, index) => (
-                    <div className={`portal-double-request${request.contracted ? " is-contracted" : ""}`} key={`${request.specialty}-${request.journey}-${index}`}>
-                      <strong>{request.specialty}</strong>
+                    <div className={`portal-double-request${request.contracted ? " is-contracted" : ""}`} key={`${request.kind}-${request.specialty || request.period}-${request.journey}-${index}`}>
+                      <strong>{request.kind === "relay" ? "Hora de relevo" : request.specialty}</strong>
                       <span className="portal-double-request-meta">
-                        <small>Jornada <b>{request.journey}</b></small>
+                        <small>{request.kind === "relay" ? `${request.period} · ` : "Jornada "}<b>{request.journey}</b></small>
                         {request.contracted && <em><Check size={12} aria-hidden="true" /> Contratado</em>}
                       </span>
                     </div>
@@ -1191,8 +1196,8 @@ function UpcomingDoubles({ snapshot, currentTime }) {
         <div className="portal-doubles-empty">
           <CalendarCheck2 size={20} aria-hidden="true" />
           <div>
-            <strong>No hay dobles solicitados próximos</strong>
-            <small>No tienes solicitudes de doble pendientes para los próximos días.</small>
+            <strong>No hay dobles ni horas de relevo próximos</strong>
+            <small>No tienes solicitudes de doble o relevo pendientes para los próximos días.</small>
           </div>
         </div>
       )}

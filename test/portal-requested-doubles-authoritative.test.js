@@ -8,13 +8,14 @@ const migrationSource = await readFile(
   "utf8"
 );
 
-test("only a completely queried rolling doubles window may replace cached rows", () => {
+test("only a completely read current-month doubles calendar may replace cached rows", () => {
   assert.match(
     syncSource,
     /dobles solicitados[\s\S]*isCompleteRequestedDoublesWindow,[\s\S]*allowCollectionShrink: true/
   );
-  assert.match(syncSource, /waitForDoublesResult\(page, frame, date\)/);
-  assert.match(syncSource, /const resultFrame = await waitForDoublesResult/);
+  assert.match(syncSource, /openRequestedNorayFrame\(page, 19, "\/dobles"\)/);
+  assert.match(syncSource, /mapNorayDoublesMonth\(calendar, details\)/);
+  assert.match(syncSource, /readNorayDoublesModalDom/);
 });
 
 test("Supabase stores recognized requested doubles as the authoritative rolling window", () => {

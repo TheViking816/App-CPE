@@ -66,12 +66,10 @@ test("el login no confunde otros campos de texto con el usuario", () => {
   assert.doesNotMatch(section, /input\[type="text"\]:visible/);
 });
 
-test("Bolsa de Excepciones usa primero el menú y conserva ViewNoray 17 como respaldo", () => {
+test("Pedir Excepciones usa la nueva ruta ViewNoray 21", () => {
   const section = source.match(/async function collectExceptions[\s\S]*?async function getStoredPayrollDocumentIds/)?.[0] || "";
-  assert.match(section, /openPortalHash\(page, "User,ViewNoray,17"\)/);
-  assert.match(section, /openMenu\(page, "Solicitudes", "Bolsa de Excepciones"\)/);
-  assert.ok(section.indexOf('openMenu(page, "Solicitudes", "Bolsa de Excepciones")') < section.indexOf('openPortalHash(page, "User,ViewNoray,17")'));
-  assert.match(section, /se repite el clic del menu/);
+  assert.match(section, /openRequestedNorayFrame\(page, 21, "\/excepciones-pedidas"\)/);
+  assert.match(section, /mapNorayExceptions\(\{ bag, months, year, chapa: portalUser \}\)/);
 });
 
 test("Cloudflare o una portada en blanco solo se recargan una vez antes de cerrar el perfil", () => {
