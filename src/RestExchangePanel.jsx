@@ -6,6 +6,7 @@ import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
+import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -146,6 +147,7 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
   const board = offers.filter((offer) => offer.status === "open"
     && !restOfferExpired(offer, today));
   const { filters, setFilters, visible } = useExchangeFilters(board, false);
+  const focusedOfferId = useExchangeOfferFocus("descansos", panelRef, loading, tab, setTab, visible, setFilters);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
@@ -158,7 +160,8 @@ export default function RestExchangePanel({ session, descansos, vacaciones, vaca
       onClick={() => { window.location.hash = conversationHash("rest", proposal.id); }}>
       Abrir conversación
     </button>;
-    return <article className="rest-exchange-offer" key={offer.id} data-kind={offer.kind}>
+    return <article className={`rest-exchange-offer${offer.id === focusedOfferId ? " is-notification-target" : ""}`}
+      key={offer.id} data-kind={offer.kind} data-offer-id={offer.id} tabIndex={offer.id === focusedOfferId ? -1 : undefined}>
       <div className="rest-exchange-offer-head">
         <ExchangeAvatar name={offer.ownerName} />
         <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>

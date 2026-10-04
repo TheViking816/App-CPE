@@ -132,7 +132,7 @@ import AdminMonitor from "./AdminMonitor.jsx";
 import { companyLogo, fetchGeneralBoard, fetchWorkerNames, shipImage } from "./generalBoard.js";
 import { currentAssignmentsFromSnapshot } from "./currentAssignments.js";
 import { fillMissingFullPartWorkerNames, findPartBolsaWorkers, formatFullPartWorkerCode, mergeFullPartSpecialties } from "./fullPartMerge.js";
-import { hashForTab, tabFromHash } from "./navigation.js";
+import { exchangeOfferFromHash, hashForExchangeOffer, hashForTab, tabFromHash } from "./navigation.js";
 import { compareExceptionsDescending } from "./exceptionOrder.js";
 import { loadPortalPayrollDocument, portalPayrollFileName } from "./portalDocument.js";
 import { initialIrpfRate } from "./irpfRate.js";
@@ -4749,7 +4749,8 @@ export function App() {
       setActiveTab(allowedTab);
       const canonicalHash = hashForTab(allowedTab);
       if (window.location.hash !== canonicalHash
-        && !/^#\/conversaciones\/(rest|vacation|direct)\/[0-9a-f-]{36}$/i.test(window.location.hash)) {
+        && !/^#\/conversaciones\/(rest|vacation|direct)\/[0-9a-f-]{36}$/i.test(window.location.hash)
+        && !exchangeOfferFromHash(window.location.hash)) {
         window.history.replaceState(null, "", canonicalHash);
       }
     };
@@ -4831,6 +4832,9 @@ export function App() {
       window.location.hash = directConversationHash(item.metadata.conversationId);
     } else if (/^(rest|vacation)_(message|proposal|response)$/.test(item.eventType) && item.metadata?.proposalId) {
       window.location.hash = conversationHash(item.eventType.startsWith("rest_") ? "rest" : "vacation", item.metadata.proposalId);
+    } else if (["rest_offer_published", "vacation_offer_published"].includes(item.eventType) && item.metadata?.offerId) {
+      const tab = item.eventType === "rest_offer_published" ? "descansos" : "vacaciones";
+      window.location.hash = hashForExchangeOffer(tab, item.metadata.offerId);
     } else {
       navigateToTab(item.targetTab || "novedades");
     }

@@ -78,3 +78,13 @@
 :root[data-theme="dark"] .mobile-app .exchange-redesign .rest-exchange-tabs { background:#182d45; }
 :root[data-theme="dark"] .mobile-app .exchange-redesign .rest-exchange-heading p { color:#9ec9f4; }
 
+.mobile-app .exchange-redesign,
+.mobile-app .exchange-redesign .rest-exchange-offer { scroll-margin-top: 112px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer.is-notification-target {
+  outline: 3px solid #2479cb;
+  outline-offset: 3px;
+}
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-offer.is-notification-target {
+  outline-color: #93c5fd;
+}
+

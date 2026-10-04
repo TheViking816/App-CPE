@@ -6,6 +6,7 @@ import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
 import { assignedVacationDays, canRespondToVacationOffer, dateRangeKeys, vacationSelectionPatch } from "./vacationExchange.js";
 import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
+import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import {
   cancelVacationExchange, decideVacationExchange, getVacationExchange,
   proposeVacationExchange, publishVacationExchange, updateVacationExchange,
@@ -144,6 +145,7 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
   const board = offers.filter((offer) => offer.status === "open"
     && !vacationOfferExpired(offer, today));
   const { filters, setFilters, visible } = useExchangeFilters(board, true);
+  const focusedOfferId = useExchangeOfferFocus("vacaciones", panelRef, loading, tab, setTab, visible, setFilters);
   const mine = recentPersonalOffers(offers, proposals);
 
   function offerCard(offer, personal = false) {
@@ -156,7 +158,8 @@ export default function VacationExchangePanel({ session, vacaciones, selectedDay
       Abrir conversación
     </button>;
 
-    return <article className="rest-exchange-offer" key={offer.id} data-kind="vacation">
+    return <article className={`rest-exchange-offer${offer.id === focusedOfferId ? " is-notification-target" : ""}`}
+      key={offer.id} data-kind="vacation" data-offer-id={offer.id} tabIndex={offer.id === focusedOfferId ? -1 : undefined}>
       <div className="rest-exchange-offer-head">
         <ExchangeAvatar name={offer.ownerName} />
         <div><span>Intercambio de vacaciones</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
