@@ -92,6 +92,7 @@ import {
   getUserNotifications,
   getForumMessages,
   loadPayrollConfig,
+  loadPayrollHolidays,
   getOfficialPortalDocument,
   getOfficialPortalSnapshot,
   getPortalAutoSyncStatus,
@@ -2680,8 +2681,9 @@ function PortalExceptionsPreview({ exceptions }) {
   );
 }
 
-function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEntries = [], onDaySelect, selectedDay }) {
+function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEntries = [], holidays = [], onDaySelect, selectedDay }) {
   const months = useMemo(() => buildPersonalRestMonths(descansos, vacaciones), [descansos, vacaciones]);
+  const holidayByDate = useMemo(() => new Map(holidays.map((item) => [item.holiday_date, item.name])), [holidays]);
   const vacationDates = useMemo(() => new Set(
     vacationEntries.map((item) => String(item?.payroll?.date || "")).filter(Boolean)
   ), [vacationEntries]);
@@ -2710,6 +2712,8 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
   const days = month.days;
   const today = new Date();
   const isCurrentMonth = Number(month.month) === today.getMonth() + 1 && Number(month.year) === today.getFullYear();
+  const availability = descansos?.availability?.monthKey === month.key && isCurrentMonth
+    ? descansos.availability : null;
 
   return (
     <section className="portal-calendar-card">
@@ -2719,6 +2723,11 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
           <h1>{MONTHS_ES[month.month - 1]} {month.year}</h1>
         </div>
       </div>
+      {availability && <div className="personal-rest-summary" aria-label="Resumen de descansos del mes actual">
+        <span><b>Grupos descanso:</b> {availability.group}</span>
+        <span><b>FS:</b> {availability.fsMonth.used}/{availability.fsMonth.max} mes <i aria-hidden="true">|</i> {availability.fsYear.used}/{availability.fsYear.max} año</span>
+        <span><b>{availability.monthName}:</b> min {availability.restMonth.min} / max {availability.restMonth.max} ({availability.restMonth.requested})</span>
+      </div>}
       {months.length > 1 && <div className="personal-rest-navigation">
         <button type="button" disabled={selectedMonthIndex === 0} onClick={() => setSelectedMonthIndex((index) => index - 1)} aria-label="Mes anterior">‹</button>
         <select aria-label="Mes del calendario de descansos" value={month.key} onChange={(event) => setSelectedMonthIndex(months.findIndex((item) => item.key === event.target.value))}>
@@ -2740,6 +2749,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
           const slPosition = code.toUpperCase() === "SL" && !isVacation ? slPositionByDate.get(dateKey) : "";
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
+          const holidayName = holidayByDate.get(dateKey);
           const DayTag = onDaySelect ? "button" : "div";
           return (
             <DayTag
@@ -2749,9 +2759,9 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
               aria-current={isToday ? "date" : undefined}
               style={gridColumn ? { gridColumnStart: gridColumn } : undefined}
               onClick={onDaySelect ? () => onDaySelect({ dateKey, code: displayCode, source: month.source }) : undefined}
-              aria-label={onDaySelect ? `${day} de ${MONTHS_ES[month.month - 1]}: ${displayCode || ({ rest: "descanso", week: "descanso", holiday: "festivo inhábil", requested: "lista de espera" }[item.type] || "día laborable")}. Ver opciones de intercambio` : undefined}
+              aria-label={onDaySelect ? `${day} de ${MONTHS_ES[month.month - 1]}: ${displayCode || ({ rest: "descanso", week: "descanso", holiday: "festivo inhábil", requested: "lista de espera" }[item.type] || "día laborable")}${holidayName ? `. Festivo: ${holidayName}` : ""}. Ver opciones de intercambio` : undefined}
             >
-              <span>{day}</span>
+              <span className={holidayName ? "is-public-holiday-number" : undefined} title={holidayName || undefined}>{day}</span>
               <small>{WEEKDAYS_ES[date.getDay()]}</small>
               {(displayCode || item.type || isVacation) && (
                 <strong
@@ -2954,6 +2964,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
   const [selectedRestDay, setSelectedRestDay] = useState(null);
   const [selectedVacationDay, setSelectedVacationDay] = useState(null);
   const [payrollConfig, setPayrollConfig] = useState(null);
+  const [restHolidays, setRestHolidays] = useState([]);
   const [relayHours, setRelayHours] = useState({});
   const [savingRelayHourKey, setSavingRelayHourKey] = useState("");
   const [relayHourError, setRelayHourError] = useState("");
@@ -2995,6 +3006,25 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (view !== "all" && view !== "rests") return undefined;
+    let active = true;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      loadPayrollHolidays()
+        .then((rows) => { if (active) setRestHolidays(rows); })
+        .catch((error) => console.warn("No se pudieron actualizar los festivos:", error.message));
+    };
+    refresh();
+    document.addEventListener("visibilitychange", refresh);
+    const interval = window.setInterval(refresh, 5 * 60 * 1000);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", refresh);
+      window.clearInterval(interval);
+    };
+  }, [view]);
 
   useEffect(() => {
     const normalizedRate = initialIrpfRate(session?.irpfRate, snapshot?.chapa);
@@ -3656,7 +3686,7 @@ function PortalResultPreview({ snapshot, session, view = "all", onSessionChange,
 
       {(view === "all" || view === "rests") && descansos && (
         <div ref={descansosRef} className="portal-scroll-anchor">
-          <PortalCalendarPreview descansos={descansos} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries}
+          <PortalCalendarPreview descansos={descansos} vacaciones={vacaciones} slRows={slRows} vacationEntries={vacationPayrollEntries} holidays={restHolidays}
             onDaySelect={view === "rests" ? setSelectedRestDay : undefined} selectedDay={selectedRestDay} />
         </div>
       )}

@@ -510,6 +510,29 @@ export function hasCurrentRestMonthWindow(value, now = new Date()) {
   return selectCurrentRestMonths(value?.months, now).length === 2;
 }
 
+export function parseRestAvailabilitySummary(html = "", now = new Date()) {
+  const text = textFromHtml(html).replace(/\s*\|\s*/g, " | ");
+  const group = text.match(/Grupos?\s+descanso\s*:\s*([A-Z]\s*\/\s*[A-Z])\b/i)?.[1];
+  const fs = text.match(/FS\s*:\s*(\d+)\s*\/\s*(\d+)\s*mes\s*\|\s*(\d+)\s*\/\s*(\d+)\s*año/i);
+  const rest = text.match(/(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre)\s*:\s*min\s*(\d+)\s*\/\s*max\s*(\d+)\s*\(\s*(\d+)\s*\)/i);
+  if (!group || !fs || !rest) return null;
+
+  const currentMonth = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", month: "long" }).format(now);
+  if (rest[1].toLocaleLowerCase("es-ES") !== currentMonth.toLocaleLowerCase("es-ES")) return null;
+  const year = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Madrid", year: "numeric" }).format(now);
+  const month = String(MONTH_NAMES_ES.findIndex((name) => name.toLocaleLowerCase("es-ES") === currentMonth.toLocaleLowerCase("es-ES")) + 1).padStart(2, "0");
+  const values = [...fs.slice(1), ...rest.slice(2)].map(Number);
+  if (values.some((value) => !Number.isSafeInteger(value) || value < 0)) return null;
+  return {
+    monthKey: `${year}-${month}`,
+    group: group.replace(/\s*\/\s*/, " / "),
+    fsMonth: { used: values[0], max: values[1] },
+    fsYear: { used: values[2], max: values[3] },
+    monthName: rest[1].charAt(0).toLocaleUpperCase("es-ES") + rest[1].slice(1).toLocaleLowerCase("es-ES"),
+    restMonth: { min: values[4], max: values[5], requested: values[6] }
+  };
+}
+
 export function parseDescansos(html = "", now = new Date()) {
   const pageText = textFromHtml(html);
   const expectedChapa = String(portalUser || "").replace(/\D/g, "").slice(-5);
@@ -1788,6 +1811,14 @@ async function collectDescansos(page) {
   if (hasCurrentRestMonthWindow(result)) return result;
 
   throw new Error("El calendario no incluye el mes actual y el siguiente. Se conservaran los ultimos datos disponibles.");
+}
+
+async function collectRestAvailability(page) {
+  await openMenu(page, "Consultas", "Disponibilidades");
+  return waitForParsedContext(
+    page.context(), parseRestAvailabilitySummary,
+    (summary) => Number(Boolean(summary)), 12000
+  );
 }
 
 async function collectSl(page) {
@@ -3787,6 +3818,14 @@ async function main() {
         name: cleanText(descansos?.worker?.name) || portalIdentity.name,
         givenName: portalIdentity.givenName
       };
+    }
+    try {
+      descansos.availability = await collectRestAvailability(page)
+        || existingSnapshot?.payload?.descansos?.availability
+        || null;
+    } catch (error) {
+      descansos.availability = existingSnapshot?.payload?.descansos?.availability || null;
+      console.warn(`Resumen de disponibilidades no disponible; se conserva la ultima lectura. ${error instanceof Error ? error.message : ""}`);
     }
     await publishProgress("descansos", descansos, "Descansos cargados");
     const excepcionesLeidas = await readOptionalSection(

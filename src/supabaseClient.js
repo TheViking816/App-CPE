@@ -500,6 +500,16 @@ export async function loadPayrollConfig() {
   };
 }
 
+export async function loadPayrollHolidays() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("app_cpe_payroll_holidays")
+    .select("holiday_date, name")
+    .eq("enabled", true);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function trackUsageEvent({ eventType, chapa, metadata = {} }) {
   if (!supabase || !eventType) return null;
   const normalizedChapa = String(chapa || "").replace(/\D/g, "").slice(-5);
