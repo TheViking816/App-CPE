@@ -2675,7 +2675,7 @@ function PortalExceptionsPreview({ exceptions }) {
       <section className="portal-exceptions-info">
         <header><Info size={18} /><div><small>Información importante</small><strong>Cómo funciona la bolsa</strong></div></header>
         <ul>{rules.map((rule) => <li key={rule}>{rule}</li>)}</ul>
-        <a href="https://portal.cpevalencia.com/#User,ViewNoray,17" target="_blank" rel="noreferrer">Gestionar excepciones en el Portal <ExternalLink size={15} /></a>
+        <a href="https://portal.cpevalencia.com/#User,ViewNoray,21" target="_blank" rel="noreferrer">Gestionar excepciones en el Portal <ExternalLink size={15} /></a>
       </section>
     </section>
   );

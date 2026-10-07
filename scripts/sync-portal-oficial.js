@@ -1814,11 +1814,18 @@ async function collectDescansos(page) {
 }
 
 async function collectRestAvailability(page) {
-  await openMenu(page, "Consultas", "Disponibilidades");
-  return waitForParsedContext(
-    page.context(), parseRestAvailabilitySummary,
-    (summary) => Number(Boolean(summary)), 12000
-  );
+  const frame = await openRequestedNorayFrame(page, 17, "/descansos");
+  try {
+    const deadline = Date.now() + 12000;
+    while (Date.now() < deadline) {
+      const summary = parseRestAvailabilitySummary(await frame.content().catch(() => ""));
+      if (summary) return summary;
+      await frame.page().waitForTimeout(200);
+    }
+    throw new Error("Disponibilidades no mostro el resumen del mes actual.");
+  } finally {
+    await frame.page().close().catch(() => {});
+  }
 }
 
 async function collectSl(page) {
