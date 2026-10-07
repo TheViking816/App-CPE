@@ -2750,6 +2750,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
           const gridColumn = day === 1 ? ((date.getDay() + 6) % 7) + 1 : undefined;
           const isToday = isCurrentMonth && day === today.getDate();
           const holidayName = holidayByDate.get(dateKey);
+          const isRedDayNumber = date.getDay() === 0 || Boolean(holidayName);
           const DayTag = onDaySelect ? "button" : "div";
           return (
             <DayTag
@@ -2761,7 +2762,7 @@ function PortalCalendarPreview({ descansos, vacaciones, slRows = [], vacationEnt
               onClick={onDaySelect ? () => onDaySelect({ dateKey, code: displayCode, source: month.source }) : undefined}
               aria-label={onDaySelect ? `${day} de ${MONTHS_ES[month.month - 1]}: ${displayCode || ({ rest: "descanso", week: "descanso", holiday: "festivo inhábil", requested: "lista de espera" }[item.type] || "día laborable")}${holidayName ? `. Festivo: ${holidayName}` : ""}. Ver opciones de intercambio` : undefined}
             >
-              <span className={holidayName ? "is-public-holiday-number" : undefined} title={holidayName || undefined}>{day}</span>
+              <span className={isRedDayNumber ? "is-festive-number" : undefined} title={holidayName || undefined}>{day}</span>
               <small>{WEEKDAYS_ES[date.getDay()]}</small>
               {(displayCode || item.type || isVacation) && (
                 <strong

@@ -6179,8 +6179,8 @@ select {
 .personal-rest-summary { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 12px; padding: 8px 12px; border: 1px solid #dbe6f1; border-radius: 9px; background: #f6f9fd; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .personal-rest-summary b { color: var(--ink); }
 .personal-rest-summary i { padding: 0 3px; font-style: normal; opacity: .55; }
-.portal-day.personal-rest-day > span.is-public-holiday-number,
-.portal-day.personal-rest-day.is-today > span.is-public-holiday-number { color: #c81e32; }
+.portal-day.personal-rest-day > span.is-festive-number,
+.portal-day.personal-rest-day.is-today > span.is-festive-number { color: #c81e32; }
 .personal-rest-navigation button, .personal-rest-navigation select { min-height: 38px; border: 1px solid #dbe6f1; border-radius: 8px; background: #f8fafc; color: var(--ink); font: inherit; font-weight: 800; }
 .personal-rest-navigation button { width: 42px; font-size: 24px; cursor: pointer; }
 .personal-rest-navigation button:disabled { opacity: .4; cursor: default; }
@@ -6981,8 +6981,8 @@ select {
 }
 
 :root[data-theme="dark"] .personal-rest-summary { border-color: rgba(148, 163, 184, .24); background: rgba(8, 22, 38, .72); }
-:root[data-theme="dark"] .portal-day.personal-rest-day > span.is-public-holiday-number,
-:root[data-theme="dark"] .portal-day.personal-rest-day.is-today > span.is-public-holiday-number { color: #fb7185; }
+:root[data-theme="dark"] .portal-day.personal-rest-day > span.is-festive-number,
+:root[data-theme="dark"] .portal-day.personal-rest-day.is-today > span.is-festive-number { color: #fb7185; }
 
 :root[data-theme="dark"] .personal-rest-navigation button,
 :root[data-theme="dark"] .personal-rest-navigation select {

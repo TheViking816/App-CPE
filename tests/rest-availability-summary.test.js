@@ -28,3 +28,11 @@ test("availability is read from ViewNoray 17 and exceptions no longer link there
   assert.match(worker, /openRequestedNorayFrame\(page, 17, "\/descansos"\)/);
   assert.doesNotMatch(app, /ViewNoray,17"[^>]*>Gestionar excepciones/);
 });
+
+test("Sundays and configured holidays color only the rest-calendar day number", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.match(app, /date\.getDay\(\) === 0 \|\| Boolean\(holidayName\)/);
+  assert.match(app, /<span className=\{isRedDayNumber \? "is-festive-number"/);
+  assert.match(styles, /\.portal-day\.personal-rest-day > span\.is-festive-number/);
+});
