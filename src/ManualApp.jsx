@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor } from './supabaseClient.js';
+import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor } from './supabaseClient.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
-import { formatEuro } from './payroll.js';
+import { enrichJornales, formatEuro } from './payroll.js';
+import { optionsForGroup } from './manualSpecialties.js';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const TEMPORARY_NOTICE = 'Aviso temporal: Por el momento, solo está disponible el Sueldómetro manual. Puedes consultar tus jornales guardados y añadir nuevos jornales y primas. El resto de funciones volverá cuando se solucionen los problemas de acceso al portal';
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
-const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: '', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', notes: '' });
+const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', notes: '' });
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
@@ -77,15 +78,16 @@ function JornalCard({ item, busy, onEdit, onRemove, onPremium }) {
   const company = String(item.empresa || '').trim();
   const logo = companyImage(company);
   const date = new Date(`${item.payroll.date}T12:00:00`);
-  return <article className="jornal-card">
+  return <article className={`jornal-card${logo ? ' has-company-art' : ''}`} style={logo ? { '--jornal-company-logo': `url("${logo}")` } : undefined}>
     <div className="jornal-art">
       {logo ? <img src={logo} alt={company} loading="lazy" /> : <span className="jornal-monogram">{company ? company.slice(0, 4).toUpperCase() : 'CPE'}</span>}
       <span className="jornal-day">{date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
     </div>
     <div className="jornal-body">
       <div className="jornal-heading"><div><small>{[company, item.tipo, item.payroll.shift].filter(Boolean).join(' · ')}</small><h3>{item.especialidad || 'Jornal'}</h3></div><strong>{formatEuro(item.payroll.total)}</strong></div>
-      <p>{[item.buque, item.operacion || (item.payroll.operationType === 'RECEPCION_ENTREGA' ? 'Recepción y entrega' : 'Estiba')].filter(Boolean).join(' · ')}</p>
-      <div className="jornal-breakdown"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}<span>Prima <b>{formatEuro(item.payroll.prima || 0)}</b></span></div>
+      <p>{[item.buque, item.source === 'manual' ? (item.payroll.operationType === 'RECEPCION_ENTREGA' ? 'Operaciones complementarias (OC) · Recepción y entrega' : 'Servicio público (SP)') : item.operacion || (item.payroll.operationType === 'RECEPCION_ENTREGA' ? 'Operaciones complementarias (OC)' : 'Servicio público (SP)')].filter(Boolean).join(' · ')}</p>
+      <div className="jornal-meta"><span>Grupo {item.payroll.group}</span>{item.source === 'historico' && item.parte && <span>Parte {item.parte}</span>}{item.jornal && <span>Jornal {item.jornal}</span>}</div>
+      <div className="jornal-breakdown"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}<span>Prima <b>{formatEuro(item.payroll.prima || 0)}</b></span>{item.payroll.relayHour > 0 && <span>Relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}{item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}{item.payroll.continuousDoubleMeal > 0 && <span>Manutención <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>}</div>
       {item.notes && <p className="jornal-notes">{item.notes}</p>}
       <div className="jornal-actions">{item.source === 'manual' ? <><button disabled={busy} onClick={() => onEdit(item)}>Editar jornal</button><button disabled={busy} onClick={() => onRemove(item.id)}>Eliminar</button></> : <button disabled={busy} onClick={() => onPremium(item)}>Editar prima</button>}</div>
     </div>
@@ -96,6 +98,8 @@ function Salary({ session, onSession }) {
   const [snapshot, setSnapshot] = useState(null);
   const [manualRows, setManualRows] = useState([]);
   const [premiums, setPremiums] = useState({});
+  const [relayHours, setRelayHours] = useState({});
+  const [remateHours, setRemateHours] = useState({});
   const [config, setConfig] = useState(null);
   const [month, setMonth] = useState('');
   const [period, setPeriod] = useState(() => new Date().getDate() <= 15 ? 'first' : 'second');
@@ -111,24 +115,35 @@ function Salary({ session, onSession }) {
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const [oldData, newRows, premiumData, rateData] = await Promise.all([
+      const [oldData, newRows, premiumData, rateData, relayData, remateData] = await Promise.all([
         rpc('app_cpe_get_saved_salary_history', { p_token: session.token }),
         rpc('app_cpe_list_manual_jornales', { p_token: session.token }),
-        getUserManualPremiums({ token: session.token }), loadPayrollConfig()
+        getUserManualPremiums({ token: session.token }), loadPayrollConfig(),
+        getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token })
       ]);
-      setSnapshot(oldData); setManualRows(newRows || []); setPremiums(premiumData || {}); setConfig(rateData);
+      setSnapshot(oldData); setManualRows(newRows || []); setPremiums(premiumData || {}); setConfig(rateData); setRelayHours(relayData || {}); setRemateHours(remateData || {});
     } catch (reason) { setError(reason.message || 'No se pudieron cargar los datos.'); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); if (!session.supportAccess) trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
   useEffect(() => { if (!session.supportAccess) trackPageVisit({ token: session.token, page: tab === 'monitor' ? 'inicio' : 'sueldometro' }).catch(() => {}); }, [session.token, tab]);
 
-  const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums), [snapshot, manualRows, config, premiums]);
+  const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours), [snapshot, manualRows, config, premiums, relayHours, remateHours]);
   const currentMonthKey = today().slice(0, 7);
   const chosen = months.find((item) => item.key === month) || months.find((item) => item.key === currentMonthKey) || months[0];
   const selected = salaryPeriod(chosen?.items, period);
   const gross = selected.total;
   const net = Number((gross * (1 - irpf / 100)).toFixed(2));
+  const formEstimate = useMemo(() => {
+    if (!form.work_date || !form.specialty) return null;
+    const [, monthNumber, day] = form.work_date.split('-');
+    const raw = { dia: Number(day), jornada: form.shift, especialidad: form.specialty, payrollGroup: form.worker_group,
+      operacion: form.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA', parte: 'MANUAL-PREVIA' };
+    const calculated = enrichJornales([raw], [], `${monthNumber}/${form.work_date.slice(0, 4)}`, config)[0]?.payroll;
+    if (!calculated) return null;
+    const premium = euroInput(form.premium);
+    return { ...calculated, total: Number((calculated.total + (Number.isFinite(premium) ? premium : 0)).toFixed(2)) };
+  }, [form, config]);
 
   async function save(event) {
     event.preventDefault(); setError(''); setNotice(''); setBusy(true);
@@ -174,13 +189,14 @@ function Salary({ session, onSession }) {
     {showForm && <section className="manual-panel editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
       <label>Turno<select value={form.shift} onChange={(event) => setForm({ ...form, shift: event.target.value })}>{['02-08','06-12','08-14','14-20','18-00','19-01','20-02'].map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label>Especialidad<input value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} placeholder="Ej.: Conductor 1A" maxLength="100" required /></label>
-      <label>Grupo<select value={form.worker_group} onChange={(event) => setForm({ ...form, worker_group: event.target.value })}>{['I','II','III','IV'].map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label>Operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Estiba</option><option value="RECEPCION_ENTREGA">Recepción y entrega</option></select></label>
+      <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>
+      <label>Puesto / especialidad<select value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} required>{optionsForGroup(form.worker_group, form.specialty).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
       <label>Empresa o terminal<select value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option><option value="CSP">CSP</option><option value="TCV">TCV</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
       <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
       <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
       <label className="wide">Notas (opcional)<input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} maxLength="500" /></label>
+      {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
       <div className="form-actions"><button type="button" onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
     </form></section>}
     {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <>
