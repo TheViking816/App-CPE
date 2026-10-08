@@ -27,7 +27,25 @@ test('retains saved history and adds new manual jornales without altering it', (
   assert.equal(salaryPeriod(months[0].items, 'second').items.length, 0);
   assert.equal(salaryPeriod(months[1].items, 'month').items.length, 1);
   assert.equal(companyImage('CSP IBERIAN VALENCIA TERMINAL'), '/assets/empresas/csp.jpeg');
-  assert.equal(companyImage('TCV'), '');
+  assert.equal(companyImage('TCV'), '/assets/empresas/tcv.svg');
+});
+
+test('includes saved paid vacation days in monthly and annual salary data', () => {
+  const snapshot = { payload: { descansos: { months: [{ year: 2026, month: 10, days: [{ day: 3, code: 'VA' }, { day: 4, code: 'VA' }] }] } } };
+  const months = buildManualSalaryMonths(snapshot);
+  assert.equal(months[0].key, '2026-10');
+  assert.equal(months[0].items.filter((item) => item.isVacation).length, 2);
+  assert.equal(salaryPeriod(months[0].items, 'first').items.length, 2);
+  assert.equal(salaryPeriod(months[0].items, 'second').items.length, 0);
+  assert.equal(months[0].total, months[0].items.reduce((sum, item) => sum + item.payroll.total, 0));
+});
+
+test('includes saved FM days once when both calendar sources contain them', () => {
+  const month = { year: 2026, month: 10, days: [{ day: 8, code: 'FM' }] };
+  const snapshot = { payload: { descansos: { months: [month] }, disponibilidad: { trainingHistory: [month] } } };
+  const months = buildManualSalaryMonths(snapshot);
+  assert.equal(months[0].items.filter((item) => item.isTraining).length, 1);
+  assert.equal(months[0].items.filter((item) => item.isVacation).length, 0);
 });
 
 test('filters posts by group and uses reception rates for OC', () => {

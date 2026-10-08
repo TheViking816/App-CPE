@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" role="img" aria-labelledby="title">
+  <title id="title">Terminal de Contenedores de Valencia</title>
+  <defs><linearGradient id="sea" x2="1" y2="1"><stop stop-color="#0c3763"/><stop offset="1" stop-color="#0f6e95"/></linearGradient></defs>
+  <rect width="560" height="320" rx="22" fill="url(#sea)"/>
+  <path d="M40 212h480M76 190V81h159v109M145 81V54m-95 0h212M330 191v-81h157v81" fill="none" stroke="#9ddde6" stroke-width="11" stroke-linecap="round"/>
+  <rect x="88" y="139" width="70" height="51" rx="3" fill="#f38b24"/><rect x="164" y="139" width="70" height="51" rx="3" fill="#e8f3f7"/><rect x="345" y="135" width="67" height="55" rx="3" fill="#f38b24"/><rect x="417" y="135" width="67" height="55" rx="3" fill="#e8f3f7"/>
+  <text x="280" y="266" fill="#fff" font-family="Arial,sans-serif" font-weight="800" font-size="48" text-anchor="middle" letter-spacing="9">TCV</text>
+</svg>

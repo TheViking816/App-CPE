@@ -1,4 +1,5 @@
 import REMATE_SALARY_DATA from "../assets/remates-salariales.json" with { type: "json" };
+import MANUAL_PREMIUM_RATES from "../assets/manual-premium-rates.json" with { type: "json" };
 import { canonicalPortalPart, normalizeReservePortalRow } from "./portalRowIdentity.js";
 
 const VALENCIA_HOLIDAYS_2026 = new Set([
@@ -150,7 +151,7 @@ function toYmd(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function isHoliday(dateString, holidaySet = VALENCIA_HOLIDAYS_2026) {
+export function isHoliday(dateString, holidaySet = VALENCIA_HOLIDAYS_2026) {
   const date = parseLocalDate(dateString);
   return date.getDay() === 0 || holidaySet.has(dateString);
 }
@@ -194,6 +195,7 @@ const SHIFT_ORDER = {
 };
 
 export const VACATION_DAY_RATE = 214.11;
+export const TRAINING_DAY_RATE = 60.68;
 
 export const RELAY_HOUR_RATES = Object.freeze({
   LABORABLE: 66.05,
@@ -268,7 +270,7 @@ export function compareJornalesDescending(a, b) {
 function parseMonthLabel(monthLabel = "") {
   const numericMatch = String(monthLabel).match(/(\d{1,2})\s*\/\s*(\d{4})/);
   if (numericMatch) return { month: Number(numericMatch[1]), year: Number(numericMatch[2]) };
-  const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)\s+de\s+(\d{4})/i);
+  const match = String(monthLabel).toLowerCase().match(/([a-záéíóúñ]+)(?:\s+de)?\s+(\d{4})/i);
   if (!match) return { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
   const normalized = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return { month: MONTHS_ES[normalized] || new Date().getMonth() + 1, year: Number(match[2]) };
@@ -334,56 +336,87 @@ function getSpecialtyKey(specialty = "") {
   return normalized.replace(/\s+/g, "_");
 }
 
-function getMonthKey(monthLabel = "") {
+export function getMonthKey(monthLabel = "") {
   const { month, year } = parseMonthLabel(monthLabel);
   return `${year}-${pad(month)}`;
 }
 
-export function buildVacationPayrollEntries(descansos = null, amount = VACATION_DAY_RATE) {
+function parseVacationDate(value) {
+  const normalized = String(value || "").trim();
+  const dayFirst = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const yearFirst = normalized.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+  if (!dayFirst && !yearFirst) return null;
+  const year = Number(dayFirst?.[3] || yearFirst?.[1]);
+  const month = Number(dayFirst?.[2] || yearFirst?.[2]);
+  const day = Number(dayFirst?.[1] || yearFirst?.[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) return null;
+  return date;
+}
+
+export function buildVacationPayrollEntries(vacationSources = null, amount = VACATION_DAY_RATE) {
   const seenDates = new Set();
   const entries = [];
 
-  for (const monthData of descansos?.months || []) {
-    const numericTitle = String(monthData?.title || "").match(/(\d{1,2})\s*\/\s*(\d{4})/);
-    const month = Number(monthData?.month || numericTitle?.[1]);
-    const year = Number(monthData?.year || numericTitle?.[2]);
-    if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) continue;
+  const addVacationDay = (date) => {
+    const dateKey = toYmd(date);
+    if (seenDates.has(dateKey)) return;
+    seenDates.add(dateKey);
 
-    for (const dayData of monthData?.days || []) {
-      if (String(dayData?.code || "").trim().toUpperCase() !== "VA") continue;
-      const day = Number(dayData?.day);
-      if (!Number.isInteger(day) || day < 1 || day > 31) continue;
-      const date = `${year}-${pad(month)}-${pad(day)}`;
-      if (seenDates.has(date)) continue;
-      seenDates.add(date);
+    entries.push({
+      jornal: `VA-${dateKey}`,
+      parte: "",
+      dia: pad(date.getDate()),
+      tipo: "VA",
+      jornada: "VACACIONES",
+      especialidad: "VACACIONES",
+      empresa: "",
+      buque: "",
+      operacion: "Día de vacaciones",
+      isVacation: true,
+      payroll: {
+        conceptType: "VACATION",
+        date: dateKey,
+        shift: "VA",
+        group: "",
+        operationType: "VACACIONES",
+        rateKey: "VACACIONES",
+        base: Number(amount),
+        complement: 0,
+        prima: null,
+        primaPending: false,
+        relayHourEligible: false,
+        relayHour: 0,
+        total: Number(amount)
+      }
+    });
+  };
 
-      entries.push({
-        jornal: `VA-${date}`,
-        parte: "",
-        dia: pad(day),
-        tipo: "VA",
-        jornada: "VACACIONES",
-        especialidad: "VACACIONES",
-        empresa: "",
-        buque: "",
-        operacion: "Día de vacaciones",
-        isVacation: true,
-        payroll: {
-          conceptType: "VACATION",
-          date,
-          shift: "VA",
-          group: "",
-          operationType: "VACACIONES",
-          rateKey: "VACACIONES",
-          base: Number(amount),
-          complement: 0,
-          prima: null,
-          primaPending: false,
-          relayHourEligible: false,
-          relayHour: 0,
-          total: Number(amount)
-        }
-      });
+  const sources = Array.isArray(vacationSources) ? vacationSources : [vacationSources];
+  for (const source of sources.filter(Boolean)) {
+    for (const period of source?.rows || []) {
+      const start = parseVacationDate(period?.inicio);
+      const end = parseVacationDate(period?.fin);
+      if (!start || !end || end < start) continue;
+      const cursor = new Date(start);
+      for (let elapsed = 0; cursor <= end && elapsed < 370; elapsed += 1) {
+        addVacationDay(cursor);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    for (const monthData of source?.months || []) {
+      const numericTitle = String(monthData?.title || "").match(/(\d{1,2})\s*\/\s*(\d{4})/);
+      const month = Number(monthData?.month || numericTitle?.[1]);
+      const year = Number(monthData?.year || numericTitle?.[2]);
+      if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) continue;
+
+      for (const dayData of monthData?.days || []) {
+        if (String(dayData?.code || "").trim().toUpperCase() !== "VA") continue;
+        const day = Number(dayData?.day);
+        if (!Number.isInteger(day) || day < 1 || day > 31) continue;
+        addVacationDay(new Date(year, month - 1, day));
+      }
     }
   }
 
@@ -393,6 +426,56 @@ export function buildVacationPayrollEntries(descansos = null, amount = VACATION_
 export function vacationPayrollEntriesForMonth(entries = [], monthLabel = "") {
   const monthKey = getMonthKey(monthLabel);
   return entries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
+}
+
+export function buildTrainingPayrollEntries(sources = null, amount = TRAINING_DAY_RATE) {
+  const entries = new Map();
+  for (const source of (Array.isArray(sources) ? sources : [sources]).filter(Boolean)) {
+    for (const monthData of [...(source?.months || []), ...(source?.trainingHistory || [])]) {
+      const month = Number(monthData?.month);
+      const year = Number(monthData?.year);
+      if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) continue;
+      for (const dayData of monthData?.days || []) {
+        if (String(dayData?.code || "").trim().toUpperCase() !== "FM") continue;
+        const day = Number(dayData?.day);
+        if (!Number.isInteger(day) || day < 1 || day > new Date(year, month, 0).getDate()) continue;
+        const date = `${year}-${pad(month)}-${pad(day)}`;
+        if (entries.has(date)) continue;
+        entries.set(date, {
+          jornal: `FM-${date}`,
+          parte: "",
+          dia: pad(day),
+          tipo: "FM",
+          jornada: "FORMACIÓN",
+          especialidad: "FORMACIÓN",
+          empresa: "",
+          buque: "",
+          operacion: "Día de formación",
+          isTraining: true,
+          payroll: {
+            conceptType: "TRAINING",
+            date,
+            shift: "FM",
+            group: "",
+            operationType: "FORMACIÓN",
+            rateKey: "FORMACIÓN",
+            base: Number(amount),
+            complement: 0,
+            prima: null,
+            primaPending: false,
+            relayHourEligible: false,
+            relayHour: 0,
+            total: Number(amount)
+          }
+        });
+      }
+    }
+  }
+  return [...entries.values()].sort((a, b) => a.payroll.date.localeCompare(b.payroll.date));
+}
+
+export function trainingPayrollEntriesForMonth(entries = [], monthLabel = "") {
+  return vacationPayrollEntriesForMonth(entries, monthLabel);
 }
 
 function getComplement(
@@ -440,6 +523,23 @@ function getRateKey(dateString, shift, holidaySet) {
   }
   if (dayType === "SABADO" && shift === "02-08") return "LABORABLE";
   return dayType;
+}
+
+export function getManualMovementPremium(dateString, shift, movements, payrollConfig = null) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateString)) || !Number.isInteger(Number(movements)) || Number(movements) < 0) return null;
+  const holidays = payrollConfig?.holidays
+    ? new Set(payrollConfig.holidays.filter((item) => item.enabled !== false).map((item) => item.holiday_date || item.holidayDate))
+    : VALENCIA_HOLIDAYS_2026;
+  const rateKey = getRateKey(dateString, shift, holidays);
+  const suffix = {
+    FESTIVO_TO_LABORABLE: "FEST-LAB",
+    FESTIVO_TO_FESTIVO: "FEST-FEST",
+    LABORABLE_TO_FESTIVO: "LAB-FEST"
+  }[rateKey] || rateKey;
+  const rates = MANUAL_PREMIUM_RATES[`${shift}_${suffix}`];
+  if (!rates) return null;
+  const rate = Number(movements) < 120 ? rates[0] : rates[1];
+  return { amount: Number((Number(movements) * rate).toFixed(2)), rate, dayType: suffix };
 }
 
 function getRemateRateKey(dateString, shift, holidaySet) {
@@ -543,7 +643,8 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const remateRate = getRemateRate(date, shift, jornal.especialidad, holidaySet);
     const remateKey = getRelayHourKey(jornal, date, shift);
     const manualPremiumKey = remateKey;
-    const savedManualPremium = manualPremiums?.[manualPremiumKey];
+    const savedManualPremium = manualPremiums?.[manualPremiumKey]
+      ?? (jornal.manualPremiumAmount == null ? null : { amount: jornal.manualPremiumAmount });
     const parsedManualPremium = Number(savedManualPremium?.amount);
     const hasManualPremium = manualPremiumEligible && savedManualPremium != null && Number.isFinite(parsedManualPremium);
     const manualPrima = hasManualPremium ? Number(parsedManualPremium.toFixed(2)) : null;
@@ -617,11 +718,12 @@ export function summarizePayroll(items = []) {
     const total = Number(item.payroll?.total || 0);
     acc.total += total;
     if (item.isVacation) acc.vacationDays += 1;
+    else if (item.isTraining) acc.trainingDays += 1;
     else acc.workCount += 1;
     if (day <= 15) acc.firstHalf += total;
     else acc.secondHalf += total;
     return acc;
-  }, { total: 0, firstHalf: 0, secondHalf: 0, workCount: 0, vacationDays: 0 });
+  }, { total: 0, firstHalf: 0, secondHalf: 0, workCount: 0, vacationDays: 0, trainingDays: 0 });
 }
 
 export function filterJornalesByPeriod(items = [], period = "month") {
@@ -708,6 +810,60 @@ export function selectPortalJornalesHistory(jornales = null, primas = null) {
   return Array.isArray(primas?.history) ? primas.history : [];
 }
 
+// A manual estimate stays separate from the official snapshot. Once the portal
+// has the same date and shift, its row wins and the estimate is not counted twice.
+export function mergeManualSalaryJornales(officialRows = [], entries = [], monthLabel = "") {
+  const { year, month } = parseMonthLabel(monthLabel);
+  const rows = [...(Array.isArray(officialRows) ? officialRows : [])];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const date = String(entry?.date || "");
+    if (!date.startsWith(`${year}-${pad(month)}-`)) continue;
+    const shift = parseShift(entry?.shift);
+    if (!shift) continue;
+    const day = Number(date.slice(-2));
+    const officialIndex = rows.findIndex((row) => Number(row?.dia) === day && parseShift(row?.jornada) === shift);
+    const premium = entry.premiumAmount == null ? null : Number(entry.premiumAmount);
+    if (officialIndex >= 0) {
+      rows[officialIndex] = { ...rows[officialIndex], manualEntryId: entry.id, manualPremiumAmount: premium };
+      continue;
+    }
+    rows.push({
+      jornal: `MANUAL-${date}-${shift}`,
+      parte: entry.part || "",
+      dia: pad(day),
+      jornada: shift,
+      payrollGroup: entry.group || "II",
+      especialidad: entry.specialty || "",
+      empresa: entry.company || "",
+      buque: entry.vessel || "",
+      operacion: entry.operationType === "RECEPCION_ENTREGA" ? "RECEPCION / ENTREGA" : "SERVICIO PÚBLICO",
+      manualEntryId: entry.id,
+      manualOnly: true,
+      manualPremiumAmount: premium
+    });
+  }
+  return rows;
+}
+
+export function mergeManualSalaryHistory(history = [], entries = []) {
+  const periods = (Array.isArray(history) ? history : []).map((period) => ({ ...period }));
+  const byMonth = new Set(periods.map((period) => `${period.year}-${pad(period.month)}`));
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const match = String(entry?.date || "").match(/^(\d{4})-(\d{2})-\d{2}$/);
+    if (!match) continue;
+    const key = `${match[1]}-${match[2]}`;
+    if (byMonth.has(key)) continue;
+    byMonth.add(key);
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    periods.push({ year, month, monthLabel: `${Object.keys(MONTHS_ES).find((name) => MONTHS_ES[name] === month)} de ${year}`, rows: [] });
+  }
+  return periods.map((period) => ({
+    ...period,
+    rows: mergeManualSalaryJornales(period.rows, entries, period.monthLabel)
+  }));
+}
+
 function premiumRowsForMonth(premiumHistory, month) {
   if (!Array.isArray(premiumHistory)) return [];
   const matchingPeriod = premiumHistory.find((period) => (
@@ -727,10 +883,11 @@ export function summarizeAnnualPayroll(
   vacationEntries = [],
   premiumHistory = [],
   remateHours = {},
-  manualPremiums = {}
+  manualPremiums = {},
+  trainingEntries = []
 ) {
   const historyKeys = new Set(history.map((month) => `${month.year}-${pad(month.month)}`));
-  const vacationOnlyMonths = vacationEntries.reduce((months, item) => {
+  const supplementaryOnlyMonths = [...vacationEntries, ...trainingEntries].reduce((months, item) => {
     const match = String(item?.payroll?.date || "").match(/^(\d{4})-(\d{2})-/);
     if (!match || historyKeys.has(`${match[1]}-${match[2]}`)) return months;
     if (!months.some((month) => Number(month.year) === Number(match[1]) && Number(month.month) === Number(match[2]))) {
@@ -744,13 +901,20 @@ export function summarizeAnnualPayroll(
     return months;
   }, []);
 
-  const months = [...history, ...vacationOnlyMonths].map((month) => {
+  const months = [...history, ...supplementaryOnlyMonths].sort((left, right) => {
+    const a = parseMonthLabel(left.monthLabel || "");
+    const b = parseMonthLabel(right.monthLabel || "");
+    return (Number(left.year) || a.year) - (Number(right.year) || b.year)
+      || (Number(left.month) || a.month) - (Number(right.month) || b.month);
+  }).map((month) => {
     const monthKey = `${month.year}-${pad(month.month)}`;
     const vacationRows = vacationEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
+    const trainingRows = trainingEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
     const premiumRows = premiumRowsForMonth(premiumHistory, month);
     const enriched = [
       ...enrichJornales(month.rows || [], premiumRows, month.monthLabel || "", payrollConfig, relayHours, remateHours, manualPremiums),
-      ...vacationRows
+      ...vacationRows,
+      ...trainingRows
     ];
     const summary = summarizePayroll(enriched);
     const primaTotal = enriched.reduce((sum, item) => sum + Number(item.payroll?.prima || 0), 0);
@@ -759,6 +923,7 @@ export function summarizeAnnualPayroll(
       enriched,
       count: summary.workCount,
       vacationDays: summary.vacationDays,
+      trainingDays: summary.trainingDays,
       total: Number(summary.total.toFixed(2)),
       primaTotal: Number(primaTotal.toFixed(2))
     };
@@ -768,9 +933,10 @@ export function summarizeAnnualPayroll(
     months,
     count: months.reduce((sum, month) => sum + month.count, 0),
     vacationDays: months.reduce((sum, month) => sum + month.vacationDays, 0),
+    trainingDays: months.reduce((sum, month) => sum + month.trainingDays, 0),
     total: Number(months.reduce((sum, month) => sum + month.total, 0).toFixed(2)),
     primaTotal: Number(months.reduce((sum, month) => sum + month.primaTotal, 0).toFixed(2)),
-    activeMonths: months.filter((month) => month.count > 0 || month.vacationDays > 0).length
+    activeMonths: months.filter((month) => month.count > 0 || month.vacationDays > 0 || month.trainingDays > 0).length
   };
 }
 

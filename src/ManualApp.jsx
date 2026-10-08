@@ -4,6 +4,7 @@ import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSal
 import { enrichJornales, formatEuro } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
+import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
@@ -76,6 +77,8 @@ function ActivityMonitor({ session }) {
 }
 
 function JornalCard({ item, busy, onEdit, onRemove, onPremium }) {
+  if (item.isVacation) return <article className="jornal-card vacation-card"><div className="jornal-art"><span className="jornal-monogram">VA</span><span className="jornal-day">{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span></div><div className="jornal-body"><div className="jornal-heading"><div><small>DÍA RETRIBUIDO</small><h3>Vacaciones</h3></div><strong>{formatEuro(item.payroll.total)}</strong></div><p>Día de vacaciones retribuido</p></div></article>;
+  if (item.isTraining) return <article className="jornal-card training-card"><div className="jornal-art"><span className="jornal-monogram">FM</span><span className="jornal-day">{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span></div><div className="jornal-body"><div className="jornal-heading"><div><small>DÍA RETRIBUIDO</small><h3>Formación</h3></div><strong>{formatEuro(item.payroll.total)}</strong></div><p>Día de formación retribuido</p></div></article>;
   const company = String(item.empresa || '').trim();
   const logo = companyImage(company);
   const date = new Date(`${item.payroll.date}T12:00:00`);
@@ -111,6 +114,7 @@ function Salary({ session, onSession }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [tab, setTab] = useState('salary');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [irpf, setIrpf] = useState(Number(session.irpfRate) || 0);
 
   const load = async () => {
@@ -131,10 +135,14 @@ function Salary({ session, onSession }) {
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours), [snapshot, manualRows, config, premiums, relayHours, remateHours]);
   const currentMonthKey = today().slice(0, 7);
-  const chosen = months.find((item) => item.key === month) || months.find((item) => item.key === currentMonthKey) || months[0];
+  const selectedMonthKey = month || currentMonthKey;
+  const chosen = months.find((item) => item.key === selectedMonthKey) || {
+    key: selectedMonthKey,
+    label: new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(Number(selectedMonthKey.slice(0, 4)), Number(selectedMonthKey.slice(5, 7)) - 1, 1)),
+    items: [], total: 0
+  };
+  const monthChoices = months.some((item) => item.key === chosen.key) ? months : [chosen, ...months];
   const selected = salaryPeriod(chosen?.items, period);
-  const gross = selected.total;
-  const net = Number((gross * (1 - irpf / 100)).toFixed(2));
   const formEstimate = useMemo(() => {
     if (!form.work_date || !form.specialty) return null;
     const [, monthNumber, day] = form.work_date.split('-');
@@ -184,9 +192,8 @@ function Salary({ session, onSession }) {
   }
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  return <main className="manual-shell"><header className="app-header"><div className="brand"><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><div><strong>Sueldómetro</strong><small>Registro manual</small></div></div><div className="header-actions"><span>Chapa {session.chapa}</span>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => setTab(tab === 'monitor' ? 'salary' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div></header>
-    <div className="temporary-notice" role="note">{TEMPORARY_NOTICE}</div>
-    {tab === 'monitor' ? <ActivityMonitor session={session} /> : <><section className="hero"><div><p className="eyebrow">TU REGISTRO PERSONAL</p><h1>Sueldómetro</h1><p>Consulta tu historial y añade jornales y primas a mano.</p></div><button className="primary" onClick={() => { setForm(blank()); setShowForm(true); setNotice(''); }}>+ Añadir jornal</button></section>
+  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => setTab(tab === 'monitor' ? 'salary' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => { setTab('salary'); setMenuOpen(false); }}>Sueldómetro</button>{session.chapa === '72683' && <button type="button" onClick={() => { setTab('monitor'); setMenuOpen(false); }}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
+    {tab === 'monitor' ? <ActivityMonitor session={session} /> : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showForm && <section className="manual-panel editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
@@ -201,15 +208,9 @@ function Salary({ session, onSession }) {
       {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
       <div className="form-actions"><button type="button" onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
     </form></section>}
-    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <>
-      <section className="salary-top"><article className="salary-card lead"><small>Neto estimado · {period === 'month' ? 'mes completo' : period === 'first' ? '1.ª quincena' : '2.ª quincena'}</small><strong>{formatEuro(net)}</strong><span>IRPF {irpf}% · {selected.items.length} jornales</span></article><article className="salary-card"><small>Bruto estimado</small><strong>{formatEuro(gross)}</strong><span>{chosen?.label || 'Mes actual'}</span></article></section>
-      <section className="manual-panel"><div className="section-head"><div><h2>Jornales</h2><p className="history-caption">Consulta la quincena actual o cualquier mes de tu historial.</p></div><div className="section-actions"><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => setMonth(event.target.value)}>{months.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select><button onClick={load}>Actualizar</button></div></div>
-        <div className="period-tabs" role="group" aria-label="Ver jornales por periodo">{[['first','1.ª quincena'],['second','2.ª quincena'],['month','Mes completo']].map(([key,label]) => <button key={key} type="button" className={period === key ? 'active' : ''} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
-        <div className="period-summary"><strong>{selected.items.length} {selected.items.length === 1 ? 'jornal' : 'jornales'}</strong><span>{chosen?.label || 'Mes actual'} · {period === 'first' ? 'días 1–15' : period === 'second' ? 'días 16–fin de mes' : 'mes completo'}</span></div>
-        {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="journal-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey}-${index}`} item={item} busy={busy} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} />)}</div>}
-      </section><section className="manual-panel settings"><div><h2>Retención IRPF</h2><p>Se aplica a la estimación neta. No sustituye una nómina.</p></div><form onSubmit={saveIrpf}><input aria-label="Porcentaje de IRPF" type="number" min="0" max="60" step="0.01" value={irpf} onChange={(event) => setIrpf(Number(event.target.value))} /><span>%</span><button disabled={busy}>Guardar</button></form></section>
-      <p className="footer-note">Los jornales históricos se conservan tal como estaban guardados. Los nuevos datos los introduces tú y solo pertenecen a tu cuenta.</p>
-    </>}</>}
+    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setNotice(''); }}>
+      {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="journal-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} busy={busy} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} />)}</div>}
+    </ManualSalaryDashboard>}</>}</div>
   </main>;
 }
 

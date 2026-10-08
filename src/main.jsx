@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { ManualApp } from "./ManualApp.jsx";
 import "./manual.css";
+import "./manualSalaryVisual.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

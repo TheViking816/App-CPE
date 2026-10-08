@@ -1,4 +1,4 @@
-import { enrichJornales, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
+import { buildTrainingPayrollEntries, buildVacationPayrollEntries, enrichJornales, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
 import { unpackManualNotes } from './manualMetadata.js';
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -22,6 +22,7 @@ export function companyImage(company = '') {
   const value = String(company).toUpperCase();
   const base = `${import.meta.env?.BASE_URL || '/'}assets/empresas/`;
   if (/CSP/.test(value)) return `${base}csp.jpeg`;
+  if (/\bTCV\b|TERMINAL(?:ES)? DE CONTENEDORES DE VALENCIA/.test(value)) return `${base}tcv.svg`;
   if (/APM/.test(value)) return `${base}apm.jpeg`;
   if (/MSC|MEDITERRANEAN/.test(value)) return `${base}msc.jpeg`;
   if (/VTEU|VALENCIA TERMINAL EUROPA|GRIMALDI/.test(value)) return `${base}vteu.jpeg`;
@@ -37,6 +38,8 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
   const currentLabel = payload.jornales?.monthLabel || payload.primas?.monthLabel || '';
+  const vacationEntries = buildVacationPayrollEntries([payload.vacaciones, payload.descansos]);
+  const trainingEntries = buildTrainingPayrollEntries([payload.descansos, payload.disponibilidad]);
   const months = new Map();
 
   for (const period of historic) {
@@ -62,6 +65,13 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
     const [, yearText, monthText] = match;
     const key = `${yearText}-${monthText}`;
     if (!months.has(key)) months.set(key, { year: Number(yearText), month: Number(monthText), monthLabel: monthName(Number(yearText), Number(monthText)), rows: [] });
+  }
+  for (const entry of [...vacationEntries, ...trainingEntries]) {
+    const key = entry.payroll.date.slice(0, 7);
+    if (!months.has(key)) {
+      const [year, month] = key.split('-').map(Number);
+      months.set(key, { year, month, monthLabel: monthName(year, month), rows: [] });
+    }
   }
 
   return [...months.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([key, period]) => {
@@ -89,7 +99,9 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
         total: money(calculated.payroll.total + premium)
       } };
     });
-    const items = [...historicItems, ...newItems].sort((a, b) => b.payroll.date.localeCompare(a.payroll.date) || b.payroll.shift.localeCompare(a.payroll.shift));
+    const paidVacations = vacationEntries.filter((item) => item.payroll.date.startsWith(`${key}-`)).map((item) => ({ ...item, source: 'vacation' }));
+    const paidTraining = trainingEntries.filter((item) => item.payroll.date.startsWith(`${key}-`)).map((item) => ({ ...item, source: 'training' }));
+    const items = [...historicItems, ...newItems, ...paidVacations, ...paidTraining].sort((a, b) => b.payroll.date.localeCompare(a.payroll.date) || b.payroll.shift.localeCompare(a.payroll.shift));
     return { key, label: period.monthLabel, items, total: money(items.reduce((sum, item) => sum + item.payroll.total, 0)),
       premiums: money(items.reduce((sum, item) => sum + (item.payroll.prima || 0), 0)) };
   });
