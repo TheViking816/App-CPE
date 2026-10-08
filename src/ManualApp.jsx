@@ -11,13 +11,11 @@ import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from
 import { optionsForGroup } from './manualSpecialties.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
-import GeneralBoard from './GeneralBoard.jsx';
-import { Activity, Bell, CalendarDays, ChevronRight, ClipboardList, ExternalLink, MessageCircle, WalletCards, X } from 'lucide-react';
+import { Activity, Bell, CalendarDays, ChevronRight, ExternalLink, MessageCircle, WalletCards, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
-const ACTIVE_PAGES = new Set(['sueldometro', 'tablon', 'descansos', 'vacaciones', 'conversaciones']);
-const CONTRACTING_JOURNEY_URL = 'https://portal.cpevalencia.com/#User,ViewNoray,23';
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones']);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
@@ -212,7 +210,12 @@ function Salary({ session, onSession }) {
   };
   useEffect(() => { load(); if (!session.supportAccess) trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
   useEffect(() => {
-    const followHash = () => setTab(viewFromHash());
+    const followHash = () => {
+      const page = viewFromHash();
+      setTab(page);
+      if (window.location.hash.startsWith('#/tablon')) window.history.replaceState(null, '', '#/sueldometro');
+    };
+    followHash();
     window.addEventListener('hashchange', followHash);
     return () => window.removeEventListener('hashchange', followHash);
   }, []);
@@ -248,7 +251,7 @@ function Salary({ session, onSession }) {
     ));
   }, [session.token]);
 
-  const navigate = (next) => { setTab(next); setMenuOpen(false); if (next !== 'monitor' && next !== 'novedades') window.location.hash = `#/${next}`; };
+  const navigate = (next) => { const page = next === 'monitor' || next === 'novedades' || ACTIVE_PAGES.has(next) ? next : 'sueldometro'; setTab(page); setMenuOpen(false); if (page !== 'monitor' && page !== 'novedades') window.location.hash = `#/${page}`; };
   const openNotification = (item) => {
     if (!item.readAt) {
       setNotifications((rows) => rows.map((row) => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
@@ -353,8 +356,8 @@ function Salary({ session, onSession }) {
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => navigate('sueldometro')}>Sueldómetro</button><button type="button" onClick={() => navigate('tablon')}>Tablón general</button><button type="button" onClick={() => navigate('descansos')}>Intercambios</button><button type="button" onClick={() => navigate('conversaciones')}>Chats privados</button>{session.chapa === '72683' && <button type="button" onClick={() => navigate('monitor')}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
-    {tab === 'monitor' ? <ActivityMonitor session={session} /> : tab === 'tablon' ? <GeneralBoard chapa={session.chapa} supabaseOnly contractingUrl={CONTRACTING_JOURNEY_URL} /> : (tab === 'descansos' || tab === 'vacaciones') ? <ExchangeSection session={session} section={tab} onSectionChange={navigate} /> : tab === 'conversaciones' ? <div className="exchange-area"><ExchangeConversations session={session} /></div> : tab === 'novedades' ? <ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /> : <>
+  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => navigate('sueldometro')}>Sueldómetro</button><button type="button" onClick={() => navigate('descansos')}>Intercambios</button><button type="button" onClick={() => navigate('conversaciones')}>Chats privados</button>{session.chapa === '72683' && <button type="button" onClick={() => navigate('monitor')}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
+    {tab === 'monitor' ? <ActivityMonitor session={session} /> : (tab === 'descansos' || tab === 'vacaciones') ? <ExchangeSection session={session} section={tab} onSectionChange={navigate} /> : tab === 'conversaciones' ? <div className="exchange-area"><ExchangeConversations session={session} /></div> : tab === 'novedades' ? <ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /> : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showForm && <section className="manual-panel editor manual-editor-card"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
@@ -381,7 +384,6 @@ function Salary({ session, onSession }) {
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">
       {[
         ['sueldometro', 'Sueldómetro', WalletCards],
-        ['tablon', 'Tablón', ClipboardList],
         ['descansos', 'Intercambios', CalendarDays],
         ['conversaciones', 'Chats', MessageCircle],
         ['novedades', 'Novedades', Bell],
