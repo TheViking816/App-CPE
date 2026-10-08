@@ -3,6 +3,7 @@ import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, getUs
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
 import { enrichJornales, formatEuro } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
+import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
@@ -150,9 +151,10 @@ function Salary({ session, onSession }) {
     try {
       const premium = euroInput(form.premium);
       if (!Number.isFinite(premium) || premium < 0) throw new Error('Introduce una prima válida.');
-      const saved = await rpc('app_cpe_save_manual_jornal_v2', { p_token: session.token, p_id: form.id,
+      const saved = await rpc('app_cpe_save_manual_jornal', { p_token: session.token, p_id: form.id,
         p_work_date: form.work_date, p_shift: form.shift, p_specialty: form.specialty.trim(),
-        p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_company: form.company.trim(), p_vessel: form.vessel.trim(), p_premium: premium, p_notes: form.notes });
+        p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_premium: premium,
+        p_notes: packManualNotes(form) });
       setManualRows((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
       setMonth(saved.work_date.slice(0, 7)); setShowForm(false); setForm(blank()); setNotice('Jornal guardado.');
     } catch (reason) { setError(reason.message || 'No se pudo guardar el jornal.'); }
@@ -180,7 +182,7 @@ function Salary({ session, onSession }) {
     try { const result = await updateUserIrpf({ token: session.token, irpfRate: irpf }); const next = { ...session, ...result, irpfRate: irpf }; localStorage.setItem(SESSION_KEY, JSON.stringify(next)); onSession(next); setNotice('IRPF guardado.'); }
     catch (reason) { setError(reason.message); } finally { setBusy(false); }
   }
-  const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return <main className="manual-shell"><header className="app-header"><div className="brand"><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><div><strong>Sueldómetro</strong><small>Registro manual</small></div></div><div className="header-actions"><span>Chapa {session.chapa}</span>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => setTab(tab === 'monitor' ? 'salary' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div></header>
     <div className="temporary-notice" role="note">{TEMPORARY_NOTICE}</div>

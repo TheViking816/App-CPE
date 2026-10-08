@@ -1,4 +1,5 @@
 import { enrichJornales, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
+import { unpackManualNotes } from './manualMetadata.js';
 
 const pad = (value) => String(value).padStart(2, '0');
 const monthName = (year, month) => new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
@@ -77,12 +78,13 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
           total: money(item.payroll.total - (item.payroll.prima || 0) + premium) } };
       });
     const newItems = manualRows.filter((row) => String(row.work_date).startsWith(key)).map((row) => {
+      const details = unpackManualNotes(row.notes);
       const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
-        parte: `MANUAL-${row.id}`, empresa: row.company || '', buque: row.vessel || '', produccion: '' };
+        parte: `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig)[0];
       const premium = money(row.premium);
-      return { ...calculated, id: row.id, notes: row.notes, source: 'manual', payroll: {
+      return { ...calculated, id: row.id, notes: details.notes, source: 'manual', payroll: {
         ...calculated.payroll, prima: premium, manualPrima: premium, primaSource: 'manual', primaPending: false,
         total: money(calculated.payroll.total + premium)
       } };
