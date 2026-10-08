@@ -31,7 +31,7 @@ export function companyImage(company = '') {
   return '';
 }
 
-export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}) {
+export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}) {
   const payload = snapshot?.payload || {};
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
@@ -66,7 +66,7 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
   return [...months.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([key, period]) => {
     const savedPremiumRows = (payload.primas?.history || []).find((item) => Number(item.year) === period.year && Number(item.month) === period.month)?.rows
       || (String(payload.primas?.monthLabel || '').toLowerCase() === String(period.monthLabel).toLowerCase() ? payload.primas?.rows || [] : []);
-    const historicItems = enrichJornales(period.rows, savedPremiumRows, period.monthLabel, payrollConfig, {}, {}, manualPremiums)
+    const historicItems = enrichJornales(period.rows, savedPremiumRows, period.monthLabel, payrollConfig, relayHours, remateHours, manualPremiums)
       .map((item) => {
         const saved = manualPremiums[item.payroll.manualPremiumKey];
         const amount = Number(saved?.amount);

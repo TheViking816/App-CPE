@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from '../src/manualSalary.js';
+import { optionsForGroup } from '../src/manualSpecialties.js';
+import { enrichJornales } from '../src/payroll.js';
 
 test('retains saved history and adds new manual jornales without altering it', () => {
   const saved = { dia: '05', jornada: '08-14', especialidad: 'Conductor 1A', operacion: 'ESTIBA', parte: '123' };
@@ -25,4 +27,18 @@ test('retains saved history and adds new manual jornales without altering it', (
   assert.equal(salaryPeriod(months[1].items, 'month').items.length, 1);
   assert.equal(companyImage('CSP IBERIAN VALENCIA TERMINAL'), '/assets/empresas/csp.jpeg');
   assert.equal(companyImage('TCV'), '');
+});
+
+test('filters posts by group and uses reception rates for OC', () => {
+  assert.deepEqual(optionsForGroup('III'), ['CLASIFICADOR']);
+  assert.deepEqual(optionsForGroup('IV'), ['CAPATAZ', 'SOBORDISTA']);
+  assert.ok(optionsForGroup('I').includes('TRINCADOR'));
+  assert.ok(optionsForGroup('II').includes('CONDUCTOR 1a'));
+  const row = { dia: 8, jornada: '08-14', especialidad: 'CONDUCTOR 1a', payrollGroup: 'II', parte: 'MANUAL-TEST' };
+  const sp = enrichJornales([{ ...row, operacion: 'ESTIBA' }], [], '10/2026')[0].payroll;
+  const oc = enrichJornales([{ ...row, operacion: 'RECEPCION Y ENTREGA' }], [], '10/2026')[0].payroll;
+  assert.equal(sp.operationType, 'ESTIBA');
+  assert.equal(oc.operationType, 'RECEPCION_ENTREGA');
+  assert.notEqual(sp.base, oc.base);
+  assert.equal(sp.group, 'II');
 });
