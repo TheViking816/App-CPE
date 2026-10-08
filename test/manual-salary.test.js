@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from '../src/manualSalary.js';
 import { optionsForGroup } from '../src/manualSpecialties.js';
 import { enrichJornales } from '../src/payroll.js';
+import { packManualNotes, unpackManualNotes } from '../src/manualMetadata.js';
 
 test('retains saved history and adds new manual jornales without altering it', () => {
   const saved = { dia: '05', jornada: '08-14', especialidad: 'Conductor 1A', operacion: 'ESTIBA', parte: '123' };
@@ -41,4 +42,16 @@ test('filters posts by group and uses reception rates for OC', () => {
   assert.equal(oc.operationType, 'RECEPCION_ENTREGA');
   assert.notEqual(sp.base, oc.base);
   assert.equal(sp.group, 'II');
+});
+
+test('stores company and vessel in existing manual record without losing old notes', () => {
+  const input = { company: 'CSP', vessel: 'MAERSK VALENCIA', notes: 'Turno de prueba' };
+  assert.deepEqual(unpackManualNotes(packManualNotes(input)), input);
+  assert.deepEqual(unpackManualNotes('Nota antigua'), { company: '', vessel: '', notes: 'Nota antigua' });
+  const months = buildManualSalaryMonths(null, [{ id: 'manual-1', work_date: '2026-10-08', shift: '08-14',
+    specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', premium: 0,
+    notes: packManualNotes(input) }]);
+  assert.equal(months[0].items[0].empresa, 'CSP');
+  assert.equal(months[0].items[0].buque, 'MAERSK VALENCIA');
+  assert.equal(months[0].items[0].notes, 'Turno de prueba');
 });
