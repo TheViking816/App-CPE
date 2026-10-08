@@ -15,6 +15,7 @@ test('retains saved history and adds new manual jornales without altering it', (
   const months = buildManualSalaryMonths(snapshot, manual);
   assert.deepEqual(months.map(({ key }) => key), ['2026-10', '2026-09', '2026-08']);
   assert.equal(months[0].items[0].source, 'manual');
+  assert.equal(months[0].items[0].operacion, 'CONT. C/SPREADER AUT');
   assert.equal(months[0].items[0].payroll.prima, 50);
   assert.equal(months[0].total, months[0].items[0].payroll.base + months[0].items[0].payroll.complement + 50);
   assert.equal(months[1].items[0].source, 'historico');
@@ -78,6 +79,18 @@ test('filters posts by group and uses reception rates for OC', () => {
   assert.equal(oc.operationType, 'RECEPCION_ENTREGA');
   assert.notEqual(sp.base, oc.base);
   assert.equal(sp.group, 'II');
+  const manualRows = [
+    { id: 'sp', work_date: '2026-10-08', shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', premium: 0 },
+    { id: 'oc', work_date: '2026-10-08', shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'RECEPCION_ENTREGA', premium: 0 },
+    { id: 'second-driver', work_date: '2026-10-08', shift: '08-14', specialty: 'CONDUCTOR 2a', worker_group: 'II', operation_type: 'ESTIBA', premium: 0 }
+  ];
+  const items = buildManualSalaryMonths(null, manualRows)[0].items;
+  assert.equal(items.find((item) => item.id === 'sp').operacion, 'CONT. C/SPREADER AUT');
+  assert.equal(items.find((item) => item.id === 'oc').operacion, 'RECEPCION / ENTREGA');
+  assert.equal(items.find((item) => item.id === 'second-driver').operacion, 'RO-RO (Vehículos)');
+  assert.equal(items.find((item) => item.id === 'sp').payroll.operationType, 'ESTIBA');
+  assert.equal(items.find((item) => item.id === 'oc').payroll.operationType, 'RECEPCION_ENTREGA');
+  assert.notEqual(items.find((item) => item.id === 'sp').payroll.base, items.find((item) => item.id === 'oc').payroll.base);
 });
 
 test('stores the part number, company and vessel without losing old notes', () => {

@@ -114,7 +114,9 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
         parte: details.part || `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig)[0];
       const premium = money(row.premium);
-      return { ...calculated, id: row.id, manualPart: details.part, notes: details.notes, source: 'manual', payroll: {
+      const operationLabel = row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
+        : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT';
+      return { ...calculated, operacion: operationLabel, id: row.id, manualPart: details.part, notes: details.notes, source: 'manual', payroll: {
         ...calculated.payroll, prima: premium, manualPrima: premium, primaSource: 'manual', primaPending: false,
         total: money(calculated.payroll.total + premium)
       } };
