@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor } from './supabaseClient.js';
-import { buildManualSalaryMonths } from './manualSalary.js';
+import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
 import { formatEuro } from './payroll.js';
 
 const SESSION_KEY = 'app-cpe-session';
+const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const TEMPORARY_NOTICE = 'Aviso temporal: Por el momento, solo está disponible el Sueldómetro manual. Puedes consultar tus jornales guardados y añadir nuevos jornales y primas. El resto de funciones volverá cuando se solucionen los problemas de acceso al portal';
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
-const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: '', worker_group: 'II', operation_type: 'ESTIBA', premium: '0', notes: '' });
+const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: '', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', notes: '' });
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
@@ -38,7 +39,7 @@ function Access({ onAccess }) {
     finally { setBusy(false); }
   }
   return <main className="manual-shell access-shell"><section className="access-card">
-    <div className="brand-mark">CPE</div><p className="eyebrow">APP CPE</p><h1>Tu Sueldómetro</h1>
+    <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><p className="eyebrow">APP CPE</p><h1>Tu Sueldómetro</h1>
     <p>Registra tus jornales y primas. Tus datos anteriores se conservan en tu cuenta.</p>
     <div className="temporary-notice" role="note">{TEMPORARY_NOTICE}</div>
     <form onSubmit={submit}>
@@ -72,12 +73,32 @@ function ActivityMonitor({ session }) {
   </section>;
 }
 
+function JornalCard({ item, busy, onEdit, onRemove, onPremium }) {
+  const company = String(item.empresa || '').trim();
+  const logo = companyImage(company);
+  const date = new Date(`${item.payroll.date}T12:00:00`);
+  return <article className="jornal-card">
+    <div className="jornal-art">
+      {logo ? <img src={logo} alt={company} loading="lazy" /> : <span className="jornal-monogram">{company ? company.slice(0, 4).toUpperCase() : 'CPE'}</span>}
+      <span className="jornal-day">{date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+    </div>
+    <div className="jornal-body">
+      <div className="jornal-heading"><div><small>{[company, item.tipo, item.payroll.shift].filter(Boolean).join(' · ')}</small><h3>{item.especialidad || 'Jornal'}</h3></div><strong>{formatEuro(item.payroll.total)}</strong></div>
+      <p>{[item.buque, item.operacion || (item.payroll.operationType === 'RECEPCION_ENTREGA' ? 'Recepción y entrega' : 'Estiba')].filter(Boolean).join(' · ')}</p>
+      <div className="jornal-breakdown"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}<span>Prima <b>{formatEuro(item.payroll.prima || 0)}</b></span></div>
+      {item.notes && <p className="jornal-notes">{item.notes}</p>}
+      <div className="jornal-actions">{item.source === 'manual' ? <><button disabled={busy} onClick={() => onEdit(item)}>Editar jornal</button><button disabled={busy} onClick={() => onRemove(item.id)}>Eliminar</button></> : <button disabled={busy} onClick={() => onPremium(item)}>Editar prima</button>}</div>
+    </div>
+  </article>;
+}
+
 function Salary({ session, onSession }) {
   const [snapshot, setSnapshot] = useState(null);
   const [manualRows, setManualRows] = useState([]);
   const [premiums, setPremiums] = useState({});
   const [config, setConfig] = useState(null);
   const [month, setMonth] = useState('');
+  const [period, setPeriod] = useState(() => new Date().getDate() <= 15 ? 'first' : 'second');
   const [form, setForm] = useState(blank);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -103,19 +124,20 @@ function Salary({ session, onSession }) {
   useEffect(() => { if (!session.supportAccess) trackPageVisit({ token: session.token, page: tab === 'monitor' ? 'inicio' : 'sueldometro' }).catch(() => {}); }, [session.token, tab]);
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums), [snapshot, manualRows, config, premiums]);
-  const chosen = months.find((item) => item.key === month) || months[0];
-  const gross = chosen?.total || 0;
+  const currentMonthKey = today().slice(0, 7);
+  const chosen = months.find((item) => item.key === month) || months.find((item) => item.key === currentMonthKey) || months[0];
+  const selected = salaryPeriod(chosen?.items, period);
+  const gross = selected.total;
   const net = Number((gross * (1 - irpf / 100)).toFixed(2));
-  const allCount = months.reduce((sum, item) => sum + item.items.length, 0);
 
   async function save(event) {
     event.preventDefault(); setError(''); setNotice(''); setBusy(true);
     try {
       const premium = euroInput(form.premium);
       if (!Number.isFinite(premium) || premium < 0) throw new Error('Introduce una prima válida.');
-      const saved = await rpc('app_cpe_save_manual_jornal', { p_token: session.token, p_id: form.id,
+      const saved = await rpc('app_cpe_save_manual_jornal_v2', { p_token: session.token, p_id: form.id,
         p_work_date: form.work_date, p_shift: form.shift, p_specialty: form.specialty.trim(),
-        p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_premium: premium, p_notes: form.notes });
+        p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_company: form.company.trim(), p_vessel: form.vessel.trim(), p_premium: premium, p_notes: form.notes });
       setManualRows((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
       setMonth(saved.work_date.slice(0, 7)); setShowForm(false); setForm(blank()); setNotice('Jornal guardado.');
     } catch (reason) { setError(reason.message || 'No se pudo guardar el jornal.'); }
@@ -145,9 +167,9 @@ function Salary({ session, onSession }) {
   }
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  return <main className="manual-shell"><header className="app-header"><div className="brand"><span className="brand-mark">CPE</span><div><strong>Sueldómetro</strong><small>Registro manual</small></div></div><div className="header-actions"><span>Chapa {session.chapa}</span>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => setTab(tab === 'monitor' ? 'salary' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div></header>
+  return <main className="manual-shell"><header className="app-header"><div className="brand"><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><div><strong>Sueldómetro</strong><small>Registro manual</small></div></div><div className="header-actions"><span>Chapa {session.chapa}</span>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => setTab(tab === 'monitor' ? 'salary' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div></header>
     <div className="temporary-notice" role="note">{TEMPORARY_NOTICE}</div>
-    {tab === 'monitor' ? <ActivityMonitor session={session} /> : <><section className="hero"><div><p className="eyebrow">TU REGISTRO PERSONAL</p><h1>Sueldómetro</h1><p>Consulta tu historial y añade jornales y primas a mano. Los importes son estimaciones.</p></div><button className="primary" onClick={() => { setForm(blank()); setShowForm(true); setNotice(''); }}>+ Añadir jornal</button></section>
+    {tab === 'monitor' ? <ActivityMonitor session={session} /> : <><section className="hero"><div><p className="eyebrow">TU REGISTRO PERSONAL</p><h1>Sueldómetro</h1><p>Consulta tu historial y añade jornales y primas a mano.</p></div><button className="primary" onClick={() => { setForm(blank()); setShowForm(true); setNotice(''); }}>+ Añadir jornal</button></section>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showForm && <section className="manual-panel editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
@@ -155,14 +177,18 @@ function Salary({ session, onSession }) {
       <label>Especialidad<input value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} placeholder="Ej.: Conductor 1A" maxLength="100" required /></label>
       <label>Grupo<select value={form.worker_group} onChange={(event) => setForm({ ...form, worker_group: event.target.value })}>{['I','II','III','IV'].map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>Operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Estiba</option><option value="RECEPCION_ENTREGA">Recepción y entrega</option></select></label>
+      <label>Empresa o terminal<select value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option><option value="CSP">CSP</option><option value="TCV">TCV</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
+      <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
       <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
       <label className="wide">Notas (opcional)<input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} maxLength="500" /></label>
       <div className="form-actions"><button type="button" onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
     </form></section>}
     {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <>
-      <section className="salary-top"><article className="salary-card lead"><small>Neto estimado · {chosen?.label || 'mes actual'}</small><strong>{formatEuro(net)}</strong><span>Aplicando IRPF del {irpf}% al bruto estimado</span></article><article className="salary-card"><small>Bruto estimado</small><strong>{formatEuro(gross)}</strong><span>{chosen?.items.length || 0} jornales este mes</span></article><article className="salary-card"><small>Primas del mes</small><strong>{formatEuro(chosen?.premiums || 0)}</strong><span>{allCount} jornales en el historial</span></article></section>
-      <section className="manual-panel"><div className="section-head"><div><p className="eyebrow">ESTIMACIÓN PERSONAL</p><h2>Jornales</h2></div><div className="section-actions"><select aria-label="Mes" value={chosen?.key || ''} onChange={(event) => setMonth(event.target.value)}>{months.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select><button onClick={load}>Actualizar</button></div></div>
-        {!chosen?.items.length ? <div className="empty"><strong>Todavía no hay jornales en este mes.</strong><p>Añade el primero con el botón de arriba.</p></div> : <div className="journal-list">{chosen.items.map((item, index) => <article className="journal" key={`${item.source}-${item.id || item.payroll.manualPremiumKey}-${index}`}><div className="journal-date"><strong>{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})}</strong><small>{item.payroll.shift}</small></div><div className="journal-detail"><strong>{item.especialidad || 'Jornal'}</strong><span>{item.payroll.operationType === 'RECEPCION_ENTREGA' ? 'Recepción y entrega' : 'Estiba'} · {item.source === 'manual' ? 'Añadido a mano' : 'Historial guardado'}</span>{item.notes && <small>{item.notes}</small>}</div><div className="journal-money"><strong>{formatEuro(item.payroll.total)}</strong><small>Prima {formatEuro(item.payroll.prima || 0)}</small></div><div className="journal-actions">{item.source === 'manual' ? <><button disabled={busy} onClick={() => edit(item)}>Editar</button><button disabled={busy} onClick={() => remove(item.id)}>Eliminar</button></> : <button disabled={busy} onClick={() => editHistoricPremium(item)}>Editar prima</button>}</div></article>)}</div>}
+      <section className="salary-top"><article className="salary-card lead"><small>Neto estimado · {period === 'month' ? 'mes completo' : period === 'first' ? '1.ª quincena' : '2.ª quincena'}</small><strong>{formatEuro(net)}</strong><span>IRPF {irpf}% · {selected.items.length} jornales</span></article><article className="salary-card"><small>Bruto estimado</small><strong>{formatEuro(gross)}</strong><span>{chosen?.label || 'Mes actual'}</span></article></section>
+      <section className="manual-panel"><div className="section-head"><div><h2>Jornales</h2><p className="history-caption">Consulta la quincena actual o cualquier mes de tu historial.</p></div><div className="section-actions"><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => setMonth(event.target.value)}>{months.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select><button onClick={load}>Actualizar</button></div></div>
+        <div className="period-tabs" role="group" aria-label="Ver jornales por periodo">{[['first','1.ª quincena'],['second','2.ª quincena'],['month','Mes completo']].map(([key,label]) => <button key={key} type="button" className={period === key ? 'active' : ''} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
+        <div className="period-summary"><strong>{selected.items.length} {selected.items.length === 1 ? 'jornal' : 'jornales'}</strong><span>{chosen?.label || 'Mes actual'} · {period === 'first' ? 'días 1–15' : period === 'second' ? 'días 16–fin de mes' : 'mes completo'}</span></div>
+        {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="journal-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey}-${index}`} item={item} busy={busy} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} />)}</div>}
       </section><section className="manual-panel settings"><div><h2>Retención IRPF</h2><p>Se aplica a la estimación neta. No sustituye una nómina.</p></div><form onSubmit={saveIrpf}><input aria-label="Porcentaje de IRPF" type="number" min="0" max="60" step="0.01" value={irpf} onChange={(event) => setIrpf(Number(event.target.value))} /><span>%</span><button disabled={busy}>Guardar</button></form></section>
       <p className="footer-note">Los jornales históricos se conservan tal como estaban guardados. Los nuevos datos los introduces tú y solo pertenecen a tu cuenta.</p>
     </>}</>}

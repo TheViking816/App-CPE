@@ -5,6 +5,32 @@ const monthName = (year, month) => new Intl.DateTimeFormat('es-ES', { month: 'lo
 const money = (value) => Number(Number(value || 0).toFixed(2));
 const monthNumbers = Object.fromEntries(Array.from({ length: 12 }, (_, index) => [monthName(2026, index + 1).split(' ')[0], index + 1]));
 
+export function salaryPeriod(items = [], period = 'month') {
+  const filtered = period === 'month' ? items : items.filter((item) => {
+    const day = Number(item.payroll?.date?.slice(-2));
+    return period === 'first' ? day <= 15 : day > 15;
+  });
+  return {
+    items: filtered,
+    total: money(filtered.reduce((sum, item) => sum + Number(item.payroll?.total || 0), 0)),
+    premiums: money(filtered.reduce((sum, item) => sum + Number(item.payroll?.prima || 0), 0))
+  };
+}
+
+export function companyImage(company = '') {
+  const value = String(company).toUpperCase();
+  const base = `${import.meta.env?.BASE_URL || '/'}assets/empresas/`;
+  if (/CSP/.test(value)) return `${base}csp.jpeg`;
+  if (/APM/.test(value)) return `${base}apm.jpeg`;
+  if (/MSC|MEDITERRANEAN/.test(value)) return `${base}msc.jpeg`;
+  if (/VTEU|VALENCIA TERMINAL EUROPA|GRIMALDI/.test(value)) return `${base}vteu.jpeg`;
+  if (/ERH|ERSHIP|EUROPEA DE HANDLING/.test(value)) return `${base}erh.png`;
+  if (/BALE[AÀ]RIA/.test(value)) return `${base}balearia.png`;
+  if (/TRASMED/.test(value)) return `${base}trasmed.png`;
+  if (/SEVASA|CPE/.test(value)) return `${base}cpe.jpg`;
+  return '';
+}
+
 export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}) {
   const payload = snapshot?.payload || {};
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
@@ -53,7 +79,7 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
     const newItems = manualRows.filter((row) => String(row.work_date).startsWith(key)).map((row) => {
       const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
-        parte: `MANUAL-${row.id}`, produccion: '' };
+        parte: `MANUAL-${row.id}`, empresa: row.company || '', buque: row.vessel || '', produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig)[0];
       const premium = money(row.premium);
       return { ...calculated, id: row.id, notes: row.notes, source: 'manual', payroll: {

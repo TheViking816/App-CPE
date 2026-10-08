@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildManualSalaryMonths } from '../src/manualSalary.js';
+import { buildManualSalaryMonths, companyImage, salaryPeriod } from '../src/manualSalary.js';
 
 test('retains saved history and adds new manual jornales without altering it', () => {
   const saved = { dia: '05', jornada: '08-14', especialidad: 'Conductor 1A', operacion: 'ESTIBA', parte: '123' };
@@ -20,4 +20,9 @@ test('retains saved history and adds new manual jornales without altering it', (
   const overridden = buildManualSalaryMonths(snapshot, manual, null, { [key]: { amount: 32 } });
   assert.equal(overridden[1].items[0].payroll.prima, 32);
   assert.equal(overridden[1].items[0].payroll.primaSource, 'manual');
+  assert.equal(salaryPeriod(months[0].items, 'first').items.length, 1);
+  assert.equal(salaryPeriod(months[0].items, 'second').items.length, 0);
+  assert.equal(salaryPeriod(months[1].items, 'month').items.length, 1);
+  assert.equal(companyImage('CSP IBERIAN VALENCIA TERMINAL'), '/assets/empresas/csp.jpeg');
+  assert.equal(companyImage('TCV'), '');
 });
