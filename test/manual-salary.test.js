@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildManualSalaryMonths, companyImage, salaryPeriod } from '../src/manualSalary.js';
+import { buildManualSalaryMonths, companyImage, manualPaidDayEntry, salaryPeriod } from '../src/manualSalary.js';
 import { optionsForGroup } from '../src/manualSpecialties.js';
 import { enrichJornales } from '../src/payroll.js';
 import { packManualNotes, unpackManualNotes } from '../src/manualMetadata.js';
@@ -46,6 +46,24 @@ test('includes saved FM days once when both calendar sources contain them', () =
   const months = buildManualSalaryMonths(snapshot);
   assert.equal(months[0].items.filter((item) => item.isTraining).length, 1);
   assert.equal(months[0].items.filter((item) => item.isVacation).length, 0);
+});
+
+test('manual VA and FM use their own rates and count in their fortnight without duplicates', () => {
+  const snapshot = { payload: { descansos: { months: [{ year: 2026, month: 10, days: [{ day: 3, code: 'VA' }] }] } } };
+  const paid = [
+    { id: 'va-1', work_date: '2026-10-03', concept_type: 'VA' },
+    { id: 'fm-1', work_date: '2026-10-20', concept_type: 'FM' }
+  ];
+  const months = buildManualSalaryMonths(snapshot, [], null, {}, {}, {}, paid);
+  const first = salaryPeriod(months[0].items, 'first');
+  const second = salaryPeriod(months[0].items, 'second');
+  assert.equal(first.items.length, 1);
+  assert.equal(first.items[0].id, 'va-1');
+  assert.equal(first.total, manualPaidDayEntry(paid[0]).payroll.total);
+  assert.equal(second.items.length, 1);
+  assert.equal(second.items[0].isTraining, true);
+  assert.equal(second.total, manualPaidDayEntry(paid[1]).payroll.total);
+  assert.equal(months[0].total, first.total + second.total);
 });
 
 test('filters posts by group and uses reception rates for OC', () => {

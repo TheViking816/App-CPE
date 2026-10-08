@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ManualApp } from "./ManualApp.jsx";
 import "./manual.css";
 import "./manualSalaryVisual.css";
+import "./manualProductionJornales.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -23,13 +24,13 @@ if ("serviceWorker" in navigator) {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20261008-manual-1");
+      forceReload("20261008-manual-2");
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261008-manual-1`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261008-manual-2`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });

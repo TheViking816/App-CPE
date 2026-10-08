@@ -7,7 +7,7 @@ const shortMonths = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SE
 const periodNames = { first: '1ª quincena', second: '2ª quincena', month: 'Mes completo' };
 const titleCase = (value) => value ? value.charAt(0).toLocaleUpperCase('es-ES') + value.slice(1) : '';
 
-export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onAdd, children }) {
+export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onAdd, onAddPaidDay, children }) {
   const [annualExpanded, setAnnualExpanded] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(true);
   const year = Number(chosen?.key?.slice(0, 4)) || new Date().getFullYear();
@@ -39,7 +39,7 @@ export function ManualSalaryDashboard({ months, monthChoices, chosen, period, on
 
   return <>
     <section className="visual-page-heading"><span>JORNALES Y SALARIO</span><h1>Sueldómetro</h1></section>
-    <div className="visual-toolbar"><span><Clock3 size={16} /> Historial guardado · consulta manual</span><div><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => onMonthChange(event.target.value)}>{monthChoices.map((item) => <option key={item.key} value={item.key}>{titleCase(item.label)}</option>)}</select><button type="button" onClick={onRefresh} disabled={busy} title="Actualizar historial" aria-label="Actualizar historial"><RefreshCw size={17} /></button><button type="button" className="visual-add" onClick={onAdd}>+ Añadir jornal</button></div></div>
+    <div className="visual-toolbar"><span><Clock3 size={16} /> Historial guardado · consulta manual</span><div><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => onMonthChange(event.target.value)}>{monthChoices.map((item) => <option key={item.key} value={item.key}>{titleCase(item.label)}</option>)}</select><button type="button" onClick={onRefresh} disabled={busy} title="Actualizar historial" aria-label="Actualizar historial"><RefreshCw size={17} /></button><button type="button" className="visual-add-paid" onClick={onAddPaidDay}>+ Día VA / FM</button><button type="button" className="visual-add" onClick={onAdd}>+ Añadir jornal</button></div></div>
     <section className="visual-salary-card" aria-label="Extracto salarial">
       <div className="visual-salary-hero">
         <div className="visual-hero-heading"><div className="visual-hero-title"><span className="visual-hero-icon"><WalletCards size={25} /></span><div><small>Extracto salarial</small><strong>{titleCase(chosen?.label || new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date()))}</strong></div></div><span className="visual-period-label">{periodNames[period]}</span></div>
