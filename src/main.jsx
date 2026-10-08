@@ -10,6 +10,7 @@ import "./exchangeThemeA.css";
 import "./exchangeBoardCalendar.css";
 import "./manualNavigation.css";
 import "./generalBoardManual.css";
+import "./manualCompact.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

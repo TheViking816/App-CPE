@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261008-general-board-1";
+self.__APP_CPE_SW_VERSION__ = "20261008-compact-salary-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
