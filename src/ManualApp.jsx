@@ -72,24 +72,30 @@ function ActivityMonitor({ session }) {
   const [data, setData] = useState(null);
   const [journalEvents, setJournalEvents] = useState([]);
   const [personalLinks, setPersonalLinks] = useState([]);
+  const [sectionLinks, setSectionLinks] = useState([]);
   const [linkChapa, setLinkChapa] = useState('');
   const [linkValue, setLinkValue] = useState('');
+  const [sectionLinkChapa, setSectionLinkChapa] = useState('');
+  const [sectionLinkType, setSectionLinkType] = useState('vacaciones');
+  const [sectionLinkValue, setSectionLinkValue] = useState('');
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [error, setError] = useState('');
   const [journalError, setJournalError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, links] = await Promise.allSettled([
+    const [usage, journals, links, sections] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
-      rpc('app_cpe_admin_manual_donde_voy_status', { p_token: session.token })
+      rpc('app_cpe_admin_manual_donde_voy_status', { p_token: session.token }),
+      rpc('app_cpe_admin_manual_noray_section_status', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
     if (journals.status === 'fulfilled') { setJournalEvents(journals.value || []); setJournalError(''); }
     else setJournalError(journals.reason?.message || 'No se pudieron cargar los jornales.');
     if (links.status === 'fulfilled') setPersonalLinks(links.value || []);
+    if (sections.status === 'fulfilled') setSectionLinks(sections.value || []);
   };
   const saveLink = async (event) => {
     event.preventDefault(); setLinkBusy(true); setLinkError('');
@@ -99,6 +105,19 @@ function ActivityMonitor({ session }) {
         p_token: session.token, p_chapa: linkChapa.trim(), p_url: linkValue.trim()
       });
       setLinkValue('');
+      await load();
+    } catch (reason) { setLinkError(reason.message || 'No se pudo guardar el enlace.'); }
+    finally { setLinkBusy(false); }
+  };
+  const saveSectionLink = async (event) => {
+    event.preventDefault(); setLinkBusy(true); setLinkError('');
+    if (EXCHANGE_PREVIEW_READ_ONLY) { setLinkBusy(false); return; }
+    try {
+      await rpc('app_cpe_admin_set_manual_noray_section_link', {
+        p_token: session.token, p_chapa: sectionLinkChapa.trim(),
+        p_section: sectionLinkType, p_url: sectionLinkValue.trim()
+      });
+      setSectionLinkValue('');
       await load();
     } catch (reason) { setLinkError(reason.message || 'No se pudo guardar el enlace.'); }
     finally { setLinkBusy(false); }
@@ -137,6 +156,16 @@ function ActivityMonitor({ session }) {
         <td>{item.chapa}</td><td>{item.configured ? 'Configurado' : 'Pendiente'}</td><td>{time(item.updatedAt)}</td>
         <td>{item.configured && <form action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="chapa" value={item.chapa} /><button type="submit">Abrir ↗</button></form>}</td>
       </tr>)}
+    </tbody></table></div>
+    <h3>Enlaces personales · Vacaciones y dobles</h3>
+    <form className="monitor-link-form monitor-section-link-form" onSubmit={saveSectionLink} autoComplete="off">
+      <label>Chapa<input inputMode="numeric" pattern="[0-9]{5}" maxLength={5} required value={sectionLinkChapa} onChange={(event) => setSectionLinkChapa(event.target.value)} /></label>
+      <label>Sección<select value={sectionLinkType} onChange={(event) => setSectionLinkType(event.target.value)}><option value="vacaciones">Solicitud de vacaciones</option><option value="dobles">Dobles y HS</option></select></label>
+      <label>Enlace personal<input type="password" maxLength={2048} required value={sectionLinkValue} onChange={(event) => setSectionLinkValue(event.target.value)} autoComplete="off" /></label>
+      <button type="submit" disabled={linkBusy || EXCHANGE_PREVIEW_READ_ONLY}>{linkBusy ? 'Guardando…' : 'Guardar enlace'}</button>
+    </form>
+    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Vacaciones</th><th>Dobles y HS</th></tr></thead><tbody>
+      {sectionLinks.filter((item) => String(item.chapa).includes(filter)).map((item) => <tr key={item.chapa}><td>{item.chapa}</td><td>{item.vacaciones ? 'Configurado' : 'Pendiente'}</td><td>{item.dobles ? 'Configurado' : 'Pendiente'}</td></tr>)}
     </tbody></table></div>
     <h3>Actividad reciente</h3><div className="recent-list">{recent.slice(0, 30).map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
   </section>;
@@ -220,6 +249,7 @@ function Salary({ session, onSession }) {
   const [tab, setTab] = useState(viewFromHash);
   const [notifications, setNotifications] = useState([]);
   const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
+  const [doblesLinkAvailable, setDoblesLinkAvailable] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [irpf, setIrpf] = useState(Number(session.irpfRate) || 0);
@@ -260,6 +290,10 @@ function Salary({ session, onSession }) {
     refresh();
     const timer = window.setInterval(refresh, 15_000);
     return () => { active = false; window.clearInterval(timer); };
+  }, [session.token]);
+  useEffect(() => {
+    rpc('app_cpe_has_manual_noray_section_link', { p_token: session.token, p_section: 'dobles' })
+      .then((available) => setDoblesLinkAvailable(available === true)).catch(() => setDoblesLinkAvailable(false));
   }, [session.token]);
   useEffect(() => {
     Promise.allSettled([
@@ -397,7 +431,7 @@ function Salary({ session, onSession }) {
       <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : TRAINING_DAY_RATE)}</strong></div>
       <div className="form-actions"><button type="button" onClick={() => setShowPaidForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar día'}</button></div>
     </form></section>}
-    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }} portalAction={personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={17} aria-hidden="true" /></button></form>}>
+    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }} portalAction={(personalLinkAvailable || doblesLinkAvailable) && <div className="personal-portal-actions">{personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={17} aria-hidden="true" /></button></form>}{doblesLinkAvailable && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="dobles" /><button type="submit">Solicitar dobles y HS <ExternalLink size={17} aria-hidden="true" /></button></form>}</div>}>
       {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="portal-jornales-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} onOpen={setSelectedDetail} />)}</div>}
     </ManualSalaryDashboard>}{selectedDetail && <JornalDetail item={selectedDetail} busy={busy} onClose={() => setSelectedDetail(null)} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}</>}</div>
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">

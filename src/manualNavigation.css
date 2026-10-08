@@ -10,7 +10,19 @@
   gap: 16px;
 }
 .visual-page-heading > div { min-width: 0; }
+.visual-manual-notice {
+  margin: 14px 4px 0;
+  padding: 10px 13px;
+  border-left: 3px solid #298de2;
+  border-radius: 8px;
+  background: #edf6fc;
+  color: #385777;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 650;
+}
 .personal-portal-link { margin: 0; }
+.personal-portal-actions { display: grid; gap: 8px; }
 .personal-portal-link button {
   display: inline-flex;
   align-items: center;
@@ -28,6 +40,9 @@
   white-space: nowrap;
 }
 .personal-portal-link button:hover { background: #d5ecfa; border-color: #7fb9df; }
+.vacation-exchange-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.vacation-portal-link { margin-left: auto; }
+.monitor-section-link-form { grid-template-columns: 110px 180px minmax(220px, 1fr) auto; }
 .personal-portal-link button:focus-visible,
 .visual-bottom-nav button:focus-visible,
 .exchange-notification-list button:focus-visible {
@@ -156,6 +171,7 @@
 }
 
 @media (max-width: 600px) {
+  .monitor-section-link-form { grid-template-columns: 1fr; }
   .visual-page-heading { align-items: stretch; }
   .personal-portal-link, .personal-portal-link button { width: 100%; }
   .visual-bottom-nav {

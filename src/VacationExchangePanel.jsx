@@ -1,11 +1,13 @@
 import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
 import { canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import { supabase } from "./supabaseClient.js";
 import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import {
@@ -36,6 +38,7 @@ export default function VacationExchangePanel({ session }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [personalVacationLink, setPersonalVacationLink] = useState(false);
   const panelRef = useRef(null);
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
@@ -58,6 +61,16 @@ export default function VacationExchangePanel({ session }) {
     }, 45_000);
     return () => window.clearInterval(timer);
   }, [reload]);
+
+  useEffect(() => {
+    let active = true;
+    supabase.rpc('app_cpe_has_manual_noray_section_link', {
+      p_token: session.token, p_section: 'vacaciones'
+    }).then(({ data, error }) => {
+      if (active) setPersonalVacationLink(!error && data === true);
+    }).catch(() => { if (active) setPersonalVacationLink(false); });
+    return () => { active = false; };
+  }, [session.token]);
 
   async function mutate(action, message) {
     if (EXCHANGE_PREVIEW_READ_ONLY) {
@@ -192,7 +205,9 @@ export default function VacationExchangePanel({ session }) {
   }
 
   return <section className="rest-exchange-panel vacation-exchange-panel exchange-redesign" ref={panelRef}>
-    <div className="rest-exchange-heading"><ExchangeHeroIcon vacation /><div><p>Entre compañeros · Vacaciones</p><h2>Intercambiar vacaciones</h2></div></div>
+    <div className="rest-exchange-heading vacation-exchange-heading"><ExchangeHeroIcon vacation /><div><p>Entre compañeros · Vacaciones</p><h2>Intercambiar vacaciones</h2></div>
+      {personalVacationLink && <form className="personal-portal-link vacation-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={17} aria-hidden="true" /></button></form>}
+    </div>
     <ExchangeBoardCalendar offers={board} selectedDate={filters.date} vacation onSelectDate={(date) => { setTab("board"); setFilters((current) => ({ ...current, date })); }} />
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
