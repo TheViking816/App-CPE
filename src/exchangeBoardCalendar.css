@@ -9,6 +9,8 @@
 .exchange-board-legend span::before,.offer-dots i{content:"";display:block;width:9px;height:9px;border-radius:50%;background:#1769cf}
 .exchange-board-legend .is-give::before,.offer-dots .is-give{background:#0a9477}
 .exchange-board-legend .is-want::before,.offer-dots .is-want{background:#d07a12}
+.exchange-board-legend .is-offered::before,.offer-dots .is-offered{background:#1769cf}
+.exchange-board-legend .is-wanted::before,.offer-dots .is-wanted{background:#d07a12}
 .exchange-board-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .exchange-board-grid .weekday{text-align:center;padding:7px 0;color:#6a7f96;font-size:12px}
 .exchange-board-grid button,.exchange-board-grid .blank{min-height:57px;border:1px solid #e1e9f2;border-radius:9px;background:#f9fbfe;text-align:left;padding:7px;display:flex;flex-direction:column;justify-content:space-between;color:#193b60;font-size:12px;font-weight:700}

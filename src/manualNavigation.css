@@ -1,0 +1,175 @@
+.visual-shell {
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+
+.visual-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.visual-page-heading > div { min-width: 0; }
+.personal-portal-link { margin: 0; }
+.personal-portal-link button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid #acd1eb;
+  border-radius: 11px;
+  background: #e6f3fb;
+  color: #0b4e84;
+  font-size: 14px;
+  font-weight: 850;
+  box-shadow: 0 4px 11px #0b4e8414;
+  white-space: nowrap;
+}
+.personal-portal-link button:hover { background: #d5ecfa; border-color: #7fb9df; }
+.personal-portal-link button:focus-visible,
+.visual-bottom-nav button:focus-visible,
+.exchange-notification-list button:focus-visible {
+  outline: 3px solid #28a9d2;
+  outline-offset: 2px;
+}
+
+.exchange-notifications { margin-top: 14px; }
+.exchange-notifications .section-head { margin-bottom: 18px; }
+.exchange-notification-list { display: grid; gap: 11px; }
+.exchange-notification-list > button {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 88px;
+  padding: 14px 16px;
+  border: 1px solid #dbe7f1;
+  border-radius: 14px;
+  background: #fff;
+  color: #112f54;
+  text-align: left;
+  box-shadow: 0 6px 17px #112b4810;
+}
+.exchange-notification-list > button:hover {
+  border-color: #a8cbe5;
+  background: #f8fcff;
+  transform: translateY(-1px);
+}
+.exchange-notification-list > button.is-unread {
+  border-left: 4px solid #208bd1;
+  background: #f3f9ff;
+}
+.exchange-notification-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e6f2fb;
+  color: #15669f;
+}
+.exchange-notification-copy { display: grid; gap: 4px; min-width: 0; }
+.exchange-notification-copy strong { font-size: 15px; line-height: 1.3; }
+.exchange-notification-copy > span {
+  color: #47617d;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.exchange-notification-copy small { color: #7a8da1; font-size: 11px; font-weight: 700; }
+.exchange-notification-arrow { color: #6688a8; }
+
+.exchange-type-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  width: min(430px, 100%);
+  margin: 0 auto 18px;
+  padding: 5px;
+  border: 1px solid #d5e3f0;
+  border-radius: 14px;
+  background: #eaf2f9;
+}
+.exchange-type-switch button {
+  min-height: 45px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #5c7490;
+  font-weight: 850;
+}
+.exchange-type-switch button.is-active {
+  background: #fff;
+  color: #0b4d83;
+  box-shadow: 0 3px 10px #193b631e;
+}
+.exchange-type-switch button:focus-visible { outline: 3px solid #28a9d2; outline-offset: 2px; }
+
+.visual-bottom-nav {
+  position: fixed;
+  z-index: 35;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  width: min(720px, calc(100% - 28px));
+  padding: 7px;
+  border: 1px solid #cbdbea;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 32px #092a5430;
+}
+.visual-bottom-nav button {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 61px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 2px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #607994;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.visual-bottom-nav button:hover { background: #f0f6fb; color: #174c7d; }
+.visual-bottom-nav button.is-active { background: #e4f2fc; color: #0c568d; }
+.visual-bottom-icon { position: relative; display: grid; place-items: center; min-height: 23px; }
+.visual-bottom-icon i {
+  position: absolute;
+  top: -3px;
+  right: -6px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #f18b22;
+}
+
+@media (max-width: 600px) {
+  .visual-page-heading { align-items: stretch; }
+  .personal-portal-link, .personal-portal-link button { width: 100%; }
+  .visual-bottom-nav {
+    bottom: 0;
+    width: 100%;
+    gap: 1px;
+    padding: 6px 5px calc(5px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+  .visual-bottom-nav button { min-height: 56px; font-size: 10px; }
+  .exchange-notification-list > button {
+    grid-template-columns: 36px minmax(0, 1fr) 18px;
+    gap: 10px;
+    padding: 12px;
+  }
+  .exchange-notification-icon { width: 36px; height: 36px; }
+}

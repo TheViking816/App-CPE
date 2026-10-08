@@ -7,7 +7,7 @@ const shortMonths = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SE
 const periodNames = { first: '1ª quincena', second: '2ª quincena', month: 'Mes completo' };
 const titleCase = (value) => value ? value.charAt(0).toLocaleUpperCase('es-ES') + value.slice(1) : '';
 
-export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onAdd, onAddPaidDay, children }) {
+export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onAdd, onAddPaidDay, portalAction, children }) {
   const [annualExpanded, setAnnualExpanded] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(true);
   const year = Number(chosen?.key?.slice(0, 4)) || new Date().getFullYear();
@@ -38,7 +38,7 @@ export function ManualSalaryDashboard({ months, monthChoices, chosen, period, on
   const maxCount = Math.max(1, ...annual.entries.map((entry) => entry.count));
 
   return <>
-    <section className="visual-page-heading"><span>JORNALES Y SALARIO</span><h1>Sueldómetro</h1></section>
+    <section className="visual-page-heading"><div><span>JORNALES Y SALARIO</span><h1>Sueldómetro</h1></div>{portalAction}</section>
     <div className="visual-toolbar"><span><Clock3 size={16} /> Historial guardado · consulta manual</span><div><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => onMonthChange(event.target.value)}>{monthChoices.map((item) => <option key={item.key} value={item.key}>{titleCase(item.label)}</option>)}</select><button type="button" onClick={onRefresh} disabled={busy} title="Actualizar historial" aria-label="Actualizar historial"><RefreshCw size={17} /></button><button type="button" className="visual-add-paid" onClick={onAddPaidDay}>+ Día VA / FM</button><button type="button" className="visual-add" onClick={onAdd}>+ Añadir jornal</button></div></div>
     <section className="visual-salary-card" aria-label="Extracto salarial">
       <div className="visual-salary-hero">

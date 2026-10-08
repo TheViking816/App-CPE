@@ -3,6 +3,7 @@ import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, getUs
 import { touchDirectPresence } from './exchangeClient.js';
 import { EXCHANGE_PREVIEW_READ_ONLY } from './exchangePreview.js';
 import RestExchangePanel from './RestExchangePanel.jsx';
+import VacationExchangePanel from './VacationExchangePanel.jsx';
 import ExchangeConversations, { conversationHash, directConversationHash } from './ExchangeConversations.jsx';
 import { hashForExchangeOffer } from './navigation.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
@@ -10,12 +11,12 @@ import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from
 import { optionsForGroup } from './manualSpecialties.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
-import { Bell, ChevronRight, X } from 'lucide-react';
+import { Activity, Bell, CalendarDays, ChevronRight, ExternalLink, MessageCircle, WalletCards, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
-const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'conversaciones']);
-const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'direct_message']);
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones']);
+const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
   return ACTIVE_PAGES.has(route) ? route : 'sueldometro';
@@ -180,13 +181,22 @@ function JornalDetail({ item, busy, onClose, onEdit, onRemove, onPremium, onEdit
 }
 
 function ExchangeNotifications({ rows, onOpen, onMarkAll }) {
-  return <section className="manual-panel exchange-notifications"><div className="section-head"><h2>Novedades</h2>
+  return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Novedades</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
     <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
       className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
-      <strong>{item.title}</strong><span>{item.body}</span><small>{new Date(item.createdAt).toLocaleString('es-ES')}</small>
+      <span className="exchange-notification-icon"><Bell size={19} aria-hidden="true" /></span>
+      <span className="exchange-notification-copy"><strong>{item.title}</strong><span>{item.body}</span><small>{new Date(item.createdAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}</small></span>
+      <ChevronRight size={19} className="exchange-notification-arrow" aria-hidden="true" />
     </button>)}</div>
   </section>;
+}
+
+function ExchangeSection({ session, section, onSectionChange }) {
+  return <div className="exchange-area"><div className="exchange-type-switch" role="tablist" aria-label="Tipo de intercambio">
+    <button type="button" role="tab" aria-selected={section === 'descansos'} className={section === 'descansos' ? 'is-active' : ''} onClick={() => onSectionChange('descansos')}>Descansos</button>
+    <button type="button" role="tab" aria-selected={section === 'vacaciones'} className={section === 'vacaciones' ? 'is-active' : ''} onClick={() => onSectionChange('vacaciones')}>Vacaciones</button>
+  </div>{section === 'vacaciones' ? <VacationExchangePanel session={session} /> : <RestExchangePanel session={session} />}</div>;
 }
 
 function Salary({ session, onSession }) {
@@ -266,16 +276,17 @@ function Salary({ session, onSession }) {
       setNotifications((rows) => rows.map((row) => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => {});
     }
+    const section = item.eventType?.startsWith('vacation_') ? 'vacaciones' : 'descansos';
     if (item.eventType === 'direct_message' && item.metadata?.conversationId) {
       window.location.hash = directConversationHash(item.metadata.conversationId);
       setTab('conversaciones');
     } else if (item.metadata?.proposalId) {
-      window.location.hash = conversationHash('rest', item.metadata.proposalId);
+      window.location.hash = conversationHash(section === 'vacaciones' ? 'vacation' : 'rest', item.metadata.proposalId);
       setTab('conversaciones');
     } else if (item.metadata?.offerId) {
-      window.location.hash = hashForExchangeOffer('descansos', item.metadata.offerId);
-      setTab('descansos');
-    } else navigate('descansos');
+      window.location.hash = hashForExchangeOffer(section, item.metadata.offerId);
+      setTab(section);
+    } else navigate(section);
   };
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
@@ -364,8 +375,8 @@ function Salary({ session, onSession }) {
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => navigate('sueldometro')}>Sueldómetro</button><button type="button" onClick={() => navigate('descansos')}>Intercambios de descansos</button><button type="button" onClick={() => navigate('conversaciones')}>Chats privados</button>{session.chapa === '72683' && <button type="button" onClick={() => navigate('monitor')}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
-    {tab === 'monitor' ? <ActivityMonitor session={session} /> : tab === 'descansos' ? <div className="exchange-area"><RestExchangePanel session={session} /></div> : tab === 'conversaciones' ? <div className="exchange-area"><ExchangeConversations session={session} /></div> : tab === 'novedades' ? <ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /> : <>
+  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => navigate('sueldometro')}>Sueldómetro</button><button type="button" onClick={() => navigate('descansos')}>Intercambios</button><button type="button" onClick={() => navigate('conversaciones')}>Chats privados</button>{session.chapa === '72683' && <button type="button" onClick={() => navigate('monitor')}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
+    {tab === 'monitor' ? <ActivityMonitor session={session} /> : (tab === 'descansos' || tab === 'vacaciones') ? <ExchangeSection session={session} section={tab} onSectionChange={navigate} /> : tab === 'conversaciones' ? <div className="exchange-area"><ExchangeConversations session={session} /></div> : tab === 'novedades' ? <ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /> : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showForm && <section className="manual-panel editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
@@ -386,10 +397,22 @@ function Salary({ session, onSession }) {
       <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : TRAINING_DAY_RATE)}</strong></div>
       <div className="form-actions"><button type="button" onClick={() => setShowPaidForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar día'}</button></div>
     </form></section>}
-    {personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi ¿Dónde voy? ↗</button></form>}
-    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }}>
+    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }} portalAction={personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={17} aria-hidden="true" /></button></form>}>
       {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="portal-jornales-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} onOpen={setSelectedDetail} />)}</div>}
     </ManualSalaryDashboard>}{selectedDetail && <JornalDetail item={selectedDetail} busy={busy} onClose={() => setSelectedDetail(null)} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}</>}</div>
+    <nav className="visual-bottom-nav" aria-label="Secciones de la app">
+      {[
+        ['sueldometro', 'Sueldómetro', WalletCards],
+        ['descansos', 'Intercambios', CalendarDays],
+        ['conversaciones', 'Chats', MessageCircle],
+        ['novedades', 'Novedades', Bell],
+        ...(session.chapa === '72683' ? [['monitor', 'Monitor', Activity]] : [])
+      ].map(([page, label, Icon]) => <button key={page} type="button" className={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'is-active' : ''}
+        aria-current={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'page' : undefined} onClick={() => navigate(page)}>
+        <span className="visual-bottom-icon"><Icon size={21} strokeWidth={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 2.5 : 2} />{page === 'novedades' && notifications.some((row) => !row.readAt) && <i aria-hidden="true" />}</span>
+        <span>{label}</span>
+      </button>)}
+    </nav>
   </main>;
 }
 
