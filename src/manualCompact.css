@@ -89,6 +89,11 @@
 .manual-editor-card .form-actions { padding-top: 5px; gap: 8px; }
 .manual-editor-card .form-actions button { min-height: 36px; padding: 7px 12px; }
 
+@media (min-width: 601px) {
+  .paid-day-editor.manual-editor-card form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .paid-day-editor.manual-editor-card .paid-day-rate { grid-column: auto; }
+}
+
 @media (max-width: 600px) {
   .visual-content { padding: 12px 10px 0; }
   .visual-page-heading { padding: 14px; gap: 10px; }
