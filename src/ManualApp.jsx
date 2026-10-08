@@ -11,7 +11,7 @@ const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const TEMPORARY_NOTICE = 'Aviso temporal: Por el momento, solo está disponible el Sueldómetro manual. Puedes consultar tus jornales guardados y añadir nuevos jornales y primas. El resto de funciones volverá cuando se solucionen los problemas de acceso al portal';
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
-const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', notes: '' });
+const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', part: '', notes: '' });
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
@@ -130,7 +130,7 @@ function JornalDetail({ item, busy, onClose, onEdit, onRemove, onPremium, onEdit
     <header><div><small>{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} · {item.payroll.shift}</small><h2>{paidDay ? (item.isVacation ? 'Vacaciones' : 'Formación') : item.especialidad || 'Jornal'}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
     {!paidDay && <p>{[item.buque, item.empresa, item.operacion].filter(Boolean).join(' · ')}</p>}
     <div className="manual-detail-values"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}{!paidDay && <span>Prima <b>{formatEuro(item.payroll.prima || 0)}</b></span>}{!paidDay && item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}<span>Total <b>{formatEuro(item.payroll.total)}</b></span></div>
-    {!paidDay && item.parte && <p>Parte {item.parte}</p>}{item.notes && <p>{item.notes}</p>}
+    {!paidDay && (item.source === 'manual' ? item.manualPart : item.parte) && <p>Parte {item.source === 'manual' ? item.manualPart : item.parte}</p>}{item.notes && <p>{item.notes}</p>}
     <div className="manual-detail-actions">{item.source === 'manual' && <><button disabled={busy} onClick={() => action(onEdit)}>Editar jornal</button><button disabled={busy} onClick={() => action(() => onRemove(item.id))}>Eliminar jornal</button></>}{item.source === 'historico' && <button disabled={busy} onClick={() => action(onPremium)}>Editar prima</button>}{item.source === 'manual_paid_day' && <><button disabled={busy} onClick={() => action(onEditPaid)}>Editar día</button><button disabled={busy} onClick={() => action(() => onRemovePaid(item.id))}>Eliminar día</button></>}</div>
   </section></div>;
 }
@@ -273,7 +273,7 @@ function Salary({ session, onSession }) {
       <label>Empresa o terminal<select value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option><option value="CSP">CSP</option><option value="TCV">TCV</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
       <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
       <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
-      <label className="wide">Notas (opcional)<input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} maxLength="500" /></label>
+      <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>
       {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
       <div className="form-actions"><button type="button" onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
     </form></section>}

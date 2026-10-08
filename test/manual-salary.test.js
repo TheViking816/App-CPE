@@ -80,14 +80,19 @@ test('filters posts by group and uses reception rates for OC', () => {
   assert.equal(sp.group, 'II');
 });
 
-test('stores company and vessel in existing manual record without losing old notes', () => {
-  const input = { company: 'CSP', vessel: 'MAERSK VALENCIA', notes: 'Turno de prueba' };
+test('stores the part number, company and vessel without losing old notes', () => {
+  const input = { company: 'CSP', vessel: 'MAERSK VALENCIA', part: '29050', notes: 'Turno de prueba' };
   assert.deepEqual(unpackManualNotes(packManualNotes(input)), input);
-  assert.deepEqual(unpackManualNotes('Nota antigua'), { company: '', vessel: '', notes: 'Nota antigua' });
+  assert.deepEqual(unpackManualNotes('Nota antigua'), { company: '', vessel: '', part: '', notes: 'Nota antigua' });
+  assert.deepEqual(unpackManualNotes(packManualNotes({ company: 'CSP', vessel: 'MAERSK VALENCIA', notes: 'Nota anterior' })),
+    { company: 'CSP', vessel: 'MAERSK VALENCIA', part: '', notes: 'Nota anterior' });
+  assert.throws(() => packManualNotes({ part: '29A50' }), /número de parte válido/);
   const months = buildManualSalaryMonths(null, [{ id: 'manual-1', work_date: '2026-10-08', shift: '08-14',
     specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', premium: 0,
     notes: packManualNotes(input) }]);
   assert.equal(months[0].items[0].empresa, 'CSP');
   assert.equal(months[0].items[0].buque, 'MAERSK VALENCIA');
+  assert.equal(months[0].items[0].parte, '29050');
+  assert.equal(months[0].items[0].manualPart, '29050');
   assert.equal(months[0].items[0].notes, 'Turno de prueba');
 });

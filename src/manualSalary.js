@@ -111,10 +111,10 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       const details = unpackManualNotes(row.notes);
       const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
-        parte: `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
+        parte: details.part || `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig)[0];
       const premium = money(row.premium);
-      return { ...calculated, id: row.id, notes: details.notes, source: 'manual', payroll: {
+      return { ...calculated, id: row.id, manualPart: details.part, notes: details.notes, source: 'manual', payroll: {
         ...calculated.payroll, prima: premium, manualPrima: premium, primaSource: 'manual', primaPending: false,
         total: money(calculated.payroll.total + premium)
       } };
