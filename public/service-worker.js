@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261008-personal-links-1";
+self.__APP_CPE_SW_VERSION__ = "20261008-jornales-link-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

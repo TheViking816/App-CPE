@@ -22,23 +22,30 @@
   font-weight: 650;
 }
 .personal-portal-link { margin: 0; }
-.personal-portal-actions { display: grid; gap: 8px; }
+.personal-portal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: min(100%, 410px);
+}
 .personal-portal-link button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 10px 15px;
+  gap: 6px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
   border: 1px solid #acd1eb;
-  border-radius: 11px;
+  border-radius: 9px;
   background: #e6f3fb;
   color: #0b4e84;
-  font-size: 14px;
-  font-weight: 850;
-  box-shadow: 0 4px 11px #0b4e8414;
-  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 800;
+  box-shadow: 0 3px 8px #0b4e8412;
 }
+.personal-portal-link button svg { flex: 0 0 auto; }
 .personal-portal-link button:hover { background: #d5ecfa; border-color: #7fb9df; }
 .vacation-exchange-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 .vacation-portal-link { margin-left: auto; }
@@ -173,7 +180,7 @@
 @media (max-width: 600px) {
   .monitor-section-link-form { grid-template-columns: 1fr; }
   .visual-page-heading { align-items: stretch; }
-  .personal-portal-link, .personal-portal-link button { width: 100%; }
+  .personal-portal-actions { width: 100%; }
   .visual-bottom-nav {
     bottom: 0;
     width: 100%;
