@@ -1,0 +1,21 @@
+.exchange-area{--ink:#172b48;--muted:#62758d;--line:#d8e3ef;--card:#fff}
+.exchange-board-calendar{padding:20px;border:1px solid #d8e3ef;border-radius:18px;background:#fff;box-shadow:0 8px 24px #152b4810}
+.exchange-board-calendar header,.exchange-board-calendar header>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.exchange-board-calendar header small{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#4776ae}
+.exchange-board-calendar h3{margin:3px 0;font-size:22px;text-transform:capitalize;color:#142b4c}
+.exchange-board-calendar header button{width:34px;height:34px;border:1px solid #d4e1ef;border-radius:9px;background:#f5f9fd;color:#214d7b;font-size:24px;line-height:1}
+.exchange-board-legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.exchange-board-legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#425a73}
+.exchange-board-legend span::before,.offer-dots i{content:"";display:block;width:9px;height:9px;border-radius:50%;background:#1769cf}
+.exchange-board-legend .is-give::before,.offer-dots .is-give{background:#0a9477}
+.exchange-board-legend .is-want::before,.offer-dots .is-want{background:#d07a12}
+.exchange-board-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.exchange-board-grid .weekday{text-align:center;padding:7px 0;color:#6a7f96;font-size:12px}
+.exchange-board-grid button,.exchange-board-grid .blank{min-height:57px;border:1px solid #e1e9f2;border-radius:9px;background:#f9fbfe;text-align:left;padding:7px;display:flex;flex-direction:column;justify-content:space-between;color:#193b60;font-size:12px;font-weight:700}
+.exchange-board-grid button.has-offers{background:#edf5ff;border-color:#bdd3ed}
+.exchange-board-grid button.is-selected{outline:3px solid #1769cf}
+.exchange-board-grid .blank{border:0;background:transparent}
+.offer-dots{display:flex;gap:3px;flex-wrap:wrap}
+.exchange-board-calendar p{margin:14px 0 0;color:#687b91;font-size:12px}
+.exchange-calendar-clear{margin-top:12px;border:0;background:none;color:#1769cf;font-weight:800}
+@media(max-width:600px){.exchange-board-calendar{padding:13px}.exchange-board-grid{gap:3px}.exchange-board-grid button,.exchange-board-grid .blank{min-height:43px;padding:5px}.exchange-board-calendar h3{font-size:18px}}

@@ -28,3 +28,16 @@ export function hashForTab(tab) {
   const safeTab = VALID_TABS.has(tab) ? tab : DEFAULT_TAB;
   return `#/${safeTab}`;
 }
+
+const EXCHANGE_OFFER_HASH = /^#\/(descansos|vacaciones)\/oferta\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+export function exchangeOfferFromHash(hash = "") {
+  const match = String(hash).match(EXCHANGE_OFFER_HASH);
+  return match ? { tab: match[1].toLowerCase(), offerId: match[2].toLowerCase() } : null;
+}
+
+export function hashForExchangeOffer(tab, offerId) {
+  const safeId = String(offerId || "").toLowerCase();
+  return EXCHANGE_OFFER_HASH.test(`#/${tab}/oferta/${safeId}`)
+    ? `#/${tab}/oferta/${safeId}` : hashForTab(tab);
+}

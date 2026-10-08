@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261008-manual-5";
+self.__APP_CPE_SW_VERSION__ = "20261008-exchanges-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

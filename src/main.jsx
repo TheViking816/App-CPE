@@ -4,6 +4,10 @@ import { ManualApp } from "./ManualApp.jsx";
 import "./manual.css";
 import "./manualSalaryVisual.css";
 import "./manualProductionJornales.css";
+import "./exchangeLegacy.css";
+import "./exchangeRedesign.css";
+import "./exchangeThemeA.css";
+import "./exchangeBoardCalendar.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -24,13 +28,13 @@ if ("serviceWorker" in navigator) {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20261008-manual-5");
+      forceReload("20261008-exchanges-1");
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261008-manual-5`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261008-exchanges-1`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });

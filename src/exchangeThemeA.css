@@ -1,0 +1,90 @@
+/* The surrounding screen uses the original app CSS without overrides. */
+/* A: dense offer cards, without hiding participant or date information. */
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-list { gap:10px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer { --offer-color:#1769cf; padding:13px; gap:10px; border-radius:12px; border:2px solid #a9c9ed; border-left:5px solid var(--offer-color); background:linear-gradient(110deg,#f3f8ff,var(--card) 65%); box-shadow:0 3px 9px #123c6810; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer[data-kind="give"] { --offer-color:#00826a; border-color:#8ed6c5; border-left-color:var(--offer-color); background:linear-gradient(110deg,#effbf7,var(--card) 65%); }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer[data-kind="want"] { --offer-color:#bb650b; border-color:#eac28e; border-left-color:var(--offer-color); background:linear-gradient(110deg,#fff7eb,var(--card) 65%); }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer[data-kind="vacation"] { --offer-color:#7642ce; border-color:#cbb3ee; border-left-color:var(--offer-color); background:linear-gradient(110deg,#f6f0ff,var(--card) 65%); }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer-head > div > span { color:var(--offer-color); }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer-head { grid-template-columns:30px minmax(0,1fr); gap:6px 9px; }
+.mobile-app.mobile-app .exchange-avatar { width:30px; height:30px; font-size:14px !important; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer-head > div { gap:2px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer-head strong { font-size:13px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer-groups { gap:3px 8px; padding:0; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer-groups small { border:0; padding:0; font-size:10px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-dates > div { padding:8px 10px; gap:3px; border-radius:8px; background:#deebff; border:1px solid #b4d0f6; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-dates > div:nth-child(2) { background:#dff5f2; border-color:#a2d9d0; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-dates > div:nth-child(2) > small { color:#12695c; }
+.mobile-app.mobile-app .exchange-date-display { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 5px; }
+.mobile-app.mobile-app .exchange-date-display time { font-size:22px; }
+.mobile-app.mobile-app .exchange-date-display > span { font-size:11px; }
+.mobile-app.mobile-app .exchange-date-display > small { display:block; flex-basis:100%; color:#3d5470; font-size:10px; font-weight:650; line-height:1.25; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-dates::after { width:24px; height:24px; border-width:3px; font-size:12px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-manage { padding-top:8px; gap:7px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-secondary { min-height:34px; padding:6px 10px; font-size:11px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-actions > button { min-height:36px; font-size:12px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-actions { gap:4px; }
+@media(min-width:900px) { .exchange-filter-fields { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+.exchange-filter-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.exchange-filter-fields label { display:grid; gap:5px; font-size:11px; color:var(--muted); font-weight:700; }
+.exchange-filter-fields input,.exchange-filter-fields select { width:100%; min-width:0; height:40px; padding:7px 9px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); font:inherit; font-size:12px; }
+.exchange-filter-summary { display:flex; justify-content:space-between; align-items:center; min-height:30px; margin-top:5px; color:var(--muted); font-size:11px; }
+.exchange-filter-summary button { border:0; background:transparent; color:var(--blue); font:inherit; cursor:pointer; padding:6px; }
+.mobile-app .exchange-redesign,
+.mobile-app[data-design="b"] .exchange-redesign,
+.mobile-app .exchange-redesign.vacation-exchange-panel,
+.mobile-app[data-design="b"] .exchange-redesign.vacation-exchange-panel {
+ --ex-accent:#1766ac; --ex-soft:#edf4ff; --ex-ink:var(--ink); --ex-muted:var(--muted); --ex-line:var(--line); --ex-card:var(--card);
+ background:var(--card); padding:22px; border:1px solid var(--line); border-radius:18px; box-shadow:0 7px 18px rgba(7,31,63,.06); font:inherit;
+}
+.mobile-app .exchange-redesign .rest-exchange-heading h2 { font-size:25px; font-weight:850; letter-spacing:-.02em; }
+.mobile-app .exchange-redesign .rest-exchange-heading p { color:#376390; font-size:11px; letter-spacing:.07em; font-weight:900; }
+.mobile-app .exchange-redesign .rest-exchange-intro { font-size:14px; }
+.mobile-app .exchange-redesign .rest-exchange-tabs { background:#eef3fa; }
+.mobile-app .exchange-redesign .rest-exchange-tabs button { font-size:13px; font-weight:800; }
+.mobile-app .exchange-redesign .rest-exchange-offer-head strong { font-size:16px; font-weight:850; }
+.mobile-app .exchange-redesign .rest-exchange-offer-groups small { font-size:11px; }
+.mobile-app .exchange-redesign .rest-exchange-offer-head > div > span { font-size:10px; }
+.mobile-app .exchange-redesign .rest-exchange-offer { box-shadow:none; border-radius:14px; }
+.mobile-app .exchange-redesign .rest-exchange-dates > div:nth-child(2) { background:#f3f6fa; }
+.mobile-app .exchange-redesign .rest-exchange-secondary { font-size:12px; font-weight:750; }
+.mobile-app .exchange-redesign .rest-exchange-form label { font-size:14px; font-weight:800; }
+.mobile-app .exchange-redesign .rest-exchange-form { max-width:none; }
+.mobile-app[data-design="b"] .exchange-redesign .rest-exchange-heading { border-top:0; padding-top:0; }
+.mobile-app[data-design="b"] .exchange-redesign .rest-exchange-tabs,
+.mobile-app[data-design="b"] .exchange-redesign .rest-exchange-dates > div { background:transparent; }
+@media(max-width:600px) {
+ .mobile-app .exchange-redesign { padding:16px; }
+ .mobile-app .exchange-redesign .rest-exchange-heading h2 { font-size:21px; }
+ .mobile-app .exchange-redesign .rest-exchange-heading p { font-size:9px; }
+ .mobile-app .exchange-redesign .rest-exchange-intro { font-size:12px; }
+ .mobile-app .exchange-redesign .rest-exchange-tabs button { font-size:11px; }
+ .mobile-app .exchange-redesign .rest-exchange-offer { padding:16px; }
+ .mobile-app .exchange-redesign .rest-exchange-offer-head strong { font-size:14px; }
+ .mobile-app .exchange-redesign .rest-exchange-offer-groups small { font-size:10px; }
+ .mobile-app .exchange-redesign .rest-exchange-dates > div { padding:12px; }
+ .mobile-app[data-design="b"] .exchange-redesign .rest-exchange-dates > div { padding:0; }
+}
+
+:root[data-theme="dark"] .mobile-app .exchange-redesign { --ex-accent:#8fc1ff; --ex-soft:#183756; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-offer { background:var(--card); border-color:#37659a; border-left-color:#60a5fa; --offer-color:#8fc1ff; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-offer[data-kind="give"] { border-color:#327767; border-left-color:#34d399; --offer-color:#6ee7b7; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-offer[data-kind="want"] { border-color:#886136; border-left-color:#fbbf24; --offer-color:#fcd34d; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-offer[data-kind="vacation"] { border-color:#735496; border-left-color:#b794f6; --offer-color:#d1b6ff; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-dates > div { background:#193758; border-color:#3a5c89; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-dates > div:nth-child(2) { background:#163c39; border-color:#37665e; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-dates > div:nth-child(2) > small { color:#8ae0cc; }
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-date-display > small { color:#c4d5e8; }
+:root[data-theme="dark"] .mobile-app .exchange-redesign .rest-exchange-tabs { background:#182d45; }
+:root[data-theme="dark"] .mobile-app .exchange-redesign .rest-exchange-heading p { color:#9ec9f4; }
+
+.mobile-app .exchange-redesign,
+.mobile-app .exchange-redesign .rest-exchange-offer { scroll-margin-top: 112px; }
+.mobile-app.mobile-app .exchange-redesign .rest-exchange-offer.is-notification-target {
+  outline: 3px solid #2479cb;
+  outline-offset: 3px;
+}
+:root[data-theme="dark"] .mobile-app.mobile-app .exchange-redesign .rest-exchange-offer.is-notification-target {
+  outline-color: #93c5fd;
+}
+

@@ -1,0 +1,136 @@
+.rest-exchange-panel { display: grid; gap: 13px; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: 0 7px 18px rgba(7,31,63,.06); scroll-margin-top: 18px; }
+.rest-exchange-heading p { margin: 0 0 3px; color: #376390; font-size: 11px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.rest-exchange-heading h2 { margin: 0; color: var(--ink); font-size: 22px; line-height: 1.2; }
+.rest-exchange-intro, .rest-exchange-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.rest-exchange-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border-radius: 11px; background: #eef3fa; }
+.rest-exchange-tabs button { min-height: 38px; padding: 6px; border: 0; border-radius: 8px; background: transparent; color: #4d627c; font: inherit; font-size: 11px; font-weight: 850; cursor: pointer; }
+.rest-exchange-tabs button.active { background: var(--card); color: #1e4d81; box-shadow: 0 2px 8px rgba(7,31,63,.1); }
+.rest-exchange-form, .rest-exchange-list { display: grid; gap: 11px; }
+.rest-exchange-form label { display: grid; gap: 5px; color: var(--ink); font-size: 12px; font-weight: 800; }
+.rest-exchange-form select { width: 100%; min-height: 43px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); font: inherit; }
+.vacation-exchange-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.vacation-exchange-form-grid input { width: 100%; min-height: 43px; box-sizing: border-box; padding: 0 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); font: inherit; }
+@media (max-width: 540px) { .vacation-exchange-form-grid { grid-template-columns: 1fr; } }
+.rest-exchange-form > button, .rest-exchange-actions > button, .rest-exchange-proposal button { min-height: 40px; padding: 7px 12px; border: 0; border-radius: 9px; background: #1764ad; color: #fff; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; }
+.rest-exchange-panel button:disabled { opacity: .55; cursor: default; }
+.rest-exchange-error, .rest-exchange-notice { margin: 0; padding: 9px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.rest-exchange-error { background: #fef2f2; color: #b91c1c; }
+.rest-exchange-notice { background: #ecfdf5; color: #047857; }
+.rest-exchange-offer { display: grid; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); }
+.rest-exchange-offer-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+.rest-exchange-offer-head > div, .rest-exchange-dates > div { display: grid; gap: 2px; }
+.rest-exchange-offer-head .rest-exchange-offer-groups { justify-items: end; text-align: right; }
+.rest-exchange-offer-head span { color: #1764ad; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.rest-exchange-offer-head strong { color: var(--ink); font-size: 15px; }
+.rest-exchange-offer-head small, .rest-exchange-dates small { color: var(--muted); font-size: 10px; font-weight: 700; }
+.rest-exchange-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.rest-exchange-dates > div { padding: 9px; border-radius: 8px; background: #eef5ff; }
+.rest-exchange-dates strong { color: var(--ink); font-size: 12px; }
+.rest-exchange-actions { display: grid; gap: 6px; }
+.rest-exchange-manage { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.rest-exchange-manage small { flex-basis: 100%; color: var(--muted); font-size: 11px; }
+.rest-exchange-edit-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rest-exchange-edit-heading strong { color: var(--ink); font-size: 13px; }
+.rest-exchange-actions small, .rest-exchange-status { color: var(--muted); font-size: 11px; }
+.rest-exchange-panel .rest-exchange-secondary { min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--muted); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.rest-exchange-proposal, .rest-exchange-agreement { display: grid; gap: 8px; padding: 10px; border-radius: 9px; background: #f0f7ff; color: var(--ink); font-size: 12px; }
+.rest-exchange-proposal > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.rest-exchange-agreement span { color: var(--muted); line-height: 1.4; }
+.rest-exchange-agreement a { color: #1764ad; font-weight: 850; }
+.rest-exchange-chat { display: grid; width: 100%; box-sizing: border-box; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font-size: 12px; }
+.rest-exchange-chat > p { margin: 0; color: var(--muted); line-height: 1.45; }
+.rest-exchange-messages { display: flex; flex-direction: column; align-items: flex-start; max-height: 280px; gap: 8px; overflow-y: auto; padding: 5px 2px; }
+.rest-exchange-message { display: flex; flex-direction: column; align-self: flex-start; width: fit-content; max-width: min(85%, 420px); box-sizing: border-box; gap: 4px; padding: 8px 11px; border-radius: 12px 12px 12px 4px; background: #eef5ff; overflow-wrap: anywhere; line-height: 1.4; }
+.rest-exchange-message.is-own { align-self: flex-end; border-radius: 12px 12px 4px 12px; background: #dcfce7; }
+.rest-exchange-message small { color: var(--muted); font-size: 10px; }
+.rest-exchange-message span { white-space: pre-wrap; }
+.rest-exchange-chat form { display: grid; gap: 7px; }
+.rest-exchange-chat label { font-weight: 800; }
+.rest-exchange-chat textarea { width: 100%; box-sizing: border-box; padding: 9px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; }
+.rest-exchange-chat form button { min-height: 38px; border: 0; border-radius: 8px; background: #1764ad; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.exchange-inbox { display: grid; gap: 18px; max-width: 1180px; margin: 0 auto; color: var(--ink); }
+.direct-inbox-main-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.direct-inbox-main-tabs button { min-height: 42px; padding: 9px 17px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); color: var(--muted); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.direct-inbox-main-tabs button.is-active { border-color: #1764ad; background: #eaf3ff; color: #145a9d; }
+.direct-inbox-search { display: flex; align-items: center; gap: 8px; margin: 12px 14px 0; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); }
+.direct-inbox-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12px; }
+.direct-inbox-online-count { margin: 9px 14px 12px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.direct-status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #9aaabd; vertical-align: 1px; }
+.direct-online { color: #15803d !important; }
+.direct-online .direct-status-dot { background: #22c55e; }
+.direct-admin-badge { display: inline-flex; align-self: start; width: fit-content; padding: 3px 8px; border-radius: 999px; background: #eaf3ff; color: #145a9d !important; font-size: 10px; font-weight: 900; }
+.direct-inbox-shell .exchange-inbox-row:disabled { opacity: 1; cursor: default; }
+.direct-inbox-shell .exchange-inbox-row-copy > strong { font-size: 13px; }
+.direct-inbox-messages { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-height: 310px; max-height: 520px; overflow-y: auto; padding: 18px; }
+.direct-inbox-messages > p { margin: auto; color: var(--muted); font-size: 12px; }
+.direct-inbox-messages .direct-message-receipt { display: inline-flex; align-self: flex-end; align-items: center; gap: 3px; margin-top: 1px; color: #66788c; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.direct-inbox-messages .direct-message-receipt.is-read { color: #116cbd; }
+.direct-inbox-compose { display: grid; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.direct-inbox-compose label { font-size: 12px; font-weight: 800; }
+.direct-inbox-compose textarea { width: 100%; box-sizing: border-box; padding: 10px; resize: vertical; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); font: inherit; }
+.direct-inbox-compose button { justify-self: end; min-width: 100px; min-height: 36px; border: 0; border-radius: 8px; background: #1764ad; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.direct-inbox-compose button:disabled { opacity: .55; cursor: default; }
+.direct-inbox-delete { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: none; min-height: 34px; margin-left: auto; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: #b42318; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.direct-inbox-delete:disabled { opacity: .55; cursor: default; }
+@media (max-width: 420px) { .direct-inbox-delete span { display: none; } }
+.exchange-inbox-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+.exchange-inbox-header span { color: #1764ad; font-size: 11px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.exchange-inbox-header h1 { margin: 4px 0; font-size: clamp(24px, 4vw, 32px); }
+.exchange-inbox-header p { margin: 0; color: var(--muted); font-size: 13px; }
+.exchange-inbox-unread, .exchange-inbox-count { flex: none; padding: 5px 9px; border-radius: 999px; background: #1764ad; color: #fff; font-size: 11px; }
+.exchange-inbox-preview-note { margin: -6px 0 0; padding: 10px 14px; border-radius: 10px; background: #fff7e6; color: #805200; font-size: 12px; }
+.exchange-inbox-shell { display: grid; grid-template-columns: minmax(310px, 39%) minmax(0, 1fr); min-height: 560px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--card); box-shadow: 0 10px 30px rgba(19, 48, 79, .06); }
+.exchange-inbox-list { min-width: 0; border-right: 1px solid var(--line); }
+.exchange-inbox-filters, .exchange-inbox-types { display: flex; gap: 5px; padding: 12px 14px 0; }
+.exchange-inbox-filters button, .exchange-inbox-types button { border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.exchange-inbox-filters button { flex: 1; min-height: 38px; }
+.exchange-inbox-filters span { margin-left: 4px; opacity: .75; }
+.exchange-inbox-types { padding-bottom: 12px; }
+.exchange-inbox-types button { padding: 6px 10px; }
+.exchange-inbox-filters button.is-active, .exchange-inbox-types button.is-active { background: #eaf3ff; color: #145a9d; }
+.exchange-inbox-rows { display: grid; align-content: start; max-height: 660px; overflow-y: auto; }
+.exchange-inbox-row { display: flex; align-items: start; gap: 11px; width: 100%; padding: 15px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.exchange-inbox-row:hover, .exchange-inbox-row.is-selected { background: #f1f7ff; }
+.exchange-inbox-avatar { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #145a9d; background: #eaf3ff; }
+.exchange-inbox-avatar.is-vacation { color: #a35a0b; background: #fff3db; }
+.exchange-inbox-row-copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
+.exchange-inbox-row-top { display: flex; justify-content: space-between; gap: 7px; }
+.exchange-inbox-row-top strong, .exchange-inbox-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exchange-inbox-row-top strong { font-size: 13px; }
+.exchange-inbox-row small, .exchange-inbox-detail-head small { color: var(--muted); font-size: 11px; }
+.exchange-inbox-preview { color: var(--muted); font-size: 12px; }
+.exchange-inbox-empty, .exchange-inbox-placeholder { display: grid; place-content: center; justify-items: center; gap: 8px; min-height: 230px; padding: 25px; color: var(--muted); text-align: center; font-size: 12px; }
+.exchange-inbox-empty strong, .exchange-inbox-placeholder strong { color: var(--ink); font-size: 14px; }
+.exchange-inbox-error { padding: 15px; color: #b42318; }
+.exchange-inbox-detail { display: grid; align-content: start; min-width: 0; }
+.exchange-inbox-detail-head { display: flex; align-items: center; gap: 11px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.exchange-inbox-detail-head div { display: grid; gap: 3px; }
+.exchange-inbox-detail-head strong { font-size: 14px; }
+.exchange-inbox-back { display: none; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.exchange-inbox-context { display: flex; gap: 8px; padding: 13px 18px; border-bottom: 1px solid var(--line); }
+.exchange-inbox-context span { display: grid; flex: 1; gap: 3px; padding: 10px; border-radius: 9px; background: #f1f7ff; }
+.exchange-inbox-context small { color: var(--muted); font-size: 11px; }
+.exchange-inbox-context strong { font-size: 12px; }
+.exchange-inbox-detail .rest-exchange-chat { border: 0; border-radius: 0; padding: 18px; }
+.exchange-inbox-detail .rest-exchange-messages { max-height: 360px; min-height: 100px; }
+.exchange-inbox-readonly { margin: 0 18px 18px; color: var(--muted); font-size: 12px; }
+@media (max-width: 720px) {
+  .exchange-inbox-header { padding: 18px; }
+  .exchange-inbox-shell { display: block; min-height: 480px; }
+  .exchange-inbox-list { border-right: 0; }
+  .exchange-inbox-list.has-selection { display: none; }
+  .exchange-inbox-detail { display: none; }
+  .exchange-inbox-detail.has-selection { display: grid; }
+  .exchange-inbox-back { display: grid; place-items: center; padding: 6px; }
+  .exchange-inbox-detail .rest-exchange-messages { max-height: 45vh; }
+}
+:root[data-theme="dark"] .exchange-inbox-row:hover, :root[data-theme="dark"] .exchange-inbox-row.is-selected,
+:root[data-theme="dark"] .exchange-inbox-context span, :root[data-theme="dark"] .exchange-inbox-filters button.is-active,
+:root[data-theme="dark"] .exchange-inbox-types button.is-active { background: #182d45; color: #a9d3ff; }
+:root[data-theme="dark"] .rest-exchange-message { background: #1b3c5d; }
+:root[data-theme="dark"] .rest-exchange-message.is-own { background: #1b5648; }
+:root[data-theme="dark"] .rest-exchange-tabs, :root[data-theme="dark"] .rest-exchange-dates > div, :root[data-theme="dark"] .rest-exchange-proposal, :root[data-theme="dark"] .rest-exchange-agreement { background: #182d45; }
+:root[data-theme="dark"] .rest-exchange-tabs button { color: #adc0d5; }
+:root[data-theme="dark"] .rest-exchange-tabs button.active { color: #a9d3ff; }
+:root[data-theme="dark"] .rest-exchange-heading p, :root[data-theme="dark"] .rest-exchange-offer-head span { color: #9ec9f4; }
+:root[data-theme="dark"] .rest-exchange-agreement a { color: #9ec9f4; }

@@ -1,15 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor } from './supabaseClient.js';
+import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
+import { touchDirectPresence } from './exchangeClient.js';
+import { EXCHANGE_PREVIEW_READ_ONLY } from './exchangePreview.js';
+import RestExchangePanel from './RestExchangePanel.jsx';
+import ExchangeConversations, { conversationHash, directConversationHash } from './ExchangeConversations.jsx';
+import { hashForExchangeOffer } from './navigation.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
 import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
-import { ChevronRight, X } from 'lucide-react';
+import { Bell, ChevronRight, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
-const TEMPORARY_NOTICE = 'Aviso temporal: Por el momento, solo está disponible el Sueldómetro manual. Puedes consultar tus jornales guardados y añadir nuevos jornales y primas. El resto de funciones volverá cuando se solucionen los problemas de acceso al portal';
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'conversaciones']);
+const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'direct_message']);
+const viewFromHash = () => {
+  const route = window.location.hash.split('/')[1];
+  return ACTIVE_PAGES.has(route) ? route : 'sueldometro';
+};
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
 const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', part: '', notes: '' });
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
@@ -45,7 +55,6 @@ function Access({ onAccess }) {
   return <main className="manual-shell access-shell"><section className="access-card">
     <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><p className="eyebrow">APP CPE</p><h1>Tu Sueldómetro</h1>
     <p>Registra tus jornales y primas. Tus datos anteriores se conservan en tu cuenta.</p>
-    <div className="temporary-notice" role="note">{TEMPORARY_NOTICE}</div>
     <form onSubmit={submit}>
       <label>Chapa<input value={chapa} onChange={(event) => setChapa(event.target.value)} inputMode="numeric" autoComplete="username" required /></label>
       {register && <label>Correo electrónico<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>}
@@ -61,21 +70,43 @@ function Access({ onAccess }) {
 function ActivityMonitor({ session }) {
   const [data, setData] = useState(null);
   const [journalEvents, setJournalEvents] = useState([]);
+  const [personalLinks, setPersonalLinks] = useState([]);
+  const [linkChapa, setLinkChapa] = useState('');
+  const [linkValue, setLinkValue] = useState('');
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkError, setLinkError] = useState('');
   const [error, setError] = useState('');
   const [journalError, setJournalError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals] = await Promise.allSettled([
+    const [usage, journals, links] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
-      rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token })
+      rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
+      rpc('app_cpe_admin_manual_donde_voy_status', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
     if (journals.status === 'fulfilled') { setJournalEvents(journals.value || []); setJournalError(''); }
     else setJournalError(journals.reason?.message || 'No se pudieron cargar los jornales.');
+    if (links.status === 'fulfilled') setPersonalLinks(links.value || []);
+  };
+  const saveLink = async (event) => {
+    event.preventDefault(); setLinkBusy(true); setLinkError('');
+    if (EXCHANGE_PREVIEW_READ_ONLY) { setLinkBusy(false); return; }
+    try {
+      await rpc('app_cpe_admin_set_manual_donde_voy_link', {
+        p_token: session.token, p_chapa: linkChapa.trim(), p_url: linkValue.trim()
+      });
+      setLinkValue('');
+      await load();
+    } catch (reason) { setLinkError(reason.message || 'No se pudo guardar el enlace.'); }
+    finally { setLinkBusy(false); }
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
-  const users = (data?.users || []).filter((user) => String(user.chapa || '').includes(filter));
+  const users = (data?.users || []).filter((user) => ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter));
+  const pages = (data?.pages || []).filter((page) => ACTIVE_PAGES.has(page.page));
+  const recent = (data?.recent || []).filter((event) => event.type === 'page_visit'
+    ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type));
   const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa || '').includes(filter));
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
@@ -83,8 +114,8 @@ function ActivityMonitor({ session }) {
   return <section className="manual-panel monitor-panel"><div className="section-head"><div><p className="eyebrow">Administración</p><h2>Monitor de actividad</h2></div><button onClick={load}>Actualizar</button></div>
     <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales manuales se conservan en el registro.</p>
     {error && <p className="form-error">{error}</p>}
-    <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{data?.summary?.pageViews ?? '—'}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
-    <h3>Pantallas</h3><div className="monitor-pages">{(data?.pages || []).map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
+    <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
+    <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
     <h3>Usuarios recientes</h3><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Buscar chapa" inputMode="numeric" />
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
     <h3>Jornales manuales registrados</h3>
@@ -93,7 +124,20 @@ function ActivityMonitor({ session }) {
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día del jornal</th><th>Turno</th><th>Puesto</th><th>Grupo</th><th>Operación</th></tr></thead><tbody>
       {visibleJournalEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}</td><td>{event.shift}</td><td>{event.specialty}</td><td>{event.worker_group}</td><td>{event.operation_type === 'RECEPCION_ENTREGA' ? 'OC' : 'SP'}</td></tr>)}
     </tbody></table>{!journalError && visibleJournalEvents.length === 0 && <p className="monitor-empty">No hay movimientos de jornales manuales para el filtro actual.</p>}</div>
-    <h3>Actividad reciente</h3><div className="recent-list">{(data?.recent || []).slice(0, 30).map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
+    <h3>Enlaces personales · ¿Dónde voy?</h3>
+    <form className="monitor-link-form" onSubmit={saveLink} autoComplete="off">
+      <label>Chapa<input inputMode="numeric" pattern="[0-9]{5}" maxLength={5} required value={linkChapa} onChange={(event) => setLinkChapa(event.target.value)} /></label>
+      <label>Enlace personal<input type="password" maxLength={2048} required value={linkValue} onChange={(event) => setLinkValue(event.target.value)} autoComplete="off" /></label>
+      <button type="submit" disabled={linkBusy || EXCHANGE_PREVIEW_READ_ONLY}>{linkBusy ? 'Guardando…' : 'Guardar enlace'}</button>
+    </form>
+    {linkError && <p className="form-error" role="alert">{linkError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Enlace</th><th>Actualizado</th><th></th></tr></thead><tbody>
+      {personalLinks.filter((item) => String(item.chapa).includes(filter)).map((item) => <tr key={item.chapa}>
+        <td>{item.chapa}</td><td>{item.configured ? 'Configurado' : 'Pendiente'}</td><td>{time(item.updatedAt)}</td>
+        <td>{item.configured && <form action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="chapa" value={item.chapa} /><button type="submit">Abrir ↗</button></form>}</td>
+      </tr>)}
+    </tbody></table></div>
+    <h3>Actividad reciente</h3><div className="recent-list">{recent.slice(0, 30).map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
   </section>;
 }
 
@@ -135,6 +179,16 @@ function JornalDetail({ item, busy, onClose, onEdit, onRemove, onPremium, onEdit
   </section></div>;
 }
 
+function ExchangeNotifications({ rows, onOpen, onMarkAll }) {
+  return <section className="manual-panel exchange-notifications"><div className="section-head"><h2>Novedades</h2>
+    {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
+    <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
+      className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
+      <strong>{item.title}</strong><span>{item.body}</span><small>{new Date(item.createdAt).toLocaleString('es-ES')}</small>
+    </button>)}</div>
+  </section>;
+}
+
 function Salary({ session, onSession }) {
   const [snapshot, setSnapshot] = useState(null);
   const [manualRows, setManualRows] = useState([]);
@@ -153,7 +207,9 @@ function Salary({ session, onSession }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [tab, setTab] = useState('salary');
+  const [tab, setTab] = useState(viewFromHash);
+  const [notifications, setNotifications] = useState([]);
+  const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [irpf, setIrpf] = useState(Number(session.irpfRate) || 0);
@@ -173,7 +229,54 @@ function Salary({ session, onSession }) {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); if (!session.supportAccess) trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
-  useEffect(() => { if (!session.supportAccess) trackPageVisit({ token: session.token, page: tab === 'monitor' ? 'inicio' : 'sueldometro' }).catch(() => {}); }, [session.token, tab]);
+  useEffect(() => {
+    const followHash = () => setTab(viewFromHash());
+    window.addEventListener('hashchange', followHash);
+    return () => window.removeEventListener('hashchange', followHash);
+  }, []);
+  useEffect(() => { if (!session.supportAccess && ACTIVE_PAGES.has(tab)) trackPageVisit({ token: session.token, page: tab }).catch(() => {}); }, [session.token, session.supportAccess, tab]);
+  useEffect(() => {
+    if (session.supportAccess) return undefined;
+    const touch = () => touchDirectPresence({ token: session.token }).catch(() => {});
+    touch();
+    const timer = window.setInterval(touch, 5 * 60_000);
+    return () => window.clearInterval(timer);
+  }, [session.token, session.supportAccess]);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => getUserNotifications({ token: session.token, limit: 100 })
+      .then((data) => { if (active) setNotifications((data.rows || []).filter((row) => ACTIVE_NOTIFICATION_TYPES.has(row.eventType))); })
+      .catch(() => {});
+    refresh();
+    const timer = window.setInterval(refresh, 15_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [session.token]);
+  useEffect(() => {
+    Promise.allSettled([
+      rpc('app_cpe_has_manual_donde_voy_link', { p_token: session.token }),
+      canOpenNorayLinks({ token: session.token })
+    ]).then(([manual, legacy]) => setPersonalLinkAvailable(
+      (manual.status === 'fulfilled' && manual.value === true) || (legacy.status === 'fulfilled' && legacy.value === true)
+    ));
+  }, [session.token]);
+
+  const navigate = (next) => { setTab(next); setMenuOpen(false); if (next !== 'monitor' && next !== 'novedades') window.location.hash = `#/${next}`; };
+  const openNotification = (item) => {
+    if (!item.readAt) {
+      setNotifications((rows) => rows.map((row) => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
+      markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => {});
+    }
+    if (item.eventType === 'direct_message' && item.metadata?.conversationId) {
+      window.location.hash = directConversationHash(item.metadata.conversationId);
+      setTab('conversaciones');
+    } else if (item.metadata?.proposalId) {
+      window.location.hash = conversationHash('rest', item.metadata.proposalId);
+      setTab('conversaciones');
+    } else if (item.metadata?.offerId) {
+      window.location.hash = hashForExchangeOffer('descansos', item.metadata.offerId);
+      setTab('descansos');
+    } else navigate('descansos');
+  };
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
   const currentMonthKey = today().slice(0, 7);
@@ -261,8 +364,8 @@ function Salary({ session, onSession }) {
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => setTab(tab === 'monitor' ? 'salary' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => { setTab('salary'); setMenuOpen(false); }}>Sueldómetro</button>{session.chapa === '72683' && <button type="button" onClick={() => { setTab('monitor'); setMenuOpen(false); }}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
-    {tab === 'monitor' ? <ActivityMonitor session={session} /> : <>
+  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <nav className="visual-menu" aria-label="Menú principal"><button type="button" onClick={() => navigate('sueldometro')}>Sueldómetro</button><button type="button" onClick={() => navigate('descansos')}>Intercambios de descansos</button><button type="button" onClick={() => navigate('conversaciones')}>Chats privados</button>{session.chapa === '72683' && <button type="button" onClick={() => navigate('monitor')}>Monitor de actividad</button>}<button type="button" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></nav>}</header><div className="visual-content">
+    {tab === 'monitor' ? <ActivityMonitor session={session} /> : tab === 'descansos' ? <div className="exchange-area"><RestExchangePanel session={session} /></div> : tab === 'conversaciones' ? <div className="exchange-area"><ExchangeConversations session={session} /></div> : tab === 'novedades' ? <ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /> : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showForm && <section className="manual-panel editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
@@ -283,6 +386,7 @@ function Salary({ session, onSession }) {
       <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : TRAINING_DAY_RATE)}</strong></div>
       <div className="form-actions"><button type="button" onClick={() => setShowPaidForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar día'}</button></div>
     </form></section>}
+    {personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi ¿Dónde voy? ↗</button></form>}
     {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }}>
       {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="portal-jornales-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} onOpen={setSelectedDetail} />)}</div>}
     </ManualSalaryDashboard>}{selectedDetail && <JornalDetail item={selectedDetail} busy={busy} onClose={() => setSelectedDetail(null)} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}</>}</div>
