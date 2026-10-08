@@ -33,7 +33,7 @@ test('retains saved history and adds new manual jornales without altering it', (
 test('filters posts by group and uses reception rates for OC', () => {
   assert.deepEqual(optionsForGroup('III'), ['CLASIFICADOR']);
   assert.deepEqual(optionsForGroup('IV'), ['CAPATAZ', 'SOBORDISTA']);
-  assert.ok(optionsForGroup('I').includes('TRINCADOR'));
+  assert.deepEqual(optionsForGroup('I'), ['TRINCADOR', 'ESPECIALISTA']);
   assert.ok(optionsForGroup('II').includes('CONDUCTOR 1a'));
   const row = { dia: 8, jornada: '08-14', especialidad: 'CONDUCTOR 1a', payrollGroup: 'II', parte: 'MANUAL-TEST' };
   const sp = enrichJornales([{ ...row, operacion: 'ESTIBA' }], [], '10/2026')[0].payroll;
