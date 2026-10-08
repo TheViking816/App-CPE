@@ -71,56 +71,18 @@ function Access({ onAccess }) {
 function ActivityMonitor({ session }) {
   const [data, setData] = useState(null);
   const [journalEvents, setJournalEvents] = useState([]);
-  const [personalLinks, setPersonalLinks] = useState([]);
-  const [sectionLinks, setSectionLinks] = useState([]);
-  const [linkChapa, setLinkChapa] = useState('');
-  const [linkValue, setLinkValue] = useState('');
-  const [sectionLinkChapa, setSectionLinkChapa] = useState('');
-  const [sectionLinkType, setSectionLinkType] = useState('vacaciones');
-  const [sectionLinkValue, setSectionLinkValue] = useState('');
-  const [linkBusy, setLinkBusy] = useState(false);
-  const [linkError, setLinkError] = useState('');
   const [error, setError] = useState('');
   const [journalError, setJournalError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, links, sections] = await Promise.allSettled([
+    const [usage, journals] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
-      rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
-      rpc('app_cpe_admin_manual_donde_voy_status', { p_token: session.token }),
-      rpc('app_cpe_admin_manual_noray_section_status', { p_token: session.token })
+      rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
     if (journals.status === 'fulfilled') { setJournalEvents(journals.value || []); setJournalError(''); }
     else setJournalError(journals.reason?.message || 'No se pudieron cargar los jornales.');
-    if (links.status === 'fulfilled') setPersonalLinks(links.value || []);
-    if (sections.status === 'fulfilled') setSectionLinks(sections.value || []);
-  };
-  const saveLink = async (event) => {
-    event.preventDefault(); setLinkBusy(true); setLinkError('');
-    if (EXCHANGE_PREVIEW_READ_ONLY) { setLinkBusy(false); return; }
-    try {
-      await rpc('app_cpe_admin_set_manual_donde_voy_link', {
-        p_token: session.token, p_chapa: linkChapa.trim(), p_url: linkValue.trim()
-      });
-      setLinkValue('');
-      await load();
-    } catch (reason) { setLinkError(reason.message || 'No se pudo guardar el enlace.'); }
-    finally { setLinkBusy(false); }
-  };
-  const saveSectionLink = async (event) => {
-    event.preventDefault(); setLinkBusy(true); setLinkError('');
-    if (EXCHANGE_PREVIEW_READ_ONLY) { setLinkBusy(false); return; }
-    try {
-      await rpc('app_cpe_admin_set_manual_noray_section_link', {
-        p_token: session.token, p_chapa: sectionLinkChapa.trim(),
-        p_section: sectionLinkType, p_url: sectionLinkValue.trim()
-      });
-      setSectionLinkValue('');
-      await load();
-    } catch (reason) { setLinkError(reason.message || 'No se pudo guardar el enlace.'); }
-    finally { setLinkBusy(false); }
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter));
@@ -144,29 +106,6 @@ function ActivityMonitor({ session }) {
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día del jornal</th><th>Turno</th><th>Puesto</th><th>Grupo</th><th>Operación</th></tr></thead><tbody>
       {visibleJournalEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}</td><td>{event.shift}</td><td>{event.specialty}</td><td>{event.worker_group}</td><td>{event.operation_type === 'RECEPCION_ENTREGA' ? 'OC' : 'SP'}</td></tr>)}
     </tbody></table>{!journalError && visibleJournalEvents.length === 0 && <p className="monitor-empty">No hay movimientos de jornales manuales para el filtro actual.</p>}</div>
-    <h3>Enlaces personales · ¿Dónde voy?</h3>
-    <form className="monitor-link-form" onSubmit={saveLink} autoComplete="off">
-      <label>Chapa<input inputMode="numeric" pattern="[0-9]{5}" maxLength={5} required value={linkChapa} onChange={(event) => setLinkChapa(event.target.value)} /></label>
-      <label>Enlace personal<input type="password" maxLength={2048} required value={linkValue} onChange={(event) => setLinkValue(event.target.value)} autoComplete="off" /></label>
-      <button type="submit" disabled={linkBusy || EXCHANGE_PREVIEW_READ_ONLY}>{linkBusy ? 'Guardando…' : 'Guardar enlace'}</button>
-    </form>
-    {linkError && <p className="form-error" role="alert">{linkError}</p>}
-    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Enlace</th><th>Actualizado</th><th></th></tr></thead><tbody>
-      {personalLinks.filter((item) => String(item.chapa).includes(filter)).map((item) => <tr key={item.chapa}>
-        <td>{item.chapa}</td><td>{item.configured ? 'Configurado' : 'Pendiente'}</td><td>{time(item.updatedAt)}</td>
-        <td>{item.configured && <form action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="chapa" value={item.chapa} /><button type="submit">Abrir ↗</button></form>}</td>
-      </tr>)}
-    </tbody></table></div>
-    <h3>Enlaces personales · Vacaciones y dobles</h3>
-    <form className="monitor-link-form monitor-section-link-form" onSubmit={saveSectionLink} autoComplete="off">
-      <label>Chapa<input inputMode="numeric" pattern="[0-9]{5}" maxLength={5} required value={sectionLinkChapa} onChange={(event) => setSectionLinkChapa(event.target.value)} /></label>
-      <label>Sección<select value={sectionLinkType} onChange={(event) => setSectionLinkType(event.target.value)}><option value="vacaciones">Solicitud de vacaciones</option><option value="dobles">Dobles y HS</option></select></label>
-      <label>Enlace personal<input type="password" maxLength={2048} required value={sectionLinkValue} onChange={(event) => setSectionLinkValue(event.target.value)} autoComplete="off" /></label>
-      <button type="submit" disabled={linkBusy || EXCHANGE_PREVIEW_READ_ONLY}>{linkBusy ? 'Guardando…' : 'Guardar enlace'}</button>
-    </form>
-    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Vacaciones</th><th>Dobles y HS</th></tr></thead><tbody>
-      {sectionLinks.filter((item) => String(item.chapa).includes(filter)).map((item) => <tr key={item.chapa}><td>{item.chapa}</td><td>{item.vacaciones ? 'Configurado' : 'Pendiente'}</td><td>{item.dobles ? 'Configurado' : 'Pendiente'}</td></tr>)}
-    </tbody></table></div>
     <h3>Actividad reciente</h3><div className="recent-list">{recent.slice(0, 30).map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
   </section>;
 }
