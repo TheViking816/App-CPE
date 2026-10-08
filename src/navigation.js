@@ -13,7 +13,6 @@ export const VALID_TABS = new Set([
   "puertas",
   "censo",
   "portal",
-  "tablon",
   "foro",
   "enlaces",
   "monitor"

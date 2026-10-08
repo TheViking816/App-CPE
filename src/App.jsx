@@ -106,7 +106,6 @@ import {
   updateUserPassword,
   updateUserSpecialties
 } from "./supabaseClient.js";
-import GeneralBoard from "./GeneralBoard.jsx";
 import AdminMonitor from "./AdminMonitor.jsx";
 import { companyLogo, fetchGeneralBoard, shipImage } from "./generalBoard.js";
 import { currentAssignmentsFromSnapshot } from "./currentAssignments.js";
@@ -257,7 +256,6 @@ const SIDE_NAV_GROUPS = [
       { id: "estado", label: "Chapero", Icon: BriefcaseBusiness },
       { id: "puertas", label: "Puertas", Icon: CalendarRange },
       { id: "excepciones", label: "Excepciones", Icon: CalendarOff },
-      { id: "tablon", label: "Tablón general", Icon: ClipboardList },
       { id: "censo", label: "Censo", Icon: UsersRound }
     ]
   },
@@ -4774,14 +4772,6 @@ export function App() {
             activeSpecialtyId={activeSpecialtyId}
             availableSpecialties={availableSpecialties}
             onSpecialtyChange={setActiveSpecialtyId}
-          />
-        )}
-        {activeTab === "tablon" && (
-          <GeneralBoard
-            chapa={session.chapa}
-            onOpen={(chapa) => {
-              if (!session.supportAccess) trackUsageEvent({ eventType: "tablon_general_open", chapa });
-            }}
           />
         )}
         {activeTab === "portal" && (

@@ -5,7 +5,6 @@ import { hashForTab, tabFromHash } from "../src/navigation.js";
 test("restaura varias secciones internas desde su hash", () => {
   assert.equal(tabFromHash("#/puertas"), "puertas");
   assert.equal(tabFromHash("#/portal"), "portal");
-  assert.equal(tabFromHash("#/tablon"), "tablon");
   assert.equal(tabFromHash("#/contratacion"), "contratacion");
   assert.equal(tabFromHash("#/sueldometro"), "sueldometro");
   assert.equal(tabFromHash("#/descansos"), "descansos");
@@ -17,5 +16,7 @@ test("restaura varias secciones internas desde su hash", () => {
 test("normaliza rutas válidas y usa Inicio para rutas desconocidas", () => {
   assert.equal(tabFromHash("#censo"), "censo");
   assert.equal(tabFromHash("#/no-existe"), "inicio");
+  assert.equal(tabFromHash("#/tablon"), "inicio");
+  assert.equal(hashForTab("tablon"), "#/inicio");
   assert.equal(hashForTab("no-existe"), "#/inicio");
 });
