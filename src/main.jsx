@@ -9,6 +9,7 @@ import "./exchangeRedesign.css";
 import "./exchangeThemeA.css";
 import "./exchangeBoardCalendar.css";
 import "./manualNavigation.css";
+import "./generalBoardManual.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

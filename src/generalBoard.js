@@ -277,10 +277,12 @@ export function defaultJourneyKey(journeys, now = new Date()) {
   return journeys?.at(-1)?.key || "";
 }
 
-export async function fetchGeneralBoard() {
+export async function fetchGeneralBoard({ supabaseOnly = false } = {}) {
   const expected = expectedContractingSelection();
   const todayIso = madridTodayIso();
-  const syncResult = await syncBoardFromCsv().catch(() => ({ success: false, journeys: [], rows: [] }));
+  const syncResult = supabaseOnly
+    ? { success: false, journeys: [], rows: [] }
+    : await syncBoardFromCsv().catch(() => ({ success: false, journeys: [], rows: [] }));
   const trustedKeys = new Set(syncResult.success ? syncResult.journeys : []);
   const { data: snapshotRow, error: snapshotError } = await supabase.from("app_cpe_general_board_snapshot").select("payload, updated_at").eq("id", "latest").maybeSingle();
   if (snapshotError || !snapshotRow?.payload) throw snapshotError || new Error("No hay contratación de Turno");
