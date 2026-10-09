@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-exchange-groups-mobile-editor-16";
+self.__APP_CPE_SW_VERSION__ = "20261009-exchange-groups-label-17";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

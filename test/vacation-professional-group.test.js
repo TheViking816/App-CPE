@@ -13,7 +13,7 @@ const offer = {
 test('portal professional groups are matched by code for vacation exchanges', () => {
   assert.equal(professionalGroupCode(offer.professionalGroup), 'G-D');
   assert.match(professionalGroupLabel('G-III'), /Clasificadores/);
-  assert.match(professionalGroupLabel('SIN-F'), /conductores/);
+  assert.equal(professionalGroupLabel('SIN-F'), 'SIN-F · Pendiente de formación');
   assert.match(professionalGroupLabel('G-IV'), /Capataces/);
   assert.match(professionalGroupLabel('G-B'), /Móvil/);
   assert.equal(new Set(PROFESSIONAL_GROUPS.map((group) => group.code)).size, 11);

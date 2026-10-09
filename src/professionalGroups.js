@@ -9,7 +9,7 @@ export const PROFESSIONAL_GROUPS = Object.freeze([
   { code: 'G-DB', label: 'G-DB · Solo containera' },
   { code: 'G-E', label: 'G-E · Auxiliares de vehículos' },
   { code: 'G-I', label: 'G-I · Estibadores' },
-  { code: 'SIN-F', label: 'SIN-F · Pendiente de formación (conductores de 1.ª y 2.ª)' }
+  { code: 'SIN-F', label: 'SIN-F · Pendiente de formación' }
 ]);
 
 export function professionalGroupCode(value) {
