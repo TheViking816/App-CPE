@@ -13,7 +13,7 @@ import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
-import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, KeyRound, LogOut, MessageCircle, WalletCards, X } from 'lucide-react';
+import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, KeyRound, LogOut, MessageCircle, Settings, WalletCards, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
@@ -30,6 +30,7 @@ const readSession = () => { try { const value = JSON.parse(localStorage.getItem(
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
 function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
+  const [settingsOpen, setSettingsOpen] = useState(tab === 'cuenta');
   const item = (page, label, Icon) => <button key={page} type="button" className={tab === page ? 'is-active' : ''} aria-current={tab === page ? 'page' : undefined} onClick={() => navigate(page)}>
     <Icon size={19} aria-hidden="true" /><span>{label}</span><ChevronRight size={16} aria-hidden="true" />
   </button>;
@@ -38,7 +39,6 @@ function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
     <div className="visual-menu-group">
       <small>MI CUENTA</small>
       {item('sueldometro', 'Sueldómetro', WalletCards)}
-      {item('cuenta', 'Cambiar contraseña', KeyRound)}
     </div>
     <div className="visual-menu-group">
       <small>OPERATIVA</small>
@@ -53,6 +53,8 @@ function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
     </div>
     <div className="visual-menu-group visual-menu-footer">
       {isAdmin && item('monitor', 'Monitor de actividad', Activity)}
+      <button type="button" className={tab === 'cuenta' ? 'is-active' : ''} aria-expanded={settingsOpen} onClick={() => setSettingsOpen((open) => !open)}><Settings size={19} aria-hidden="true" /><span>Ajustes</span><ChevronRight className={settingsOpen ? 'is-open' : ''} size={16} aria-hidden="true" /></button>
+      {settingsOpen && <div id="manual-settings-submenu" className="visual-menu-group visual-menu-submenu">{item('cuenta', 'Cambiar contraseña', KeyRound)}</div>}
       <button type="button" onClick={onLogout}><LogOut size={19} aria-hidden="true" /><span>Salir</span></button>
     </div>
   </nav>;

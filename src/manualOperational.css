@@ -219,6 +219,11 @@
   outline-offset: 2px;
 }
 .visual-menu-footer { padding-bottom: 0; }
+.visual-menu-footer > button svg.is-open { transform: rotate(90deg); }
+.visual-menu .visual-menu-submenu { margin: 0 0 4px 14px; padding: 2px 0 2px 10px; border-top: 0; border-left: 2px solid #dbe8f3; }
+.visual-menu .visual-menu-submenu > button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; padding: 9px 12px; border-radius: 10px; color: #1d3b5d; font-size: 13px; font-weight: 750; text-align: left; }
+.visual-menu .visual-menu-submenu > button:hover, .visual-menu .visual-menu-submenu > button.is-active { background: #e7f3fc; color: #0b568e; }
+.visual-menu .visual-menu-submenu > button.is-active { box-shadow: inset 3px 0 #207ec4; }
 @media (max-width: 760px) {
   .visual-menu { left: 10px; top: calc(100% + 2px); }
 }
