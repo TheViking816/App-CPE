@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-login-contact-8";
+self.__APP_CPE_SW_VERSION__ = "20261009-login-copy-9";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
