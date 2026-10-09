@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-unified-rest-27";
+self.__APP_CPE_SW_VERSION__ = "20261010-fs-va-refine-28";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
