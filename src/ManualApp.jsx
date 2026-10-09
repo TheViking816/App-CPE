@@ -9,6 +9,7 @@ import { hashForExchangeOffer } from './navigation.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
 import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
+import { specialties as censoSpecialties } from './censo.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 import GeneralBoard from './GeneralBoard.jsx';
@@ -18,19 +19,21 @@ import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, Clipboar
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
-const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', ...OPERATIONAL_PAGES]);
+const PROFESSIONAL_GROUPS = ['I', 'II', 'III', 'IV'];
+const REST_GROUPS = ['A - N', 'A - V', 'B - N', 'B - V', 'C - N', 'C - V'];
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
   return ACTIVE_PAGES.has(route) ? route : 'sueldometro';
 };
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
-const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', part: '', notes: '' });
+const blank = (preferredGroup = 'II') => { const workerGroup = PROFESSIONAL_GROUPS.includes(preferredGroup) ? preferredGroup : 'II'; return { id: null, work_date: today(), shift: '08-14', specialty: optionsForGroup(workerGroup)[0], worker_group: workerGroup, operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', part: '', notes: '' }; };
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
 function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
-  const [settingsOpen, setSettingsOpen] = useState(tab === 'cuenta');
+  const [settingsOpen, setSettingsOpen] = useState(tab === 'cuenta' || tab === 'perfil');
   const item = (page, label, Icon) => <button key={page} type="button" className={tab === page ? 'is-active' : ''} aria-current={tab === page ? 'page' : undefined} onClick={() => navigate(page)}>
     <Icon size={19} aria-hidden="true" /><span>{label}</span><ChevronRight size={16} aria-hidden="true" />
   </button>;
@@ -53,8 +56,8 @@ function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
     </div>
     <div className="visual-menu-group visual-menu-footer">
       {isAdmin && item('monitor', 'Monitor de actividad', Activity)}
-      <button type="button" className={tab === 'cuenta' ? 'is-active' : ''} aria-expanded={settingsOpen} onClick={() => setSettingsOpen((open) => !open)}><Settings size={19} aria-hidden="true" /><span>Ajustes</span><ChevronRight className={settingsOpen ? 'is-open' : ''} size={16} aria-hidden="true" /></button>
-      {settingsOpen && <div id="manual-settings-submenu" className="visual-menu-group visual-menu-submenu">{item('cuenta', 'Cambiar contraseña', KeyRound)}</div>}
+      <button type="button" className={tab === 'cuenta' || tab === 'perfil' ? 'is-active' : ''} aria-expanded={settingsOpen} onClick={() => setSettingsOpen((open) => !open)}><Settings size={19} aria-hidden="true" /><span>Ajustes</span><ChevronRight className={settingsOpen ? 'is-open' : ''} size={16} aria-hidden="true" /></button>
+      {settingsOpen && <div id="manual-settings-submenu" className="visual-menu-group visual-menu-submenu">{item('perfil', 'Mis datos', WalletCards)}{item('cuenta', 'Cambiar contraseña', KeyRound)}</div>}
       <button type="button" onClick={onLogout}><LogOut size={19} aria-hidden="true" /><span>Salir</span></button>
     </div>
   </nav>;
@@ -65,6 +68,54 @@ function SectionPage({ eyebrow, title, children }) {
     <section className="visual-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div></section>
     {children}
   </div>;
+}
+
+function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }) {
+  const toggleSpecialty = (id) => setSelectedSpecialties((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  return <div className="manual-profile-fields">
+    <label>Grupo profesional<select value={professionalGroup} onChange={(event) => setProfessionalGroup(event.target.value)} required>
+      <option value="">Selecciona tu grupo</option>{PROFESSIONAL_GROUPS.map((group) => <option key={group} value={group}>Grupo {group}</option>)}
+    </select></label>
+    <label>Grupo de descansos<select value={restGroup} onChange={(event) => setRestGroup(event.target.value)} required>
+      <option value="">Selecciona tu grupo</option>{REST_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}
+    </select></label>
+    <fieldset><legend>Especialidades <small>Selecciona todas las que tengas</small></legend>
+      <div className="manual-profile-specialties">{censoSpecialties.map((specialty) => <label key={specialty.id}>
+        <input type="checkbox" checked={selectedSpecialties.includes(specialty.id)} onChange={() => toggleSpecialty(specialty.id)} />
+        <span>{specialty.name}</span>
+      </label>)}</div>
+    </fieldset>
+  </div>;
+}
+
+function ProfileSettings({ session, onSession }) {
+  const [professionalGroup, setProfessionalGroup] = useState(session.professionalGroup || '');
+  const [restGroup, setRestGroup] = useState(session.restGroup || '');
+  const [selectedSpecialties, setSelectedSpecialties] = useState(session.specialties || []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  async function submit(event) {
+    event.preventDefault(); setError(''); setNotice('');
+    if (!selectedSpecialties.length) { setError('Selecciona al menos una especialidad.'); return; }
+    setBusy(true);
+    try {
+      const response = await rpc('app_cpe_update_manual_profile', { p_token: session.token, p_professional_group: professionalGroup, p_rest_group: restGroup, p_specialties: selectedSpecialties });
+      const next = { ...session, ...response };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next)); onSession(next);
+      setNotice('Tus datos se han guardado.');
+    } catch (reason) { setError(reason.message || 'No se pudieron guardar los datos.'); }
+    finally { setBusy(false); }
+  }
+  return <SectionPage eyebrow="AJUSTES" title="Mis datos"><section className="manual-panel manual-profile-settings">
+    <p>Estos datos se usan en Chapero, Puertas, Intercambios y Sueldómetro.</p>
+    <form onSubmit={submit}>
+      <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} />
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {notice && <p className="banner success" role="status">{notice}</p>}
+      <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar mis datos'}</button>
+    </form>
+  </section></SectionPage>;
 }
 
 function PasswordSettings({ session }) {
@@ -113,13 +164,17 @@ function Access({ onAccess }) {
   const [chapa, setChapa] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [professionalGroup, setProfessionalGroup] = useState('');
+  const [restGroup, setRestGroup] = useState('');
+  const [selectedSpecialties, setSelectedSpecialties] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');
     try {
+      if (register && !selectedSpecialties.length) throw new Error('Selecciona al menos una especialidad.');
       const session = register
-        ? await rpc('app_cpe_register_manual', { p_chapa: chapa, p_password: password, p_email: email })
+        ? await rpc('app_cpe_register_manual_profile', { p_chapa: chapa, p_password: password, p_email: email, p_professional_group: professionalGroup, p_rest_group: restGroup, p_specialties: selectedSpecialties })
         : await loginUser({ chapa, password });
       if (!session?.token) throw new Error('No se pudo abrir la sesión.');
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -128,13 +183,14 @@ function Access({ onAccess }) {
     } catch (reason) { setError(reason.message || 'No se pudo acceder.'); }
     finally { setBusy(false); }
   }
-  return <main className="manual-shell access-shell"><section className="access-card">
+  return <main className="manual-shell access-shell"><section className={`access-card${register ? ' is-registering' : ''}`}>
     <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><h1>App CPE</h1>
     <p>{register ? 'Crea tu cuenta con tu chapa y una contraseña nueva.' : 'Accede con la contraseña de App CPE. Si aún no tienes cuenta, regístrate aquí.'}</p>
     <form onSubmit={submit}>
       <label>Chapa<input value={chapa} onChange={(event) => setChapa(event.target.value)} inputMode="numeric" autoComplete="username" required /></label>
       {register && <label>Correo electrónico<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>}
       <label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} minLength={register ? 8 : undefined} required /></label>
+      {register && <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} />}
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary" disabled={busy}>{busy ? 'Un momento…' : register ? 'Crear cuenta' : 'Entrar'}</button>
     </form>
@@ -253,7 +309,7 @@ function Salary({ session, onSession }) {
   const [config, setConfig] = useState(null);
   const [month, setMonth] = useState('');
   const [period, setPeriod] = useState(() => new Date().getDate() <= 15 ? 'first' : 'second');
-  const [form, setForm] = useState(blank);
+  const [form, setForm] = useState(() => blank(session.professionalGroup));
   const [showForm, setShowForm] = useState(false);
   const [paidForm, setPaidForm] = useState({ id: null, work_date: today(), concept_type: 'VA' });
   const [showPaidForm, setShowPaidForm] = useState(false);
@@ -377,7 +433,7 @@ function Salary({ session, onSession }) {
         p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_premium: premium,
         p_notes: packManualNotes(form) });
       setManualRows((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
-      setMonth(saved.work_date.slice(0, 7)); setShowForm(false); setForm(blank()); setNotice('Jornal guardado.');
+      setMonth(saved.work_date.slice(0, 7)); setShowForm(false); setForm(blank(session.professionalGroup)); setNotice('Jornal guardado.');
     } catch (reason) { setError(reason.message || 'No se pudo guardar el jornal.'); }
     finally { setBusy(false); }
   }
@@ -433,7 +489,8 @@ function Salary({ session, onSession }) {
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}</header><div className="visual-content">
-    {tab === 'cuenta' ? <PasswordSettings session={session} />
+    {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
+      : tab === 'cuenta' ? <PasswordSettings session={session} />
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
       : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} />
@@ -461,7 +518,7 @@ function Salary({ session, onSession }) {
       <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : TRAINING_DAY_RATE)}</strong></div>
       <div className="form-actions"><button type="button" onClick={() => setShowPaidForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar día'}</button></div>
     </form></section>}
-    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank()); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }} portalAction={(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <div className="personal-portal-actions">{personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="jornales" /><button type="submit">Jornales y primas <ExternalLink size={15} aria-hidden="true" /></button></form>}{doblesLinkAvailable && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="dobles" /><button type="submit">Solicitar dobles y HS <ExternalLink size={15} aria-hidden="true" /></button></form>}</div>}>
+    {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onAdd={() => { setForm(blank(session.professionalGroup)); setShowForm(true); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowForm(false); setNotice(''); }} portalAction={(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <div className="personal-portal-actions">{personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="jornales" /><button type="submit">Jornales y primas <ExternalLink size={15} aria-hidden="true" /></button></form>}{doblesLinkAvailable && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="dobles" /><button type="submit">Solicitar dobles y HS <ExternalLink size={15} aria-hidden="true" /></button></form>}</div>}>
       {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="portal-jornales-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} onOpen={setSelectedDetail} />)}</div>}
     </ManualSalaryDashboard>}{selectedDetail && <JornalDetail item={selectedDetail} busy={busy} onClose={() => setSelectedDetail(null)} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}</>}</div>
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">

@@ -35,41 +35,71 @@
 .password-settings form > button { justify-self: start; }
 .password-settings .form-error { margin: 0; color: #a72935; }
 .password-settings .banner { margin: 0; }
+.access-card.is-registering { width: min(100%, 540px); }
+.manual-profile-settings { max-width: 760px; }
+.manual-profile-settings > p { margin: 0 0 18px; color: #526b86; }
+.manual-profile-settings form, .manual-profile-fields { display: grid; gap: 16px; }
+.manual-profile-fields label { display: grid; gap: 6px; color: #173b64; font-weight: 750; }
+.manual-profile-fields select { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #cbdceb; border-radius: 9px; background: #fff; color: #102f55; }
+.manual-profile-fields fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.manual-profile-fields legend { margin-bottom: 8px; color: #173b64; font-weight: 800; }
+.manual-profile-fields legend small { display: block; margin-top: 2px; color: #68829b; font-size: 11px; font-weight: 600; }
+.manual-profile-specialties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 260px; overflow-y: auto; padding: 8px; border: 1px solid #cbdceb; border-radius: 10px; background: #f8fbfe; }
+.access-card .manual-profile-specialties label, .manual-profile-specialties label { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; padding: 7px 8px; border-radius: 7px; color: #234768; font-size: 12px; font-weight: 700; text-align: left; }
+.manual-profile-specialties label:hover { background: #eaf3fc; }
+.manual-profile-specialties input { flex: 0 0 auto; width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: #1769b6; }
+.manual-profile-settings .form-error { margin: 0; color: #a72935; }
+.manual-profile-settings .banner { margin: 0; }
+.manual-profile-settings form > button { justify-self: start; }
+@media (max-width: 530px) { .manual-profile-specialties { grid-template-columns: 1fr; } }
 .manual-section-page .exchange-area {
   width: 100%;
   max-width: none;
   margin: 0;
 }
-.visual-shell .exchange-redesign .rest-exchange-list { gap: 12px; }
+.visual-shell .exchange-redesign .rest-exchange-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  justify-content: center;
+  gap: 10px;
+}
 .visual-shell .exchange-redesign .rest-exchange-offer {
-  gap: 11px;
-  padding: 13px;
-  border-radius: 14px;
+  gap: 7px;
+  padding: 10px;
+  border: 2px solid #9bbad7;
+  border-left: 4px solid #2463a9;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: none;
 }
 .visual-shell .exchange-redesign .rest-exchange-offer-head {
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 30px minmax(0, 1fr);
   gap: 3px 9px;
 }
-.visual-shell .exchange-avatar { width: 34px; height: 34px; font-size: 15px !important; }
+.visual-shell .exchange-avatar { width: 30px; height: 30px; font-size: 14px !important; }
 .visual-shell .exchange-redesign .rest-exchange-offer-head > div { gap: 2px; }
-.visual-shell .exchange-redesign .rest-exchange-offer-head strong { font-size: 13px; line-height: 1.25; }
+.visual-shell .exchange-redesign .rest-exchange-offer-head strong { color: #0b2d54; font-size: 13px; font-weight: 850; line-height: 1.2; }
+.visual-shell .exchange-redesign .rest-exchange-offer-head > div > span { color: #145c9f; font-weight: 900; }
 .visual-shell .exchange-redesign .rest-exchange-offer-head .rest-exchange-offer-groups {
   grid-column: 2;
   gap: 3px 7px;
   padding: 0;
 }
-.visual-shell .exchange-redesign .rest-exchange-offer-groups small { padding: 0; border: 0; font-size: 10px; line-height: 1.25; }
-.visual-shell .exchange-redesign .rest-exchange-dates { gap: 7px; }
-.visual-shell .exchange-redesign .rest-exchange-dates > div { min-width: 0; gap: 3px; padding: 9px 10px; border-radius: 9px; }
+.visual-shell .exchange-redesign .rest-exchange-offer-groups small { padding: 0; border: 0; color: #3e5872; font-size: 10px; font-weight: 750; line-height: 1.2; }
+.visual-shell .exchange-redesign .rest-exchange-dates { gap: 6px; }
+.visual-shell .exchange-redesign .rest-exchange-dates > div { min-width: 0; gap: 2px; padding: 7px 8px; border: 1px solid #d2e2f1; border-radius: 8px; background: #edf5fd; }
+.visual-shell .exchange-redesign .rest-exchange-dates > div:nth-child(2) { background: #f3f7fb; }
+.visual-shell .exchange-redesign .rest-exchange-dates > div > small { color: #185e9c; font-weight: 900; }
 .visual-shell .exchange-redesign .rest-exchange-dates:has(> div:nth-child(2))::after { width: 21px; height: 21px; border-width: 2px; font-size: 12px; }
 .visual-shell .exchange-date-display { gap: 1px; }
-.visual-shell .exchange-date-display time { font-size: 23px; line-height: 1; }
-.visual-shell .exchange-date-display > span { font-size: 11px; }
-.visual-shell .exchange-redesign .exchange-date-display > small { font-size: 10px; line-height: 1.2; }
-.visual-shell .exchange-redesign .rest-exchange-actions > button { min-height: 40px; }
+.visual-shell .exchange-date-display time { color: #0b2d54; font-size: 21px; font-weight: 850; line-height: 1; }
+.visual-shell .exchange-date-display > span { color: #244b73; font-size: 11px; font-weight: 800; }
+.visual-shell .exchange-redesign .exchange-date-display > small { color: #3e5872; font-size: 10px; font-weight: 750; line-height: 1.2; }
+.visual-shell .exchange-redesign .rest-exchange-actions { justify-items: end; }
+.visual-shell .exchange-redesign .rest-exchange-actions > button { min-height: 38px; padding: 7px 14px; background: #1c63ab; font-weight: 800; }
 .visual-shell .exchange-redesign .rest-exchange-manage { padding-top: 10px; }
+@media (max-width: 300px) { .visual-shell .exchange-redesign .rest-exchange-list { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 430px) {
-  .visual-shell .exchange-redesign .rest-exchange-offer { padding: 11px; }
+  .visual-shell .exchange-redesign .rest-exchange-offer { padding: 9px; }
   .visual-shell .exchange-date-display time { font-size: 20px; }
   .visual-shell .exchange-redesign .rest-exchange-dates > div { padding: 8px; }
 }
