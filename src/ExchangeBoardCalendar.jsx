@@ -59,7 +59,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
             {Array.from({ length: firstWeekday }, (_, index) => <span className="blank" key={`blank-${index}`} />)}
             {Array.from({ length: count }, (_, index) => {
               const date = dayKey(year, month, index + 1);
-              const isHoliday = !vacation && holidayDates.has(date);
+              const isHoliday = !vacation && (holidayDates.has(date) || new Date(year, month - 1, index + 1).getDay() === 0);
               const dayOffers = entries.get(date) || [];
               const marks = vacation ? personalVacationMarks(date, paidDays)
                 : personalRestMarks(date, group, overrides, paidDays);
