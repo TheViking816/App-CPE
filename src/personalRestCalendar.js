@@ -6,12 +6,13 @@ export function personalVacationMarks(date, paidDays = []) {
 }
 
 export function personalRestMarks(date, restGroup, overrides = [], paidDays = []) {
-  const paid = paidDays.find((row) => row.work_date === date);
+  const paid = paidDays.find((row) => row.work_date === date && row.concept_type === 'VA')
+    || paidDays.find((row) => row.work_date === date && row.concept_type === 'FM');
   if (paid) return [{ type: paid.concept_type === 'FM' ? 'training' : 'vacation', label: paid.concept_type }];
   const override = overrides.find((row) => row.work_date === date);
   if (override) {
     if (override.day_type === 'WORK') return [];
-    return [{ type: override.day_type === 'FA' ? 'chosen-holiday' : 'manual-rest', label: override.day_type === 'FA' ? 'FA' : 'DS' }];
+    return [{ type: override.day_type === 'FS' ? 'chosen-holiday' : 'manual-rest', label: override.day_type === 'FS' ? 'FS' : 'DS' }];
   }
   const [year, month, day] = date.split('-').map(Number);
   return companyRestMarks(year, month, day, restGroup);

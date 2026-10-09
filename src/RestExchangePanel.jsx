@@ -284,12 +284,12 @@ export default function RestExchangePanel({ session }) {
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
     <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
-    <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir vacaciones</button><span>DS, FA, FM y VA se muestran solo en tu calendario.</span></div>
+    <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir vacaciones</button><span>DS, FS, FM y VA se muestran solo en tu calendario.</span></div>
     {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
     {editCalendar && <form className="rest-calendar-editor" ref={calendarEditorRef} onSubmit={(event) => { event.preventDefault(); changePersonalDay("save"); }}>
       <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type === "VA" ? "VA" : calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
       <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
-        <option value="REST">DS · Descanso</option><option value="FA">FA · Festivo seleccionado</option><option value="WORK">Día sin descanso</option><option value="VA">VA · Vacaciones</option>
+        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Día sin descanso</option><option value="VA">VA · Vacaciones</option>
       </select></label>
       <div><button type="submit" disabled={calendarBusy}>Guardar día</button><button type="button" disabled={calendarBusy} onClick={() => changePersonalDay("reset")}>{calendarData.paidDays.some((row) => row.work_date === editDate && row.concept_type === "VA") ? "Quitar vacaciones" : "Usar calendario del grupo"}</button></div>
     </form>}

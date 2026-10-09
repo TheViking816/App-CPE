@@ -46,7 +46,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
     <div className="exchange-board-legend">{Object.entries(vacation ? { offered: "Ofrece vacaciones", wanted: "Busca vacaciones" } : LABELS).map(([kind, label]) => <span key={kind} className={`is-${kind}`}>{label}</span>)}{vacation && <span className="is-personal-vacation">Mis vacaciones · VA</span>}</div>
     {!vacation && <div className="exchange-rest-legend" aria-label="Colores del calendario personal">
       {restCalendarAvailable && group && <><span className={`is-rest-${group.letter}`}>Grupo {group.letter.toUpperCase()}</span><span className={`is-week-${group.week}`}>Semana {group.week.toUpperCase()}</span><span className="is-holiday">Festivo inhábil</span></>}
-      <span className="is-manual-rest">DS manual</span><span className="is-chosen-holiday">FA</span><span className="is-training">FM</span><span className="is-vacation">VA</span>
+      <span className="is-manual-rest">DS manual</span><span className="is-chosen-holiday">FS</span><span className="is-training">FM</span><span className="is-vacation">VA</span>
     </div>}
     <div className={`exchange-board-months${vacation ? " is-single" : ""}`}>
       {months.map(([year, month]) => {

@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-personal-calendar-vacations-21";
+self.__APP_CPE_SW_VERSION__ = "20261009-fs-vacation-style-22";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
