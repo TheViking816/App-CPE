@@ -75,10 +75,10 @@ function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, set
   const otherProfessionalGroup = otherSelected || Boolean(professionalGroup && !PROFESSIONAL_GROUPS.some((group) => group.code === professionalGroup));
   const toggleSpecialty = (id) => setSelectedSpecialties((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   return <div className="manual-profile-fields">
-    {lockedProfessionalGroup ? <label>Grupo profesional del portal<output className="manual-profile-verified-group">{professionalGroupLabel(professionalGroup)}<small>Actualizado desde el portal</small></output></label> : <label>Grupo profesional<select value={otherProfessionalGroup ? 'other' : professionalGroup} onChange={(event) => {
+    {lockedProfessionalGroup ? <label>Grupo de intercambio del portal<output className="manual-profile-verified-group">{professionalGroupLabel(professionalGroup)}<small>Actualizado desde el portal</small></output></label> : <label>Grupo de intercambio<select value={otherProfessionalGroup ? 'other' : professionalGroup} onChange={(event) => {
       const value = event.target.value; setOtherSelected(value === 'other'); setProfessionalGroup(value === 'other' ? '' : value);
     }} required>
-      <option value="">Selecciona tu grupo del portal</option>{PROFESSIONAL_GROUPS.map((group) => <option key={group.code} value={group.code}>{group.label}</option>)}
+      <option value="">Selecciona tu grupo de intercambio</option>{PROFESSIONAL_GROUPS.map((group) => <option key={group.code} value={group.code}>{group.label}</option>)}
       <option value="other">Otro grupo del portal</option>
     </select></label>}
     {!lockedProfessionalGroup && otherProfessionalGroup && <label>Código del grupo en el portal<input value={professionalGroup} onChange={(event) => setProfessionalGroup(event.target.value.toUpperCase().trim())} placeholder="Por ejemplo, G-B" pattern="(G|SIN)-[A-Z0-9]{1,5}" maxLength={10} required /></label>}
@@ -120,7 +120,7 @@ function ProfileSettings({ session, onSession }) {
     finally { setBusy(false); }
   }
   return <SectionPage eyebrow="AJUSTES" title="Mis datos"><section className="manual-panel manual-profile-settings">
-    <p>El grupo profesional del portal se usa para comprobar los intercambios de vacaciones. Las especialidades se usan en Chapero y Puertas.</p>
+    <p>El grupo de intercambio indica con quién puedes cambiar vacaciones. Es distinto del grupo de descansos y del grupo salarial. Las especialidades se usan en Chapero y Puertas.</p>
     <form onSubmit={submit}>
       <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} lockedProfessionalGroup={session.professionalGroupSource === 'portal'} />
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -520,7 +520,7 @@ function Salary({ session, onSession }) {
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
-    {showForm && <section className="manual-panel editor manual-editor-card"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
+    {showForm && <section className="manual-panel editor manual-editor-card manual-jornal-editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
       <label>Turno<select value={form.shift} onChange={(event) => setForm({ ...form, shift: event.target.value })}>{['02-08','06-12','08-14','14-20','18-00','19-01','20-02'].map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>

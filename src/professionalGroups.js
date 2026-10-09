@@ -1,10 +1,15 @@
 export const PROFESSIONAL_GROUPS = Object.freeze([
+  { code: 'G-IV', label: 'G-IV · Capataces' },
+  { code: 'G-III', label: 'G-III · Clasificadores' },
   { code: 'G-A', label: 'G-A · Gruístas' },
+  { code: 'G-B', label: 'G-B · Móvil, pico y RTT' },
   { code: 'G-C', label: 'G-C · Pala, MAFFI y RTT' },
   { code: 'G-D', label: 'G-D · Containera y RTT' },
   { code: 'G-DA', label: 'G-DA · Solo RTT' },
-  { code: 'G-III', label: 'G-III · Clasificadores' },
-  { code: 'SIN-F', label: 'SIN-F · Pendiente de formación' }
+  { code: 'G-DB', label: 'G-DB · Solo containera' },
+  { code: 'G-E', label: 'G-E · Auxiliares de vehículos' },
+  { code: 'G-I', label: 'G-I · Estibadores' },
+  { code: 'SIN-F', label: 'SIN-F · Pendiente de formación (conductores de 1.ª y 2.ª)' }
 ]);
 
 export function professionalGroupCode(value) {
