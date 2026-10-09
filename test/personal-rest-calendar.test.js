@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { personalRestMarks, personalVacationMarks } from '../src/personalRestCalendar.js';
 
-test('group and weekly rest are identified separately', () => {
+test('all group and weekly rests show DS regardless of origin', () => {
   assert.deepEqual(personalRestMarks('2026-10-09', 'A - N'), [{ type: 'rest-a', label: 'DS' }]);
+  assert.deepEqual(personalRestMarks('2026-10-12', 'B - N'), [{ type: 'rest-b', label: 'DS' }]);
+  assert.deepEqual(personalRestMarks('2026-10-23', 'C - N'), [{ type: 'rest-c', label: 'DS' }]);
   assert.deepEqual(personalRestMarks('2026-10-10', 'A - N'), [{ type: 'week-n', label: 'DS' }]);
   assert.deepEqual(personalRestMarks('2026-10-03', 'A - V'), [{ type: 'week-v', label: 'DS' }]);
 });

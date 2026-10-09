@@ -13,7 +13,7 @@ test('recognizes all six stored rest groups', () => {
   assert.equal(parseRestGroup(''), null);
 });
 
-test('matches group rest and weekly colors from the 2026 company calendar', () => {
+test('matches group rest and weekly dates from the 2026 company calendar', () => {
   assert.equal(companyRestType(2026, 10, 9, 'A - N'), 'rest-a');
   assert.equal(companyRestType(2026, 10, 10, 'A - N'), 'week-n');
   assert.equal(companyRestType(2026, 10, 3, 'A - V'), 'week-v');

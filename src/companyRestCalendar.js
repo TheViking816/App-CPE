@@ -71,12 +71,11 @@ export function companyRestMarks(year, month, day, groupValue) {
   if (!calendar) return [];
   if (calendar.holiday?.includes(day)) return [{ type: 'holiday', label: 'FI' }];
   if (!group) return [];
-  const marks = [];
   if (calendar[group.letter]?.includes(day) || calendar[`${group.letter}${group.week}`]?.includes(day))
-    marks.push({ type: `rest-${group.letter}`, label: 'DS' });
+    return [{ type: `rest-${group.letter}`, label: 'DS' }];
   if (calendar[group.week]?.includes(day))
-    marks.push({ type: `week-${group.week}`, label: 'DS' });
-  return marks;
+    return [{ type: `week-${group.week}`, label: 'DS' }];
+  return [];
 }
 
 export function availableRestMonths(year) {
