@@ -36,6 +36,10 @@
 .password-settings .form-error { margin: 0; color: #a72935; }
 .password-settings .banner { margin: 0; }
 .access-card.is-registering { width: min(100%, 540px); }
+.access-password-field { position: relative; display: block; width: 100%; }
+.access-password-field input { width: 100%; padding-right: 50px; }
+.access-password-field button { position: absolute; top: 50%; right: 5px; display: grid; place-items: center; width: 37px; height: 37px; padding: 0; transform: translateY(-50%); border: 0; border-radius: 8px; background: transparent; color: #526b86; }
+.access-password-field button:hover, .access-password-field button:focus-visible { background: #e9f2fb; color: #155994; }
 .manual-profile-settings { max-width: 760px; }
 .manual-profile-settings > p { margin: 0 0 18px; color: #526b86; }
 .manual-profile-settings form, .manual-profile-fields { display: grid; gap: 16px; }
