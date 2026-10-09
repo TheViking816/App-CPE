@@ -1,0 +1,497 @@
+.operational-panel .home-summary,
+.operational-panel .door-ring-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.08);
+}
+
+.operational-panel .home-summary {
+  padding: 18px 16px;
+  text-align: left;
+}
+
+.operational-panel .home-summary p,
+.operational-panel .section-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.operational-panel .home-summary h1 {
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.operational-panel .home-summary span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.operational-panel .ring-dot {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  transform-origin: 0 31px;
+  box-shadow: 0 2px 8px rgba(7, 31, 63, 0.25);
+}
+
+.operational-panel .user-dot {
+  background: var(--green);
+  transform: rotate(var(--user-angle)) translateX(-50%);
+}
+
+.operational-panel .door-dot {
+  background: var(--blue);
+  transform: rotate(var(--door-angle)) translateX(-50%);
+}
+
+.operational-panel .door-rings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operational-panel .door-ring-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.operational-panel .mini-position-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, #fff 0 50%, transparent 51%),
+    conic-gradient(from -90deg, rgba(13, 53, 103, 0.14), rgba(21, 184, 136, 0.26), rgba(13, 53, 103, 0.14));
+  border: 1px solid rgba(13, 53, 103, 0.16);
+  box-shadow: inset 0 0 0 4px #f4f8fc;
+}
+
+.operational-panel .mini-position-ring .ring-dot {
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  transform-origin: 0 22px;
+}
+
+.operational-panel .mini-position-ring strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.operational-panel .door-ring-card.near .mini-position-ring,
+.operational-panel .door-ring-card.now .mini-position-ring {
+  border-color: rgba(21, 184, 136, 0.42);
+  box-shadow: inset 0 0 0 4px #eefbf6;
+}
+
+.operational-panel .door-ring-card.far .mini-position-ring {
+  border-color: rgba(31, 71, 163, 0.22);
+}
+
+.operational-panel .door-ring-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.operational-panel .door-ring-card > div:last-child > strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.operational-panel .door-ring-card small {
+  display: block;
+  margin-top: 3px;
+  color: #6d7c91;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.operational-panel .chapero-card {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 1px solid rgba(8, 38, 75, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(7, 31, 63, 0.1);
+}
+
+.operational-panel .jornada-card {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(13, 53, 103, 0.13);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, #f8fbff 0%, #eef5fb 100%);
+  box-shadow: inset 4px 0 0 rgba(245, 130, 32, 0.9);
+}
+
+.operational-panel .jornada-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.operational-panel .jornada-card strong {
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.operational-panel .chapero-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 1px;
+}
+
+.operational-panel .chapero-meta-row span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: capitalize;
+}
+
+.operational-panel .chapero-meta-row small {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.operational-panel .chapero-card.contratado,
+.operational-panel .chapero-card.anticipado {
+  border-color: rgba(16, 185, 129, 0.32);
+}
+
+.operational-panel .chapero-card.nocontratado {
+  border-color: rgba(13, 53, 103, 0.22);
+}
+
+.operational-panel .chapero-card.falta {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.operational-panel .chapero-card.excepcion {
+  border-color: rgba(245, 130, 32, 0.38);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+.operational-panel .chapero-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #08264b 0%, var(--chapero-contratado) 100%);
+  color: #fff;
+}
+
+.operational-panel .chapero-status-copy {
+  min-width: 0;
+}
+
+.operational-panel .chapero-status-copy span {
+  display: block;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.operational-panel .chapero-status-copy strong {
+  display: block;
+  margin-top: 2px;
+  color: #fff;
+  font-size: 25px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.operational-panel .chapero-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.operational-panel .chapero-card.contratado .chapero-status-badge {
+  background: #dff9ee;
+  color: #07815d;
+}
+
+.operational-panel .chapero-card.anticipado .chapero-status-row {
+  background: linear-gradient(135deg, #2563eb 0%, var(--chapero-anticipado) 100%);
+}
+
+.operational-panel .chapero-card.anticipado .chapero-status-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.operational-panel .chapero-card.nocontratado .chapero-status-row {
+  background: linear-gradient(135deg, #64748b 0%, var(--chapero-nocontratado) 100%);
+}
+
+.operational-panel .chapero-card.nocontratado .chapero-status-badge {
+  background: #edf2f7;
+  color: #475569;
+}
+
+.operational-panel .chapero-card.falta .chapero-status-row,
+.operational-panel .chapero-card.empty .chapero-status-row,
+.operational-panel .chapero-card.loading .chapero-status-row {
+  background: linear-gradient(135deg, #7b8798 0%, var(--chapero-falta) 100%);
+}
+
+.operational-panel .chapero-card.falta .chapero-status-badge,
+.operational-panel .chapero-card.empty .chapero-status-badge,
+.operational-panel .chapero-card.loading .chapero-status-badge {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.operational-panel .chapero-card.excepcion .chapero-status-row {
+  background: linear-gradient(135deg, #d97706 0%, var(--chapero-excepcion) 100%);
+}
+
+.operational-panel .chapero-card.excepcion .chapero-status-badge {
+  background: #ffedd5;
+  color: #c05621;
+}
+
+.operational-panel .chapero-card.doble .chapero-status-row {
+  background: linear-gradient(135deg, #991b1b 0%, var(--chapero-doble) 100%);
+}
+
+.operational-panel .chapero-card.doble .chapero-status-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.operational-panel .chapero-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.operational-panel .chapero-summary div {
+  min-width: 0;
+  padding: 8px 5px 7px;
+  border-radius: 8px;
+  background: #f2f6fa;
+  text-align: center;
+}
+
+.operational-panel .chapero-summary strong {
+  display: block;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.operational-panel .chapero-summary span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.operational-panel .chapero-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+  color: #6d7c91;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.operational-panel .section-heading {
+  margin: 2px 0 15px;
+  padding: 0 4px;
+}
+
+.operational-panel .section-heading h1 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.operational-panel .section-heading span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.operational-panel .doors-table-section {
+  margin-bottom: 22px;
+}
+
+.operational-panel .doors-table-section h2 {
+  margin: 0 0 10px 4px;
+  color: var(--ink);
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.operational-panel .doors-table-wrap {
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.operational-panel .doors-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.operational-panel .doors-table th {
+  padding: 17px 8px;
+  background: #0d3567;
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.operational-panel .doors-table td {
+  padding: 17px 8px;
+  border-bottom: 1px solid #dde5ed;
+  color: #263247;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.operational-panel .doors-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.operational-panel .doors-table th:first-child,
+.operational-panel .doors-table td:first-child {
+  width: 28%;
+  text-align: left;
+  padding-left: 20px;
+}
+
+.operational-panel .doors-table th:nth-child(2),
+.operational-panel .doors-table td:nth-child(2) {
+  width: 28%;
+}
+
+.operational-panel .doors-table th:nth-child(3),
+.operational-panel .doors-table td:nth-child(3) {
+  width: 17%;
+}
+
+.operational-panel .door-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  min-height: 54px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  box-shadow: 0 8px 16px rgba(7, 31, 63, 0.18);
+}
+
+.operational-panel .door-badge.lab {
+  background: linear-gradient(135deg, #16c68d, #079568);
+}
+
+.operational-panel .door-badge.fes {
+  background: linear-gradient(135deg, #2143a2, #173481);
+}
+
+.operational-panel .doors-table small {
+  display: block;
+  margin-top: 5px;
+  color: #7b8798;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.operational-panel .doors-table tr.near td {
+  background: #ecfdf5;
+}
+
+.operational-panel .doors-table tr.now td {
+  background: #fff7ed;
+}
+
+.operational-panel .doors-table tr.far td {
+  background: #f9fafb;
+}
+
+.operational-panel .specialty-select {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid rgba(217, 226, 236, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 7px 18px rgba(7, 31, 63, 0.08);
+}
+
+.operational-panel .specialty-select span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}

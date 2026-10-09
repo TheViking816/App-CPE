@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-admin-operativa-1";
+self.__APP_CPE_SW_VERSION__ = "20261009-operativa-nav-2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

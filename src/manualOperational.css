@@ -1,4 +1,15 @@
 .operational-panel {
+  --ink: #08264b;
+  --muted: #6d7c91;
+  --shadow: 0 8px 20px #071f3f1c;
+  --green: #14b88a;
+  --blue: #2455ad;
+  --chapero-contratado: #059669;
+  --chapero-anticipado: #1d4ed8;
+  --chapero-nocontratado: #475569;
+  --chapero-falta: #64748b;
+  --chapero-excepcion: #b45309;
+  --chapero-doble: #b91c1c;
   display: grid;
   gap: 1rem;
 }
@@ -30,4 +41,89 @@
   padding: .5rem .7rem;
   border-radius: .5rem;
   background: #e9f2fa;
+}
+
+.visual-menu {
+  z-index: 60;
+  left: max(16px, calc((100vw - 1020px) / 2));
+  top: calc(100% + 6px);
+  display: block;
+  width: min(320px, calc(100vw - 32px));
+  min-width: 0;
+  max-height: min(75vh, 650px);
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid #d9e6f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 22px 55px #071f3f40;
+}
+.visual-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 10px;
+  color: #092a54;
+  font-size: 20px;
+  font-weight: 900;
+}
+.visual-menu .visual-menu-heading button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 9px;
+  color: #57728e;
+}
+.visual-menu-group {
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+  border-top: 1px solid #e7edf3;
+}
+.visual-menu-group > small {
+  padding: 0 11px 5px;
+  color: #7690a9;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.visual-menu .visual-menu-group > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 45px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  color: #1d3b5d;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: left;
+}
+.visual-menu-group > button svg:first-child {
+  flex: 0 0 auto;
+  color: #5c84aa;
+}
+.visual-menu-group > button svg:last-child:not(:first-child) {
+  margin-left: auto;
+  color: #9aafc1;
+}
+.visual-menu .visual-menu-group > button:hover,
+.visual-menu .visual-menu-group > button.is-active {
+  background: #e7f3fc;
+  color: #0b568e;
+}
+.visual-menu .visual-menu-group > button.is-active {
+  box-shadow: inset 3px 0 #207ec4;
+}
+.visual-menu .visual-menu-group > button:focus-visible,
+.visual-menu .visual-menu-heading button:focus-visible {
+  outline: 3px solid #28a9d2;
+  outline-offset: 2px;
+}
+.visual-menu-footer { padding-bottom: 0; }
+@media (max-width: 760px) {
+  .visual-menu { left: 10px; top: calc(100% + 2px); }
 }

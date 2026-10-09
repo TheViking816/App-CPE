@@ -10,8 +10,9 @@ import "./exchangeThemeA.css";
 import "./exchangeBoardCalendar.css";
 import "./manualNavigation.css";
 import "./generalBoardManual.css";
-import "./manualOperational.css";
 import "./manualCompact.css";
+import "./manualOperationalLegacy.css";
+import "./manualOperational.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -32,13 +33,13 @@ if ("serviceWorker" in navigator) {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20261009-admin-operativa-1");
+      forceReload("20261009-operativa-nav-2");
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261009-admin-operativa-1`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261009-operativa-nav-2`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });
