@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-rest-jornales-31";
+self.__APP_CPE_SW_VERSION__ = "20261010-calendar-colors-32";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

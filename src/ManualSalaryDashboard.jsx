@@ -6,6 +6,11 @@ import { formatEuro } from './payroll.js';
 const shortMonths = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const periodNames = { first: '1ª quincena', second: '2ª quincena', month: 'Mes completo' };
 const titleCase = (value) => value ? value.charAt(0).toLocaleUpperCase('es-ES') + value.slice(1) : '';
+const shortMonthLabel = (item) => {
+  const month = Number(item.key?.slice(5, 7));
+  const year = item.key?.slice(2, 4);
+  return month >= 1 && month <= 12 && year ? `${titleCase(shortMonths[month - 1].toLocaleLowerCase('es-ES'))} ${year}` : titleCase(item.label);
+};
 
 export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onAdd, onAddPaidDay, portalAction, children }) {
   const [annualExpanded, setAnnualExpanded] = useState(false);
@@ -40,7 +45,7 @@ export function ManualSalaryDashboard({ months, monthChoices, chosen, period, on
   return <>
     <section className="visual-page-heading"><div><span>JORNALES Y SALARIO</span><h1>Sueldómetro</h1></div>{portalAction}</section>
     <p className="visual-manual-notice">Ahora los jornales se añaden manualmente</p>
-    <div className="visual-toolbar"><span><Clock3 size={16} /> Historial guardado · consulta manual</span><div><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => onMonthChange(event.target.value)}>{monthChoices.map((item) => <option key={item.key} value={item.key}>{titleCase(item.label)}</option>)}</select><button type="button" onClick={onRefresh} disabled={busy} title="Actualizar historial" aria-label="Actualizar historial"><RefreshCw size={17} /></button><button type="button" className="visual-add-paid" onClick={onAddPaidDay}>+ Día VA / FM</button><button type="button" className="visual-add" onClick={onAdd}>+ Añadir jornal</button></div></div>
+    <div className="visual-toolbar"><span><Clock3 size={16} /> Historial guardado · consulta manual</span><div><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => onMonthChange(event.target.value)}>{monthChoices.map((item) => <option key={item.key} value={item.key}>{shortMonthLabel(item)}</option>)}</select><button type="button" onClick={onRefresh} disabled={busy} title="Actualizar historial" aria-label="Actualizar historial"><RefreshCw size={17} /></button><button type="button" className="visual-add-paid" onClick={onAddPaidDay}>+ Día VA / FM</button><button type="button" className="visual-add" onClick={onAdd}>+ Añadir jornal</button></div></div>
     <section className="visual-salary-card" aria-label="Extracto salarial">
       <div className="visual-salary-hero">
         <div className="visual-hero-heading"><div className="visual-hero-title"><span className="visual-hero-icon"><WalletCards size={25} /></span><div><small>Extracto salarial</small><strong>{titleCase(chosen?.label || new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date()))}</strong></div></div><span className="visual-period-label">{periodNames[period]}</span></div>
