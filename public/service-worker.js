@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-settings-menu-10";
+self.__APP_CPE_SW_VERSION__ = "20261009-login-title-11";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
