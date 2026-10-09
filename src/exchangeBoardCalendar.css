@@ -4,6 +4,7 @@
 .exchange-board-calendar header small{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#4776ae}
 .exchange-board-calendar h3{margin:3px 0;font-size:22px;text-transform:capitalize;color:#142b4c}
 .exchange-board-calendar header button{width:34px;height:34px;border:1px solid #d4e1ef;border-radius:9px;background:#f5f9fd;color:#214d7b;font-size:24px;line-height:1}
+.exchange-board-calendar header button:disabled{opacity:.4;cursor:not-allowed}
 .exchange-board-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:14px}
 .exchange-board-months.is-single{grid-template-columns:1fr}
 .exchange-board-month{min-width:0}

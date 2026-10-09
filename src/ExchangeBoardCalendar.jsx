@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { madridTodayKey } from "./exchangeDeadline.js";
 import { dateRangeKeys } from "./vacationExchange.js";
-import { companyRestType, parseRestGroup, remainingRestMonths } from "./companyRestCalendar.js";
+import { availableRestMonths, companyRestType, parseRestGroup } from "./companyRestCalendar.js";
 
 const LABELS = { swap: "Intercambio", give: "Cesión", want: "Busco descanso" };
 const dayKey = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -11,11 +11,9 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
   const todayKey = madridTodayKey();
   const [visibleMonth, setVisibleMonth] = useState(() => todayKey.slice(0, 7));
   const group = parseRestGroup(restGroup);
-  const restMonths = remainingRestMonths(todayKey);
   const [selectedYear, selectedMonth] = visibleMonth.split("-").map(Number);
-  const months = vacation || !restMonths.length
-    ? [[selectedYear, selectedMonth]]
-    : restMonths.map((month) => [2026, month]);
+  const months = [[selectedYear, selectedMonth]];
+  const restMonths = availableRestMonths(selectedYear);
   const entries = useMemo(() => {
     const byDay = new Map();
     for (const offer of offers) {
@@ -33,15 +31,16 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
   }, [offers, vacation]);
   const changeMonth = (offset) => {
     const date = new Date(selectedYear, selectedMonth - 1 + offset, 1);
+    if (!vacation && todayKey.startsWith("2026-") && date.getFullYear() !== 2026) return;
     setVisibleMonth(dayKey(date.getFullYear(), date.getMonth() + 1, 1).slice(0, 7));
   };
-  const restCalendarAvailable = !vacation && restMonths.length > 0;
+  const restCalendarAvailable = !vacation && restMonths.includes(selectedMonth);
   return <section className="exchange-board-calendar" aria-label={`Calendario de ofertas de ${vacation ? "vacaciones" : "descansos"}`}>
     <header><div><small>{vacation ? "Tablón de ofertas" : group ? `Descansos del grupo ${group.label} · Ofertas` : "Descansos y ofertas"}</small>
-      <h3>{vacation || !restCalendarAvailable ? monthName(selectedYear, selectedMonth) : `De ${monthName(2026, restMonths[0])} a diciembre de 2026`}</h3></div>
-      {(vacation || !restCalendarAvailable) && <div><button type="button" aria-label="Mes anterior" onClick={() => changeMonth(-1)}>‹</button><button type="button" aria-label="Mes siguiente" onClick={() => changeMonth(1)}>›</button></div>}
+      <h3>{monthName(selectedYear, selectedMonth)}</h3></div>
+      <div><button type="button" aria-label="Mes anterior" disabled={!vacation && todayKey.startsWith("2026-") && selectedYear === 2026 && selectedMonth === 1} onClick={() => changeMonth(-1)}>‹</button><button type="button" aria-label="Mes siguiente" disabled={!vacation && todayKey.startsWith("2026-") && selectedYear === 2026 && selectedMonth === 12} onClick={() => changeMonth(1)}>›</button></div>
     </header>
-    {!vacation && !group && <p className="exchange-rest-group-notice">Elige tu grupo de descansos en <a href="#/perfil">Mis datos</a> para ver tus descansos desde este mes hasta final de año.</p>}
+    {!vacation && !group && <p className="exchange-rest-group-notice">Elige tu grupo de descansos en <a href="#/perfil">Mis datos</a> para ver tus descansos de todo el año.</p>}
     {!vacation && group && !restCalendarAvailable && <p className="exchange-rest-group-notice">El calendario laboral de este año aún no está disponible. Consulta tus descansos en el portal oficial.</p>}
     <div className="exchange-board-legend">{Object.entries(vacation ? { offered: "Ofrece vacaciones", wanted: "Busca vacaciones" } : LABELS).map(([kind, label]) => <span key={kind} className={`is-${kind}`}>{label}</span>)}</div>
     {restCalendarAvailable && group && <div className="exchange-rest-legend" aria-label="Colores del calendario laboral"><span className={`is-rest-${group.letter}`}>Descanso {group.letter.toUpperCase()}</span><span className={`is-week-${group.week}`}>Semana {group.week === "v" ? "verde" : "naranja"}</span><span className="is-holiday">Festivo inhábil</span></div>}

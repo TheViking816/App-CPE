@@ -207,7 +207,6 @@ export default function RestExchangePanel({ session }) {
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
-    <p className="rest-exchange-intro">Publica el descanso que tienes o el día que buscas. Comprueba las fechas con tu calendario oficial antes de acordar nada: la app no modifica tus descansos.</p>
     <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} selectedDate={filters.date} onSelectDate={(date) => { setTab("board"); setFilters((current) => ({ ...current, date })); }} />
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
