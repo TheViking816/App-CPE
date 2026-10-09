@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-login-title-11";
+self.__APP_CPE_SW_VERSION__ = "20261009-compact-offers-12";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

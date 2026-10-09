@@ -40,6 +40,39 @@
   max-width: none;
   margin: 0;
 }
+.visual-shell .exchange-redesign .rest-exchange-list { gap: 12px; }
+.visual-shell .exchange-redesign .rest-exchange-offer {
+  gap: 11px;
+  padding: 13px;
+  border-radius: 14px;
+}
+.visual-shell .exchange-redesign .rest-exchange-offer-head {
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 3px 9px;
+}
+.visual-shell .exchange-avatar { width: 34px; height: 34px; font-size: 15px !important; }
+.visual-shell .exchange-redesign .rest-exchange-offer-head > div { gap: 2px; }
+.visual-shell .exchange-redesign .rest-exchange-offer-head strong { font-size: 13px; line-height: 1.25; }
+.visual-shell .exchange-redesign .rest-exchange-offer-head .rest-exchange-offer-groups {
+  grid-column: 2;
+  gap: 3px 7px;
+  padding: 0;
+}
+.visual-shell .exchange-redesign .rest-exchange-offer-groups small { padding: 0; border: 0; font-size: 10px; line-height: 1.25; }
+.visual-shell .exchange-redesign .rest-exchange-dates { gap: 7px; }
+.visual-shell .exchange-redesign .rest-exchange-dates > div { min-width: 0; gap: 3px; padding: 9px 10px; border-radius: 9px; }
+.visual-shell .exchange-redesign .rest-exchange-dates:has(> div:nth-child(2))::after { width: 21px; height: 21px; border-width: 2px; font-size: 12px; }
+.visual-shell .exchange-date-display { gap: 1px; }
+.visual-shell .exchange-date-display time { font-size: 23px; line-height: 1; }
+.visual-shell .exchange-date-display > span { font-size: 11px; }
+.visual-shell .exchange-redesign .exchange-date-display > small { font-size: 10px; line-height: 1.2; }
+.visual-shell .exchange-redesign .rest-exchange-actions > button { min-height: 40px; }
+.visual-shell .exchange-redesign .rest-exchange-manage { padding-top: 10px; }
+@media (max-width: 430px) {
+  .visual-shell .exchange-redesign .rest-exchange-offer { padding: 11px; }
+  .visual-shell .exchange-date-display time { font-size: 20px; }
+  .visual-shell .exchange-redesign .rest-exchange-dates > div { padding: 8px; }
+}
 .operational-panel .chapero-card.contratado {
   border-color: #cbdceb;
 }
