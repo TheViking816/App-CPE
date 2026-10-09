@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-full-year-rest-calendar-19";
+self.__APP_CPE_SW_VERSION__ = "20261009-personal-calendar-vacations-21";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

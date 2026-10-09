@@ -8,6 +8,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from 
 import { canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
 import { professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import { addManualVacationRange, deleteManualPaidDay, listManualPaidDays } from "./personalRestCalendarClient.js";
 import { supabase } from "./supabaseClient.js";
 import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
@@ -40,7 +41,15 @@ export default function VacationExchangePanel({ session }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [personalVacationLink, setPersonalVacationLink] = useState(false);
+  const [paidDays, setPaidDays] = useState([]);
+  const [vacationEditorOpen, setVacationEditorOpen] = useState(false);
+  const [personalBusy, setPersonalBusy] = useState(false);
+  const [vacationStart, setVacationStart] = useState(madridTodayKey());
+  const [vacationEnd, setVacationEnd] = useState(madridTodayKey());
+  const [scrollTarget, setScrollTarget] = useState(null);
   const panelRef = useRef(null);
+  const vacationEditorRef = useRef(null);
+  const scrolledCalendarTargetRef = useRef(null);
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!session?.token) return;
@@ -62,6 +71,18 @@ export default function VacationExchangePanel({ session }) {
     }, 45_000);
     return () => window.clearInterval(timer);
   }, [reload]);
+
+  const reloadPaidDays = useCallback(async () => {
+    if (!session?.token) return;
+    try { setPaidDays(await listManualPaidDays(session.token) || []); }
+    catch (loadError) { setError(loadError.message || "No se pudieron cargar tus vacaciones."); }
+  }, [session?.token]);
+
+  useEffect(() => { reloadPaidDays(); }, [reloadPaidDays]);
+
+  useEffect(() => {
+    if (vacationEditorOpen) vacationEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [vacationEditorOpen]);
 
   useEffect(() => {
     let active = true;
@@ -128,6 +149,48 @@ export default function VacationExchangePanel({ session }) {
     setTab("publish");
   }
 
+  function openVacationEditor(date = madridTodayKey()) {
+    setVacationStart(date);
+    setVacationEnd(date);
+    setVacationEditorOpen(true);
+    setError("");
+  }
+
+  async function saveVacationDays(event) {
+    event.preventDefault();
+    if (EXCHANGE_PREVIEW_READ_ONLY) return setError("Esta vista previa está en modo consulta.");
+    setPersonalBusy(true);
+    setError("");
+    try {
+      const count = await addManualVacationRange(session.token, vacationStart, vacationEnd);
+      await reloadPaidDays();
+      setNotice(`${count} ${count === 1 ? "día de vacaciones guardado" : "días de vacaciones guardados"}.`);
+      setVacationEditorOpen(false);
+    } catch (saveError) {
+      setError(saveError.message || "No se pudieron guardar las vacaciones.");
+    } finally {
+      setPersonalBusy(false);
+    }
+  }
+
+  async function removeVacationDay() {
+    const row = paidDays.find((item) => item.work_date === vacationStart && item.concept_type === "VA");
+    if (!row || vacationStart !== vacationEnd) return;
+    if (EXCHANGE_PREVIEW_READ_ONLY) return setError("Esta vista previa está en modo consulta.");
+    setPersonalBusy(true);
+    setError("");
+    try {
+      await deleteManualPaidDay(session.token, row.id);
+      await reloadPaidDays();
+      setNotice("Día de vacaciones eliminado.");
+      setVacationEditorOpen(false);
+    } catch (removeError) {
+      setError(removeError.message || "No se pudo eliminar el día.");
+    } finally {
+      setPersonalBusy(false);
+    }
+  }
+
   const offers = data.offers || [];
   const proposals = data.proposals || [];
   const today = madridTodayKey();
@@ -135,7 +198,24 @@ export default function VacationExchangePanel({ session }) {
     && !vacationOfferExpired(offer, today));
   const { filters, setFilters, visible } = useExchangeFilters(board, true);
   const focusedOfferId = useExchangeOfferFocus("vacaciones", panelRef, loading, tab, setTab, visible, setFilters);
+  useEffect(() => {
+    if (!scrollTarget || loading || tab !== "board" || scrolledCalendarTargetRef.current === scrollTarget) return;
+    const card = Array.from(panelRef.current?.querySelectorAll("[data-offer-id]") || [])
+      .find((item) => item.dataset.offerId === scrollTarget.id);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+    card.focus({ preventScroll: true });
+    scrolledCalendarTargetRef.current = scrollTarget;
+  }, [scrollTarget, visible, loading, tab]);
   const mine = recentPersonalOffers(offers, proposals);
+
+  function selectCalendarOffer(date) {
+    const offer = board.find((row) => (row.offeredStart <= date && row.offeredEnd >= date)
+      || (row.wantedStart <= date && row.wantedEnd >= date));
+    setTab("board");
+    setFilters({ search: "", group: "", kind: "", date });
+    if (offer) setScrollTarget({ id: offer.id, date });
+  }
 
   function offerCard(offer, personal = false) {
     const expired = offer.status === "open" && vacationOfferExpired(offer, today);
@@ -149,8 +229,8 @@ export default function VacationExchangePanel({ session }) {
       Abrir conversación
     </button>;
 
-    return <article className={`rest-exchange-offer${offer.id === focusedOfferId ? " is-notification-target" : ""}`}
-      key={offer.id} data-kind="vacation" data-offer-id={offer.id} tabIndex={offer.id === focusedOfferId ? -1 : undefined}>
+    return <article className={`rest-exchange-offer${offer.id === focusedOfferId || offer.id === scrollTarget?.id ? " is-notification-target" : ""}`}
+      key={offer.id} data-kind="vacation" data-offer-id={offer.id} tabIndex={offer.id === focusedOfferId || offer.id === scrollTarget?.id ? -1 : undefined}>
       <div className="rest-exchange-offer-head">
         <ExchangeAvatar name={offer.ownerName} />
         <div><span>Intercambio de vacaciones</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
@@ -212,7 +292,13 @@ export default function VacationExchangePanel({ session }) {
     <div className="rest-exchange-heading vacation-exchange-heading"><ExchangeHeroIcon vacation /><div><p>Entre compañeros · Vacaciones</p><h2>Intercambiar vacaciones</h2></div>
       {personalVacationLink && <form className="personal-portal-link vacation-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={17} aria-hidden="true" /></button></form>}
     </div>
-    <ExchangeBoardCalendar offers={board} selectedDate={filters.date} vacation onSelectDate={(date) => { setTab("board"); setFilters((current) => ({ ...current, date })); }} />
+    <ExchangeBoardCalendar offers={board} paidDays={paidDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />
+    <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir vacaciones</button><span>Los días VA aparecen también en tu calendario de descansos y en Sueldómetro.</span></div>
+    {vacationEditorOpen && <form className="rest-calendar-editor" ref={vacationEditorRef} onSubmit={saveVacationDays}>
+      <label>Desde<input type="date" value={vacationStart} onChange={(event) => { setVacationStart(event.target.value); if (vacationEnd < event.target.value) setVacationEnd(event.target.value); }} required /></label>
+      <label>Hasta<input type="date" min={vacationStart} value={vacationEnd} onChange={(event) => setVacationEnd(event.target.value)} required /></label>
+      <div><button type="submit" disabled={personalBusy}>Guardar vacaciones</button>{vacationStart === vacationEnd && paidDays.some((row) => row.work_date === vacationStart && row.concept_type === "VA") && <button type="button" disabled={personalBusy} onClick={removeVacationDay}>Quitar VA</button>}</div>
+    </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""}

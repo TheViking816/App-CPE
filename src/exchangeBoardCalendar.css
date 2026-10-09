@@ -16,6 +16,7 @@
 .exchange-board-legend .is-want::before,.offer-dots .is-want{background:#d07a12}
 .exchange-board-legend .is-offered::before,.offer-dots .is-offered{background:#1769cf}
 .exchange-board-legend .is-wanted::before,.offer-dots .is-wanted{background:#d07a12}
+.exchange-board-legend .is-personal-vacation::before{background:#d2e0ff;border:1px solid #9fbdf7}
 .exchange-board-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .exchange-board-grid .weekday{text-align:center;padding:7px 0;color:#6a7f96;font-size:12px}
 .exchange-board-grid button,.exchange-board-grid .blank{min-height:57px;border:1px solid #e1e9f2;border-radius:9px;background:#f9fbfe;text-align:left;padding:7px;display:flex;flex-direction:column;justify-content:space-between;color:#193b60;font-size:12px;font-weight:700}
@@ -26,9 +27,21 @@
 .exchange-board-grid button.is-week-v{background:#86cb63;color:#20451d;border-color:#65aa45}
 .exchange-board-grid button.is-week-n{background:#ffae46;color:#593400;border-color:#e88d21}
 .exchange-board-grid button.is-holiday{background:#9ca5b1;color:#fff;border-color:#7e8896}
+.exchange-board-grid button.is-manual-rest{background:#b5e8e2;color:#124946;border-color:#6bc7bd}
+.exchange-board-grid button.is-chosen-holiday{background:#f8dcb3;color:#65410b;border-color:#e2b76e}
+.exchange-board-grid button.is-training{background:#d9c8fa;color:#3f266f;border-color:#b99aea}
+.exchange-board-grid button.is-vacation{background:#d2e0ff;color:#183f83;border-color:#9fbdf7}
 .exchange-board-grid button.is-selected{outline:3px solid #1769cf}
 .exchange-board-grid .blank{border:0;background:transparent}
 .offer-dots{display:flex;gap:3px;flex-wrap:wrap}
+.rest-day-marks{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+.rest-day-marks b{display:inline-flex;align-items:center;justify-content:center;min-width:17px;min-height:16px;padding:0 2px;border:1px solid #ffffffaa;border-radius:3px;background:#ffffffa8;color:#173250;font-size:10px;line-height:1;font-weight:900}
+.rest-day-marks b.is-rest-a{background:#067f9c;color:#fff}
+.rest-day-marks b.is-rest-b{background:#ad8500;color:#fff}
+.rest-day-marks b.is-rest-c{background:#b52d29;color:#fff}
+.rest-day-marks b.is-week-v{background:#3e8735;color:#fff}
+.rest-day-marks b.is-week-n{background:#af5f0a;color:#fff}
+.exchange-board-grid button.is-rest-c .rest-day-marks b,.exchange-board-grid button.is-holiday .rest-day-marks b{color:#202b42}
 .exchange-board-grid button[class*="is-rest-"] .offer-dots i,.exchange-board-grid button[class*="is-week-"] .offer-dots i,.exchange-board-grid button.is-holiday .offer-dots i{box-shadow:0 0 0 1px #fff}
 .exchange-rest-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0;color:#425a73;font-size:12px}
 .exchange-rest-legend span{display:inline-flex;align-items:center;gap:5px}
@@ -38,8 +51,21 @@
 .exchange-rest-legend .is-rest-c::before{background:#ed5750}
 .exchange-rest-legend .is-week-v::before{background:#86cb63}
 .exchange-rest-legend .is-week-n::before{background:#ffae46}
+.exchange-rest-legend .is-manual-rest::before{background:#b5e8e2}
+.exchange-rest-legend .is-chosen-holiday::before{background:#f8dcb3}
+.exchange-rest-legend .is-training::before{background:#d9c8fa}
+.exchange-rest-legend .is-vacation::before{background:#d2e0ff}
+.rest-calendar-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:10px 0 16px;color:#60748d;font-size:12px}
+.rest-calendar-controls button,.rest-calendar-editor button{border:1px solid #b9d3ed;border-radius:9px;background:#e8f3ff;color:#104f8a;padding:9px 13px;font-weight:800;cursor:pointer}
+.rest-calendar-editor{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin:0 0 18px;padding:14px;border:1px solid #d1e0ee;border-radius:12px;background:#f5f9fd}
+.rest-calendar-editor label{display:grid;gap:5px;color:#294761;font-size:12px;font-weight:800}
+.rest-calendar-editor input,.rest-calendar-editor select{min-height:40px;border:1px solid #bfcfe0;border-radius:8px;padding:7px 9px;background:#fff;color:#173250;font:inherit}
+.rest-calendar-editor>div{display:flex;flex-wrap:wrap;gap:7px}
+.rest-calendar-editor button:disabled{opacity:.55;cursor:wait}
+.rest-exchange-panel .rest-exchange-offer{scroll-margin-top:110px}
+.rest-exchange-panel .rest-exchange-offer.is-notification-target{outline:2px solid #248bd0;outline-offset:2px}
 .exchange-rest-group-notice{padding:11px 13px;border:1px solid #c6dcf2;border-radius:10px;background:#eff7ff!important;color:#234365!important;font-size:13px!important}
 .exchange-rest-group-notice a{color:#085aa9;font-weight:800;text-decoration:underline}
 .exchange-board-calendar p{margin:14px 0 0;color:#687b91;font-size:12px}
 .exchange-calendar-clear{margin-top:12px;border:0;background:none;color:#1769cf;font-weight:800}
-@media(max-width:600px){.exchange-board-calendar{padding:13px}.exchange-board-grid{gap:3px}.exchange-board-grid button,.exchange-board-grid .blank{min-height:43px;padding:5px}.exchange-board-calendar h3{font-size:18px}}
+@media(max-width:600px){.exchange-board-calendar{padding:13px}.exchange-board-grid{gap:3px}.exchange-board-grid button,.exchange-board-grid .blank{min-height:51px;padding:4px}.exchange-board-calendar h3{font-size:18px}.rest-day-marks b{min-width:15px;min-height:14px;font-size:9px}}

@@ -11,6 +11,7 @@ import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from
 import { optionsForGroup } from './manualSpecialties.js';
 import { specialties as censoSpecialties } from './censo.js';
 import { PROFESSIONAL_GROUPS, professionalGroupCode, professionalGroupLabel } from './professionalGroups.js';
+import { REST_GROUPS } from './restGroups.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 import GeneralBoard from './GeneralBoard.jsx';
@@ -20,7 +21,6 @@ import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, Clipboar
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
-const REST_GROUPS = ['A - N', 'A - V', 'B - N', 'B - V', 'C - N', 'C - V'];
 const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {

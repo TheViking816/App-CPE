@@ -9,6 +9,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from 
 import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import { deleteManualPaidDay, deleteRestDayOverride, getPersonalRestCalendar, saveManualVacationDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -43,7 +44,16 @@ export default function RestExchangePanel({ session }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [calendarData, setCalendarData] = useState({ overrides: [], paidDays: [] });
+  const [calendarError, setCalendarError] = useState("");
+  const [calendarBusy, setCalendarBusy] = useState(false);
+  const [editCalendar, setEditCalendar] = useState(false);
+  const [editDate, setEditDate] = useState(madridTodayKey());
+  const [editType, setEditType] = useState("REST");
+  const [scrollTarget, setScrollTarget] = useState(null);
   const panelRef = useRef(null);
+  const calendarEditorRef = useRef(null);
+  const scrolledCalendarTargetRef = useRef(null);
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!session?.token) return;
@@ -65,6 +75,23 @@ export default function RestExchangePanel({ session }) {
     }, 45_000);
     return () => window.clearInterval(timer);
   }, [reload]);
+
+  const reloadCalendar = useCallback(async () => {
+    if (!session?.token) return;
+    try {
+      setCalendarData(await getPersonalRestCalendar(session.token));
+      setCalendarError("");
+    } catch (loadError) {
+      setCalendarError(loadError.message || "No se pudo cargar tu calendario personal.");
+    }
+  }, [session?.token]);
+
+  useEffect(() => { reloadCalendar(); }, [reloadCalendar]);
+
+  useEffect(() => {
+    if (!editCalendar) return;
+    calendarEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [editCalendar, editDate]);
 
   async function mutate(action, successMessage) {
     if (EXCHANGE_PREVIEW_READ_ONLY) {
@@ -120,14 +147,62 @@ export default function RestExchangePanel({ session }) {
     panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function openCalendarEditor(date = madridTodayKey(), preferredType = "") {
+    setEditDate(date);
+    setEditType(preferredType || (calendarData.paidDays.find((row) => row.work_date === date)?.concept_type === "VA" ? "VA" : calendarData.overrides.find((row) => row.work_date === date)?.day_type || "REST"));
+    setEditCalendar(true);
+    setCalendarError("");
+  }
+
+  async function changePersonalDay(action) {
+    if (EXCHANGE_PREVIEW_READ_ONLY) return setCalendarError("Esta vista previa está en modo consulta.");
+    if (!editDate) return setCalendarError("Selecciona una fecha.");
+    const paid = calendarData.paidDays.find((row) => row.work_date === editDate);
+    if (action === "save" && paid && !(editType === "VA" && paid.concept_type === "VA"))
+      return setCalendarError("Este día figura como VA o FM. Modifícalo en Sueldómetro.");
+    setCalendarBusy(true);
+    setCalendarError("");
+    try {
+      if (action === "reset") {
+        if (paid?.concept_type === "VA") await deleteManualPaidDay(session.token, paid.id);
+        else await deleteRestDayOverride(session.token, editDate);
+      } else if (editType === "VA") {
+        if (!paid) await saveManualVacationDay(session.token, editDate);
+      } else await saveRestDayOverride(session.token, editDate, editType);
+      await reloadCalendar();
+      setNotice(action === "reset" ? "Día restablecido según tu grupo." : "Día guardado en tu calendario personal.");
+      setEditCalendar(false);
+    } catch (saveError) {
+      setCalendarError(saveError.message || "No se pudo guardar el día.");
+    } finally {
+      setCalendarBusy(false);
+    }
+  }
+
   const offers = data.offers || [];
   const today = madridTodayKey();
   const board = offers.filter((offer) => offer.status === "open"
     && !restOfferExpired(offer, today));
   const { filters, setFilters, visible } = useExchangeFilters(board, false);
   const focusedOfferId = useExchangeOfferFocus("descansos", panelRef, loading, tab, setTab, visible, setFilters);
+  useEffect(() => {
+    if (!scrollTarget || loading || tab !== "board" || scrolledCalendarTargetRef.current === scrollTarget) return;
+    const card = Array.from(panelRef.current?.querySelectorAll("[data-offer-id]") || [])
+      .find((item) => item.dataset.offerId === scrollTarget.id);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+    card.focus({ preventScroll: true });
+    scrolledCalendarTargetRef.current = scrollTarget;
+  }, [scrollTarget, visible, loading, tab]);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
+
+  function selectCalendarOffer(date) {
+    const offer = board.find((row) => row.offeredDate === date || row.wantedDate === date);
+    setTab("board");
+    setFilters({ search: "", group: "", kind: "", date });
+    if (offer) setScrollTarget({ id: offer.id, date });
+  }
 
   function offerCard(offer, personal = false) {
     const expired = offer.status === "open" && restOfferExpired(offer, today);
@@ -138,8 +213,8 @@ export default function RestExchangePanel({ session }) {
       onClick={() => { window.location.hash = conversationHash("rest", proposal.id); }}>
       Abrir conversación
     </button>;
-    return <article className={`rest-exchange-offer${offer.id === focusedOfferId ? " is-notification-target" : ""}`}
-      key={offer.id} data-kind={offer.kind} data-offer-id={offer.id} tabIndex={offer.id === focusedOfferId ? -1 : undefined}>
+    return <article className={`rest-exchange-offer${offer.id === focusedOfferId || offer.id === scrollTarget?.id ? " is-notification-target" : ""}`}
+      key={offer.id} data-kind={offer.kind} data-offer-id={offer.id} tabIndex={offer.id === focusedOfferId || offer.id === scrollTarget?.id ? -1 : undefined}>
       <div className="rest-exchange-offer-head">
         <ExchangeAvatar name={offer.ownerName} />
         <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
@@ -207,7 +282,17 @@ export default function RestExchangePanel({ session }) {
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
-    <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} selectedDate={filters.date} onSelectDate={(date) => { setTab("board"); setFilters((current) => ({ ...current, date })); }} />
+    <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays}
+      selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
+    <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir vacaciones</button><span>DS, FA, FM y VA se muestran solo en tu calendario.</span></div>
+    {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
+    {editCalendar && <form className="rest-calendar-editor" ref={calendarEditorRef} onSubmit={(event) => { event.preventDefault(); changePersonalDay("save"); }}>
+      <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type === "VA" ? "VA" : calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
+      <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
+        <option value="REST">DS · Descanso</option><option value="FA">FA · Festivo seleccionado</option><option value="WORK">Día sin descanso</option><option value="VA">VA · Vacaciones</option>
+      </select></label>
+      <div><button type="submit" disabled={calendarBusy}>Guardar día</button><button type="button" disabled={calendarBusy} onClick={() => changePersonalDay("reset")}>{calendarData.paidDays.some((row) => row.work_date === editDate && row.concept_type === "VA") ? "Quitar vacaciones" : "Usar calendario del grupo"}</button></div>
+    </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}</button>)}

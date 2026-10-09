@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
+import { PROFESSIONAL_GROUPS, professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
+import { REST_GROUPS, restGroupCode } from "./restGroups.js";
 
 const normalize = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export function filterExchangeOffers(offers, filters, vacation = false) {
   return offers.filter(offer => {
     const text = normalize([offer.ownerName, offer.ownerChapa].join(" "));
-    const group = vacation ? professionalGroupCode(offer.professionalGroup) : offer.ownerGroup;
+    const group = vacation ? professionalGroupCode(offer.professionalGroup) : restGroupCode(offer.ownerGroup);
     return (!filters.search || text.includes(normalize(filters.search.trim())))
       && (!filters.group || group === filters.group)
       && (!filters.kind || offer.kind === filters.kind)
@@ -19,7 +20,7 @@ export function useExchangeFilters(offers, vacation = false) {
   return { filters, setFilters, visible: filterExchangeOffers(offers, filters, vacation) };
 }
 export default function ExchangeFilters({ offers, filters, setFilters, count, vacation = false }) {
-  const groups = [...new Set(offers.map(o => vacation ? professionalGroupCode(o.professionalGroup) : o.ownerGroup).filter(Boolean))].sort((a,b) => a.localeCompare(b, "es"));
+  const groups = vacation ? PROFESSIONAL_GROUPS.map((group) => group.code) : REST_GROUPS;
   const set = (key, value) => setFilters(previous => ({ ...previous, [key]: value }));
   const active = Object.values(filters).some(Boolean);
   return <div className="exchange-filters">

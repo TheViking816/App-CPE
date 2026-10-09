@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { madridTodayKey } from "./exchangeDeadline.js";
 import { dateRangeKeys } from "./vacationExchange.js";
-import { availableRestMonths, companyRestType, parseRestGroup } from "./companyRestCalendar.js";
+import { availableRestMonths, parseRestGroup } from "./companyRestCalendar.js";
+import { personalRestMarks, personalVacationMarks } from "./personalRestCalendar.js";
 
 const LABELS = { swap: "Intercambio", give: "Cesión", want: "Busco descanso" };
 const dayKey = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 const monthName = (year, month) => new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
 
-export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "" }) {
+export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "", overrides = [], paidDays = [], onEditDate }) {
   const todayKey = madridTodayKey();
   const [visibleMonth, setVisibleMonth] = useState(() => todayKey.slice(0, 7));
   const group = parseRestGroup(restGroup);
@@ -42,8 +43,11 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
     </header>
     {!vacation && !group && <p className="exchange-rest-group-notice">Elige tu grupo de descansos en <a href="#/perfil">Mis datos</a> para ver tus descansos de todo el año.</p>}
     {!vacation && group && !restCalendarAvailable && <p className="exchange-rest-group-notice">El calendario laboral de este año aún no está disponible. Consulta tus descansos en el portal oficial.</p>}
-    <div className="exchange-board-legend">{Object.entries(vacation ? { offered: "Ofrece vacaciones", wanted: "Busca vacaciones" } : LABELS).map(([kind, label]) => <span key={kind} className={`is-${kind}`}>{label}</span>)}</div>
-    {restCalendarAvailable && group && <div className="exchange-rest-legend" aria-label="Colores del calendario laboral"><span className={`is-rest-${group.letter}`}>Descanso {group.letter.toUpperCase()}</span><span className={`is-week-${group.week}`}>Semana {group.week === "v" ? "verde" : "naranja"}</span><span className="is-holiday">Festivo inhábil</span></div>}
+    <div className="exchange-board-legend">{Object.entries(vacation ? { offered: "Ofrece vacaciones", wanted: "Busca vacaciones" } : LABELS).map(([kind, label]) => <span key={kind} className={`is-${kind}`}>{label}</span>)}{vacation && <span className="is-personal-vacation">Mis vacaciones · VA</span>}</div>
+    {!vacation && <div className="exchange-rest-legend" aria-label="Colores del calendario personal">
+      {restCalendarAvailable && group && <><span className={`is-rest-${group.letter}`}>Grupo {group.letter.toUpperCase()}</span><span className={`is-week-${group.week}`}>Semana {group.week.toUpperCase()}</span><span className="is-holiday">Festivo inhábil</span></>}
+      <span className="is-manual-rest">DS manual</span><span className="is-chosen-holiday">FA</span><span className="is-training">FM</span><span className="is-vacation">VA</span>
+    </div>}
     <div className={`exchange-board-months${vacation ? " is-single" : ""}`}>
       {months.map(([year, month]) => {
         const firstWeekday = (new Date(year, month - 1, 1).getDay() + 6) % 7;
@@ -55,12 +59,15 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
             {Array.from({ length: count }, (_, index) => {
               const date = dayKey(year, month, index + 1);
               const dayOffers = entries.get(date) || [];
-              const restType = restCalendarAvailable && group ? companyRestType(year, month, index + 1, group) : "";
-              const restLabel = restType.startsWith("rest-") ? "descanso de tu grupo" : restType.startsWith("week-") ? "semana de descanso" : restType === "holiday" ? "festivo inhábil" : "";
+              const marks = vacation ? personalVacationMarks(date, paidDays)
+                : personalRestMarks(date, group, overrides, paidDays);
+              const restType = marks[0]?.type || "";
+              const restLabel = marks.map((mark) => mark.label).join(" y ");
               return <button type="button" key={date} className={`${dayOffers.length ? "has-offers" : ""}${selectedDate === date ? " is-selected" : ""}${restType ? ` is-${restType}` : ""}`}
-                onClick={() => onSelectDate(selectedDate === date ? "" : date)}
-                aria-label={`${index + 1} de ${monthName(year, month)}${restLabel ? `, ${restLabel}` : ""}: ${new Set(dayOffers.map((offer) => offer.id)).size} ofertas`}>
-                <span>{index + 1}</span><span className="offer-dots">{[...new Set(dayOffers.map((offer) => offer.kind))].map((kind) => <i key={kind} className={`is-${kind}`} />)}</span>
+                onClick={() => dayOffers.length || !onEditDate ? onSelectDate(date) : onEditDate(date)}
+                aria-label={`${index + 1} de ${monthName(year, month)}${restLabel ? `, ${restLabel}` : ""}: ${new Set(dayOffers.map((offer) => offer.id)).size} ofertas${onEditDate && !dayOffers.length ? ", editar día" : ""}`}>
+                <span>{index + 1}</span><span className="rest-day-marks">{marks.map((mark) => <b key={mark.type} className={`is-${mark.type}`}>{mark.label}</b>)}</span>
+                <span className="offer-dots">{[...new Set(dayOffers.map((offer) => offer.kind))].map((kind) => <i key={kind} className={`is-${kind}`} />)}</span>
               </button>;
             })}
           </div>

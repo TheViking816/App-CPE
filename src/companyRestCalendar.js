@@ -62,14 +62,21 @@ export function parseRestGroup(value) {
 }
 
 export function companyRestType(year, month, day, groupValue) {
+  return companyRestMarks(year, month, day, groupValue)[0]?.type || '';
+}
+
+export function companyRestMarks(year, month, day, groupValue) {
   const calendar = Number(year) === 2026 ? COMPANY_REST_2026[Number(month)] : null;
   const group = typeof groupValue === 'string' ? parseRestGroup(groupValue) : groupValue;
-  if (!calendar) return '';
-  if (calendar.holiday?.includes(day)) return 'holiday';
-  if (!group) return '';
-  if (calendar[group.letter]?.includes(day) || calendar[`${group.letter}${group.week}`]?.includes(day)) return `rest-${group.letter}`;
-  if (calendar[group.week]?.includes(day)) return `week-${group.week}`;
-  return '';
+  if (!calendar) return [];
+  if (calendar.holiday?.includes(day)) return [{ type: 'holiday', label: 'FI' }];
+  if (!group) return [];
+  const marks = [];
+  if (calendar[group.letter]?.includes(day) || calendar[`${group.letter}${group.week}`]?.includes(day))
+    marks.push({ type: `rest-${group.letter}`, label: group.letter.toUpperCase() });
+  if (calendar[group.week]?.includes(day))
+    marks.push({ type: `week-${group.week}`, label: group.week.toUpperCase() });
+  return marks;
 }
 
 export function availableRestMonths(year) {
