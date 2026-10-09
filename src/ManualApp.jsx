@@ -137,7 +137,7 @@ function Access({ onAccess }) {
       <button className="primary" disabled={busy}>{busy ? 'Un momento…' : register ? 'Crear cuenta' : 'Entrar'}</button>
     </form>
     <button className="text-button" type="button" onClick={() => { setRegister(!register); setError(''); }}>{register ? 'Ya tengo cuenta' : 'Crear cuenta nueva'}</button>
-    {!register && <small>¿No recuerdas tu contraseña? Solicita ayuda al responsable de la app. No crees otra cuenta con la misma chapa.</small>}
+    {!register && <small>¿No recuerdas tu contraseña? <a href="mailto:portalestibavlc@gmail.com">portalestibavlc@gmail.com</a></small>}
     {register && <small>Esta contraseña es exclusiva de App CPE; no uses la del portal.</small>}
   </section></main>;
 }
