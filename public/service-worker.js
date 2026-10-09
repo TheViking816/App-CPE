@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-registration-profile-13";
+self.__APP_CPE_SW_VERSION__ = "20261009-clean-login-14";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

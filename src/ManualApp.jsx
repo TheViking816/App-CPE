@@ -184,8 +184,7 @@ function Access({ onAccess }) {
     finally { setBusy(false); }
   }
   return <main className="manual-shell access-shell"><section className={`access-card${register ? ' is-registering' : ''}`}>
-    <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><h1>App CPE</h1>
-    <p>{register ? 'Crea tu cuenta con tu chapa y una contraseña nueva.' : 'Accede con la contraseña de App CPE. Si aún no tienes cuenta, regístrate aquí.'}</p>
+    <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" />
     <form onSubmit={submit}>
       <label>Chapa<input value={chapa} onChange={(event) => setChapa(event.target.value)} inputMode="numeric" autoComplete="username" required /></label>
       {register && <label>Correo electrónico<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>}
