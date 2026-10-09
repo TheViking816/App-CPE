@@ -32,8 +32,11 @@
 .exchange-board-grid button.is-chosen-holiday{background:#f8dcb3;color:#65410b;border-color:#e2b76e}
 .exchange-board-grid button.is-training{background:#d9c8fa;color:#3f266f;border-color:#b99aea}
 .exchange-board-grid button.is-vacation{background:#f5f3ff;color:#5b21b6;border-color:#8b5cf6;box-shadow:inset 0 0 0 1px #8b5cf6}
+.exchange-board-grid button.is-today{outline:2px solid #075985;outline-offset:1px}
 .exchange-board-grid button.is-selected{outline:3px solid #1769cf}
 .exchange-board-grid .blank{border:0;background:transparent}
+.exchange-day-heading{display:flex;align-items:center;justify-content:space-between;gap:2px;width:100%}
+.exchange-day-heading small{padding:1px 3px;border-radius:3px;background:#075985;color:#fff;font-size:9px;font-weight:900;line-height:1.2}
 .offer-dots{display:flex;gap:3px;flex-wrap:wrap}
 .rest-day-marks{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
 .rest-day-marks b{display:inline-flex;align-items:center;justify-content:center;min-width:17px;min-height:16px;padding:0 2px;border:1px solid #ffffffaa;border-radius:3px;background:#ffffffa8;color:#173250;font-size:10px;line-height:1;font-weight:900}

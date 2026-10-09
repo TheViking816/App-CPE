@@ -63,10 +63,10 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
                 : personalRestMarks(date, group, overrides, paidDays);
               const restType = marks[0]?.type || "";
               const restLabel = marks.map((mark) => mark.label).join(" y ");
-              return <button type="button" key={date} className={`${dayOffers.length ? "has-offers" : ""}${selectedDate === date ? " is-selected" : ""}${restType ? ` is-${restType}` : ""}`}
+              return <button type="button" key={date} className={`${dayOffers.length ? "has-offers" : ""}${date === todayKey ? " is-today" : ""}${selectedDate === date ? " is-selected" : ""}${restType ? ` is-${restType}` : ""}`}
                 onClick={() => dayOffers.length || !onEditDate ? onSelectDate(date) : onEditDate(date)}
-                aria-label={`${index + 1} de ${monthName(year, month)}${restLabel ? `, ${restLabel}` : ""}: ${new Set(dayOffers.map((offer) => offer.id)).size} ofertas${onEditDate && !dayOffers.length ? ", editar día" : ""}`}>
-                <span>{index + 1}</span><span className="rest-day-marks">{marks.map((mark) => <b key={mark.type} className={`is-${mark.type}`}>{mark.label}</b>)}</span>
+                aria-label={`${index + 1} de ${monthName(year, month)}${date === todayKey ? ", hoy" : ""}${restLabel ? `, ${restLabel}` : ""}: ${new Set(dayOffers.map((offer) => offer.id)).size} ofertas${onEditDate && !dayOffers.length ? ", editar día" : ""}`}>
+                <span className="exchange-day-heading"><span>{index + 1}</span>{date === todayKey && <small>Hoy</small>}</span><span className="rest-day-marks">{marks.map((mark) => <b key={mark.type} className={`is-${mark.type}`}>{mark.label}</b>)}</span>
                 <span className="offer-dots">{[...new Set(dayOffers.map((offer) => offer.kind))].map((kind) => <i key={kind} className={`is-${kind}`} />)}</span>
               </button>;
             })}
