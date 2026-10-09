@@ -431,7 +431,7 @@ function Salary({ session, onSession }) {
         ['puertas', 'Puertas', DoorOpen],
         ['sueldometro', 'Sueldómetro', WalletCards],
         ['tablon', 'Tablón', ClipboardList],
-        ['conversaciones', 'Chats', MessageCircle],
+        ['descansos', 'Intercambios', CalendarDays],
         ...(isAdmin ? [['monitor', 'Monitor', Activity]] : [])
       ].map(([page, label, Icon]) => <button key={page} type="button" className={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'is-active' : ''}
         aria-current={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'page' : undefined} onClick={() => navigate(page)}>

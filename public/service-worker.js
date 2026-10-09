@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-all-headings-5";
+self.__APP_CPE_SW_VERSION__ = "20261009-exchanges-nav-6";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
