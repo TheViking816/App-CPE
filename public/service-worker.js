@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-calendar-today-24";
+self.__APP_CPE_SW_VERSION__ = "20261010-rest-ds-25";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
