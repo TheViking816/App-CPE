@@ -4,6 +4,10 @@
 .exchange-board-calendar header small{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#4776ae}
 .exchange-board-calendar h3{margin:3px 0;font-size:22px;text-transform:capitalize;color:#142b4c}
 .exchange-board-calendar header button{width:34px;height:34px;border:1px solid #d4e1ef;border-radius:9px;background:#f5f9fd;color:#214d7b;font-size:24px;line-height:1}
+.exchange-board-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:14px}
+.exchange-board-months.is-single{grid-template-columns:1fr}
+.exchange-board-month{min-width:0}
+.exchange-board-month h4{margin:0 0 8px;text-transform:capitalize;color:#183b63;font-size:16px}
 .exchange-board-legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .exchange-board-legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#425a73}
 .exchange-board-legend span::before,.offer-dots i{content:"";display:block;width:9px;height:9px;border-radius:50%;background:#1769cf}
@@ -15,9 +19,26 @@
 .exchange-board-grid .weekday{text-align:center;padding:7px 0;color:#6a7f96;font-size:12px}
 .exchange-board-grid button,.exchange-board-grid .blank{min-height:57px;border:1px solid #e1e9f2;border-radius:9px;background:#f9fbfe;text-align:left;padding:7px;display:flex;flex-direction:column;justify-content:space-between;color:#193b60;font-size:12px;font-weight:700}
 .exchange-board-grid button.has-offers{background:#edf5ff;border-color:#bdd3ed}
+.exchange-board-grid button.is-rest-a{background:#29b7d8;color:#073c50;border-color:#1398bc}
+.exchange-board-grid button.is-rest-b{background:#f8dc36;color:#4b3b00;border-color:#dcc219}
+.exchange-board-grid button.is-rest-c{background:#ed5750;color:#fff;border-color:#d83f39}
+.exchange-board-grid button.is-week-v{background:#86cb63;color:#20451d;border-color:#65aa45}
+.exchange-board-grid button.is-week-n{background:#ffae46;color:#593400;border-color:#e88d21}
+.exchange-board-grid button.is-holiday{background:#9ca5b1;color:#fff;border-color:#7e8896}
 .exchange-board-grid button.is-selected{outline:3px solid #1769cf}
 .exchange-board-grid .blank{border:0;background:transparent}
 .offer-dots{display:flex;gap:3px;flex-wrap:wrap}
+.exchange-board-grid button[class*="is-rest-"] .offer-dots i,.exchange-board-grid button[class*="is-week-"] .offer-dots i,.exchange-board-grid button.is-holiday .offer-dots i{box-shadow:0 0 0 1px #fff}
+.exchange-rest-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0;color:#425a73;font-size:12px}
+.exchange-rest-legend span{display:inline-flex;align-items:center;gap:5px}
+.exchange-rest-legend span::before{content:"";width:11px;height:11px;border-radius:3px;background:#9ca5b1}
+.exchange-rest-legend .is-rest-a::before{background:#29b7d8}
+.exchange-rest-legend .is-rest-b::before{background:#f8dc36}
+.exchange-rest-legend .is-rest-c::before{background:#ed5750}
+.exchange-rest-legend .is-week-v::before{background:#86cb63}
+.exchange-rest-legend .is-week-n::before{background:#ffae46}
+.exchange-rest-group-notice{padding:11px 13px;border:1px solid #c6dcf2;border-radius:10px;background:#eff7ff!important;color:#234365!important;font-size:13px!important}
+.exchange-rest-group-notice a{color:#085aa9;font-weight:800;text-decoration:underline}
 .exchange-board-calendar p{margin:14px 0 0;color:#687b91;font-size:12px}
 .exchange-calendar-clear{margin-top:12px;border:0;background:none;color:#1769cf;font-weight:800}
 @media(max-width:600px){.exchange-board-calendar{padding:13px}.exchange-board-grid{gap:3px}.exchange-board-grid button,.exchange-board-grid .blank{min-height:43px;padding:5px}.exchange-board-calendar h3{font-size:18px}}

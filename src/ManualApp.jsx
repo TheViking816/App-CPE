@@ -83,7 +83,7 @@ function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, set
     </select></label>}
     {!lockedProfessionalGroup && otherProfessionalGroup && <label>Código del grupo en el portal<input value={professionalGroup} onChange={(event) => setProfessionalGroup(event.target.value.toUpperCase().trim())} placeholder="Por ejemplo, G-B" pattern="(G|SIN)-[A-Z0-9]{1,5}" maxLength={10} required /></label>}
     <label>Grupo de descansos<select value={restGroup} onChange={(event) => setRestGroup(event.target.value)} required>
-      <option value="">Selecciona tu grupo</option>{REST_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}
+      <option value="">Selecciona tu grupo</option>{REST_GROUPS.map((group) => <option key={group} value={group}>{group.replace(/\s+/g, '')}</option>)}
     </select></label>
     <fieldset><legend>Especialidades <small>Selecciona todas las que tengas</small></legend>
       <div className="manual-profile-specialties">{censoSpecialties.map((specialty) => <label key={specialty.id}>
