@@ -75,7 +75,7 @@
 @media (max-width: 420px) { .direct-inbox-delete span { display: none; } }
 .exchange-inbox-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
 .exchange-inbox-header span { color: #1764ad; font-size: 11px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
-.exchange-inbox-header h1 { margin: 4px 0; font-size: clamp(24px, 4vw, 32px); }
+.exchange-inbox-header h2 { margin: 4px 0; font-size: clamp(24px, 4vw, 32px); }
 .exchange-inbox-header p { margin: 0; color: var(--muted); font-size: 13px; }
 .exchange-inbox-unread, .exchange-inbox-count { flex: none; padding: 5px 9px; border-radius: 999px; background: #1764ad; color: #fff; font-size: 11px; }
 .exchange-inbox-preview-note { margin: -6px 0 0; padding: 10px 14px; border-radius: 10px; background: #fff7e6; color: #805200; font-size: 12px; }

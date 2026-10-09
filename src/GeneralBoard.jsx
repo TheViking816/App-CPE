@@ -64,7 +64,7 @@ function Company({ company, journey, query, expandAll }) {
   );
 }
 
-export default function GeneralBoard({ chapa, onOpen, supabaseOnly = false, contractingUrl = "" }) {
+export default function GeneralBoard({ chapa, onOpen, supabaseOnly = false, contractingUrl = "", showHeading = true }) {
   const [data, setData] = useState({ journeys: [], updatedAt: "", expectedKey: "", bolsaPending: false });
   const [selected, setSelected] = useState("");
   const [query, setQuery] = useState("");
@@ -89,7 +89,7 @@ export default function GeneralBoard({ chapa, onOpen, supabaseOnly = false, cont
   const normalizedQuery = normalizeText(query).toUpperCase();
   return (
     <section className="general-board page-panel">
-      <div className="section-heading general-board-heading"><div><p>Contratación completa</p><h1>Tablón general</h1></div>{contractingUrl && <a href={contractingUrl} target="_blank" rel="noopener noreferrer">Contratación Jornada <ExternalLink size={16} aria-hidden="true" /></a>}</div>
+      {showHeading && <div className="section-heading general-board-heading"><div><p>Contratación completa</p><h1>Tablón general</h1></div>{contractingUrl && <a href={contractingUrl} target="_blank" rel="noopener noreferrer">Contratación Jornada <ExternalLink size={16} aria-hidden="true" /></a>}</div>}
       {loading && <div className="general-loading"><span className="spinner" />Cargando contratación...</div>}
       {error && <p className="inline-notice error">{error}</p>}
       {!loading && !error && !journey && <p className="inline-notice">Contratación pendiente. Esperando la jornada correspondiente a este horario.</p>}

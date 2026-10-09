@@ -21,6 +21,24 @@
 }
 .operational-context strong { font-size: 22px; font-weight: 900; }
 .operational-context span { color: #66809e; font-size: 12px; font-weight: 750; }
+.manual-section-page {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.manual-section-page > * { min-width: 0; }
+.manual-section-page .exchange-area {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+.operational-panel .chapero-card.contratado {
+  border-color: #cbdceb;
+}
+.operational-panel .chapero-card.contratado .chapero-status-row {
+  background: #123b6b;
+  box-shadow: inset 4px 0 #21ad87;
+}
 
 .operational-panel label {
   display: grid;

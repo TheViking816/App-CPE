@@ -117,7 +117,7 @@ export default function ExchangeConversations({ session }) {
 
   return <section className="exchange-inbox">
     <header className="exchange-inbox-header">
-      <div><span>Entre compañeros</span><h1>Conversaciones</h1>
+      <div><span>Entre compañeros</span><h2>Conversaciones</h2>
         <p>Habla con otros usuarios y consulta tus propuestas de intercambio.</p></div>
       {unreadCount > 0 && <b className="exchange-inbox-unread">{unreadCount} sin leer</b>}
     </header>

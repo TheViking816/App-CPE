@@ -57,6 +57,13 @@ function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
   </nav>;
 }
 
+function SectionPage({ eyebrow, title, children }) {
+  return <div className="manual-section-page">
+    <section className="visual-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div></section>
+    {children}
+  </div>;
+}
+
 async function rpc(name, values) {
   if (!supabase) throw new Error('Falta la configuración de la base de datos.');
   const { data, error } = await supabase.rpc(name, values);
@@ -180,7 +187,7 @@ function JornalDetail({ item, busy, onClose, onEdit, onRemove, onPremium, onEdit
 }
 
 function ExchangeNotifications({ rows, onOpen, onMarkAll }) {
-  return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Novedades</h2></div>
+  return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Actividad reciente</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
     <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
       className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
@@ -388,7 +395,13 @@ function Salary({ session, onSession }) {
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}</header><div className="visual-content">
-    {tab === 'monitor' ? <ActivityMonitor session={session} /> : tab === 'tablon' ? <GeneralBoard chapa={session.chapa} supabaseOnly /> : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} /> : (tab === 'descansos' || tab === 'vacaciones') ? <ExchangeSection session={session} section={tab} onSectionChange={navigate} /> : tab === 'conversaciones' ? <div className="exchange-area"><ExchangeConversations session={session} /></div> : tab === 'novedades' ? <ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /> : <>
+    {tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
+      : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
+      : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} />
+      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} /></SectionPage>
+      : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
+      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
+      : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showForm && <section className="manual-panel editor manual-editor-card"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
