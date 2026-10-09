@@ -13,6 +13,14 @@
   display: grid;
   gap: 1rem;
 }
+.operational-context {
+  display: grid;
+  gap: 3px;
+  padding: 4px 2px;
+  color: #0b2b52;
+}
+.operational-context strong { font-size: 22px; font-weight: 900; }
+.operational-context span { color: #66809e; font-size: 12px; font-weight: 750; }
 
 .operational-panel label {
   display: grid;

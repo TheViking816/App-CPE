@@ -106,9 +106,10 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
     {censusRows.length > 100 && <small>Mostrando 100 de {censusRows.length}. Busca una chapa para localizarla.</small>}
   </details>;
 
-  if (view === 'puertas') return <section className="manual-panel operational-panel">
+  if (view === 'puertas') return <section className="operational-panel">
+    <section className="visual-page-heading"><div><span>PUERTAS DE TURNO</span><h1>Puertas</h1></div></section>
     {selector}
-    <div className="section-heading"><p>Puertas de turno</p><h1>{specialty?.name || 'Sin datos'}</h1><span>Censo: {specialty?.censo.length || 0} · Actualizado: {formatDate(snapshot?.updatedAt)}</span></div>
+    <div className="operational-context"><strong>{specialty?.name || 'Sin datos'}</strong><span>Censo: {specialty?.censo.length || 0} · Actualizado: {formatDate(snapshot?.updatedAt)}</span></div>
     {loading ? <p>Cargando Puertas…</p> : !doors.length ? <p>No hay puertas publicadas para esta especialidad.</p> : <>
       <DoorTable title="Laborables" doors={doors.filter((door) => door.dayType === 'laborable')} tone="lab" />
       <DoorTable title="Festivas" doors={doors.filter((door) => door.dayType === 'festivo')} tone="fes" />
@@ -117,8 +118,8 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
   </section>;
 
   const statusLabels = { contratado: 'Contratado', anticipado: 'Anticipado', nocontratado: 'No contratado', falta: 'No disponible', excepcion: 'Con excepción', doble: 'Doble' };
-  return <section className="manual-panel operational-panel">
-    <div className="section-heading"><p>Chapero y posición</p><h1>Estado operativo</h1></div>
+  return <section className="operational-panel">
+    <section className="visual-page-heading"><div><span>ESTADO Y POSICIÓN</span><h1>Chapero</h1></div></section>
     <section className={`chapero-card ${loading ? 'loading' : chaperoWorker?.status || 'empty'}`}>
       <div className="jornada-card"><span>Última jornada contratada</span><strong>{chapero?.jornadaDate && chapero?.fromHour ? `${chapero.jornadaDate} ${chapero.fromHour}-${chapero.toHour}` : 'Sin jornada'}</strong></div>
       <div className="chapero-meta-row"><span>{new Date().toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</span><small>Chapa {chapa}</small></div>

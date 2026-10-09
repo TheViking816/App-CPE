@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-user-specialties-3";
+self.__APP_CPE_SW_VERSION__ = "20261009-operational-headings-4";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
