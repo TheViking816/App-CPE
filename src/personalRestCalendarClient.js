@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { calendarJornales } from './calendarJornales.js';
 
 async function rpc(name, args) {
   if (!supabase) throw new Error('Falta la configuración de la base de datos.');
@@ -8,12 +9,14 @@ async function rpc(name, args) {
 }
 
 export async function getPersonalRestCalendar(token) {
-  const [overrides, paidDays, holidays] = await Promise.all([
+  const [overrides, paidDays, holidays, salaryHistory, manualJornales] = await Promise.all([
     rpc('app_cpe_list_rest_day_overrides', { p_token: token }),
     listManualPaidDays(token),
-    listPayrollHolidays()
+    listPayrollHolidays(),
+    rpc('app_cpe_get_saved_salary_history', { p_token: token }),
+    rpc('app_cpe_list_manual_jornales', { p_token: token })
   ]);
-  return { overrides: overrides || [], paidDays: paidDays || [], holidays };
+  return { overrides: overrides || [], paidDays: paidDays || [], holidays, jornales: calendarJornales(salaryHistory, manualJornales) };
 }
 
 export async function listPayrollHolidays() {

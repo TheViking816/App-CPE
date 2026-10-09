@@ -33,6 +33,9 @@
 .exchange-day-heading{display:flex;align-items:center;justify-content:space-between;gap:2px;width:100%}
 .exchange-day-heading .is-payroll-holiday{color:#b91c1c;font-weight:950}
 .exchange-day-heading small{padding:1px 3px;border-radius:3px;background:#075985;color:#fff;font-size:9px;font-weight:900;line-height:1.2}
+.exchange-day-detail{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-width:0}
+.exchange-day-jornales{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;color:#0b4e83;font-size:10px;font-weight:850;line-height:1.15;font-variant-numeric:tabular-nums}
+.exchange-day-jornales span{white-space:nowrap}
 .offer-dots{display:flex;gap:3px;flex-wrap:wrap}
 .rest-day-marks{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
 .rest-day-marks b{display:inline-flex;align-items:center;justify-content:center;min-width:17px;min-height:16px;padding:0 2px;border:1px solid #ffffffaa;border-radius:3px;background:#ffffffa8;color:#173250;font-size:10px;line-height:1;font-weight:900}
@@ -60,4 +63,4 @@
 .exchange-rest-group-notice a{color:#085aa9;font-weight:800;text-decoration:underline}
 .exchange-board-calendar p{margin:14px 0 0;color:#687b91;font-size:12px}
 .exchange-calendar-clear{margin-top:12px;border:0;background:none;color:#1769cf;font-weight:800}
-@media(max-width:600px){.exchange-board-calendar{padding:13px}.exchange-board-grid{gap:3px}.exchange-board-grid button,.exchange-board-grid .blank{min-height:51px;padding:4px}.exchange-board-calendar h3{font-size:18px}.rest-day-marks b{min-width:15px;min-height:14px;font-size:9px}}
+@media(max-width:600px){.exchange-board-calendar{padding:13px}.exchange-board-grid{gap:3px}.exchange-board-grid button,.exchange-board-grid .blank{min-height:51px;padding:4px}.exchange-board-calendar h3{font-size:18px}.rest-day-marks b{min-width:15px;min-height:14px;font-size:9px}.exchange-day-jornales{font-size:9px}}

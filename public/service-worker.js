@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-sunday-holidays-30";
+self.__APP_CPE_SW_VERSION__ = "20261010-rest-jornales-31";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
