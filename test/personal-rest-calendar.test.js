@@ -28,5 +28,5 @@ test('salary VA and FM take precedence over rest edits', () => {
 test('VA appears in the vacation calendar from the shared salary records', () => {
   const rows = [{ work_date: '2026-10-10', concept_type: 'VA' }, { work_date: '2026-10-11', concept_type: 'FM' }];
   assert.deepEqual(personalVacationMarks('2026-10-10', rows), [{ type: 'vacation', label: 'VA' }]);
-  assert.deepEqual(personalVacationMarks('2026-10-11', rows), []);
+  assert.deepEqual(personalVacationMarks('2026-10-11', rows), [{ type: 'training', label: 'FM' }]);
 });

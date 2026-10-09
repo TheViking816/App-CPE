@@ -8,7 +8,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from 
 import { canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
 import { professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
-import { addManualVacationRange, deleteManualPaidDay, listManualPaidDays } from "./personalRestCalendarClient.js";
+import { addManualPaidDayRange, deleteManualPaidDay, listManualPaidDays, saveManualPaidDay } from "./personalRestCalendarClient.js";
 import { supabase } from "./supabaseClient.js";
 import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
@@ -46,6 +46,7 @@ export default function VacationExchangePanel({ session }) {
   const [personalBusy, setPersonalBusy] = useState(false);
   const [vacationStart, setVacationStart] = useState(madridTodayKey());
   const [vacationEnd, setVacationEnd] = useState(madridTodayKey());
+  const [paidType, setPaidType] = useState("VA");
   const [scrollTarget, setScrollTarget] = useState(null);
   const panelRef = useRef(null);
   const vacationEditorRef = useRef(null);
@@ -152,6 +153,7 @@ export default function VacationExchangePanel({ session }) {
   function openVacationEditor(date = madridTodayKey()) {
     setVacationStart(date);
     setVacationEnd(date);
+    setPaidType(paidDays.find((row) => row.work_date === date)?.concept_type || "VA");
     setVacationEditorOpen(true);
     setError("");
   }
@@ -162,9 +164,16 @@ export default function VacationExchangePanel({ session }) {
     setPersonalBusy(true);
     setError("");
     try {
-      const count = await addManualVacationRange(session.token, vacationStart, vacationEnd);
+      const current = vacationStart === vacationEnd ? paidDays.find((row) => row.work_date === vacationStart) : null;
+      let count;
+      if (current && current.concept_type !== paidType) {
+        await saveManualPaidDay(session.token, vacationStart, paidType, current.id);
+        count = 1;
+      } else {
+        count = await addManualPaidDayRange(session.token, vacationStart, vacationEnd, paidType);
+      }
       await reloadPaidDays();
-      setNotice(`${count} ${count === 1 ? "día de vacaciones guardado" : "días de vacaciones guardados"}.`);
+      setNotice(`${count} ${count === 1 ? "día guardado" : "días guardados"} como ${paidType}.`);
       setVacationEditorOpen(false);
     } catch (saveError) {
       setError(saveError.message || "No se pudieron guardar las vacaciones.");
@@ -174,7 +183,7 @@ export default function VacationExchangePanel({ session }) {
   }
 
   async function removeVacationDay() {
-    const row = paidDays.find((item) => item.work_date === vacationStart && item.concept_type === "VA");
+    const row = paidDays.find((item) => item.work_date === vacationStart);
     if (!row || vacationStart !== vacationEnd) return;
     if (EXCHANGE_PREVIEW_READ_ONLY) return setError("Esta vista previa está en modo consulta.");
     setPersonalBusy(true);
@@ -182,7 +191,7 @@ export default function VacationExchangePanel({ session }) {
     try {
       await deleteManualPaidDay(session.token, row.id);
       await reloadPaidDays();
-      setNotice("Día de vacaciones eliminado.");
+      setNotice(`Día ${row.concept_type} eliminado.`);
       setVacationEditorOpen(false);
     } catch (removeError) {
       setError(removeError.message || "No se pudo eliminar el día.");
@@ -293,11 +302,12 @@ export default function VacationExchangePanel({ session }) {
       {personalVacationLink && <form className="personal-portal-link vacation-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={17} aria-hidden="true" /></button></form>}
     </div>
     <ExchangeBoardCalendar offers={board} paidDays={paidDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />
-    <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir vacaciones</button><span>Los días VA aparecen también en tu calendario de descansos y en Sueldómetro.</span></div>
+    <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir VA o FM</button><span>Los días VA y FM aparecen también en descansos y Sueldómetro.</span></div>
     {vacationEditorOpen && <form className="rest-calendar-editor" ref={vacationEditorRef} onSubmit={saveVacationDays}>
-      <label>Desde<input type="date" value={vacationStart} onChange={(event) => { setVacationStart(event.target.value); if (vacationEnd < event.target.value) setVacationEnd(event.target.value); }} required /></label>
+      <label>Desde<input type="date" value={vacationStart} onChange={(event) => { setVacationStart(event.target.value); setPaidType(paidDays.find((row) => row.work_date === event.target.value)?.concept_type || "VA"); if (vacationEnd < event.target.value) setVacationEnd(event.target.value); }} required /></label>
       <label>Hasta<input type="date" min={vacationStart} value={vacationEnd} onChange={(event) => setVacationEnd(event.target.value)} required /></label>
-      <div><button type="submit" disabled={personalBusy}>Guardar vacaciones</button>{vacationStart === vacationEnd && paidDays.some((row) => row.work_date === vacationStart && row.concept_type === "VA") && <button type="button" disabled={personalBusy} onClick={removeVacationDay}>Quitar VA</button>}</div>
+      <label>Tipo<select value={paidType} onChange={(event) => setPaidType(event.target.value)}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option></select></label>
+      <div><button type="submit" disabled={personalBusy}>Guardar días</button>{vacationStart === vacationEnd && paidDays.some((row) => row.work_date === vacationStart) && <button type="button" disabled={personalBusy} onClick={removeVacationDay}>Quitar día</button>}</div>
     </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>

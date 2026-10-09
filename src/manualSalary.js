@@ -1,4 +1,4 @@
-import { TRAINING_DAY_RATE, VACATION_DAY_RATE, buildTrainingPayrollEntries, buildVacationPayrollEntries, enrichJornales, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
+import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
 import { unpackManualNotes } from './manualMetadata.js';
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -57,8 +57,6 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
   const currentLabel = payload.jornales?.monthLabel || payload.primas?.monthLabel || '';
-  const vacationEntries = buildVacationPayrollEntries([payload.vacaciones, payload.descansos]);
-  const trainingEntries = buildTrainingPayrollEntries([payload.descansos, payload.disponibilidad]);
   const manuallyPaid = manualPaidDays.map(manualPaidDayEntry).filter(Boolean);
   const months = new Map();
 
@@ -86,7 +84,7 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
     const key = `${yearText}-${monthText}`;
     if (!months.has(key)) months.set(key, { year: Number(yearText), month: Number(monthText), monthLabel: monthName(Number(yearText), Number(monthText)), rows: [] });
   }
-  for (const entry of [...vacationEntries, ...trainingEntries, ...manuallyPaid]) {
+  for (const entry of manuallyPaid) {
     const key = entry.payroll.date.slice(0, 7);
     if (!months.has(key)) {
       const [year, month] = key.split('-').map(Number);
@@ -122,8 +120,6 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       } };
     });
     const paidByDate = new Map();
-    for (const item of vacationEntries.filter((entry) => entry.payroll.date.startsWith(`${key}-`))) paidByDate.set(item.payroll.date, { ...item, source: 'vacation' });
-    for (const item of trainingEntries.filter((entry) => entry.payroll.date.startsWith(`${key}-`))) paidByDate.set(item.payroll.date, { ...item, source: 'training' });
     for (const item of manuallyPaid.filter((entry) => entry.payroll.date.startsWith(`${key}-`))) paidByDate.set(item.payroll.date, item);
     const items = [...historicItems, ...newItems, ...paidByDate.values()].sort((a, b) => b.payroll.date.localeCompare(a.payroll.date) || b.payroll.shift.localeCompare(a.payroll.shift));
     return { key, label: period.monthLabel, items, total: money(items.reduce((sum, item) => sum + item.payroll.total, 0)),

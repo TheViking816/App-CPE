@@ -31,9 +31,10 @@ test('retains saved history and adds new manual jornales without altering it', (
   assert.equal(companyImage('TCV'), '/assets/empresas/tcv.svg');
 });
 
-test('includes saved paid vacation days in monthly and annual salary data', () => {
+test('shows imported vacation days from the shared paid-day table', () => {
   const snapshot = { payload: { descansos: { months: [{ year: 2026, month: 10, days: [{ day: 3, code: 'VA' }, { day: 4, code: 'VA' }] }] } } };
-  const months = buildManualSalaryMonths(snapshot);
+  const paid = [3, 4].map((day) => ({ id: `va-${day}`, work_date: `2026-10-0${day}`, concept_type: 'VA' }));
+  const months = buildManualSalaryMonths(snapshot, [], null, {}, {}, {}, paid);
   assert.equal(months[0].key, '2026-10');
   assert.equal(months[0].items.filter((item) => item.isVacation).length, 2);
   assert.equal(salaryPeriod(months[0].items, 'first').items.length, 2);
@@ -41,12 +42,18 @@ test('includes saved paid vacation days in monthly and annual salary data', () =
   assert.equal(months[0].total, months[0].items.reduce((sum, item) => sum + item.payroll.total, 0));
 });
 
-test('includes saved FM days once when both calendar sources contain them', () => {
+test('uses the shared paid-day table for FM even when the old snapshot contains it', () => {
   const month = { year: 2026, month: 10, days: [{ day: 8, code: 'FM' }] };
   const snapshot = { payload: { descansos: { months: [month] }, disponibilidad: { trainingHistory: [month] } } };
-  const months = buildManualSalaryMonths(snapshot);
+  const months = buildManualSalaryMonths(snapshot, [], null, {}, {}, {}, [{ id: 'fm-8', work_date: '2026-10-08', concept_type: 'FM' }]);
   assert.equal(months[0].items.filter((item) => item.isTraining).length, 1);
   assert.equal(months[0].items.filter((item) => item.isVacation).length, 0);
+});
+
+test('deleted VA and FM stay absent even when still present in the old portal snapshot', () => {
+  const snapshot = { payload: { vacaciones: { rows: [{ inicio: '03/10/2026', fin: '03/10/2026' }] },
+    descansos: { months: [{ year: 2026, month: 10, days: [{ day: 8, code: 'FM' }] }] } } };
+  assert.equal(buildManualSalaryMonths(snapshot).length, 0);
 });
 
 test('manual VA and FM use their own rates and count in their fortnight without duplicates', () => {

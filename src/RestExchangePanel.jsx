@@ -9,7 +9,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from 
 import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
-import { deleteManualPaidDay, deleteRestDayOverride, getPersonalRestCalendar, saveManualVacationDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
+import { deleteManualPaidDay, deleteRestDayOverride, getPersonalRestCalendar, saveManualPaidDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -149,7 +149,7 @@ export default function RestExchangePanel({ session }) {
 
   function openCalendarEditor(date = madridTodayKey(), preferredType = "") {
     setEditDate(date);
-    setEditType(preferredType || (calendarData.paidDays.find((row) => row.work_date === date)?.concept_type === "VA" ? "VA" : calendarData.overrides.find((row) => row.work_date === date)?.day_type || "REST"));
+    setEditType(preferredType || calendarData.paidDays.find((row) => row.work_date === date)?.concept_type || calendarData.overrides.find((row) => row.work_date === date)?.day_type || "REST");
     setEditCalendar(true);
     setCalendarError("");
   }
@@ -158,17 +158,18 @@ export default function RestExchangePanel({ session }) {
     if (EXCHANGE_PREVIEW_READ_ONLY) return setCalendarError("Esta vista previa está en modo consulta.");
     if (!editDate) return setCalendarError("Selecciona una fecha.");
     const paid = calendarData.paidDays.find((row) => row.work_date === editDate);
-    if (action === "save" && paid && !(editType === "VA" && paid.concept_type === "VA"))
-      return setCalendarError("Este día figura como VA o FM. Modifícalo en Sueldómetro.");
     setCalendarBusy(true);
     setCalendarError("");
     try {
       if (action === "reset") {
-        if (paid?.concept_type === "VA") await deleteManualPaidDay(session.token, paid.id);
+        if (paid) await deleteManualPaidDay(session.token, paid.id);
         else await deleteRestDayOverride(session.token, editDate);
-      } else if (editType === "VA") {
-        if (!paid) await saveManualVacationDay(session.token, editDate);
-      } else await saveRestDayOverride(session.token, editDate, editType);
+      } else if (editType === "VA" || editType === "FM") {
+        await saveManualPaidDay(session.token, editDate, editType, paid?.id || null);
+      } else {
+        if (paid) await deleteManualPaidDay(session.token, paid.id);
+        await saveRestDayOverride(session.token, editDate, editType);
+      }
       await reloadCalendar();
       setNotice(action === "reset" ? "Día restablecido según tu grupo." : "Día guardado en tu calendario personal.");
       setEditCalendar(false);
@@ -284,14 +285,14 @@ export default function RestExchangePanel({ session }) {
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
     <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
-    <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir vacaciones</button><span>DS, FS, FM y VA se muestran solo en tu calendario.</span></div>
+    <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button><span>DS, FS, FM y VA se muestran solo en tu calendario.</span></div>
     {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
     {editCalendar && <form className="rest-calendar-editor" ref={calendarEditorRef} onSubmit={(event) => { event.preventDefault(); changePersonalDay("save"); }}>
-      <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type === "VA" ? "VA" : calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
+      <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type || calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
       <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
-        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Día sin descanso</option><option value="VA">VA · Vacaciones</option>
+        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Día sin descanso</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option>
       </select></label>
-      <div><button type="submit" disabled={calendarBusy}>Guardar día</button><button type="button" disabled={calendarBusy} onClick={() => changePersonalDay("reset")}>{calendarData.paidDays.some((row) => row.work_date === editDate && row.concept_type === "VA") ? "Quitar vacaciones" : "Usar calendario del grupo"}</button></div>
+      <div><button type="submit" disabled={calendarBusy}>Guardar día</button><button type="button" disabled={calendarBusy} onClick={() => changePersonalDay("reset")}>{calendarData.paidDays.some((row) => row.work_date === editDate) ? "Quitar VA o FM" : "Usar calendario del grupo"}</button></div>
     </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>

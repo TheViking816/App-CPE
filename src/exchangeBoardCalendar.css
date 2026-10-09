@@ -17,6 +17,7 @@
 .exchange-board-legend .is-offered::before,.offer-dots .is-offered{background:#1769cf}
 .exchange-board-legend .is-wanted::before,.offer-dots .is-wanted{background:#d07a12}
 .exchange-board-legend .is-personal-vacation::before{background:#f5f3ff;border:2px solid #8b5cf6}
+.exchange-board-legend .is-personal-training::before{background:#d9c8fa;border:1px solid #b99aea}
 .exchange-board-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
 .exchange-board-grid .weekday{text-align:center;padding:7px 0;color:#6a7f96;font-size:12px}
 .exchange-board-grid button,.exchange-board-grid .blank{min-height:57px;border:1px solid #e1e9f2;border-radius:9px;background:#f9fbfe;text-align:left;padding:7px;display:flex;flex-direction:column;justify-content:space-between;color:#193b60;font-size:12px;font-weight:700}

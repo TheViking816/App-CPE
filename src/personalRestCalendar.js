@@ -1,8 +1,9 @@
 import { companyRestMarks } from './companyRestCalendar.js';
 
 export function personalVacationMarks(date, paidDays = []) {
-  return paidDays.some((row) => row.work_date === date && row.concept_type === 'VA')
-    ? [{ type: 'vacation', label: 'VA' }] : [];
+  const paid = paidDays.find((row) => row.work_date === date && row.concept_type === 'VA')
+    || paidDays.find((row) => row.work_date === date && row.concept_type === 'FM');
+  return paid ? [{ type: paid.concept_type === 'VA' ? 'vacation' : 'training', label: paid.concept_type }] : [];
 }
 
 export function personalRestMarks(date, restGroup, overrides = [], paidDays = []) {
