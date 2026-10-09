@@ -27,6 +27,14 @@
   min-width: 0;
 }
 .manual-section-page > * { min-width: 0; }
+.password-settings { max-width: 540px; }
+.password-settings > p { margin: 0 0 20px; color: #526b86; }
+.password-settings form { display: grid; gap: 16px; }
+.password-settings label { display: grid; gap: 7px; color: #173b64; font-weight: 750; }
+.password-settings input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #cbdceb; border-radius: 9px; background: #fff; color: #102f55; }
+.password-settings form > button { justify-self: start; }
+.password-settings .form-error { margin: 0; color: #a72935; }
+.password-settings .banner { margin: 0; }
 .manual-section-page .exchange-area {
   width: 100%;
   max-width: none;

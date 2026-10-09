@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, loginUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
+import { supabase, loginUser, updateUserPassword, getUserManualPremiums, setUserManualPremium, getUserRelayHours, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
 import { touchDirectPresence } from './exchangeClient.js';
 import { EXCHANGE_PREVIEW_READ_ONLY } from './exchangePreview.js';
 import RestExchangePanel from './RestExchangePanel.jsx';
@@ -13,12 +13,12 @@ import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
-import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, LogOut, MessageCircle, WalletCards, X } from 'lucide-react';
+import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, KeyRound, LogOut, MessageCircle, WalletCards, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
-const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', ...OPERATIONAL_PAGES]);
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', ...OPERATIONAL_PAGES]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
@@ -38,6 +38,7 @@ function ManualSideMenu({ tab, isAdmin, navigate, onClose, onLogout }) {
     <div className="visual-menu-group">
       <small>MI CUENTA</small>
       {item('sueldometro', 'Sueldómetro', WalletCards)}
+      {item('cuenta', 'Cambiar contraseña', KeyRound)}
     </div>
     <div className="visual-menu-group">
       <small>OPERATIVA</small>
@@ -62,6 +63,40 @@ function SectionPage({ eyebrow, title, children }) {
     <section className="visual-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div></section>
     {children}
   </div>;
+}
+
+function PasswordSettings({ session }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  async function submit(event) {
+    event.preventDefault();
+    setError(''); setNotice('');
+    if (newPassword !== confirmPassword) { setError('Las contraseñas nuevas no coinciden.'); return; }
+    setBusy(true);
+    try {
+      await updateUserPassword({ token: session.token, currentPassword, newPassword });
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      setNotice('Contraseña actualizada. Puedes seguir usando esta sesión.');
+    } catch (reason) { setError(reason.message || 'No se pudo cambiar la contraseña.'); }
+    finally { setBusy(false); }
+  }
+  return <SectionPage eyebrow="MI CUENTA" title="Cambiar contraseña">
+    <section className="manual-panel password-settings">
+      <p>Introduce tu contraseña actual y elige una nueva para App CPE.</p>
+      <form onSubmit={submit}>
+        <label>Contraseña actual<input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required /></label>
+        <label>Contraseña nueva<input type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></label>
+        <label>Repite la contraseña nueva<input type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></label>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        {notice && <p className="banner success" role="status">{notice}</p>}
+        <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar contraseña'}</button>
+      </form>
+    </section>
+  </SectionPage>;
 }
 
 async function rpc(name, values) {
@@ -93,7 +128,7 @@ function Access({ onAccess }) {
   }
   return <main className="manual-shell access-shell"><section className="access-card">
     <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><p className="eyebrow">APP CPE</p><h1>Tu Sueldómetro</h1>
-    <p>Registra tus jornales y primas. Tus datos anteriores se conservan en tu cuenta.</p>
+    <p>{register ? 'Crea tu cuenta con tu chapa y una contraseña nueva.' : 'Accede con la contraseña de App CPE. Si aún no tienes cuenta, regístrate aquí.'}</p>
     <form onSubmit={submit}>
       <label>Chapa<input value={chapa} onChange={(event) => setChapa(event.target.value)} inputMode="numeric" autoComplete="username" required /></label>
       {register && <label>Correo electrónico<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>}
@@ -102,7 +137,8 @@ function Access({ onAccess }) {
       <button className="primary" disabled={busy}>{busy ? 'Un momento…' : register ? 'Crear cuenta' : 'Entrar'}</button>
     </form>
     <button className="text-button" type="button" onClick={() => { setRegister(!register); setError(''); }}>{register ? 'Ya tengo cuenta' : 'Crear cuenta nueva'}</button>
-    <small>El registro solo requiere credenciales de App CPE.</small>
+    {!register && <small>¿No recuerdas tu contraseña? Solicita ayuda al responsable de la app. No crees otra cuenta con la misma chapa.</small>}
+    {register && <small>Esta contraseña es exclusiva de App CPE; no uses la del portal.</small>}
   </section></main>;
 }
 
@@ -395,7 +431,8 @@ function Salary({ session, onSession }) {
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" aria-label={`Novedades${notifications.filter((row) => !row.readAt).length ? `, ${notifications.filter((row) => !row.readAt).length} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{notifications.filter((row) => !row.readAt).length > 0 && <b>{notifications.filter((row) => !row.readAt).length}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}</header><div className="visual-content">
-    {tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
+    {tab === 'cuenta' ? <PasswordSettings session={session} />
+      : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
       : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} /></SectionPage>
