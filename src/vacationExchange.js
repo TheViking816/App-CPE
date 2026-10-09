@@ -1,4 +1,5 @@
 import { vacationOfferExpired } from "./exchangeDeadline.js";
+import { professionalGroupCode } from "./professionalGroups.js";
 
 export function dateRangeKeys(start, end) {
   if (!start || !end || start > end) return [];
@@ -12,9 +13,12 @@ export function dateRangeKeys(start, end) {
   return keys.length <= 31 ? keys : [];
 }
 
-export function canRespondToVacationOffer(offer) {
+export function canRespondToVacationOffer(offer, userProfessionalGroup) {
   if (offer.status !== "open" || offer.isOwn) return false;
   if (vacationOfferExpired(offer)) return false;
+  const ownerGroup = professionalGroupCode(offer.professionalGroup);
+  const userGroup = professionalGroupCode(userProfessionalGroup);
+  if (!ownerGroup || !userGroup || ownerGroup !== userGroup) return false;
   const offered = dateRangeKeys(offer.offeredStart, offer.offeredEnd);
   const wanted = dateRangeKeys(offer.wantedStart, offer.wantedEnd);
   return offered.length > 0 && offered.length === wanted.length;

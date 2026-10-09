@@ -6,6 +6,7 @@ import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
 import { canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
+import { professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
 import { supabase } from "./supabaseClient.js";
 import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
@@ -140,7 +141,9 @@ export default function VacationExchangePanel({ session }) {
     const expired = offer.status === "open" && vacationOfferExpired(offer, today);
     const related = proposals.filter((proposal) => proposal.offerId === offer.id);
     const minePending = related.find((proposal) => proposal.isOwn && proposal.status === "pending");
-    const canRespond = canRespondToVacationOffer(offer);
+    const canRespond = canRespondToVacationOffer(offer, session.professionalGroup);
+    const groupMatches = professionalGroupCode(offer.professionalGroup)
+      && professionalGroupCode(offer.professionalGroup) === professionalGroupCode(session.professionalGroup);
     const chatButton = (proposal) => <button type="button" className="rest-exchange-secondary"
       onClick={() => { window.location.hash = conversationHash("vacation", proposal.id); }}>
       Abrir conversación
@@ -152,7 +155,7 @@ export default function VacationExchangePanel({ session }) {
         <ExchangeAvatar name={offer.ownerName} />
         <div><span>Intercambio de vacaciones</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
         {(offer.professionalGroup || offer.restGroup) && <div className="rest-exchange-offer-groups">
-          {offer.professionalGroup && <small>Grupo profesional: {offer.professionalGroup}</small>}
+          {offer.professionalGroup && <small>Grupo profesional: {professionalGroupLabel(offer.professionalGroup)}</small>}
           {offer.restGroup && <small>Descanso: {offer.restGroup}</small>}
         </div>}
       </div>
@@ -166,6 +169,7 @@ export default function VacationExchangePanel({ session }) {
           () => proposeVacationExchange({ token: session.token, offerId: offer.id }),
           "Propuesta enviada. El autor recibirá una notificación."
         )}>Me interesa</button>
+        {!groupMatches && <small>{session.professionalGroup ? 'Solo puedes intercambiar vacaciones con tu mismo grupo profesional.' : 'Indica tu grupo profesional en Ajustes → Mis datos.'}</small>}
       </div>}
       {offer.isOwn && offer.status === "open" && <div className="rest-exchange-manage">
         <button type="button" className="rest-exchange-secondary" disabled={busy || expired || related.some((p) => p.status === "pending")}

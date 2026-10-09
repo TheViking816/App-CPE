@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261009-clean-login-14";
+self.__APP_CPE_SW_VERSION__ = "20261009-portal-professional-groups-15";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

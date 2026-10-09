@@ -6,6 +6,7 @@ import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
 import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
+import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
 import {
@@ -143,7 +144,7 @@ export default function RestExchangePanel({ session }) {
         <ExchangeAvatar name={offer.ownerName} />
         <div><span>{KINDS[offer.kind]}</span><strong>{offer.ownerName || "Compañero"}{offer.ownerChapa ? ` · ${offer.ownerChapa}` : ""}</strong></div>
         {(offer.professionalGroup || offer.ownerGroup) && <div className="rest-exchange-offer-groups">
-          {offer.professionalGroup && <small>Grupo profesional: {offer.professionalGroup}</small>}
+          {offer.professionalGroup && <small>Grupo profesional: {professionalGroupLabel(offer.professionalGroup)}</small>}
           {offer.ownerGroup && <small>Descanso: {offer.ownerGroup}</small>}
         </div>}
       </div>
