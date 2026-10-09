@@ -1,0 +1,33 @@
+.operational-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.operational-panel label {
+  display: grid;
+  gap: .35rem;
+  max-width: 28rem;
+  font-weight: 700;
+}
+
+.operational-panel select,
+.operational-panel input {
+  width: 100%;
+  padding: .7rem;
+  border: 1px solid #c8d9eb;
+  border-radius: .6rem;
+  background: white;
+  color: #102b4d;
+}
+
+.operational-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.operational-summary span {
+  padding: .5rem .7rem;
+  border-radius: .5rem;
+  background: #e9f2fa;
+}
