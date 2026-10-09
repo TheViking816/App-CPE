@@ -31,6 +31,7 @@
 .exchange-board-grid button.is-selected{outline:3px solid #1769cf}
 .exchange-board-grid .blank{border:0;background:transparent}
 .exchange-day-heading{display:flex;align-items:center;justify-content:space-between;gap:2px;width:100%}
+.exchange-day-heading .is-payroll-holiday{color:#b91c1c;font-weight:950}
 .exchange-day-heading small{padding:1px 3px;border-radius:3px;background:#075985;color:#fff;font-size:9px;font-weight:900;line-height:1.2}
 .offer-dots{display:flex;gap:3px;flex-wrap:wrap}
 .rest-day-marks{display:flex;flex-wrap:wrap;gap:2px;align-items:center}

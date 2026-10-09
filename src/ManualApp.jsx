@@ -10,7 +10,7 @@ import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSal
 import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { specialties as censoSpecialties } from './censo.js';
-import { PROFESSIONAL_GROUPS, professionalGroupCode, professionalGroupLabel } from './professionalGroups.js';
+import { PROFESSIONAL_GROUPS, professionalGroupCode } from './professionalGroups.js';
 import { REST_GROUPS } from './restGroups.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
@@ -70,18 +70,18 @@ function SectionPage({ eyebrow, title, children }) {
   </div>;
 }
 
-function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties, lockedProfessionalGroup = false }) {
+function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties, professionalGroupSource }) {
   const [otherSelected, setOtherSelected] = useState(false);
   const otherProfessionalGroup = otherSelected || Boolean(professionalGroup && !PROFESSIONAL_GROUPS.some((group) => group.code === professionalGroup));
   const toggleSpecialty = (id) => setSelectedSpecialties((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   return <div className="manual-profile-fields">
-    {lockedProfessionalGroup ? <label>Grupo de intercambio del portal<output className="manual-profile-verified-group">{professionalGroupLabel(professionalGroup)}<small>Actualizado desde el portal</small></output></label> : <label>Grupo de intercambio<select value={otherProfessionalGroup ? 'other' : professionalGroup} onChange={(event) => {
+    <label>Grupo profesional de intercambio<select value={otherProfessionalGroup ? 'other' : professionalGroup} onChange={(event) => {
       const value = event.target.value; setOtherSelected(value === 'other'); setProfessionalGroup(value === 'other' ? '' : value);
     }} required>
       <option value="">Selecciona tu grupo de intercambio</option>{PROFESSIONAL_GROUPS.map((group) => <option key={group.code} value={group.code}>{group.label}</option>)}
       <option value="other">Otro grupo del portal</option>
-    </select></label>}
-    {!lockedProfessionalGroup && otherProfessionalGroup && <label>Código del grupo en el portal<input value={professionalGroup} onChange={(event) => setProfessionalGroup(event.target.value.toUpperCase().trim())} placeholder="Por ejemplo, G-B" pattern="(G|SIN)-[A-Z0-9]{1,5}" maxLength={10} required /></label>}
+    </select>{professionalGroupSource === 'portal' && <small>Seleccionado desde el portal. Puedes cambiarlo y guardar tu elección.</small>}</label>
+    {otherProfessionalGroup && <label>Código del grupo en el portal<input value={professionalGroup} onChange={(event) => setProfessionalGroup(event.target.value.toUpperCase().trim())} placeholder="Por ejemplo, G-B" pattern="(G|SIN)-[A-Z0-9]{1,5}" maxLength={10} required /></label>}
     <label>Grupo de descansos<select value={restGroup} onChange={(event) => setRestGroup(event.target.value)} required>
       <option value="">Selecciona tu grupo</option>{REST_GROUPS.map((group) => <option key={group} value={group}>{group.replace(/\s+/g, '')}</option>)}
     </select></label>
@@ -122,7 +122,7 @@ function ProfileSettings({ session, onSession }) {
   return <SectionPage eyebrow="AJUSTES" title="Mis datos"><section className="manual-panel manual-profile-settings">
     <p>El grupo de intercambio indica con quién puedes cambiar vacaciones. Es distinto del grupo de descansos y del grupo salarial. Las especialidades se usan en Chapero y Puertas.</p>
     <form onSubmit={submit}>
-      <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} lockedProfessionalGroup={session.professionalGroupSource === 'portal'} />
+      <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} professionalGroupSource={session.professionalGroupSource} />
       {error && <p className="form-error" role="alert">{error}</p>}
       {notice && <p className="banner success" role="status">{notice}</p>}
       <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar mis datos'}</button>

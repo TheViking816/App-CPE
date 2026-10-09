@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-fs-va-refine-28";
+self.__APP_CPE_SW_VERSION__ = "20261010-profile-holidays-29";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

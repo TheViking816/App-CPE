@@ -8,11 +8,20 @@ async function rpc(name, args) {
 }
 
 export async function getPersonalRestCalendar(token) {
-  const [overrides, paidDays] = await Promise.all([
+  const [overrides, paidDays, holidays] = await Promise.all([
     rpc('app_cpe_list_rest_day_overrides', { p_token: token }),
-    listManualPaidDays(token)
+    listManualPaidDays(token),
+    listPayrollHolidays()
   ]);
-  return { overrides: overrides || [], paidDays: paidDays || [] };
+  return { overrides: overrides || [], paidDays: paidDays || [], holidays };
+}
+
+export async function listPayrollHolidays() {
+  if (!supabase) throw new Error('Falta la configuración de la base de datos.');
+  const { data, error } = await supabase.from('app_cpe_payroll_holidays')
+    .select('holiday_date').eq('enabled', true);
+  if (error) throw error;
+  return (data || []).map((row) => row.holiday_date);
 }
 
 export const listManualPaidDays = (token) =>

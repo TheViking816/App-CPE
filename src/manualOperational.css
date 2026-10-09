@@ -40,6 +40,7 @@
 .manual-profile-settings > p { margin: 0 0 18px; color: #526b86; }
 .manual-profile-settings form, .manual-profile-fields { display: grid; gap: 16px; }
 .manual-profile-fields label { display: grid; gap: 6px; color: #173b64; font-weight: 750; }
+.manual-profile-fields label > small { color: #5b7590; font-size: 11px; font-weight: 650; }
 .manual-profile-fields select { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #cbdceb; border-radius: 9px; background: #fff; color: #102f55; }
 .manual-profile-verified-group { display: grid; gap: 2px; min-height: 44px; padding: 8px 11px; border: 1px solid #cbdceb; border-radius: 9px; background: #f3f8fd; color: #123c69; font-weight: 850; }
 .manual-profile-verified-group small { color: #5b7590; font-size: 10px; font-weight: 650; }

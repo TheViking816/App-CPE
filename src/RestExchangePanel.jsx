@@ -44,7 +44,7 @@ export default function RestExchangePanel({ session }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [calendarData, setCalendarData] = useState({ overrides: [], paidDays: [] });
+  const [calendarData, setCalendarData] = useState({ overrides: [], paidDays: [], holidays: [] });
   const [calendarError, setCalendarError] = useState("");
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [editCalendar, setEditCalendar] = useState(false);
@@ -283,7 +283,7 @@ export default function RestExchangePanel({ session }) {
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
-    <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays}
+    <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
     <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button><span>DS, FS, FM y VA se muestran solo en tu calendario.</span></div>
     {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
