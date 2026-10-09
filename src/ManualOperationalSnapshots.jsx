@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Clock3 } from 'lucide-react';
 import { classifyDistance, findByChapa, getDoorState, specialties } from './censo.js';
-import { getLatestChaperoSnapshot, getLatestDoorSnapshots } from './supabaseClient.js';
+import { getLatestChaperoSnapshot, getLatestDoorSnapshots, updateUserSpecialties } from './supabaseClient.js';
 
 const DOOR_SPECIALTIES = [
   'MAFIS', 'APOYO OPERACION', 'CONDUCTOR 1a', 'CONDUCTOR 2a',
@@ -39,10 +39,23 @@ function DoorRings({ doors, user, total }) {
   </section>;
 }
 
-export default function ManualOperationalSnapshots({ view, chapa }) {
+function initialSpecialtyIds(session) {
+  const known = new Set(specialties.map((item) => item.id));
+  const saved = (session.specialties || []).filter((id) => known.has(id));
+  if (saved.length) return saved;
+  return specialties.filter((item) => findByChapa(session.chapa, item.id)).map((item) => item.id).slice(0, 1);
+}
+
+export default function ManualOperationalSnapshots({ view, session, onSession }) {
+  const chapa = session.chapa;
   const [snapshots, setSnapshots] = useState([]);
   const [chapero, setChapero] = useState(null);
-  const [selectedId, setSelectedId] = useState('conductor-1a');
+  const [savedIds, setSavedIds] = useState(() => initialSpecialtyIds(session));
+  const [draftIds, setDraftIds] = useState(savedIds);
+  const [selectedId, setSelectedId] = useState(savedIds[0] || specialties[0].id);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [censusQuery, setCensusQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,18 +69,42 @@ export default function ManualOperationalSnapshots({ view, chapa }) {
     return () => { active = false; };
   }, [view]);
 
-  const available = useMemo(() => specialties.filter((item) =>
-    snapshots.some((snapshot) => snapshot.specialty === item.name)), [snapshots]);
+  const available = useMemo(() => specialties.filter((item) => savedIds.includes(item.id)), [savedIds]);
   const specialty = available.find((item) => item.id === selectedId) || available[0];
   const snapshot = snapshots.find((item) => item.specialty === specialty?.name);
   const doors = specialty ? getDoorState(chapa, snapshot?.doors || [], specialty.id) : [];
   const user = specialty ? findByChapa(chapa, specialty.id) : null;
   const chaperoWorker = chapero?.workers.find((item) => String(item.chapa) === String(chapa));
+  const censusRows = (specialty?.censo || []).filter((item) => String(item.chapa).includes(censusQuery.trim()));
+  const toggleSpecialty = (id) => setDraftIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  const saveSpecialties = async () => {
+    if (!draftIds.length) { setMessage('Selecciona al menos una especialidad.'); return; }
+    setSaving(true); setMessage('');
+    try {
+      const response = await updateUserSpecialties({ token: session.token, specialties: draftIds });
+      if (!response) throw new Error('No hay conexión para guardar las especialidades.');
+      const next = { ...session, ...response, specialties: draftIds };
+      localStorage.setItem('app-cpe-session', JSON.stringify(next));
+      onSession(next);
+      setSavedIds(draftIds);
+      if (!draftIds.includes(selectedId)) setSelectedId(draftIds[0]);
+      setMessage('Especialidades guardadas.');
+    } catch (error) {
+      setMessage(error.message || 'No se pudieron guardar las especialidades.');
+    } finally { setSaving(false); }
+  };
   const selector = <div className="specialty-select doors-specialty-select">
     <span>Especialidad</span><select aria-label="Seleccionar puertas por especialidad" value={specialty?.id || ''} onChange={(event) => setSelectedId(event.target.value)}>
       {available.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
     </select>
   </div>;
+  const census = <details className="operational-census">
+    <summary>Censo de {specialty?.name || 'especialidad'} · {specialty?.censo.length || 0} trabajadores</summary>
+    <label>Buscar chapa <input value={censusQuery} onChange={(event) => setCensusQuery(event.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="Número de chapa" /></label>
+    <div className="operational-census-list">{censusRows.slice(0, 100).map((item) =>
+      <div key={item.chapa} className={item.chapa === chapa ? 'is-self' : ''}><strong>{item.displayPosition || item.position}</strong><span>{item.chapa}</span></div>)}</div>
+    {censusRows.length > 100 && <small>Mostrando 100 de {censusRows.length}. Busca una chapa para localizarla.</small>}
+  </details>;
 
   if (view === 'puertas') return <section className="manual-panel operational-panel">
     {selector}
@@ -76,6 +113,7 @@ export default function ManualOperationalSnapshots({ view, chapa }) {
       <DoorTable title="Laborables" doors={doors.filter((door) => door.dayType === 'laborable')} tone="lab" />
       <DoorTable title="Festivas" doors={doors.filter((door) => door.dayType === 'festivo')} tone="fes" />
     </>}
+    {census}
   </section>;
 
   const statusLabels = { contratado: 'Contratado', anticipado: 'Anticipado', nocontratado: 'No contratado', falta: 'No disponible', excepcion: 'Con excepción', doble: 'Doble' };
@@ -91,8 +129,17 @@ export default function ManualOperationalSnapshots({ view, chapa }) {
       </div>
       <div className="chapero-updated"><Clock3 size={14} /><span>Actualizado: {formatDate(chapero?.updatedAt)}</span></div>
     </section>
+    <details className="operational-specialties">
+      <summary>Añadir especialidades · {draftIds.length} seleccionadas</summary>
+      <p>Marca todas las especialidades y polivalencias que quieras consultar.</p>
+      <div className="operational-specialty-list">{specialties.map((item) =>
+        <label key={item.id}><input type="checkbox" checked={draftIds.includes(item.id)} onChange={() => toggleSpecialty(item.id)} /><span>{item.name}</span><small>{item.kind === 'polivalencia' ? 'Polivalencia' : 'Especialidad'}</small></label>)}</div>
+      <button type="button" disabled={saving} onClick={saveSpecialties}>{saving ? 'Guardando…' : 'Guardar especialidades'}</button>
+      {message && <p role="status">{message}</p>}
+    </details>
     {selector}
     <div className="home-summary"><div><p>Tu posición</p><h1>{user?.displayPosition || user?.position || '-'} / {specialty?.censo.length || 0}</h1><span>Chapa {chapa}</span></div></div>
     <DoorRings user={user} doors={doors} total={specialty?.censo.length || 0} />
+    {census}
   </section>;
 }
