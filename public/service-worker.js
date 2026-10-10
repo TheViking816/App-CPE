@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-compact-rest-link-35";
+self.__APP_CPE_SW_VERSION__ = "20261010-remove-wrong-rest-link-36";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
