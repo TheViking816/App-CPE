@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-monitor-calendar-days-48";
+self.__APP_CPE_SW_VERSION__ = "20261010-header-alerts-49";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

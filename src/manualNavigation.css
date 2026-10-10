@@ -2,6 +2,49 @@
   padding-bottom: calc(120px + env(safe-area-inset-bottom));
 }
 
+.visual-header .header-actions .header-notifications {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 38px;
+}
+.visual-header .header-actions .header-notifications.is-unread {
+  border-color: #ffd275;
+  background: linear-gradient(135deg, #ffce55, #ff8a24);
+  color: #472600;
+  box-shadow: 0 0 0 3px #ffbd3b38, 0 5px 14px #f59a2760;
+}
+.visual-header .header-actions .header-notifications.is-unread:hover {
+  background: linear-gradient(135deg, #ffda74, #ff9a3d);
+}
+.header-notifications b {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border: 2px solid #0b2b54;
+  border-radius: 999px;
+  background: #fff;
+  color: #9b3d00;
+  font-size: 11px;
+  line-height: 1;
+}
+.visual-header .header-actions .header-signout,
+.visual-menu .menu-signout {
+  border-color: #ee7780;
+  background: #c72f42;
+  color: #fff;
+  font-weight: 800;
+}
+.visual-header .header-actions .header-signout:hover,
+.visual-menu .menu-signout:hover { background: #a91e32; }
+
 .visual-page-heading {
   display: flex;
   align-items: center;
