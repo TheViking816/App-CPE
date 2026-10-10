@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-annual-rest-calendar-45";
+self.__APP_CPE_SW_VERSION__ = "20261010-inline-rest-editor-46";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
