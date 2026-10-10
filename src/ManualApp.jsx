@@ -214,18 +214,23 @@ function Access({ onAccess }) {
 function ActivityMonitor({ session }) {
   const [data, setData] = useState(null);
   const [journalEvents, setJournalEvents] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState([]);
   const [error, setError] = useState('');
   const [journalError, setJournalError] = useState('');
+  const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals] = await Promise.allSettled([
+    const [usage, journals, calendar] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
-      rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token })
+      rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
+      rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
     if (journals.status === 'fulfilled') { setJournalEvents(journals.value || []); setJournalError(''); }
     else setJournalError(journals.reason?.message || 'No se pudieron cargar los jornales.');
+    if (calendar.status === 'fulfilled') { setCalendarEvents(calendar.value || []); setCalendarError(''); }
+    else setCalendarError(calendar.reason?.message || 'No se pudieron cargar los cambios del calendario.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter));
@@ -233,11 +238,16 @@ function ActivityMonitor({ session }) {
   const recent = (data?.recent || []).filter((event) => event.type === 'page_visit'
     ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type));
   const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa || '').includes(filter));
+  const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa || '').includes(filter));
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
   const action = (value) => ({ added: 'Añadido', edited: 'Editado', deleted: 'Eliminado' })[value] || value;
+  const dayType = (value) => ({ REST: 'DS', FS: 'FS', WORK: 'Disponible', VA: 'VA', FM: 'FM' })[value] || value || '—';
+  const dayChange = (event) => event.event_type === 'deleted' ? dayType(event.previous_day_type)
+    : event.previous_day_type && event.previous_day_type !== event.day_type
+      ? `${dayType(event.previous_day_type)} → ${dayType(event.day_type)}` : dayType(event.day_type);
   return <section className="manual-panel monitor-panel"><div className="section-head"><div><p className="eyebrow">Administración</p><h2>Monitor de actividad</h2></div><button onClick={load}>Actualizar</button></div>
-    <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales manuales se conservan en el registro.</p>
+    <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales y días del calendario se conservan en el registro.</p>
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
     <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
@@ -249,6 +259,12 @@ function ActivityMonitor({ session }) {
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día del jornal</th><th>Turno</th><th>Puesto</th><th>Grupo</th><th>Operación</th></tr></thead><tbody>
       {visibleJournalEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}</td><td>{event.shift}</td><td>{event.specialty}</td><td>{event.worker_group}</td><td>{event.operation_type === 'RECEPCION_ENTREGA' ? 'OC' : 'SP'}</td></tr>)}
     </tbody></table>{!journalError && visibleJournalEvents.length === 0 && <p className="monitor-empty">No hay movimientos de jornales manuales para el filtro actual.</p>}</div>
+    <h3>Cambios en el calendario personal</h3>
+    <p>Últimos 200 movimientos de DS, FS, Disponible, VA y FM, incluidos VA y FM añadidos desde Sueldómetro.</p>
+    {calendarError && <p className="form-error" role="alert">{calendarError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día</th><th>Tipo</th></tr></thead><tbody>
+      {visibleCalendarEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${workDay(event.previous_work_date)}` : ''}</td><td>{dayChange(event)}</td></tr>)}
+    </tbody></table>{!calendarError && visibleCalendarEvents.length === 0 && <p className="monitor-empty">No hay cambios de días para el filtro actual.</p>}</div>
     <h3>Actividad reciente</h3><div className="recent-list">{recent.slice(0, 30).map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
   </section>;
 }

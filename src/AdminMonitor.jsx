@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, BarChart3, CheckSquare2, Clock3, Eye, ListRestart, Play, RefreshCw, Search, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
-import { getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestPendingWorkerRun } from "./supabaseClient.js";
+import { getAdminCalendarDayActivity, getAdminPortalSyncUsers, getAdminWorkerControlStatus, getUsageMonitor, queueAdminPortalSyncUsers, requestPendingWorkerRun } from "./supabaseClient.js";
 
 const PAGE_LABELS = {
   inicio: "Inicio", contratacion: "Contratación", sueldometro: "Sueldómetro",
@@ -16,6 +16,20 @@ const EVENT_LABELS = {
   password_change: "Cambia la contraseña", portal_open: "Abre Portal",
   tablon_general_open: "Abre el tablón", page_visit: "Visita una página"
 };
+const DAY_LABELS = { REST: "DS", FS: "FS", WORK: "Disponible", VA: "VA", FM: "FM" };
+const ACTION_LABELS = { added: "Añadido", edited: "Cambiado", deleted: "Eliminado" };
+
+function formatWorkDate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "—";
+}
+
+function formatDayChange(event) {
+  if (event.event_type === "deleted") return DAY_LABELS[event.previous_day_type] || event.previous_day_type || "—";
+  const current = DAY_LABELS[event.day_type] || event.day_type || "—";
+  return event.previous_day_type && event.previous_day_type !== event.day_type
+    ? `${DAY_LABELS[event.previous_day_type] || event.previous_day_type} → ${current}` : current;
+}
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -58,6 +72,8 @@ export default function AdminMonitor({ session }) {
   const [portalError, setPortalError] = useState("");
   const [workerControl, setWorkerControl] = useState(null);
   const [startingWorker, setStartingWorker] = useState(false);
+  const [calendarActivity, setCalendarActivity] = useState([]);
+  const [calendarActivityError, setCalendarActivityError] = useState("");
 
   const load = async ({ quiet = false } = {}) => {
     if (quiet) setRefreshing(true);
@@ -65,10 +81,11 @@ export default function AdminMonitor({ session }) {
     setError("");
     setPortalError("");
     try {
-      const [usageResult, portalResult, workerResult] = await Promise.allSettled([
+      const [usageResult, portalResult, workerResult, calendarResult] = await Promise.allSettled([
         getUsageMonitor({ token: session.token }),
         getAdminPortalSyncUsers({ token: session.token }),
-        getAdminWorkerControlStatus({ token: session.token })
+        getAdminWorkerControlStatus({ token: session.token }),
+        getAdminCalendarDayActivity({ token: session.token })
       ]);
       if (usageResult.status === "rejected") throw usageResult.reason;
       setData(usageResult.value);
@@ -79,6 +96,10 @@ export default function AdminMonitor({ session }) {
         setPortalError(portalResult.reason?.message || "No se pudieron cargar las sincronizaciones.");
       }
       if (workerResult.status === "fulfilled") setWorkerControl(workerResult.value);
+      if (calendarResult.status === "fulfilled") {
+        setCalendarActivity(calendarResult.value);
+        setCalendarActivityError("");
+      } else setCalendarActivityError(calendarResult.reason?.message || "No se pudieron cargar los cambios del calendario.");
     } catch (requestError) {
       setError(requestError?.message || "No se pudo cargar el monitor.");
     } finally {
@@ -117,6 +138,7 @@ export default function AdminMonitor({ session }) {
   const maxViews = Math.max(1, ...(data?.hourly || []).map((item) => Number(item.views) || 0));
   const maxPageViews = Math.max(1, ...(data?.pages || []).map((item) => Number(item.views) || 0));
   const summary = data?.summary || {};
+  const filteredCalendarActivity = calendarActivity.filter((event) => String(event.chapa || "").includes(query.replace(/\D/g, "")));
   const filteredPortalUsers = useMemo(() => {
     const normalized = portalQuery.replace(/\D/g, "");
     return portalUsers.filter((user) => {
@@ -283,6 +305,25 @@ export default function AdminMonitor({ session }) {
               {(data?.recent || []).slice(0, 30).map((event) => (
                 <div key={event.id}><span className={event.type === "page_visit" ? "is-page" : ""} /><strong>{event.chapa || "Anónimo"}</strong><p>{event.type === "page_visit" ? `Visita ${PAGE_LABELS[event.page] || event.page}` : (EVENT_LABELS[event.type] || event.type)}</p><time>{formatDateTime(event.at)}</time></div>
               ))}
+            </div>
+          </article>
+
+          <article className="monitor-card monitor-calendar-card">
+            <div className="monitor-card-heading"><div><small>Calendario personal</small><h2>Cambios de días</h2></div><Activity size={21} /></div>
+            <p className="monitor-sync-help">Últimos 200 cambios de DS, FS, Disponible, VA y FM, también cuando VA o FM se añaden desde Sueldómetro.</p>
+            {calendarActivityError && <p className="monitor-sync-message is-error" role="alert">{calendarActivityError}</p>}
+            <div className="monitor-table-wrap">
+              <table className="monitor-table">
+                <thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día</th><th>Tipo</th></tr></thead>
+                <tbody>{filteredCalendarActivity.map((event) => <tr key={event.id}>
+                  <td>{formatDateTime(event.occurred_at)}</td>
+                  <td><strong>{event.chapa}</strong></td>
+                  <td>{ACTION_LABELS[event.event_type] || event.event_type}</td>
+                  <td>{formatWorkDate(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${formatWorkDate(event.previous_work_date)}` : ""}</td>
+                  <td>{formatDayChange(event)}</td>
+                </tr>)}</tbody>
+              </table>
+              {!calendarActivityError && !filteredCalendarActivity.length && <p className="monitor-empty">No hay cambios de días para este filtro.</p>}
             </div>
           </article>
 

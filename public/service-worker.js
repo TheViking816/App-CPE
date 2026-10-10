@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-rest-editor-offers-47";
+self.__APP_CPE_SW_VERSION__ = "20261010-monitor-calendar-days-48";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

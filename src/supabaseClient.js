@@ -439,6 +439,13 @@ export async function getUsageMonitor({ token }) {
   return data;
 }
 
+export async function getAdminCalendarDayActivity({ token }) {
+  if (!supabase || !token) return [];
+  const { data, error } = await supabase.rpc("app_cpe_admin_calendar_day_activity", { p_token: token });
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getAdminPortalSyncUsers({ token }) {
   if (!supabase || !token) return null;
 
