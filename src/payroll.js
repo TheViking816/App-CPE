@@ -228,6 +228,23 @@ function continuousDoubleMeals(jornales = []) {
   return meals;
 }
 
+export function reconcileContinuousDoubleMeals(items = []) {
+  const meals = continuousDoubleMeals(items);
+  return items.map((item, index) => {
+    if (!item.payroll || item.isVacation || item.isTraining) return item;
+    const meal = meals.get(index) || null;
+    const previous = Number(item.payroll.continuousDoubleMeal || 0);
+    const amount = meal ? CONTINUOUS_DOUBLE_MEAL_RATE : 0;
+    if (previous === amount && item.payroll.continuousDoubleMealType === (meal?.type || null)) return item;
+    return { ...item, payroll: { ...item.payroll,
+      continuousDoubleMeal: amount,
+      continuousDoubleMealType: meal?.type || null,
+      continuousDoubleMealHours: meal?.hours || null,
+      total: Number((Number(item.payroll.total || 0) - previous + amount).toFixed(2))
+    } };
+  });
+}
+
 function relayHourKeyPart(value, fallback) {
   return String(value || fallback)
     .normalize("NFD")

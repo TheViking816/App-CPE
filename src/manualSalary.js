@@ -1,4 +1,4 @@
-import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
+import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, reconcileContinuousDoubleMeals, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
 import { unpackManualNotes } from './manualMetadata.js';
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -121,7 +121,8 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
     });
     const paidByDate = new Map();
     for (const item of manuallyPaid.filter((entry) => entry.payroll.date.startsWith(`${key}-`))) paidByDate.set(item.payroll.date, item);
-    const items = [...historicItems, ...newItems, ...paidByDate.values()].sort((a, b) => b.payroll.date.localeCompare(a.payroll.date) || b.payroll.shift.localeCompare(a.payroll.shift));
+    const items = reconcileContinuousDoubleMeals([...historicItems, ...newItems, ...paidByDate.values()])
+      .sort((a, b) => b.payroll.date.localeCompare(a.payroll.date) || b.payroll.shift.localeCompare(a.payroll.shift));
     return { key, label: period.monthLabel, items, total: money(items.reduce((sum, item) => sum + item.payroll.total, 0)),
       premiums: money(items.reduce((sum, item) => sum + (item.payroll.prima || 0), 0)) };
   });

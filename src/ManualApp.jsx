@@ -7,7 +7,7 @@ import VacationExchangePanel from './VacationExchangePanel.jsx';
 import ExchangeConversations, { conversationHash, directConversationHash } from './ExchangeConversations.jsx';
 import { hashForExchangeOffer } from './navigation.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
-import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro } from './payroll.js';
+import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro, reconcileContinuousDoubleMeals } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { specialties as censoSpecialties } from './censo.js';
 import { PROFESSIONAL_GROUPS, professionalGroupCode } from './professionalGroups.js';
@@ -302,7 +302,7 @@ function JornalDetail({ item, busy, relayBusy, relayError, onRelayChange, onClos
   return <div className="manual-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="manual-detail-modal" role="dialog" aria-modal="true" aria-label={`Detalle del ${paidDay ? 'día' : 'jornal'} ${item.payroll.date}`}>
     <header><div><small>{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} · {item.payroll.shift}</small><h2>{paidDay ? (item.isVacation ? 'Vacaciones' : 'Formación') : item.especialidad || 'Jornal'}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
     {!paidDay && <p>{[item.buque, item.empresa, item.operacion].filter(Boolean).join(' · ')}</p>}
-    <div className="manual-detail-values"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}{!paidDay && <span>Prima <b>{formatEuro(item.payroll.prima || 0)}</b></span>}{!paidDay && item.payroll.relayHour > 0 && <span>Hora de relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}{!paidDay && item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}<span>Total <b>{formatEuro(item.payroll.total)}</b></span></div>
+    <div className="manual-detail-values"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}{!paidDay && <span>Prima <b>{formatEuro(item.payroll.prima || 0)}</b></span>}{!paidDay && item.payroll.continuousDoubleMeal > 0 && <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>}{!paidDay && item.payroll.relayHour > 0 && <span>Hora de relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}{!paidDay && item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}<span>Total <b>{formatEuro(item.payroll.total)}</b></span></div>
     {!paidDay && item.payroll.relayHourEligible && <label className={`manual-relay-hour${item.payroll.relayHourEnabled ? ' is-enabled' : ''}`}><input type="checkbox" checked={item.payroll.relayHourEnabled} disabled={busy || relayBusy} onChange={(event) => onRelayChange(item, event.target.checked)} /><span>Hora de relevo<small>{item.payroll.relayHourRateKey === 'FESTIVO' ? 'Festiva' : 'Laborable'} · +{formatEuro(item.payroll.relayHourRate)}</small></span></label>}
     {relayError && <p className="manual-relay-error" role="alert">{relayError}</p>}
     {!paidDay && (item.source === 'manual' ? item.manualPart : item.parte) && <p>Parte {item.source === 'manual' ? item.manualPart : item.parte}</p>}{item.notes && <p>{item.notes}</p>}
@@ -464,8 +464,11 @@ function Salary({ session, onSession }) {
     const calculated = enrichJornales([raw], [], `${monthNumber}/${form.work_date.slice(0, 4)}`, config)[0]?.payroll;
     if (!calculated) return null;
     const premium = euroInput(form.premium);
-    return { ...calculated, total: Number((calculated.total + (Number.isFinite(premium) ? premium : 0)).toFixed(2)) };
-  }, [form, config]);
+    const preview = { ...raw, payroll: { ...calculated, total: Number((calculated.total + (Number.isFinite(premium) ? premium : 0)).toFixed(2)) } };
+    const companions = months.find((entry) => entry.key === form.work_date.slice(0, 7))?.items
+      .filter((item) => !(form.id != null && item.source === 'manual' && item.id === form.id)) || [];
+    return reconcileContinuousDoubleMeals([...companions, preview]).at(-1).payroll;
+  }, [form, config, months]);
 
   async function save(event) {
     event.preventDefault(); setError(''); setNotice(''); setBusy(true);
