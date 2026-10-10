@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-no-register-email-33";
+self.__APP_CPE_SW_VERSION__ = "20261010-disponibilidades-link-34";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

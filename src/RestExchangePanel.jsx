@@ -1,5 +1,6 @@
 import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { canRespondToRestOffer, restPortalProcedure } from "./restExchange.js";
 import { madridTodayKey, restOfferExpired } from "./exchangeDeadline.js";
 import { conversationHash } from "./ExchangeConversations.jsx";
@@ -283,6 +284,7 @@ export default function RestExchangePanel({ session }) {
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
+    <a className="rest-portal-availability-link" href="https://portal.cpevalencia.com/#User,ViewNoray,3" target="_blank" rel="noopener noreferrer">Mis disponibilidades en el portal <ExternalLink size={16} aria-hidden="true" /></a>
     <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
     <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button><span>DS, FS, FM y VA se muestran solo en tu calendario.</span></div>
