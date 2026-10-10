@@ -13,6 +13,7 @@
 .visual-page-heading span { display:block; margin-bottom:6px; color:#2d669d; font-size:15px; font-weight:900; letter-spacing:.06em; }
 .visual-page-heading h1 { margin:0; font-size:clamp(32px,4vw,42px); letter-spacing:-.04em; line-height:1.15; }
 .visual-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:24px 4px 18px; color:#6983a3; font-size:14px; font-weight:650; }
+.visual-toolbar-actions-only>div { margin-left:auto; }
 .visual-toolbar>span,.visual-toolbar>div { display:flex; align-items:center; gap:8px; }
 .visual-toolbar select,.visual-toolbar button { min-height:38px; border:1px solid #cedce9; border-radius:7px; background:#fff; color:#123967; padding:6px 10px; font-weight:750; }
 .visual-toolbar button { display:grid; place-items:center; }
