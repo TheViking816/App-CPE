@@ -37,6 +37,12 @@ test('personal Noray relay accepts only saved sections and the official host', a
     assert.equal(new URL(jornales.headers.location).pathname, '/jornales');
     assert.equal(requests[1].body.p_section, 'dobles');
 
+    const descansos = response();
+    await handler({ method: 'POST', body: { token: 'session', section: 'descansos' }, headers: {} }, descansos);
+    assert.equal(descansos.statusCode, 303);
+    assert.equal(new URL(descansos.headers.location).pathname, '/descansos');
+    assert.equal(requests[2].body.p_section, 'dobles');
+
     globalThis.fetch = async () => ({ ok: true, json: async () => 'https://example.com/vacaciones?usr=72683&rec=2611&pwd=' + 'a'.repeat(64) });
     const wrongHost = response();
     await handler({ method: 'POST', body: { token: 'session', section: 'vacaciones' }, headers: {} }, wrongHost);

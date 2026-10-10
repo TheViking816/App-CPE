@@ -1,5 +1,5 @@
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
-const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales']);
+const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos']);
 
 function respond(response, status, message) {
   response.statusCode = status;
@@ -40,15 +40,16 @@ export default async function handler(request, response) {
   const key = String(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
   if (!key) return respond(response, 503, 'Acceso no disponible.');
   try {
-    const raw = section === 'jornales'
+    const derivedSection = section === 'jornales' || section === 'descansos';
+    const raw = derivedSection
       ? await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: 'dobles' })
         || await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: 'vacaciones' })
         || await savedLink(base, key, 'app_cpe_get_manual_donde_voy_link', token)
-        || await savedLink(base, key, 'app_cpe_get_noray_link', token, { p_section: 'donde-voy' })
+        || await savedLink(base, key, 'app_cpe_get_noray_link', token, { p_section: section })
       : await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: section });
     if (!raw) return respond(response, 404, 'Acceso no disponible.');
     const target = new URL(raw);
-    const sourceSections = section === 'jornales' ? ['/dobles', '/vacaciones', '/donde-voy'] : [`/${section}`];
+    const sourceSections = derivedSection ? ['/dobles', '/vacaciones', '/donde-voy', `/${section}`] : [`/${section}`];
     if (target.origin !== 'https://norayweb.cpevalencia.com' || !sourceSections.includes(target.pathname)
       || !/^\d{4,8}$/.test(target.searchParams.get('usr') || '')
       || !/^[1-9]\d{0,9}$/.test(target.searchParams.get('rec') || '')
@@ -56,7 +57,7 @@ export default async function handler(request, response) {
       || target.searchParams.get('mode') !== 'PROD' || target.searchParams.get('req') !== 'login') {
       return respond(response, 502, 'Enlace no válido.');
     }
-    if (section === 'jornales') target.pathname = '/jornales';
+    if (derivedSection) target.pathname = `/${section}`;
     response.statusCode = 303;
     response.setHeader('location', target.href);
     response.end();

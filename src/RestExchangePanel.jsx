@@ -1,5 +1,7 @@
 import ExchangeFilters, { useExchangeFilters } from "./ExchangeFilters.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import { canOpenNorayLinks, supabase } from "./supabaseClient.js";
 import { canRespondToRestOffer, restPortalProcedure } from "./restExchange.js";
 import { madridTodayKey, restOfferExpired } from "./exchangeDeadline.js";
 import { conversationHash } from "./ExchangeConversations.jsx";
@@ -47,6 +49,7 @@ export default function RestExchangePanel({ session }) {
   const [calendarData, setCalendarData] = useState({ overrides: [], paidDays: [], holidays: [], jornales: {} });
   const [calendarError, setCalendarError] = useState("");
   const [calendarBusy, setCalendarBusy] = useState(false);
+  const [portalRestsAvailable, setPortalRestsAvailable] = useState(false);
   const [editCalendar, setEditCalendar] = useState(false);
   const [editDate, setEditDate] = useState(madridTodayKey());
   const [editType, setEditType] = useState("REST");
@@ -87,6 +90,21 @@ export default function RestExchangePanel({ session }) {
   }, [session?.token]);
 
   useEffect(() => { reloadCalendar(); }, [reloadCalendar]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([
+      supabase.rpc('app_cpe_has_manual_noray_section_link', { p_token: session.token, p_section: 'dobles' }),
+      supabase.rpc('app_cpe_has_manual_noray_section_link', { p_token: session.token, p_section: 'vacaciones' }),
+      supabase.rpc('app_cpe_has_manual_donde_voy_link', { p_token: session.token }),
+      canOpenNorayLinks({ token: session.token })
+    ]).then((results) => {
+      if (!active) return;
+      setPortalRestsAvailable(results.some((result, index) => result.status === 'fulfilled'
+        && (index === 3 ? result.value === true : !result.value.error && result.value.data === true)));
+    });
+    return () => { active = false; };
+  }, [session.token]);
 
   useEffect(() => {
     if (!editCalendar) return;
@@ -283,6 +301,7 @@ export default function RestExchangePanel({ session }) {
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
+    {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
     <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
     <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button><span>DS, FS, FM y VA se muestran solo en tu calendario.</span></div>

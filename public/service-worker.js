@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-remove-wrong-rest-link-36";
+self.__APP_CPE_SW_VERSION__ = "20261010-direct-noray-rests-37";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
