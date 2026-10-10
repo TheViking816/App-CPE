@@ -56,6 +56,8 @@
 .exchange-rest-legend .is-training::before{background:#e9defb;border:1px solid #b99aea}
 .exchange-rest-legend .is-vacation::before{background:#fce8f3;border:1px solid #f3a8cc}
 .rest-calendar-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:10px 0 16px;color:#60748d;font-size:12px}
+.rest-calendar-placeholder{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#60748d;text-align:center}
+.rest-calendar-placeholder button{border:1px solid #b9d3ed;border-radius:9px;background:#e8f3ff;color:#104f8a;padding:9px 13px;font-weight:800;cursor:pointer}
 .rest-calendar-controls button,.rest-calendar-editor button{border:1px solid #b9d3ed;border-radius:9px;background:#e8f3ff;color:#104f8a;padding:9px 13px;font-weight:800;cursor:pointer}
 .rest-calendar-editor{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin:0 0 18px;padding:14px;border:1px solid #d1e0ee;border-radius:12px;background:#f5f9fd}
 .rest-calendar-editor label{display:grid;gap:5px;color:#294761;font-size:12px;font-weight:800}

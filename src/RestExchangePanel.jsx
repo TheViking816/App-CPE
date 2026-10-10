@@ -47,6 +47,7 @@ export default function RestExchangePanel({ session }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [calendarData, setCalendarData] = useState({ overrides: [], paidDays: [], holidays: [], jornales: {} });
+  const [calendarStatus, setCalendarStatus] = useState("loading");
   const [calendarError, setCalendarError] = useState("");
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [portalRestsAvailable, setPortalRestsAvailable] = useState(false);
@@ -84,12 +85,14 @@ export default function RestExchangePanel({ session }) {
     try {
       setCalendarData(await getPersonalRestCalendar(session.token));
       setCalendarError("");
+      setCalendarStatus("ready");
     } catch (loadError) {
       setCalendarError(loadError.message || "No se pudo cargar tu calendario personal.");
+      setCalendarStatus("error");
     }
   }, [session?.token]);
 
-  useEffect(() => { reloadCalendar(); }, [reloadCalendar]);
+  useEffect(() => { setCalendarStatus("loading"); reloadCalendar(); }, [reloadCalendar]);
 
   useEffect(() => {
     let active = true;
@@ -302,9 +305,13 @@ export default function RestExchangePanel({ session }) {
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Entre compañeros · Descansos</p><h2>Intercambios y cesiones</h2></div></div>
     {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
-    <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
+    {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
-    <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button></div>
+      : <section className="exchange-board-calendar rest-calendar-placeholder" role="status" aria-live="polite">
+        <p>{calendarStatus === "loading" ? "Cargando tu calendario personal…" : "No se pudo cargar tu calendario personal."}</p>
+        {calendarStatus === "error" && <button type="button" onClick={() => { setCalendarStatus("loading"); reloadCalendar(); }}>Reintentar</button>}
+      </section>}
+    {calendarStatus === "ready" && <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button></div>}
     {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
     {editCalendar && <form className="rest-calendar-editor" ref={calendarEditorRef} onSubmit={(event) => { event.preventDefault(); changePersonalDay("save"); }}>
       <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type || calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
