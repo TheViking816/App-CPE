@@ -7,7 +7,7 @@ import { madridTodayKey, restOfferExpired } from "./exchangeDeadline.js";
 import { conversationHash } from "./ExchangeConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
 import { counterpartName, recentPersonalOffers } from "./exchangeDisplay.js";
-import { ExchangeAvatar, ExchangeDate, ExchangeHeroIcon, ExchangeTabIcon } from "./ExchangeVisual.jsx";
+import { ExchangeAvatar, ExchangeDate, ExchangeTabIcon } from "./ExchangeVisual.jsx";
 import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
@@ -303,7 +303,6 @@ export default function RestExchangePanel({ session }) {
   }
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
-    <div className="rest-exchange-heading"><ExchangeHeroIcon /><div><p>Descansos</p><h2>Intercambios y cesiones</h2></div></div>
     {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
     {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />

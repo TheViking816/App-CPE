@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-personal-operational-links-41";
+self.__APP_CPE_SW_VERSION__ = "20261010-compact-exchange-heading-42";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
