@@ -1,5 +1,5 @@
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
-const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos']);
+const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'chapero', 'puertas', 'jornada-contratada']);
 
 function respond(response, status, message) {
   response.statusCode = status;
@@ -40,7 +40,7 @@ export default async function handler(request, response) {
   const key = String(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
   if (!key) return respond(response, 503, 'Acceso no disponible.');
   try {
-    const derivedSection = section === 'jornales' || section === 'descansos';
+    const derivedSection = !['vacaciones', 'dobles'].includes(section);
     const raw = derivedSection
       ? await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: 'dobles' })
         || await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: 'vacaciones' })

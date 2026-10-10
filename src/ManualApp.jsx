@@ -16,6 +16,7 @@ import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
+import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
 import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, KeyRound, LogOut, MessageCircle, Settings, WalletCards, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
@@ -512,7 +513,7 @@ function Salary({ session, onSession }) {
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
       : tab === 'cuenta' ? <PasswordSettings session={session} />
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
-      : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
+      : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><PersonalNoraySectionLink session={session} section="jornada-contratada" label="Contratación Jornada" /><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
