@@ -1,5 +1,5 @@
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
-const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'chapero', 'puertas', 'jornada-contratada']);
+const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada']);
 
 function respond(response, status, message) {
   response.statusCode = status;

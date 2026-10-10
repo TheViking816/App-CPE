@@ -1,5 +1,6 @@
 .exchange-area{--ink:#172b48;--muted:#62758d;--line:#d8e3ef;--card:#fff}
 .rest-portal-availability-link{justify-self:start;margin:6px 0 2px}
+.operational-portal-links{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .rest-portal-availability-link button{display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:100%;padding:7px 10px;border:1px solid #b9d3ed;border-radius:8px;background:#e8f3ff;color:#104f8a;font-size:12px;font-weight:800}
 .rest-portal-availability-link button:hover,.rest-portal-availability-link button:focus-visible{background:#d8ebff;text-decoration:underline}
 .exchange-board-calendar{padding:20px;border:1px solid #d8e3ef;border-radius:18px;background:#fff;box-shadow:0 8px 24px #152b4810}

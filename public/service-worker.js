@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-short-portal-labels-43";
+self.__APP_CPE_SW_VERSION__ = "20261010-chapero-specialties-link-44";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
