@@ -35,15 +35,13 @@
   font-size: 11px;
   line-height: 1;
 }
-.visual-header .header-actions .header-signout,
-.visual-menu .menu-signout {
+.visual-header .header-actions .header-signout {
   border-color: #ee7780;
   background: #c72f42;
   color: #fff;
   font-weight: 800;
 }
-.visual-header .header-actions .header-signout:hover,
-.visual-menu .menu-signout:hover { background: #a91e32; }
+.visual-header .header-actions .header-signout:hover { background: #a91e32; }
 
 .visual-page-heading {
   display: flex;

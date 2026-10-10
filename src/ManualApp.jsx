@@ -191,7 +191,7 @@ function Access({ onAccess }) {
         : await loginUser({ chapa, password });
       if (!session?.token) throw new Error('No se pudo abrir la sesión.');
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      trackUsageEvent({ eventType: register ? 'register' : 'login', chapa: session.chapa }).catch(() => {});
+      if (!session.supportAccess) trackUsageEvent({ eventType: register ? 'register' : 'login', chapa: session.chapa }).catch(() => {});
       onAccess(session);
     } catch (reason) { setError(reason.message || 'No se pudo acceder.'); }
     finally { setBusy(false); }
