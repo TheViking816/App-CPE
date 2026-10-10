@@ -12,6 +12,7 @@ import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
 import { deleteManualPaidDay, deleteRestDayOverride, getPersonalRestCalendar, saveManualPaidDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
+import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -111,8 +112,11 @@ export default function RestExchangePanel({ session }) {
 
   useEffect(() => {
     if (!editCalendar) return;
-    calendarEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [editCalendar, editDate]);
+    calendarEditorRef.current?.querySelector('input[type="date"]')?.focus();
+    const closeOnEscape = (event) => { if (event.key === "Escape") setEditCalendar(false); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [editCalendar]);
 
   async function mutate(action, successMessage) {
     if (EXCHANGE_PREVIEW_READ_ONLY) {
@@ -168,9 +172,9 @@ export default function RestExchangePanel({ session }) {
     panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function openCalendarEditor(date = madridTodayKey(), preferredType = "") {
+  function openCalendarEditor(date = madridTodayKey()) {
     setEditDate(date);
-    setEditType(preferredType || calendarData.paidDays.find((row) => row.work_date === date)?.concept_type || calendarData.overrides.find((row) => row.work_date === date)?.day_type || "REST");
+    setEditType(calendarData.paidDays.find((row) => row.work_date === date)?.concept_type || calendarData.overrides.find((row) => row.work_date === date)?.day_type || "REST");
     setEditCalendar(true);
     setCalendarError("");
   }
@@ -192,7 +196,7 @@ export default function RestExchangePanel({ session }) {
         await saveRestDayOverride(session.token, editDate, editType);
       }
       await reloadCalendar();
-      setNotice(action === "reset" ? "Día restablecido según tu grupo." : "Día guardado en tu calendario personal.");
+      setNotice(action === "reset" ? "Marca eliminada del calendario personal." : "Día guardado en tu calendario personal.");
       setEditCalendar(false);
     } catch (saveError) {
       setCalendarError(saveError.message || "No se pudo guardar el día.");
@@ -208,14 +212,14 @@ export default function RestExchangePanel({ session }) {
   const { filters, setFilters, visible } = useExchangeFilters(board, false);
   const focusedOfferId = useExchangeOfferFocus("descansos", panelRef, loading, tab, setTab, visible, setFilters);
   useEffect(() => {
-    if (!scrollTarget || loading || tab !== "board" || scrolledCalendarTargetRef.current === scrollTarget) return;
+    if (!scrollTarget || loading || editCalendar || tab !== "board" || scrolledCalendarTargetRef.current === scrollTarget) return;
     const card = Array.from(panelRef.current?.querySelectorAll("[data-offer-id]") || [])
       .find((item) => item.dataset.offerId === scrollTarget.id);
     if (!card) return;
     card.scrollIntoView({ behavior: "smooth", block: "start" });
     card.focus({ preventScroll: true });
     scrolledCalendarTargetRef.current = scrollTarget;
-  }, [scrollTarget, visible, loading, tab]);
+  }, [scrollTarget, visible, loading, editCalendar, tab]);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
 
@@ -224,6 +228,7 @@ export default function RestExchangePanel({ session }) {
     setTab("board");
     setFilters({ search: "", group: "", kind: "", date });
     if (offer) setScrollTarget({ id: offer.id, date });
+    if (date) openCalendarEditor(date);
   }
 
   function offerCard(offer, personal = false) {
@@ -303,22 +308,30 @@ export default function RestExchangePanel({ session }) {
   }
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
-    {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
+    <div className="rest-portal-links">
+      {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
+      <a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a>
+    </div>
     {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
       : <section className="exchange-board-calendar rest-calendar-placeholder" role="status" aria-live="polite">
         <p>{calendarStatus === "loading" ? "Cargando tu calendario personal…" : "No se pudo cargar tu calendario personal."}</p>
         {calendarStatus === "error" && <button type="button" onClick={() => { setCalendarStatus("loading"); reloadCalendar(); }}>Reintentar</button>}
       </section>}
-    {calendarStatus === "ready" && <div className="rest-calendar-controls"><button type="button" onClick={() => editCalendar ? setEditCalendar(false) : openCalendarEditor()}>Editar mis días</button><button type="button" onClick={() => openCalendarEditor(madridTodayKey(), "VA")}>Añadir VA o FM</button></div>}
-    {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
-    {editCalendar && <form className="rest-calendar-editor" ref={calendarEditorRef} onSubmit={(event) => { event.preventDefault(); changePersonalDay("save"); }}>
-      <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type || calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
-      <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
-        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Disponible</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option>
-      </select></label>
-      <div><button type="submit" disabled={calendarBusy}>Guardar día</button><button type="button" disabled={calendarBusy} onClick={() => changePersonalDay("reset")}>{calendarData.paidDays.some((row) => row.work_date === editDate) ? "Quitar VA o FM" : "Usar calendario del grupo"}</button></div>
-    </form>}
+    {calendarError && !editCalendar && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
+    {editCalendar && <div className="rest-calendar-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !calendarBusy) setEditCalendar(false); }}>
+      <section className="rest-calendar-dialog" role="dialog" aria-modal="true" aria-label="Editar día del calendario">
+        <div className="rest-calendar-dialog-heading"><strong>Editar día</strong><button type="button" aria-label="Cerrar" onClick={() => setEditCalendar(false)}>Cerrar</button></div>
+        <form className="rest-calendar-editor" ref={calendarEditorRef} onSubmit={(event) => { event.preventDefault(); changePersonalDay("save"); }}>
+          <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type || calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
+          <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
+            <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Disponible</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option>
+          </select></label>
+          {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
+          <div><button type="submit" disabled={calendarBusy}>Guardar día</button>{(calendarData.paidDays.some((row) => row.work_date === editDate) || calendarData.overrides.some((row) => row.work_date === editDate)) && <button type="button" disabled={calendarBusy} onClick={() => changePersonalDay("reset")}>Quitar marca</button>}</div>
+        </form>
+      </section>
+    </div>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}</button>)}
