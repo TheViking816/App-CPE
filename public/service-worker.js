@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-rests-loading-39";
+self.__APP_CPE_SW_VERSION__ = "20261010-exchange-headings-40";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

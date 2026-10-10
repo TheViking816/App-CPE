@@ -298,7 +298,7 @@ export default function VacationExchangePanel({ session }) {
   }
 
   return <section className="rest-exchange-panel vacation-exchange-panel exchange-redesign" ref={panelRef}>
-    <div className="rest-exchange-heading vacation-exchange-heading"><ExchangeHeroIcon vacation /><div><p>Entre compañeros · Vacaciones</p><h2>Intercambiar vacaciones</h2></div>
+    <div className="rest-exchange-heading vacation-exchange-heading"><ExchangeHeroIcon vacation /><div><p>Vacaciones</p><h2>Intercambiar vacaciones</h2></div>
       {personalVacationLink && <form className="personal-portal-link vacation-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={17} aria-hidden="true" /></button></form>}
     </div>
     <ExchangeBoardCalendar offers={board} paidDays={paidDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />

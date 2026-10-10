@@ -514,7 +514,7 @@ function Salary({ session, onSession }) {
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
       : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} />
-      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} /></SectionPage>
+      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
