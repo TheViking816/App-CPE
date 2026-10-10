@@ -33,13 +33,13 @@ if ("serviceWorker" in navigator) {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20261010-disponibilidades-link-34");
+      forceReload("20261010-compact-rest-link-35");
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261010-disponibilidades-link-34`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261010-compact-rest-link-35`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });

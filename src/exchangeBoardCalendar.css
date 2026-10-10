@@ -1,5 +1,5 @@
 .exchange-area{--ink:#172b48;--muted:#62758d;--line:#d8e3ef;--card:#fff}
-.rest-portal-availability-link{display:inline-flex;align-items:center;gap:7px;margin:14px 0 4px;padding:9px 12px;border:1px solid #b9d3ed;border-radius:9px;background:#e8f3ff;color:#104f8a;font-size:13px;font-weight:800;text-decoration:none}
+.rest-portal-availability-link{display:inline-flex;align-items:center;justify-self:start;gap:6px;width:max-content;max-width:100%;margin:6px 0 2px;padding:7px 10px;border:1px solid #b9d3ed;border-radius:8px;background:#e8f3ff;color:#104f8a;font-size:12px;font-weight:800;text-decoration:none}
 .rest-portal-availability-link:hover,.rest-portal-availability-link:focus-visible{background:#d8ebff;text-decoration:underline}
 .exchange-board-calendar{padding:20px;border:1px solid #d8e3ef;border-radius:18px;background:#fff;box-shadow:0 8px 24px #152b4810}
 .exchange-board-calendar header,.exchange-board-calendar header>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px}

@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-disponibilidades-link-34";
+self.__APP_CPE_SW_VERSION__ = "20261010-compact-rest-link-35";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
