@@ -110,7 +110,7 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
         parte: details.part || `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
-      const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig)[0];
+      const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig, relayHours, remateHours)[0];
       const premium = money(row.premium);
       const operationLabel = row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
         : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT';

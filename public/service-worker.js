@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-sidebar-support-50";
+self.__APP_CPE_SW_VERSION__ = "20261010-relay-hours-51";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
