@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-direct-noray-rests-37";
+self.__APP_CPE_SW_VERSION__ = "20261010-rests-copy-38";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
