@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, loginUser, updateUserPassword, refreshCurrentUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, setUserRelayHour, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
+import { supabase, loginUser, updateUserPassword, updateUserProfile, refreshCurrentUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, setUserRelayHour, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
 import { touchDirectPresence } from './exchangeClient.js';
 import { EXCHANGE_PREVIEW_READ_ONLY } from './exchangePreview.js';
 import RestExchangePanel from './RestExchangePanel.jsx';
@@ -96,17 +96,39 @@ function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, set
 }
 
 function ProfileSettings({ session, onSession }) {
+  const [displayName, setDisplayName] = useState(session.displayName || '');
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [nameNotice, setNameNotice] = useState('');
   const [professionalGroup, setProfessionalGroup] = useState(professionalGroupCode(session.professionalGroup));
   const [restGroup, setRestGroup] = useState(session.restGroup || '');
   const [selectedSpecialties, setSelectedSpecialties] = useState(session.specialties || []);
   useEffect(() => {
+    setDisplayName(session.displayName || '');
     setProfessionalGroup(professionalGroupCode(session.professionalGroup));
     setRestGroup(session.restGroup || '');
     setSelectedSpecialties(session.specialties || []);
-  }, [session.professionalGroup, session.restGroup, session.specialties]);
+  }, [session.displayName, session.professionalGroup, session.restGroup, session.specialties]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  async function saveName(event) {
+    event.preventDefault(); setNameError(''); setNameNotice('');
+    const name = displayName.trim().replace(/\s+/g, ' ');
+    if (!name || name.length > 40 || /[<>\x00-\x1f\x7f]/.test(name)) {
+      setNameError('Introduce un nombre de entre 1 y 40 caracteres.');
+      return;
+    }
+    setNameBusy(true);
+    try {
+      const response = await updateUserProfile({ token: session.token, displayName: name, forumShowChapa: session.forumShowChapa });
+      const next = { ...session, ...response };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next)); onSession(next);
+      setDisplayName(next.displayName || name);
+      setNameNotice('Nombre guardado. Tus compañeros ya lo verán en chats e intercambios.');
+    } catch (reason) { setNameError(reason.message || 'No se pudo guardar el nombre.'); }
+    finally { setNameBusy(false); }
+  }
   async function submit(event) {
     event.preventDefault(); setError(''); setNotice('');
     if (!selectedSpecialties.length) { setError('Selecciona al menos una especialidad.'); return; }
@@ -120,7 +142,17 @@ function ProfileSettings({ session, onSession }) {
     } catch (reason) { setError(reason.message || 'No se pudieron guardar los datos.'); }
     finally { setBusy(false); }
   }
-  return <SectionPage eyebrow="AJUSTES" title="Mis datos"><section className="manual-panel manual-profile-settings">
+  return <SectionPage eyebrow="AJUSTES" title="Mis datos"><section className="manual-panel manual-profile-settings manual-profile-name">
+    <h2>Nombre visible</h2>
+    <p>Escribe el nombre que verán tus compañeros en chats e intercambios de descansos y vacaciones.</p>
+    <form onSubmit={saveName}>
+      <label htmlFor="manual-display-name">Tu nombre</label>
+      <input id="manual-display-name" autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={40} placeholder="Nombre y apellidos" required />
+      {nameError && <p className="form-error" role="alert">{nameError}</p>}
+      {nameNotice && <p className="banner success" role="status">{nameNotice}</p>}
+      <button className="primary" disabled={nameBusy || !displayName.trim()}>{nameBusy ? 'Guardando…' : 'Guardar nombre'}</button>
+    </form>
+  </section><section className="manual-panel manual-profile-settings">
     <p>El grupo de intercambio indica con quién puedes cambiar vacaciones. Es distinto del grupo de descansos y del grupo salarial. Las especialidades se usan en Chapero y Puertas.</p>
     <form onSubmit={submit}>
       <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} professionalGroupSource={session.professionalGroupSource} />

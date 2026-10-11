@@ -58,6 +58,11 @@
 .manual-profile-settings .form-error { margin: 0; color: #a72935; }
 .manual-profile-settings .banner { margin: 0; }
 .manual-profile-settings form > button { justify-self: start; }
+.manual-profile-name h2 { margin: 0 0 8px; color: #0c315b; font-size: 19px; }
+.manual-profile-name form { gap: 10px; }
+.manual-profile-name form > label { color: #173b64; font-size: 13px; font-weight: 750; }
+.manual-profile-name input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #cbdceb; border-radius: 9px; color: #102f55; background: #fff; }
+.manual-profile-name input:focus-visible { outline: 3px solid #92cdf2; outline-offset: 1px; }
 @media (max-width: 530px) { .manual-profile-specialties { grid-template-columns: 1fr; } }
 .manual-section-page .exchange-area {
   width: 100%;

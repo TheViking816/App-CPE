@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261010-double-meal-52";
+self.__APP_CPE_SW_VERSION__ = "20261011-profile-name-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
