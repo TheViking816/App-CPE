@@ -153,7 +153,6 @@ function ProfileSettings({ session, onSession }) {
       <button className="primary" disabled={nameBusy || !displayName.trim()}>{nameBusy ? 'Guardando…' : 'Guardar nombre'}</button>
     </form>
   </section><section className="manual-panel manual-profile-settings">
-    <p>El grupo de intercambio indica con quién puedes cambiar vacaciones. Es distinto del grupo de descansos y del grupo salarial. Las especialidades se usan en Chapero y Puertas.</p>
     <form onSubmit={submit}>
       <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} professionalGroupSource={session.professionalGroupSource} />
       {error && <p className="form-error" role="alert">{error}</p>}
