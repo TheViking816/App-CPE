@@ -243,6 +243,7 @@ function Access({ onAccess }) {
 }
 
 function ActivityMonitor({ session }) {
+  const displayLimit = 10;
   const [data, setData] = useState(null);
   const [journalEvents, setJournalEvents] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
@@ -264,12 +265,12 @@ function ActivityMonitor({ session }) {
     else setCalendarError(calendar.reason?.message || 'No se pudieron cargar los cambios del calendario.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
-  const users = (data?.users || []).filter((user) => ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter));
+  const users = (data?.users || []).filter((user) => ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
   const pages = (data?.pages || []).filter((page) => ACTIVE_PAGES.has(page.page));
   const recent = (data?.recent || []).filter((event) => event.type === 'page_visit'
-    ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type));
-  const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa || '').includes(filter));
-  const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa || '').includes(filter));
+    ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type)).slice(0, displayLimit);
+  const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa || '').includes(filter)).slice(0, displayLimit);
+  const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
   const action = (value) => ({ added: 'Añadido', edited: 'Editado', deleted: 'Eliminado' })[value] || value;
@@ -285,18 +286,18 @@ function ActivityMonitor({ session }) {
     <h3>Usuarios recientes</h3><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Buscar chapa" inputMode="numeric" />
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
     <h3>Jornales manuales registrados</h3>
-    <p>Últimos 200 movimientos. La fecha y hora indican cuándo se añadió, editó o eliminó el jornal.</p>
+    <p>Últimos 10 movimientos. La fecha y hora indican cuándo se añadió, editó o eliminó el jornal.</p>
     {journalError && <p className="form-error" role="alert">{journalError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día del jornal</th><th>Turno</th><th>Puesto</th><th>Grupo</th><th>Operación</th></tr></thead><tbody>
       {visibleJournalEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}</td><td>{event.shift}</td><td>{event.specialty}</td><td>{event.worker_group}</td><td>{event.operation_type === 'RECEPCION_ENTREGA' ? 'OC' : 'SP'}</td></tr>)}
     </tbody></table>{!journalError && visibleJournalEvents.length === 0 && <p className="monitor-empty">No hay movimientos de jornales manuales para el filtro actual.</p>}</div>
     <h3>Cambios en el calendario personal</h3>
-    <p>Últimos 200 movimientos de DS, FS, Disponible, VA y FM, incluidos VA y FM añadidos desde Sueldómetro.</p>
+    <p>Últimos 10 movimientos de DS, FS, Disponible, VA y FM, incluidos VA y FM añadidos desde Sueldómetro.</p>
     {calendarError && <p className="form-error" role="alert">{calendarError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día</th><th>Tipo</th></tr></thead><tbody>
       {visibleCalendarEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${workDay(event.previous_work_date)}` : ''}</td><td>{dayChange(event)}</td></tr>)}
     </tbody></table>{!calendarError && visibleCalendarEvents.length === 0 && <p className="monitor-empty">No hay cambios de días para el filtro actual.</p>}</div>
-    <h3>Actividad reciente</h3><div className="recent-list">{recent.slice(0, 30).map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
+    <h3>Actividad reciente</h3><div className="recent-list">{recent.map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
   </section>;
 }
 
