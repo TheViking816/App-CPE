@@ -61,13 +61,22 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
 
   useEffect(() => {
     let active = true;
+    let pending = false;
     setLoading(true);
-    const load = view === 'puertas'
-      ? getLatestDoorSnapshots(DOOR_SPECIALTIES).then((data) => { if (active) setSnapshots(data); })
-      : Promise.all([getLatestDoorSnapshots(DOOR_SPECIALTIES), getLatestChaperoSnapshot()])
-        .then(([doors, status]) => { if (active) { setSnapshots(doors); setChapero(status); } });
-    load.finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const refresh = () => {
+      if (pending) return;
+      pending = true;
+      const request = view === 'puertas'
+        ? getLatestDoorSnapshots(DOOR_SPECIALTIES).then((data) => { if (active) setSnapshots(data); })
+        : Promise.all([getLatestDoorSnapshots(DOOR_SPECIALTIES), getLatestChaperoSnapshot()])
+          .then(([doors, status]) => { if (active) { setSnapshots(doors); setChapero(status); } });
+      request.catch(() => {}).finally(() => { pending = false; if (active) setLoading(false); });
+    };
+    const refreshWhenVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    refresh();
+    const timer = window.setInterval(refreshWhenVisible, 30_000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', refreshWhenVisible); };
   }, [view]);
 
   const available = useMemo(() => specialties.filter((item) => savedIds.includes(item.id)), [savedIds]);

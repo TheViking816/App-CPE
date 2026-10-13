@@ -317,8 +317,16 @@ export async function fetchGeneralBoard({ supabaseOnly = false } = {}) {
     journeys: buildGeneralBoard(bolsaRows, snapshot),
     expectedKey: expected.key,
     bolsaPending: !expectedBolsaAvailable,
-    updatedAt: snapshot.generatedAt || snapshotRow.updated_at
+    updatedAt: snapshot.generatedAt || snapshotRow.updated_at,
+    snapshotUpdatedAt: snapshotRow.updated_at
   };
+}
+
+export async function getGeneralBoardSnapshotUpdatedAt() {
+  const { data, error } = await supabase.from("app_cpe_general_board_snapshot")
+    .select("updated_at").eq("id", "latest").maybeSingle();
+  if (error) throw error;
+  return data?.updated_at || "";
 }
 
 export function dateLabel(value) {

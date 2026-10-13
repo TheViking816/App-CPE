@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Building2, ChevronDown, ExternalLink, Search, Ship, UsersRound } from "lucide-react";
-import { boardCounts, companyLogo, dateLabel, defaultJourneyKey, fetchGeneralBoard, formatBolsaChapa, groupImage, normalizeText, sortGroups, sortSpecialties } from "./generalBoard.js";
+import { boardCounts, companyLogo, dateLabel, defaultJourneyKey, fetchGeneralBoard, formatBolsaChapa, getGeneralBoardSnapshotUpdatedAt, groupImage, normalizeText, sortGroups, sortSpecialties } from "./generalBoard.js";
 
 function sourceCounts(group) {
   return [...group.specialties.values()].reduce((sum, item) => ({ bolsa: sum.bolsa + item.bolsa.length, turno: sum.turno + item.turno }), { bolsa: 0, turno: 0 });
@@ -74,14 +74,36 @@ export default function GeneralBoard({ chapa, onOpen, supabaseOnly = false, cont
 
   useEffect(() => {
     let active = true;
+    let pending = false;
+    let hasLoaded = false;
+    let lastSnapshotAt = "";
     onOpen?.(chapa);
-    fetchGeneralBoard({ supabaseOnly }).then((result) => {
-      if (!active) return;
-      setData(result);
-      setSelected(defaultJourneyKey(result.journeys));
-    }).catch(() => active && setError("No se pudo cargar la contratación general."))
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
+    const refresh = () => {
+      if (pending) return;
+      pending = true;
+      fetchGeneralBoard({ supabaseOnly }).then((result) => {
+        if (!active) return;
+        setData(result);
+        setSelected((current) => result.journeys.some((item) => item.key === current)
+          ? current : defaultJourneyKey(result.journeys));
+        lastSnapshotAt = result.snapshotUpdatedAt;
+        hasLoaded = true;
+        setError("");
+      }).catch(() => { if (active && !hasLoaded) setError("No se pudo cargar la contratación general."); })
+        .finally(() => { pending = false; if (active) setLoading(false); });
+    };
+    const checkSnapshot = async () => {
+      if (document.visibilityState !== "visible" || pending) return;
+      try {
+        const latest = await getGeneralBoardSnapshotUpdatedAt();
+        if (active && latest && latest !== lastSnapshotAt) refresh();
+      } catch { /* Retry on the next check. */ }
+    };
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    refresh();
+    const timer = window.setInterval(checkSnapshot, 30_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener("visibilitychange", refreshWhenVisible); };
   }, [chapa, supabaseOnly]);
 
   const journey = data.journeys.find((item) => item.key === selected);
