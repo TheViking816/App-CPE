@@ -222,7 +222,7 @@ function Access({ onAccess }) {
         : await loginUser({ chapa, password });
       if (!session?.token) throw new Error('No se pudo abrir la sesión.');
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      if (!session.supportAccess) trackUsageEvent({ eventType: register ? 'register' : 'login', chapa: session.chapa }).catch(() => {});
+      if (!session.supportAccess && String(session.chapa) !== '72683') trackUsageEvent({ eventType: register ? 'register' : 'login', chapa: session.chapa }).catch(() => {});
       onAccess(session);
     } catch (reason) { setError(reason.message || 'No se pudo acceder.'); }
     finally { setBusy(false); }
@@ -265,12 +265,12 @@ function ActivityMonitor({ session }) {
     else setCalendarError(calendar.reason?.message || 'No se pudieron cargar los cambios del calendario.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
-  const users = (data?.users || []).filter((user) => ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
+  const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
   const pages = (data?.pages || []).filter((page) => ACTIVE_PAGES.has(page.page));
-  const recent = (data?.recent || []).filter((event) => event.type === 'page_visit'
-    ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type)).slice(0, displayLimit);
-  const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa || '').includes(filter)).slice(0, displayLimit);
-  const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa || '').includes(filter)).slice(0, displayLimit);
+  const recent = (data?.recent || []).filter((event) => String(event.chapa) !== '72683' && (event.type === 'page_visit'
+    ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type))).slice(0, displayLimit);
+  const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
+  const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
   const action = (value) => ({ added: 'Añadido', edited: 'Editado', deleted: 'Eliminado' })[value] || value;
@@ -405,7 +405,7 @@ function Salary({ session, onSession }) {
     } catch (reason) { setError(reason.message || 'No se pudieron cargar los datos.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); if (!session.supportAccess) trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
+  useEffect(() => { load(); if (!session.supportAccess && String(session.chapa) !== '72683') trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
   useEffect(() => {
     let active = true;
     refreshCurrentUser({ token: session.token }).then((current) => {
@@ -425,7 +425,7 @@ function Salary({ session, onSession }) {
     window.addEventListener('hashchange', followHash);
     return () => window.removeEventListener('hashchange', followHash);
   }, []);
-  useEffect(() => { if (!session.supportAccess && ACTIVE_PAGES.has(tab)) trackPageVisit({ token: session.token, page: tab }).catch(() => {}); }, [session.token, session.supportAccess, tab]);
+  useEffect(() => { if (!session.supportAccess && String(session.chapa) !== '72683' && ACTIVE_PAGES.has(tab)) trackPageVisit({ token: session.token, page: tab }).catch(() => {}); }, [session.token, session.supportAccess, session.chapa, tab]);
   useEffect(() => {
     if (session.supportAccess) return undefined;
     const touch = () => touchDirectPresence({ token: session.token }).catch(() => {});
