@@ -95,13 +95,13 @@ export default function ExchangeConversations({ session }) {
 
   const selected = threads.find((thread) => `${thread.type}:${thread.proposalId}` === selectedKey);
   useEffect(() => {
-    if (!selected || !selected.unread) return;
+    if (!selected || !selected.unread || session.supportAccess) return;
     markExchangeThreadRead({ token: session.token, type: selected.type, proposalId: selected.proposalId })
       .then(() => setThreads((current) => current.map((thread) =>
         thread.type === selected.type && thread.proposalId === selected.proposalId
           ? { ...thread, unread: 0 } : thread)))
       .catch(() => {});
-  }, [session.token, selected?.type, selected?.proposalId, selected?.unread]);
+  }, [session.token, session.supportAccess, selected?.type, selected?.proposalId, selected?.unread]);
 
   const visible = useMemo(() => threads.filter((thread) =>
     (filter === "active" ? isActive(thread) : !isActive(thread))
@@ -176,7 +176,7 @@ export default function ExchangeConversations({ session }) {
             <span><small>Quiero</small><strong>{formatRange(selected.wanted, selected.wantedEnd) || "—"}</strong></span>
           </div>
           <PrivateExchangeChat key={selectedKey} token={session.token} type={selected.type}
-            proposalId={selected.proposalId} canWrite={isActive(selected) && !EXCHANGE_PREVIEW_READ_ONLY} compact
+            proposalId={selected.proposalId} canWrite={isActive(selected) && !session.supportAccess && !EXCHANGE_PREVIEW_READ_ONLY} compact
             ownChapa={session.chapa} counterpartChapa={selected.counterpartChapa}
             onActivity={() => reload({ quiet: true })} />
           {!isActive(selected) && <p className="exchange-inbox-readonly">Esta conversación es parte de tu historial y ya no admite mensajes nuevos.</p>}

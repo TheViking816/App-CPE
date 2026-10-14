@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Check, CheckCheck } from "lucide-react";
 import {
   getRestExchangeMessages, getVacationExchangeMessages,
   sendRestExchangeMessage, sendVacationExchangeMessage
@@ -58,6 +59,11 @@ export default function PrivateExchangeChat({ token, proposalId, canWrite, type 
       {messages.map((message) => <div key={message.id} className={`rest-exchange-message${message.isOwn ? " is-own" : ""}`}>
         <small>{message.isOwn ? "Tú" : message.senderName}{(message.isOwn ? ownChapa : counterpartChapa) ? ` · ${message.isOwn ? ownChapa : counterpartChapa}` : ""} · {new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(message.createdAt))}</small>
         <span>{message.body}</span>
+        {message.isOwn && <small className={`direct-message-receipt${message.readAt ? " is-read" : ""}`}
+          title={message.readAt ? `Leído ${new Date(message.readAt).toLocaleString("es-ES")}` : "Enviado; aún no leído"}>
+          {message.readAt ? <CheckCheck size={14} /> : <Check size={14} />}
+          {message.readAt ? "Leído" : "Enviado"}
+        </small>}
       </div>)}
     </div> : <span>Aún no hay mensajes. Puedes escribir para concretar los detalles.</span>}
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
