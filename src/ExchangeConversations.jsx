@@ -7,6 +7,7 @@ import { deleteExchangeThread, getExchangeThreads, markExchangeThreadRead } from
 
 const THREAD_HASH = /^#\/conversaciones\/(rest|vacation)\/([0-9a-f-]{36})$/i;
 const DIRECT_HASH = /^#\/conversaciones\/direct\/([0-9a-f-]{36})$/i;
+const ADMIN_CHAPA = "72683";
 
 export function conversationHash(type, proposalId) {
   return `#/conversaciones/${type}/${proposalId}`;
@@ -172,6 +173,7 @@ export default function ExchangeConversations({ session }) {
                 <span className="exchange-inbox-row-copy">
                   <span className="exchange-inbox-row-top"><strong>{thread.counterpartName}{thread.counterpartChapa ? ` · ${thread.counterpartChapa}` : ""}</strong>
                     <small>{formatWhen(thread.lastAt)}</small></span>
+                  {String(thread.counterpartChapa) === ADMIN_CHAPA && <small className="direct-admin-badge">Admin</small>}
                   <small>{thread.type === "rest" ? "Descanso" : "Vacaciones"} · {threadStatus(thread)}</small>
                   <span className="exchange-inbox-preview">{thread.lastMessage || "Propuesta creada. Puedes iniciar la conversación."}</span>
                 </span>
@@ -189,6 +191,7 @@ export default function ExchangeConversations({ session }) {
             <span className={`exchange-inbox-avatar is-${selected.type}`}>
               {selected.type === "rest" ? <CalendarDays size={20} /> : <Sun size={20} />}</span>
             <div><strong>{selected.counterpartName}{selected.counterpartChapa ? ` · ${selected.counterpartChapa}` : ""}</strong>
+              {String(selected.counterpartChapa) === ADMIN_CHAPA && <small className="direct-admin-badge">Admin</small>}
               <small>{selected.type === "rest" ? "Descanso" : "Vacaciones"} · {threadStatus(selected)}</small></div>
             {!session.supportAccess && !EXCHANGE_PREVIEW_READ_ONLY && <button type="button" className="direct-inbox-delete"
               onClick={removeSelected} disabled={deleting} title="Eliminar conversación de mi lista">
