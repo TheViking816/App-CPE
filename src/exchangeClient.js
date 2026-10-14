@@ -33,7 +33,7 @@ export async function getRestExchangeMessages({ token, proposalId }) {
 }
 
 export async function getExchangeThreads({ token }) {
-  const { data, error } = await supabase.rpc("app_cpe_exchange_threads", { p_token: token });
+  const { data, error } = await supabase.rpc("app_cpe_exchange_visible_threads", { p_token: token });
   if (error && !["PGRST202", "42883"].includes(error.code)) throw error;
   if (error) {
     // A Git preview can use the current database before its branch migration is applied.
@@ -65,6 +65,14 @@ export async function getExchangeThreads({ token }) {
     return [...restThreads, ...vacationThreads].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
   }
   return data || [];
+}
+
+export async function deleteExchangeThread({ token, type, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_exchange_delete", {
+    p_token: token, p_type: type, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data;
 }
 
 export async function touchDirectPresence({ token }) {

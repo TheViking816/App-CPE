@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarDays, Inbox, MessageCircle, Sun } from "lucide-react";
+import { ArrowLeft, CalendarDays, Inbox, MessageCircle, Sun, Trash2 } from "lucide-react";
 import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
 import DirectConversations from "./DirectConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
-import { getExchangeThreads, markExchangeThreadRead } from "./exchangeClient.js";
+import { deleteExchangeThread, getExchangeThreads, markExchangeThreadRead } from "./exchangeClient.js";
 
 const THREAD_HASH = /^#\/conversaciones\/(rest|vacation)\/([0-9a-f-]{36})$/i;
 const DIRECT_HASH = /^#\/conversaciones\/direct\/([0-9a-f-]{36})$/i;
@@ -60,6 +60,7 @@ export default function ExchangeConversations({ session }) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setLoading(true);
@@ -113,6 +114,25 @@ export default function ExchangeConversations({ session }) {
   function open(thread) {
     window.location.hash = conversationHash(thread.type, thread.proposalId);
     setSelectedKey(`${thread.type}:${thread.proposalId}`);
+  }
+
+  async function removeSelected() {
+    if (!selected || deleting || session.supportAccess || EXCHANGE_PREVIEW_READ_ONLY) return;
+    if (!window.confirm("¿Eliminar esta conversación de tu lista? La otra persona conservará sus mensajes.")) return;
+    setDeleting(true);
+    try {
+      await deleteExchangeThread({ token: session.token, type: selected.type, proposalId: selected.proposalId });
+      setThreads((current) => current.filter((thread) =>
+        thread.type !== selected.type || thread.proposalId !== selected.proposalId));
+      setSelectedKey("");
+      window.location.hash = "#/conversaciones";
+      setError("");
+      await reload({ quiet: true });
+    } catch (deleteError) {
+      setError(deleteError.message || "No se pudo eliminar la conversación.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return <section className="exchange-inbox">
@@ -170,6 +190,9 @@ export default function ExchangeConversations({ session }) {
               {selected.type === "rest" ? <CalendarDays size={20} /> : <Sun size={20} />}</span>
             <div><strong>{selected.counterpartName}{selected.counterpartChapa ? ` · ${selected.counterpartChapa}` : ""}</strong>
               <small>{selected.type === "rest" ? "Descanso" : "Vacaciones"} · {threadStatus(selected)}</small></div>
+            {!session.supportAccess && !EXCHANGE_PREVIEW_READ_ONLY && <button type="button" className="direct-inbox-delete"
+              onClick={removeSelected} disabled={deleting} title="Eliminar conversación de mi lista">
+              <Trash2 size={17} /><span>{deleting ? "Eliminando…" : "Eliminar"}</span></button>}
           </div>
           <div className="exchange-inbox-context">
             <span><small>Tengo</small><strong>{formatRange(selected.offered, selected.offeredEnd) || "—"}</strong></span>
