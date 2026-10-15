@@ -218,6 +218,7 @@ export default function RestExchangePanel({ session }) {
   }, [scrollTarget, visible, loading, tab]);
   const mine = recentPersonalOffers(offers, data.proposals || []);
   const proposalsByOffer = (offerId) => (data.proposals || []).filter((proposal) => proposal.offerId === offerId);
+  const pendingIncoming = (data.proposals || []).filter((proposal) => !proposal.isOwn && proposal.status === "pending").length;
 
   function selectCalendarOffer(date) {
     const offer = board.find((row) => row.offeredDate === date || row.wantedDate === date);
@@ -231,6 +232,7 @@ export default function RestExchangePanel({ session }) {
   function offerCard(offer, personal = false) {
     const expired = offer.status === "open" && restOfferExpired(offer, today);
     const proposals = proposalsByOffer(offer.id);
+    const pendingForOffer = offer.isOwn ? proposals.filter((proposal) => !proposal.isOwn && proposal.status === "pending").length : 0;
     const myProposal = proposals.find((proposal) => proposal.isOwn && ["pending", "accepted"].includes(proposal.status));
     const canRespond = canRespondToRestOffer(offer);
     const chatButton = (proposal) => <button type="button" className="rest-exchange-secondary"
@@ -252,6 +254,7 @@ export default function RestExchangePanel({ session }) {
         {offer.wantedDate && <div><small>Busca</small><ExchangeDate start={offer.wantedDate} /></div>}
       </div>
       {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente de tramitar en el portal" : expired ? "Caducada" : "Abierto"}</span>}
+      {pendingForOffer > 0 && <button type="button" className="rest-exchange-pending" onClick={() => setTab("mine")}>{pendingForOffer} {pendingForOffer === 1 ? "propuesta pendiente" : "propuestas pendientes"} · Ver en Mis Ofertas</button>}
       {offer.status === "open" && !expired && !offer.isOwn && !myProposal && <div className="rest-exchange-actions">
         <button type="button" disabled={busy || !canRespond} onClick={() => mutate(
           () => proposeRestExchange({ token: session.token, offerId: offer.id,
@@ -327,7 +330,7 @@ export default function RestExchangePanel({ session }) {
     </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de descansos">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
-        <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}</button>)}
+        <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}{value === "mine" && pendingIncoming > 0 && <span className="rest-exchange-tab-count">{pendingIncoming}</span>}</button>)}
     </div>
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
     {notice && <p className="rest-exchange-notice" role="status">{notice}</p>}

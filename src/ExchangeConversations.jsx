@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CalendarDays, Inbox, MessageCircle, Sun, Trash2 } from "lucide-react";
 import PrivateExchangeChat from "./PrivateExchangeChat.jsx";
 import DirectConversations from "./DirectConversations.jsx";
 import { EXCHANGE_PREVIEW_READ_ONLY } from "./exchangePreview.js";
-import { deleteExchangeThread, getExchangeThreads, markExchangeThreadRead } from "./exchangeClient.js";
+import { deleteExchangeThread, getExchangeThreads, markExchangeThreadRead, restoreExchangeThread } from "./exchangeClient.js";
 
 const THREAD_HASH = /^#\/conversaciones\/(rest|vacation)\/([0-9a-f-]{36})$/i;
 const DIRECT_HASH = /^#\/conversaciones\/direct\/([0-9a-f-]{36})$/i;
@@ -62,6 +62,7 @@ export default function ExchangeConversations({ session }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const restoreAttempted = useRef("");
 
   const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setLoading(true);
@@ -96,6 +97,24 @@ export default function ExchangeConversations({ session }) {
   }, []);
 
   const selected = threads.find((thread) => `${thread.type}:${thread.proposalId}` === selectedKey);
+  useEffect(() => {
+    if (!selectedKey) restoreAttempted.current = "";
+  }, [selectedKey]);
+  useEffect(() => {
+    if (loading || selected || !selectedKey || session.supportAccess || EXCHANGE_PREVIEW_READ_ONLY
+      || restoreAttempted.current === selectedKey) return;
+    const [type, proposalId] = selectedKey.split(":");
+    if (!/^(rest|vacation)$/.test(type) || !/^[0-9a-f-]{36}$/i.test(proposalId)) return;
+    restoreAttempted.current = selectedKey;
+    restoreExchangeThread({ token: session.token, type, proposalId })
+      .then(() => reload({ quiet: true }))
+      .catch(() => setError("No se pudo abrir esta conversación. Vuelve a intentarlo desde la oferta."));
+  }, [loading, selected, selectedKey, session.supportAccess, session.token, reload]);
+  useEffect(() => {
+    if (!selected) return;
+    setFilter(isActive(selected) ? "active" : "archived");
+    setTypeFilter("all");
+  }, [selectedKey, selected?.status, selected?.offerStatus]);
   useEffect(() => {
     if (!selected || !selected.unread || session.supportAccess) return;
     markExchangeThreadRead({ token: session.token, type: selected.type, proposalId: selected.proposalId })

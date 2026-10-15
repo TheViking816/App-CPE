@@ -46,6 +46,8 @@
 .exchange-redesign .rest-exchange-actions > button::after { content: ' ↗'; margin-left: 6px; }
 .exchange-redesign .rest-exchange-actions small, .exchange-redesign .rest-exchange-manage small { font-size: 10px; line-height: 1.5; font-weight: 400; }
 .exchange-redesign .rest-exchange-status { width: fit-content; background: var(--ex-soft); color: var(--ex-accent); padding: 6px 9px; border-radius: 6px; font-size: 10px; font-weight: 600; }
+.exchange-redesign .rest-exchange-pending { justify-self: start; padding: 7px 10px; border: 1px solid #e9ad35; border-radius: 8px; background: #fff4d6; color: #7c4b00; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.exchange-redesign .rest-exchange-tab-count { display: inline-grid; min-width: 19px; height: 19px; margin-left: 4px; padding: 0 3px; place-items: center; border-radius: 999px; background: #bd6100; color: #fff; font-size: 10px; font-weight: 900; }
 .exchange-redesign .rest-exchange-form { max-width: 820px; padding: 28px; border: 1px solid var(--ex-line); border-radius: 22px; background: var(--ex-card); grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 18px; }
 .exchange-redesign .rest-exchange-form > label:first-of-type, .exchange-redesign .rest-exchange-form > button, .exchange-redesign .rest-exchange-form > p, .exchange-redesign .rest-exchange-edit-heading, .exchange-redesign .vacation-exchange-form-grid { grid-column: 1 / -1; }
 .exchange-redesign .rest-exchange-form label { gap: 9px; font-size: 12px; color: var(--ex-ink); font-weight: 650; }

@@ -75,6 +75,14 @@ export async function deleteExchangeThread({ token, type, proposalId }) {
   return data;
 }
 
+export async function restoreExchangeThread({ token, type, proposalId }) {
+  const { data, error } = await supabase.rpc("app_cpe_exchange_restore", {
+    p_token: token, p_type: type, p_proposal_id: proposalId
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function touchDirectPresence({ token }) {
   if (!supabase || !token) return false;
   const { data, error } = await supabase.rpc("app_cpe_direct_touch", { p_token: token });

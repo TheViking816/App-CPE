@@ -217,6 +217,7 @@ export default function VacationExchangePanel({ session }) {
     scrolledCalendarTargetRef.current = scrollTarget;
   }, [scrollTarget, visible, loading, tab]);
   const mine = recentPersonalOffers(offers, proposals);
+  const pendingIncoming = proposals.filter((proposal) => !proposal.isOwn && proposal.status === "pending").length;
 
   function selectCalendarOffer(date) {
     const offer = board.find((row) => (row.offeredStart <= date && row.offeredEnd >= date)
@@ -229,6 +230,7 @@ export default function VacationExchangePanel({ session }) {
   function offerCard(offer, personal = false) {
     const expired = offer.status === "open" && vacationOfferExpired(offer, today);
     const related = proposals.filter((proposal) => proposal.offerId === offer.id);
+    const pendingForOffer = offer.isOwn ? related.filter((proposal) => !proposal.isOwn && proposal.status === "pending").length : 0;
     const minePending = related.find((proposal) => proposal.isOwn && proposal.status === "pending");
     const canRespond = canRespondToVacationOffer(offer, session.professionalGroup);
     const groupMatches = professionalGroupCode(offer.professionalGroup)
@@ -253,6 +255,7 @@ export default function VacationExchangePanel({ session }) {
         <div><small>Quiero</small><ExchangeDate start={offer.wantedStart} end={offer.wantedEnd} /></div>
       </div>
       {personal && <span className="rest-exchange-status">{offer.status === "agreed" ? "Acordado · pendiente del Portal SEVASA" : expired ? "Caducada" : "Abierto"}</span>}
+      {pendingForOffer > 0 && <button type="button" className="rest-exchange-pending" onClick={() => setTab("mine")}>{pendingForOffer} {pendingForOffer === 1 ? "propuesta pendiente" : "propuestas pendientes"} · Ver en Mis Ofertas</button>}
       {offer.status === "open" && !expired && !offer.isOwn && !minePending && <div className="rest-exchange-actions">
         <button type="button" disabled={busy || !canRespond} onClick={() => mutate(
           () => proposeVacationExchange({ token: session.token, offerId: offer.id }),
@@ -310,7 +313,7 @@ export default function VacationExchangePanel({ session }) {
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">
       {[["board", "Tablón"], ["publish", "Publicar"], ["mine", "Mis Ofertas"]].map(([value, label]) =>
         <button type="button" role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""}
-          key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}</button>)}
+          key={value} onClick={() => setTab(value)}><ExchangeTabIcon tab={value} />{label}{value === "mine" && pendingIncoming > 0 && <span className="rest-exchange-tab-count">{pendingIncoming}</span>}</button>)}
     </div>
     {error && <p className="rest-exchange-error" role="alert">{error}</p>}
     {notice && <p className="rest-exchange-notice" role="status">{notice}</p>}
