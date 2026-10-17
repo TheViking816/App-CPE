@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261017-jornales-paste-55";
+self.__APP_CPE_SW_VERSION__ = "20261017-jornales-paste-56";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

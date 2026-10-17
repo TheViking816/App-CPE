@@ -30,10 +30,9 @@ export default function PortalJornalesImport({ existingItems, manualRows, busy, 
         <li>Si quieres importar las primas, pulsa el <Eye size={16} aria-label="ojo" /> ojo e introduce tu clave de seguridad <strong>en el portal</strong>.</li>
         <li>Copia el título del mes y la tabla completa (Ctrl+C en ordenador o «Copiar» en móvil); vuelve aquí y pégala.</li>
       </ol>
-      <div className="portal-paste-example" aria-label="Ejemplo sin datos personales"><span>Ejemplo de lo que se copia</span><code>Octubre 2026<br /># &nbsp; Parte &nbsp; Dia &nbsp; Jornada &nbsp; … &nbsp; Prod.<br />1 &nbsp; 12345 &nbsp; 3 &nbsp; DE 08 A 14 H. &nbsp; … &nbsp; 10,00€</code></div>
       <form onSubmit={submit}>
         <label htmlFor="portal-paste-text">Texto copiado del portal</label>
-        <textarea id="portal-paste-text" value={text} onChange={(event) => { setText(event.target.value); setError(''); }} placeholder="Pega aquí el mes y la tabla de jornales (Ctrl+V)…" rows={7} autoCapitalize="off" autoComplete="off" spellCheck={false} />
+        <textarea id="portal-paste-text" value={text} onChange={(event) => { setText(event.target.value); setError(''); }} placeholder="Pega aquí el mes y la tabla de jornales…" rows={7} autoCapitalize="off" autoComplete="off" spellCheck={false} />
         {parsed && <div className="portal-paste-preview" aria-live="polite">
           {parsed.monthKey && <strong>Mes detectado: {parsed.monthKey}</strong>}
           {parsed.errors.map((message, index) => <p className="portal-paste-error" key={index}>{message}</p>)}
