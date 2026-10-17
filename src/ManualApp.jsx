@@ -523,34 +523,46 @@ function Salary({ session, onSession }) {
     setBusy(true); setError(''); setNotice('');
     let savedCount = 0;
     try {
-      const [latestSnapshot, latestRows] = await Promise.all([
+      const [latestSnapshot, latestRows, latestPremiums] = await Promise.all([
         rpc('app_cpe_get_saved_salary_history', { p_token: session.token }),
-        rpc('app_cpe_list_manual_jornales', { p_token: session.token })
+        rpc('app_cpe_list_manual_jornales', { p_token: session.token }),
+        getUserManualPremiums({ token: session.token })
       ]);
-      const latestItems = buildManualSalaryMonths(latestSnapshot, latestRows || [], config, premiums, relayHours, remateHours, paidRows)
+      const latestItems = buildManualSalaryMonths(latestSnapshot, latestRows || [], config, latestPremiums, relayHours, remateHours, paidRows)
         .flatMap((entry) => entry.items);
       const latestPlan = planPortalJornalesImport(parsed, latestItems, latestRows || []);
-      const signature = (plan) => plan.actions.map(({ kind, row, original }) =>
-        `${kind}|${row.work_date}|${row.part}|${row.shift}|${original?.id || ''}`).join('\n');
+      const signature = (plan) => plan.actions.map(({ kind, row, original, item }) =>
+        `${kind}|${row.work_date}|${row.part}|${row.shift}|${original?.id || item?.payroll?.manualPremiumKey || ''}`).join('\n');
       if (latestPlan.conflicts.length || signature(latestPlan) !== signature(previewPlan)) {
-        setSnapshot(latestSnapshot); setManualRows(latestRows || []);
+        setSnapshot(latestSnapshot); setManualRows(latestRows || []); setPremiums(latestPremiums || {});
         throw new Error('Tus jornales han cambiado desde la vista previa. Revísala y vuelve a pulsar Importar.');
       }
       for (const action of latestPlan.actions) {
         const { row } = action;
-        const details = action.kind === 'premium'
-          ? { ...unpackManualNotes(action.original.notes), premiumKnown: true }
-          : { company: row.company, vessel: row.vessel, part: row.part, source: 'portal_paste', portalType: row.portalType, operation: row.operation, premiumKnown: row.premium !== null };
-        await rpc('app_cpe_save_manual_jornal', {
-          p_token: session.token, p_id: action.original?.id || null,
-          p_work_date: row.work_date, p_shift: row.shift, p_specialty: row.specialty,
-          p_worker_group: row.worker_group, p_operation_type: row.operation_type,
-          p_premium: row.premium ?? 0, p_notes: packManualNotes(details)
-        });
+        if (action.kind === 'premium_historic') {
+          await setUserManualPremium({ token: session.token, jornalKey: action.item.payroll.manualPremiumKey,
+            amount: row.premium, portalAmount: action.item.payroll.portalPrima });
+        } else {
+          const original = action.original;
+          const details = original ? unpackManualNotes(original.notes) : null;
+          const notes = original
+            ? details.source === 'portal_paste' ? packManualNotes({ ...details, premiumKnown: true }) : original.notes
+            : packManualNotes({ company: row.company, vessel: row.vessel, part: row.part,
+              source: 'portal_paste', portalType: row.portalType, operation: row.operation, premiumKnown: row.premium !== null });
+          await rpc('app_cpe_save_manual_jornal', {
+            p_token: session.token, p_id: original?.id || null,
+            p_work_date: original?.work_date || row.work_date, p_shift: original?.shift || row.shift,
+            p_specialty: original?.specialty || row.specialty, p_worker_group: original?.worker_group || row.worker_group,
+            p_operation_type: original?.operation_type || row.operation_type,
+            p_premium: row.premium ?? 0, p_notes: notes
+          });
+        }
         savedCount++;
       }
       setMonth(parsed.monthKey); setPeriod('month'); setShowImport(false);
-      setNotice(`${latestPlan.newCount} ${latestPlan.newCount === 1 ? 'jornal importado' : 'jornales importados'}${latestPlan.premiumUpdates ? ` · ${latestPlan.premiumUpdates} primas completadas` : ''}.`);
+      const changes = [latestPlan.newCount && `${latestPlan.newCount} ${latestPlan.newCount === 1 ? 'jornal importado' : 'jornales importados'}`,
+        latestPlan.premiumUpdates && `${latestPlan.premiumUpdates} ${latestPlan.premiumUpdates === 1 ? 'prima actualizada' : 'primas actualizadas'}`].filter(Boolean);
+      setNotice(`${changes.join(' · ')}.`);
     } catch (reason) {
       if (savedCount) throw new Error(`${savedCount} registros guardados antes del error. Los ya guardados no se duplicarán al reintentar. ${reason.message}`);
       throw reason;

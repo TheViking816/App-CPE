@@ -142,9 +142,14 @@ export function planPortalJornalesImport(parsed, existingItems = [], manualRows 
     seenParts.add(row.part);
     const existing = byIdentity.get(key) || byDayShift.get(shiftKey);
     if (existing) {
-      if (existing.original && existing.details?.source === 'portal_paste' && !existing.details.premiumKnown
-        && row.premium !== null && (!existing.part || existing.part === row.part)) {
-        actions.push({ kind: 'premium', row, original: existing.original }); stats.premiumUpdates++;
+      const currentPremium = existing.item.payroll?.prima;
+      const premiumChanged = row.premium !== null && (currentPremium == null
+        || Number(currentPremium.toFixed(2)) !== row.premium
+        || existing.details?.source === 'portal_paste' && !existing.details.premiumKnown);
+      if (premiumChanged && existing.original) {
+        actions.push({ kind: 'premium_manual', row, original: existing.original }); stats.premiumUpdates++;
+      } else if (premiumChanged && existing.item.source === 'historico' && existing.item.payroll?.manualPremiumKey) {
+        actions.push({ kind: 'premium_historic', row, item: existing.item }); stats.premiumUpdates++;
       } else stats.existingCount++;
       continue;
     }
