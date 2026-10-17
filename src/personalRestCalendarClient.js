@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { getUserRelayHours, supabase } from './supabaseClient.js';
 import { calendarJornales } from './calendarJornales.js';
 
 async function rpc(name, args) {
@@ -9,14 +9,15 @@ async function rpc(name, args) {
 }
 
 export async function getPersonalRestCalendar(token) {
-  const [overrides, paidDays, holidays, salaryHistory, manualJornales] = await Promise.all([
+  const [overrides, paidDays, holidays, salaryHistory, manualJornales, relayHours] = await Promise.all([
     rpc('app_cpe_list_rest_day_overrides', { p_token: token }),
     listManualPaidDays(token),
     listPayrollHolidays(),
     rpc('app_cpe_get_saved_salary_history', { p_token: token }),
-    rpc('app_cpe_list_manual_jornales', { p_token: token })
+    rpc('app_cpe_list_manual_jornales', { p_token: token }),
+    getUserRelayHours({ token })
   ]);
-  return { overrides: overrides || [], paidDays: paidDays || [], holidays, jornales: calendarJornales(salaryHistory, manualJornales) };
+  return { overrides: overrides || [], paidDays: paidDays || [], holidays, jornales: calendarJornales(salaryHistory, manualJornales, relayHours) };
 }
 
 export async function listPayrollHolidays() {
