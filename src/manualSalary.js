@@ -107,16 +107,17 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       });
     const newItems = manualRows.filter((row) => String(row.work_date).startsWith(key)).map((row) => {
       const details = unpackManualNotes(row.notes);
-      const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, especialidad: row.specialty,
+      const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, tipo: details.portalType || 'MAN', especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
         parte: details.part || `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig, relayHours, remateHours)[0];
-      const premium = money(row.premium);
-      const operationLabel = row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
-        : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT';
+      const premiumKnown = details.premiumKnown !== false || row.operation_type === 'RECEPCION_ENTREGA';
+      const premium = premiumKnown ? money(row.premium) : null;
+      const operationLabel = details.operation || (row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
+        : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT');
       return { ...calculated, operacion: operationLabel, id: row.id, manualPart: details.part, notes: details.notes, source: 'manual', payroll: {
-        ...calculated.payroll, prima: premium, manualPrima: premium, primaSource: 'manual', primaPending: false,
-        total: money(calculated.payroll.total + premium)
+        ...calculated.payroll, prima: premium, manualPrima: premium, primaSource: premiumKnown ? 'manual' : 'pending', primaPending: !premiumKnown,
+        total: money(calculated.payroll.total + (premium || 0))
       } };
     });
     const paidByDate = new Map();

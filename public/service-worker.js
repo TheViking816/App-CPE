@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261013-auto-update-53";
+self.__APP_CPE_SW_VERSION__ = "20261017-jornales-paste-54";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
