@@ -10,8 +10,7 @@ const SHIFTS = new Set(['02-08', '06-12', '08-14', '14-20', '18-00', '19-01', '2
 const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
 const clean = (value) => String(value || '').replace(/\u00a0/g, ' ').trim();
 const identity = ({ work_date, part, shift }) => `${work_date}|${part}|${shift}`;
-const dayFingerprint = ({ work_date, shift, specialty, company, vessel }) =>
-  [work_date, shift, specialty, company, vessel].map(normalize).join('|');
+const dayShift = ({ work_date, shift }) => `${work_date}|${shift}`;
 
 function parseShift(value) {
   const match = clean(value).match(/(?:DE\s*)?(\d{1,2})\s*(?:A|[-–])\s*(\d{1,2})(?:\s*H\.?)?/i);
@@ -79,24 +78,24 @@ export function parsePortalJornalesPaste(value) {
 export function planPortalJornalesImport(parsed, existingItems = [], manualRows = []) {
   const originals = new Map(manualRows.map((row) => [row.id, row]));
   const byIdentity = new Map();
+  const byDayShift = new Map();
   const byPart = new Map();
-  const byFingerprint = new Set();
-  const withoutPart = new Set();
   for (const item of existingItems) {
     if (item.isVacation || item.isTraining) continue;
     const original = item.source === 'manual' ? originals.get(item.id) : null;
     const details = original ? unpackManualNotes(original.notes) : null;
     const part = clean(details?.part || item.manualPart || item.parte);
     const existing = { item, original, details, part };
+    const shiftKey = dayShift({ work_date: item.payroll.date, shift: item.payroll.shift });
+    if (!byDayShift.has(shiftKey) || item.source === 'historico') byDayShift.set(shiftKey, existing);
     if (part) {
       const key = identity({ work_date: item.payroll.date, part, shift: item.payroll.shift });
       if (!byIdentity.has(key) || item.source === 'historico') byIdentity.set(key, existing);
       byPart.set(part, existing);
-    } else withoutPart.add([item.payroll.date, item.payroll.shift, normalize(item.especialidad)].join('|'));
-    byFingerprint.add(dayFingerprint({ work_date: item.payroll.date, shift: item.payroll.shift,
-      specialty: item.especialidad, company: details?.company || item.empresa, vessel: details?.vessel || item.buque }));
+    }
   }
   const seen = new Set();
+  const seenDayShifts = new Set();
   const seenParts = new Set();
   const actions = [];
   const stats = { newCount: 0, premiumUpdates: 0, existingCount: 0, repeatedCount: 0, conflicts: [] };
@@ -104,16 +103,20 @@ export function planPortalJornalesImport(parsed, existingItems = [], manualRows 
     const key = identity({ ...row, part: row.part });
     if (seen.has(key)) { stats.repeatedCount++; continue; }
     seen.add(key);
+    const shiftKey = dayShift(row);
+    if (seenDayShifts.has(shiftKey)) { stats.repeatedCount++; continue; }
+    seenDayShifts.add(shiftKey);
     if (seenParts.has(row.part)) { stats.conflicts.push(`La parte ${row.part} aparece más de una vez en la copia.`); continue; }
     seenParts.add(row.part);
-    const exact = byIdentity.get(key);
-    if (exact) {
-      if (exact.original && exact.details?.source === 'portal_paste' && !exact.details.premiumKnown && row.premium !== null) {
-        actions.push({ kind: 'premium', row, original: exact.original }); stats.premiumUpdates++;
+    const existing = byIdentity.get(key) || byDayShift.get(shiftKey);
+    if (existing) {
+      if (existing.original && existing.details?.source === 'portal_paste' && !existing.details.premiumKnown
+        && row.premium !== null && (!existing.part || existing.part === row.part)) {
+        actions.push({ kind: 'premium', row, original: existing.original }); stats.premiumUpdates++;
       } else stats.existingCount++;
       continue;
     }
-    if (byPart.has(row.part) || byFingerprint.has(dayFingerprint(row)) || withoutPart.has([row.work_date, row.shift, normalize(row.specialty)].join('|'))) {
+    if (byPart.has(row.part)) {
       stats.conflicts.push(`Parte ${row.part} · ${row.work_date}: podría duplicar un jornal existente.`);
       continue;
     }

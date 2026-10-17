@@ -34,7 +34,6 @@ export default function PortalJornalesImport({ existingItems, manualRows, busy, 
       <form onSubmit={submit}>
         <label htmlFor="portal-paste-text">Texto copiado del portal</label>
         <textarea id="portal-paste-text" value={text} onChange={(event) => { setText(event.target.value); setError(''); }} placeholder="Pega aquí el mes y la tabla de jornales (Ctrl+V)…" rows={7} autoCapitalize="off" autoComplete="off" spellCheck={false} />
-        <small className="portal-paste-privacy">El texto se analiza aquí. No se guarda hasta que pulses Importar.</small>
         {parsed && <div className="portal-paste-preview" aria-live="polite">
           {parsed.monthKey && <strong>Mes detectado: {parsed.monthKey}</strong>}
           {parsed.errors.map((message, index) => <p className="portal-paste-error" key={index}>{message}</p>)}

@@ -65,3 +65,24 @@ test('reconoce un jornal ya presente en el historial y no lo duplica', () => {
   assert.equal(plan.newCount, 0);
   assert.equal(plan.existingCount, 1);
 });
+
+test('no duplica un jornal manual sin parte si coinciden el día y el turno', () => {
+  const parsed = parsePortalJornalesPaste(paste([line(1, '12001', 3, '08-14', '146,82€')]));
+  const row = { id: 'manual-sin-parte', work_date: '2026-10-03', shift: '08-14', specialty: 'CLASIFICADOR',
+    worker_group: 'III', operation_type: 'ESTIBA', premium: 0, notes: packManualNotes({ company: 'Otra terminal' }) };
+  const existing = buildManualSalaryMonths(null, [row])[0].items;
+  const plan = planPortalJornalesImport(parsed, existing, [row]);
+  assert.equal(plan.newCount, 0);
+  assert.equal(plan.existingCount, 1);
+  assert.equal(plan.actions.length, 0);
+});
+
+test('dos filas copiadas con el mismo día y turno se consideran un solo jornal', () => {
+  const parsed = parsePortalJornalesPaste(paste([
+    line(1, '12001', 3, '08-14', '10,00€'),
+    line(2, '12002', 3, '08-14', '12,00€')
+  ]));
+  const plan = planPortalJornalesImport(parsed);
+  assert.equal(plan.newCount, 1);
+  assert.equal(plan.repeatedCount, 1);
+});
