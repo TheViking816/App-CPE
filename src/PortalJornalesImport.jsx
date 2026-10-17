@@ -28,7 +28,7 @@ export default function PortalJornalesImport({ existingItems, manualRows, busy, 
       <ol className="portal-paste-steps">
         <li>Abre <strong>Jornales y primas</strong> en el portal y elige un mes.</li>
         <li>Si quieres importar las primas, pulsa el <Eye size={16} aria-label="ojo" /> ojo e introduce tu clave de seguridad <strong>en el portal</strong>.</li>
-        <li>Copia el título del mes y la tabla completa (Ctrl+C en ordenador o «Copiar» en móvil); vuelve aquí y pégala.</li>
+        <li>Copia el título del mes y todos los jornales, en tabla o vista móvil; vuelve aquí y pégalos.</li>
       </ol>
       <form onSubmit={submit}>
         <label htmlFor="portal-paste-text">Texto copiado del portal</label>

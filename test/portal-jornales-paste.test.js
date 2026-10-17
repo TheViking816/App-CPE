@@ -8,6 +8,8 @@ const header = '#\tParte\tDia\tTipo\tJornada\tEspecialidad\tEmpresa\tBuque\tOper
 const line = (number, part, day, shift, premium = '') =>
   `${number}\t${part}\t${day}\tTUR\tDE ${shift.replace('-', ' A ')} H.\tCONDUCTOR 1a\tTerminal Ejemplo\tBUQUE DE PRUEBA\tCONT. C/SPREADER AUT\t${premium}`;
 const paste = (rows, hidden = false) => `Octubre 2026\nHoy\n${hidden ? 'Para ver las primas, pulsa el ojo e introduce tu clave de seguridad\n' : ''}Jornales del mes: ${rows.length}\nVersión móvil\n${header}\n${rows.join('\n')}`;
+const mobileCard = (number, day, part, shift, premium = '') => `Día\n${day}\nParte\n${part}\n${premium ? `${premium}\n` : ''}DE ${shift.replace('-', ' A ')} H.\nnº ${number}\nBUQUE\nBARCO DE PRUEBA\nEMPRESA\nTERMINAL DE PRUEBA\nESPEC.\nCONDUCTOR 1a\nTIPO TUR\nOPERAC.\nCONT. C/SPREADER AUT`;
+const mobilePaste = (cards, hidden = false) => `Octubre 2026\nHoy\n${hidden ? 'Para ver las primas, pulsa el ojo e introduce tu clave de seguridad\n' : ''}Jornales del mes: ${cards.length}\n\nVer tabla\n\n${cards.join('\n')}`;
 
 test('interpreta filas copiadas con y sin primas y conserva sus campos', () => {
   const visible = parsePortalJornalesPaste(paste([line(1, '12001', 3, '08-14', '146,82€')]));
@@ -85,4 +87,26 @@ test('dos filas copiadas con el mismo día y turno se consideran un solo jornal'
   const plan = planPortalJornalesImport(parsed);
   assert.equal(plan.newCount, 1);
   assert.equal(plan.repeatedCount, 1);
+});
+
+test('lee las tarjetas copiadas desde móvil con primas y jornadas dobles', () => {
+  const parsed = parsePortalJornalesPaste(mobilePaste([
+    mobileCard(1, 3, '12001', '02-08', '146,82€'),
+    mobileCard(2, 3, '12002', '20-02', '219,97€'),
+    mobileCard(3, 4, '12003', '14-20', '—')
+  ]));
+  assert.deepEqual(parsed.errors, []);
+  assert.equal(parsed.rows.length, 3);
+  assert.equal(parsed.rows[0].premium, 146.82);
+  assert.equal(parsed.rows[1].shift, '20-02');
+  assert.equal(parsed.rows[2].premium, null);
+});
+
+test('lee tarjetas móviles sin primas y detecta una copia incompleta', () => {
+  const hidden = parsePortalJornalesPaste(mobilePaste([mobileCard(1, 3, '12001', '02-08')], true));
+  assert.deepEqual(hidden.errors, []);
+  assert.equal(hidden.premiumsHidden, true);
+  assert.equal(hidden.premiumsPending, 1);
+  const incomplete = mobilePaste([mobileCard(1, 3, '12001', '02-08')]).replace('Jornales del mes: 1', 'Jornales del mes: 2');
+  assert.match(parsePortalJornalesPaste(incomplete).errors.join(' '), /Copia el mes completo/);
 });
