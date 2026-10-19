@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import portalCensusCapture from "../src/censosPortalCurrent.js";
-import { findByChapa, specialties, validateCenso } from "../src/censo.js";
+import { findByChapa, specialties, validateSpecialtyCenso } from "../src/censo.js";
 
 const expected = {
   mafis: ["especialidad", 82, [71483, 71450, 71340, 71538]],
@@ -12,8 +12,8 @@ const expected = {
   "pol-capataz": ["polivalencia", 33, [71003, 71434, 71434, 71434]],
   "pol-sobordista": ["polivalencia", 37, [71003, 71434, 71434, 71434]],
   "pol-elevadoras": ["polivalencia", 139, [71358, 71767, 71481, 71490]],
-  "pol-trincador": ["polivalencia", 587, [71954, 72043, 71352, 24140]],
-  "pol-especialista": ["polivalencia", 1304, [24075, 72305, 24198, 63316]],
+  "pol-trincador": ["polivalencia", 604, [72343, 72231, 72692, 71770]],
+  "pol-especialista": ["polivalencia", 1336, [72034, 72635, 71497, 72345]],
   "pol-conductor-2a": ["polivalencia", 500, [24220, 63291, 71135, 71508]]
 };
 
@@ -28,7 +28,7 @@ test("la captura de Tomas conserva separados los censos TU y TP", () => {
     assert.equal(item.kind, kind);
     assert.equal(item.censo.length, size);
     assert.deepEqual(item.doors.map((door) => door.raw), doors);
-    assert.equal(validateCenso(id).ok, true);
+    assert.equal(validateSpecialtyCenso(id).ok, true);
   }
 });
 

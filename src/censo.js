@@ -1,4 +1,5 @@
 import portalCensusCapture from "./censosPortalCurrent.js";
+import portalWorkersCapture from "./censosPortalWorkersCurrent.js";
 
 const CENSO_RAW = `
 2699 2700 2701 2708 2702 2703 2704 2705 2707 2717 2712 2714 2719 2730 2720 2721 2722 2723 2725 2728 2729 2733 2739 2741 2743 2149 2140 2583 2640 2641 2742 2658 2718 2713 2737 2736
@@ -351,7 +352,10 @@ function portalCensoRows(chapas) {
   }));
 }
 
-const portalSpecialties = portalCensusCapture.cards.map((item) => ({
+// Las capturas posteriores sustituyen el bloque completo, incluido su orden.
+const currentPortalCards = new Map(portalCensusCapture.cards.map((item) => [item.id, item]));
+for (const item of portalWorkersCapture.cards) currentPortalCards.set(item.id, item);
+const portalSpecialties = [...currentPortalCards.values()].map((item) => ({
   id: item.id,
   name: item.name,
   kind: item.kind,

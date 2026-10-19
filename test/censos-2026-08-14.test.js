@@ -4,9 +4,9 @@ import test from "node:test";
 import { specialties } from "../src/censo.js";
 
 const expected = {
-  "conductor-1a": { count: 568, first: "72699", last: "71812" },
-  "conductor-2a": { count: 479, first: "72699", last: "72744" },
-  "pol-especialista": { count: 1308, first: "72699", last: "72744" }
+  "conductor-1a": { count: 611, first: "72663", last: "72547" },
+  "conductor-2a": { count: 526, first: "72745", last: "72628" },
+  "pol-especialista": { count: 1336, first: "72663", last: "72744" }
 };
 
 for (const [id, values] of Object.entries(expected)) {
@@ -27,6 +27,6 @@ for (const [id, values] of Object.entries(expected)) {
 
 test("conductor-1a incluye las nuevas chapas en su posicion correcta", () => {
   const specialty = specialties.find((item) => item.id === "conductor-1a");
-  assert.equal(specialty.censo[9].chapa, "72717");
-  assert.equal(specialty.censo[198].chapa, "71763");
+  assert.equal(specialty.censo[2].chapa, "72745");
+  assert.equal(specialty.censo[41].chapa, "72788");
 });

@@ -4,8 +4,8 @@ import test from "node:test";
 import { specialties } from "../src/censo.js";
 
 const expected = {
-  "pol-trincador": { count: 584, first: "72700", last: "24077" },
-  "pol-trinca-coches": { count: 143, first: "72700", last: "24053" }
+  "pol-trincador": { count: 604, first: "72663", last: "24077" },
+  "pol-trinca-coches": { count: 152, first: "72663", last: "24053" }
 };
 
 for (const [id, values] of Object.entries(expected)) {

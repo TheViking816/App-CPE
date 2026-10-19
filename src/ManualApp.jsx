@@ -210,6 +210,7 @@ function Access({ onAccess }) {
   const [chapa, setChapa] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const [professionalGroup, setProfessionalGroup] = useState('');
   const [restGroup, setRestGroup] = useState('');
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
@@ -219,8 +220,12 @@ function Access({ onAccess }) {
     event.preventDefault(); setBusy(true); setError('');
     try {
       if (register && !selectedSpecialties.length) throw new Error('Selecciona al menos una especialidad.');
+      const name = displayName.trim().replace(/\s+/g, ' ');
+      if (register && name && (name.length > 40 || /[<>\x00-\x1f\x7f]/.test(name))) {
+        throw new Error('Introduce un nombre de hasta 40 caracteres, sin símbolos < o >.');
+      }
       const session = register
-        ? await rpc('app_cpe_register_manual_profile', { p_chapa: chapa, p_password: password, p_email: null, p_professional_group: professionalGroup, p_rest_group: restGroup, p_specialties: selectedSpecialties })
+        ? await rpc('app_cpe_register_manual_profile_named', { p_chapa: chapa, p_password: password, p_email: null, p_professional_group: professionalGroup, p_rest_group: restGroup, p_specialties: selectedSpecialties, p_display_name: name || null })
         : await loginUser({ chapa, password });
       if (!session?.token) throw new Error('No se pudo abrir la sesión.');
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -233,6 +238,7 @@ function Access({ onAccess }) {
     <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" />
     <form onSubmit={submit}>
       <label>Chapa<input value={chapa} onChange={(event) => setChapa(event.target.value)} inputMode="numeric" autoComplete="username" required /></label>
+      {register && <label>Nombre y apellidos (opcional)<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" maxLength={40} placeholder="Nombre que verán tus compañeros" /><small>Se mostrará en chats e intercambios. Puedes cambiarlo en Mis datos.</small></label>}
       <label>Contraseña<span className="access-password-field"><input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} minLength={register ? 8 : undefined} required /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></span></label>
       {register && <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} />}
       {error && <p className="form-error" role="alert">{error}</p>}
