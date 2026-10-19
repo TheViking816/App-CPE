@@ -104,6 +104,23 @@ async function loadSavedPortalCredential() {
   if (!portalUser || !portalPassword) throw new Error("La credencial lectora del tablón está incompleta.");
 }
 
+async function loadFallbackPortalCredential() {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/app_cpe_get_general_board_worker_fallback_credential`, {
+    method: "POST",
+    headers: supabaseAdminHeaders(supabaseSecret, { "Content-Type": "application/json" }),
+    body: "{}"
+  });
+  if (!response.ok) throw new Error(`No se pudo recuperar la credencial alternativa del tablón: HTTP ${response.status}`);
+  const credential = await response.json();
+  const fallbackUser = String(credential?.chapa || "").trim();
+  const fallbackPassword = String(credential?.portalPassword || "");
+  if (!fallbackUser || fallbackUser === "72683" || !fallbackPassword) {
+    throw new Error("La credencial alternativa del tablón no está disponible.");
+  }
+  portalUser = fallbackUser;
+  portalPassword = fallbackPassword;
+}
+
 function parseResultTables(tables) {
   const header = tables.find((table) => /NORAY\s*-\s*ASIGNACI/i.test(table.rows?.[0]?.[0] || ""));
   const headerText = repairPortalText(header?.rows?.[1]?.[0] || "");
@@ -362,23 +379,37 @@ async function main() {
     ? browser.contexts()[0]
     : await chromium.launchPersistentContext(profileDir, launchOptions);
   if (!context) throw new Error("Chrome no ofreció un contexto para leer el tablón general.");
-  const page = browser ? await context.newPage() : (context.pages()[0] || await context.newPage());
+  let page = browser ? await context.newPage() : (context.pages()[0] || await context.newPage());
   try {
     if (clearanceCookies.length) await context.addCookies(clearanceCookies);
     await context.addInitScript(() => Object.defineProperty(navigator, "webdriver", { get: () => undefined }));
-    await login(page);
-    const contracting = await openContracting(page);
     const dates = generalBoardPortalDates();
-    const journeys = [];
-    for (const portalDate of dates.portalDates) {
-      journeys.push(...await (contracting.mode === "responsive"
-        ? collectResponsiveDate(contracting.frame, portalDate)
-        : collectDate(contracting.frame, portalDate)).catch((error) => {
-          console.warn(`No se pudo leer el tablón del ${portalDate}: ${error instanceof Error ? error.message : error}`);
-          return [];
-        }));
+    let journeys = [];
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      if (attempt === 2) {
+        await loadFallbackPortalCredential();
+        await page.close().catch(() => {});
+        page = await context.newPage();
+      }
+      try {
+        await login(page);
+        const contracting = await openContracting(page);
+        journeys = [];
+        for (const portalDate of dates.portalDates) {
+          journeys.push(...await (contracting.mode === "responsive"
+            ? collectResponsiveDate(contracting.frame, portalDate)
+            : collectDate(contracting.frame, portalDate)).catch((error) => {
+              console.warn(`No se pudo leer el tablón del ${portalDate}: ${error instanceof Error ? error.message : error}`);
+              return [];
+            }));
+        }
+        if (!journeys.length) throw new Error("El portal no devolvio ninguna jornada del tablon general.");
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        console.warn(`No se pudo leer el tablón con 72683: ${error instanceof Error ? error.message : error}. Se probará una sola credencial alternativa.`);
+      }
     }
-    if (!journeys.length) throw new Error("El portal no devolvio ninguna jornada del tablon general.");
 
     const previous = await getExistingSnapshot();
     const merged = new Map((previous.jornadas || [])

@@ -35,8 +35,9 @@ try {
       [Parameter(Mandatory = $true)][string]$Label
     )
 
-    for ($attempt = 1; $attempt -le $OperationalAttempts; $attempt++) {
-      "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Label intento $attempt/$OperationalAttempts" |
+    $maxAttempts = if ($Label -eq "Tablon general") { 1 } else { $OperationalAttempts }
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+      "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Label intento $attempt/$maxAttempts" |
         Out-File -LiteralPath $logPath -Append -Encoding utf8
 
       $readerOutput = @(& node $ScriptPath 2>&1)
@@ -47,7 +48,7 @@ try {
 
       $readerText = $readerOutput -join "`n"
       $isForbidden = $readerText -match "HTTP\s+403"
-      if (-not $isForbidden -or $attempt -ge $OperationalAttempts) { return $readerExitCode }
+      if (-not $isForbidden -or $attempt -ge $maxAttempts) { return $readerExitCode }
 
       "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Label recibio HTTP 403; renovando la autorizacion de Cloudflare antes de reintentar." |
         Out-File -LiteralPath $logPath -Append -Encoding utf8
