@@ -87,7 +87,10 @@ function mergeBlocks(previous, current) {
 }
 
 async function loadSavedPortalCredential() {
-  if (portalUser && portalPassword) return;
+  if (portalUser && portalPassword) {
+    if (portalUser !== "72683") throw new Error(`La credencial lectora del tablón debe ser 72683; se recibió ${portalUser}.`);
+    return;
+  }
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/app_cpe_get_general_board_worker_credential`, {
     method: "POST",
     headers: supabaseAdminHeaders(supabaseSecret, { "Content-Type": "application/json" }),
@@ -97,6 +100,7 @@ async function loadSavedPortalCredential() {
   const credential = await response.json();
   portalUser = String(credential?.chapa || "").trim();
   portalPassword = String(credential?.portalPassword || "");
+  if (portalUser !== "72683") throw new Error(`La credencial lectora del tablón debe ser 72683; se recibió ${portalUser || "ninguna"}.`);
   if (!portalUser || !portalPassword) throw new Error("La credencial lectora del tablón está incompleta.");
 }
 
