@@ -28,7 +28,7 @@ test('retains saved history and adds new manual jornales without altering it', (
   assert.equal(salaryPeriod(months[0].items, 'second').items.length, 0);
   assert.equal(salaryPeriod(months[1].items, 'month').items.length, 1);
   assert.equal(companyImage('CSP IBERIAN VALENCIA TERMINAL'), '/assets/empresas/csp.jpeg');
-  assert.equal(companyImage('TCV'), '/assets/empresas/tcv.svg');
+  assert.equal(companyImage('TCV'), '/assets/empresas/apm.jpeg');
 });
 
 test('shows imported vacation days from the shared paid-day table', () => {

@@ -22,8 +22,7 @@ export function companyImage(company = '') {
   const value = String(company).toUpperCase();
   const base = `${import.meta.env?.BASE_URL || '/'}assets/empresas/`;
   if (/CSP/.test(value)) return `${base}csp.jpeg`;
-  if (/\bTCV\b|TERMINAL(?:ES)? DE CONTENEDORES DE VALENCIA/.test(value)) return `${base}tcv.svg`;
-  if (/APM/.test(value)) return `${base}apm.jpeg`;
+  if (/APM|\bTCV\b|TERMINAL(?:ES)? DE CONTENEDORES DE VALENCIA/.test(value)) return `${base}apm.jpeg`;
   if (/MSC|MEDITERRANEAN/.test(value)) return `${base}msc.jpeg`;
   if (/VTEU|VALENCIA TERMINAL EUROPA|GRIMALDI/.test(value)) return `${base}vteu.jpeg`;
   if (/ERH|ERSHIP|EUROPEA DE HANDLING/.test(value)) return `${base}erh.png`;
