@@ -238,7 +238,7 @@ function Access({ onAccess }) {
     <img className="brand-logo access-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" />
     <form onSubmit={submit}>
       <label>Chapa<input value={chapa} onChange={(event) => setChapa(event.target.value)} inputMode="numeric" autoComplete="username" required /></label>
-      {register && <label>Nombre y apellidos (opcional)<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" maxLength={40} placeholder="Nombre que verán tus compañeros" /><small>Se mostrará en chats e intercambios. Puedes cambiarlo en Mis datos.</small></label>}
+      {register && <label>Nombre (opcional)<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" maxLength={40} placeholder="Nombre que verán tus compañeros" /><small>Se mostrará en chats e intercambios. Puedes cambiarlo en Mis datos.</small></label>}
       <label>Contraseña<span className="access-password-field"><input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={register ? 'new-password' : 'current-password'} minLength={register ? 8 : undefined} required /><button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></span></label>
       {register && <ProfileFields {...{ professionalGroup, setProfessionalGroup, restGroup, setRestGroup, selectedSpecialties, setSelectedSpecialties }} />}
       {error && <p className="form-error" role="alert">{error}</p>}
