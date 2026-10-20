@@ -88,12 +88,12 @@ function ProfileFields({ professionalGroup, setProfessionalGroup, restGroup, set
     <label>Grupo de descansos<select value={restGroup} onChange={(event) => setRestGroup(event.target.value)} required>
       <option value="">Selecciona tu grupo</option>{REST_GROUPS.map((group) => <option key={group} value={group}>{group.replace(/\s+/g, '')}</option>)}
     </select></label>
-    <fieldset><legend>Especialidades <small>Selecciona todas las que tengas</small></legend>
-      <div className="manual-profile-specialties">{censoSpecialties.map((specialty) => <label key={specialty.id}>
+    {[{ title: 'Especialidades', polivalencia: false }, { title: 'Polivalencias', polivalencia: true }].map((group) => <fieldset key={group.title}><legend>{group.title} <small>Selecciona todas las que tengas</small></legend>
+      <div className="manual-profile-specialties">{censoSpecialties.filter((specialty) => specialty.name.trim().toUpperCase().startsWith('POL.') === group.polivalencia).map((specialty) => <label key={specialty.id}>
         <input type="checkbox" checked={selectedSpecialties.includes(specialty.id)} onChange={() => toggleSpecialty(specialty.id)} />
         <span>{specialty.name}</span>
       </label>)}</div>
-    </fieldset>
+    </fieldset>)}
   </div>;
 }
 
