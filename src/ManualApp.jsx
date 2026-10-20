@@ -299,6 +299,9 @@ function ActivityMonitor({ session }) {
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
     <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
+    <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
+    <h3>Usuarios recientes</h3>
+    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
     <h3>Nuevas altas</h3>
     <p>Últimos registros de la app, aunque no hayan vuelto a entrar. Fecha y hora de Madrid.</p>
     <div className="monitor-numbers"><span><strong>{registrations?.last24h ?? '—'}</strong> altas en las últimas 24 horas</span><span><strong>{registrations?.total ?? '—'}</strong> cuentas registradas</span></div>
@@ -307,9 +310,6 @@ function ActivityMonitor({ session }) {
       {matchingRegistrations.slice(0, registrationLimit).map((user) => <tr key={user.chapa}><td>{registrationTime(user.created_at)}</td><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td></tr>)}
     </tbody></table>{!registrationError && registrations && matchingRegistrations.length === 0 && <p className="monitor-empty">No hay registros para el filtro actual.</p>}</div>
     {matchingRegistrations.length > registrationLimit && <button className="monitor-more-button" type="button" onClick={() => setRegistrationLimit((current) => current + 10)}>Ver más altas<ChevronRight size={16} aria-hidden="true" /></button>}
-    <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
-    <h3>Usuarios recientes</h3>
-    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
     <h3>Jornales manuales registrados</h3>
     <p>Últimos 10 movimientos. La fecha y hora indican cuándo se añadió, editó o eliminó el jornal.</p>
     {journalError && <p className="form-error" role="alert">{journalError}</p>}
