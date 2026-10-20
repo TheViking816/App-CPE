@@ -119,3 +119,23 @@
   .manual-jornal-editor.manual-editor-card .form-actions { grid-column: 1 / -1; }
   .manual-jornal-editor.manual-editor-card .form-estimate { padding: 8px 10px; }
 }
+.monitor-panel .monitor-more-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px auto 24px;
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1px solid #c6deef;
+  border-radius: 12px;
+  background: #edf6fc;
+  color: #145889;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: background .15s, border-color .15s;
+}
+.monitor-panel .monitor-more-button svg { transform: rotate(90deg); }
+.monitor-panel .monitor-more-button:hover { background: #dceeff; border-color: #8dbde2; }
+.monitor-panel .monitor-more-button:focus-visible { outline: 3px solid #84bee7; outline-offset: 3px; }

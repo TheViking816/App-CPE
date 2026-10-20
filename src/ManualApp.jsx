@@ -306,7 +306,7 @@ function ActivityMonitor({ session }) {
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora de registro</th><th>Chapa</th><th>Nombre</th></tr></thead><tbody>
       {matchingRegistrations.slice(0, registrationLimit).map((user) => <tr key={user.chapa}><td>{registrationTime(user.created_at)}</td><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td></tr>)}
     </tbody></table>{!registrationError && registrations && matchingRegistrations.length === 0 && <p className="monitor-empty">No hay registros para el filtro actual.</p>}</div>
-    {matchingRegistrations.length > registrationLimit && <button type="button" onClick={() => setRegistrationLimit((current) => current + 10)}>Ver más altas</button>}
+    {matchingRegistrations.length > registrationLimit && <button className="monitor-more-button" type="button" onClick={() => setRegistrationLimit((current) => current + 10)}>Ver más altas<ChevronRight size={16} aria-hidden="true" /></button>}
     <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
     <h3>Usuarios recientes</h3>
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
