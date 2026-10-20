@@ -255,15 +255,19 @@ function ActivityMonitor({ session }) {
   const [data, setData] = useState(null);
   const [journalEvents, setJournalEvents] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [registrations, setRegistrations] = useState(null);
+  const [registrationError, setRegistrationError] = useState('');
+  const [registrationLimit, setRegistrationLimit] = useState(10);
   const [error, setError] = useState('');
   const [journalError, setJournalError] = useState('');
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, calendar] = await Promise.allSettled([
+    const [usage, journals, calendar, signups] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
-      rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token })
+      rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
+      rpc('app_cpe_admin_registration_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -271,6 +275,8 @@ function ActivityMonitor({ session }) {
     else setJournalError(journals.reason?.message || 'No se pudieron cargar los jornales.');
     if (calendar.status === 'fulfilled') { setCalendarEvents(calendar.value || []); setCalendarError(''); }
     else setCalendarError(calendar.reason?.message || 'No se pudieron cargar los cambios del calendario.');
+    if (signups.status === 'fulfilled') { setRegistrations(signups.value); setRegistrationError(''); }
+    else setRegistrationError(signups.reason?.message || 'No se pudieron cargar las nuevas altas.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
@@ -279,6 +285,8 @@ function ActivityMonitor({ session }) {
     ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type))).slice(0, displayLimit);
   const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
+  const matchingRegistrations = (registrations?.registrations || []).filter((user) => String(user.chapa || '').includes(filter));
+  const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
   const action = (value) => ({ added: 'Añadido', edited: 'Editado', deleted: 'Eliminado' })[value] || value;
@@ -290,8 +298,17 @@ function ActivityMonitor({ session }) {
     <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales y días del calendario se conservan en el registro.</p>
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
+    <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
+    <h3>Nuevas altas</h3>
+    <p>Últimos registros de la app, aunque no hayan vuelto a entrar. Fecha y hora de Madrid.</p>
+    <div className="monitor-numbers"><span><strong>{registrations?.last24h ?? '—'}</strong> altas en las últimas 24 horas</span><span><strong>{registrations?.total ?? '—'}</strong> cuentas registradas</span></div>
+    {registrationError && <p className="form-error" role="alert">{registrationError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Fecha y hora de registro</th><th>Chapa</th><th>Nombre</th></tr></thead><tbody>
+      {matchingRegistrations.slice(0, registrationLimit).map((user) => <tr key={user.chapa}><td>{registrationTime(user.created_at)}</td><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td></tr>)}
+    </tbody></table>{!registrationError && registrations && matchingRegistrations.length === 0 && <p className="monitor-empty">No hay registros para el filtro actual.</p>}</div>
+    {matchingRegistrations.length > registrationLimit && <button type="button" onClick={() => setRegistrationLimit((current) => current + 10)}>Ver más altas</button>}
     <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
-    <h3>Usuarios recientes</h3><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Buscar chapa" inputMode="numeric" />
+    <h3>Usuarios recientes</h3>
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
     <h3>Jornales manuales registrados</h3>
     <p>Últimos 10 movimientos. La fecha y hora indican cuándo se añadió, editó o eliminó el jornal.</p>
