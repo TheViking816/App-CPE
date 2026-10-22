@@ -56,7 +56,7 @@ export default function PortalCredentialPilot({ session }) {
             <div className="portal-pilot-password"><input ref={input} id="portal-request-password" type={show ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="off" maxLength={256} required disabled={busy} />
               <button type="button" aria-label={show ? 'Ocultar contraseña del portal' : 'Mostrar contraseña del portal'} onClick={() => setShow(!show)} disabled={busy}>{show ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
             {error && <p className="form-error" role="alert">{error}</p>}
-            <button className="primary" disabled={busy || !password}>{busy ? 'Guardando…' : 'Guardar contraseña'}</button>
+            <button className="primary" disabled={busy || !password}>{busy ? 'Guardando…' : 'Leer enlaces'}</button>
           </form>}
         </div>
       </section>
