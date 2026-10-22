@@ -9,3 +9,17 @@
 .portal-pilot-password input { min-width:0; flex:1; }
 .portal-pilot-password button { display:grid; place-items:center; padding:10px; }
 .portal-credential-pilot small { max-width:650px; line-height:1.5; }
+.portal-link-request-overlay { position:fixed; inset:0; z-index:1100; background:rgba(8,30,53,.55); display:flex; align-items:center; justify-content:center; padding:18px; overflow:auto; }
+.portal-link-request-modal { width:min(100%,480px); max-height:90dvh; overflow:auto; background:#fff; border:1px solid #cbdced; border-radius:20px; box-shadow:0 20px 70px #06172b40; color:#12365b; }
+.portal-link-request-modal header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 22px; border-bottom:1px solid #dce8f3; background:#edf5fc; }
+.portal-link-request-modal h2 { font-size:1.3rem; margin:0; }
+.portal-link-request-modal header button,.portal-link-request-modal .portal-pilot-password button { display:grid; place-items:center; width:42px; height:42px; flex-shrink:0; padding:0; border:1px solid #bfd2e5; border-radius:10px; color:#12365b; background:white; }
+.portal-link-request-body { padding:22px; }
+.portal-link-request-body form { display:grid; gap:12px; }
+.portal-link-request-body p { margin:0 0 4px; line-height:1.5; }
+.portal-link-request-body label { font-weight:700; }
+.portal-link-request-body input { box-sizing:border-box; width:100%; border:1px solid #bfd2e5; border-radius:10px; padding:12px; font:inherit; }
+.portal-link-request-body small { line-height:1.5; color:#506a84; }
+.portal-link-request-body .primary { border:0; border-radius:10px; padding:13px 18px; font:inherit; font-weight:700; color:#fff; background:#155d8c; }
+.portal-link-request-body .primary:disabled { opacity:.55; }
+.portal-link-request-entry p { color:#506a84; }
