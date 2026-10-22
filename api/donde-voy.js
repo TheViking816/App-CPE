@@ -40,8 +40,7 @@ export default async function handler(request, response) {
   const key = String(process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
   if (!key) return respond(response, 503, 'Acceso no disponible.');
   try {
-    const raw = (!chapa && await getLink(base, key, 'app_cpe_get_imported_portal_link', token, { p_section: 'donde-voy' }))
-      || await getLink(base, key, 'app_cpe_get_manual_donde_voy_link', token, chapa ? { p_chapa: chapa } : {})
+    const raw = await getLink(base, key, 'app_cpe_get_manual_donde_voy_link', token, chapa ? { p_chapa: chapa } : {})
       || (!chapa && await getLink(base, key, 'app_cpe_get_noray_link', token, { p_section: 'donde-voy' }));
     if (!raw) return respond(response, 404, 'Acceso no disponible.');
     const target = new URL(raw);

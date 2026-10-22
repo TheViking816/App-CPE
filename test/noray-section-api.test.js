@@ -16,7 +16,6 @@ test('personal Noray relay accepts only saved sections and the official host', a
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
   const requests = [];
   globalThis.fetch = async (url, options) => {
-    if (url.endsWith('/app_cpe_get_imported_portal_link')) return { ok: true, json: async () => null };
     requests.push({ url, body: JSON.parse(options.body) });
     return { ok: true, json: async () => 'https://norayweb.cpevalencia.com/vacaciones?cal=gwt&mode=PROD&req=login&usr=72683&rec=2611&pwd=' + 'a'.repeat(64) };
   };
