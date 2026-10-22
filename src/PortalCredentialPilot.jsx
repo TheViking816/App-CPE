@@ -6,7 +6,7 @@ export default function PortalCredentialPilot({ session }) {
   const [open, setOpen] = useState(false), [password, setPassword] = useState(''), [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [done, setDone] = useState(false), [pending, setPending] = useState(false);
   const input = useRef(null), trigger = useRef(null), dialog = useRef(null);
-  const enabled = String(session.chapa) === '72683';
+  const enabled = Boolean(session.token);
   useEffect(() => {
     let active = true;
     if (enabled) supabase.rpc('app_cpe_portal_link_request_status', { p_token: session.token }).then(({data,error}) => {
