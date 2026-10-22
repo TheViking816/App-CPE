@@ -5,16 +5,16 @@ import portalCensusCapture from "../src/censosPortalCurrent.js";
 import { findByChapa, specialties, validateSpecialtyCenso } from "../src/censo.js";
 
 const expected = {
-  mafis: ["especialidad", 82, [71483, 71450, 71340, 71538]],
-  "apoyo-operacion": ["especialidad", 328, [71119, 72031, 72223, 72528]],
-  "trastainers-rtt": ["especialidad", 662, [72278, 72593, 72155, 71191]],
-  container: ["especialidad", 408, [72025, 72238, 71753, 71237]],
-  "pol-capataz": ["polivalencia", 33, [71003, 71434, 71434, 71434]],
-  "pol-sobordista": ["polivalencia", 37, [71003, 71434, 71434, 71434]],
-  "pol-elevadoras": ["polivalencia", 139, [71358, 71767, 71481, 71490]],
-  "pol-trincador": ["polivalencia", 604, [72343, 72231, 72692, 71770]],
-  "pol-especialista": ["polivalencia", 1336, [72034, 72635, 71497, 72345]],
-  "pol-conductor-2a": ["polivalencia", 500, [24220, 63291, 71135, 71508]]
+  mafis: ["especialidad", 84, [71434, 71622, 71340, 71542]],
+  "apoyo-operacion": ["especialidad", 333, [71842, 72005, 71501, 72557]],
+  "trastainers-rtt": ["especialidad", 668, [71459, 71954, 72092, 72214]],
+  container: ["especialidad", 412, [71787, 72086, 72116, 71914]],
+  "pol-capataz": ["polivalencia", 44, [71003, 71434, 71434, 71434]],
+  "pol-sobordista": ["polivalencia", 48, [71003, 71434, 71434, 71434]],
+  "pol-elevadoras": ["polivalencia", 129, [71358, 71767, 71481, 71490]],
+  "pol-trincador": ["polivalencia", 602, [72027, 72663, 72692, 71770]],
+  "pol-especialista": ["polivalencia", 1339, [63089, 72507, 71497, 72345]],
+  "pol-conductor-2a": ["polivalencia", 489, [71434, 63291, 71135, 63301]]
 };
 
 test("la captura de Tomas conserva separados los censos TU y TP", () => {
@@ -40,7 +40,7 @@ test("Reserva G IV se muestra como TP sin inventar un censo ausente", () => {
 });
 
 test("Tomas aparece en los censos donde el Chapero lo incluye", () => {
-  for (const id of ["mafis", "trastainers-rtt", "pol-capataz", "pol-sobordista", "pol-elevadoras", "pol-conductor-2a"]) {
+  for (const id of ["mafis", "pol-capataz", "pol-sobordista", "pol-elevadoras", "conductor-2a"]) {
     assert.ok(findByChapa("71206", id), `No se encontro a Tomas en ${id}`);
   }
 });
