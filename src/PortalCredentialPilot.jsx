@@ -48,15 +48,13 @@ export default function PortalCredentialPilot({ session }) {
       <button ref={trigger} type="button" className="primary" onClick={() => { setOpen(true); setDone(false); setError(''); }}>{pending ? 'Actualizar contraseña del portal' : 'Vincular portal'}</button>
     </section>
     {open && <div className="portal-link-request-overlay" onMouseDown={event => { if (event.target===event.currentTarget) close(); }}>
-      <section className="portal-link-request-modal" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="portal-link-request-title" aria-describedby={done ? undefined : 'portal-link-request-description'}>
+      <section className="portal-link-request-modal" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="portal-link-request-title">
         <header><h2 id="portal-link-request-title">Vincular portal</h2><button type="button" onClick={close} disabled={busy} aria-label="Cerrar vinculación del portal"><X size={21} /></button></header>
         <div className="portal-link-request-body">
           {done ? <><p className="banner success" role="status">Contraseña guardada. Tus enlaces personales se incorporarán en la próxima sincronización.</p><button type="button" className="primary" onClick={close}>Cerrar</button></> : <form onSubmit={submit}>
-            <p id="portal-link-request-description">Guarda tu contraseña del portal para que el administrador prepare tus enlaces personales.</p>
             <label htmlFor="portal-request-password">Contraseña del portal</label>
             <div className="portal-pilot-password"><input ref={input} id="portal-request-password" type={show ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="off" maxLength={256} required disabled={busy} />
               <button type="button" aria-label={show ? 'Ocultar contraseña del portal' : 'Mostrar contraseña del portal'} onClick={() => setShow(!show)} disabled={busy}>{show ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
-            <small>La contraseña quedará guardada para que el administrador pueda acceder al portal. Los enlaces se incorporarán en la próxima sincronización.</small>
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="primary" disabled={busy || !password}>{busy ? 'Guardando…' : 'Guardar contraseña'}</button>
           </form>}
