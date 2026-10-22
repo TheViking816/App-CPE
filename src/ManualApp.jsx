@@ -19,6 +19,7 @@ import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
 import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
+import PersonalPortalImport from './PersonalPortalImport.jsx';
 import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, KeyRound, LogOut, MessageCircle, Settings, WalletCards, X } from 'lucide-react';
 
 const SESSION_KEY = 'app-cpe-session';
@@ -161,7 +162,7 @@ function ProfileSettings({ session, onSession }) {
       {notice && <p className="banner success" role="status">{notice}</p>}
       <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar mis datos'}</button>
     </form>
-  </section></SectionPage>;
+  </section><PersonalPortalImport session={session} /></SectionPage>;
 }
 
 function PasswordSettings({ session }) {

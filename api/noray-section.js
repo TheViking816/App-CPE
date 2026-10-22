@@ -41,15 +41,16 @@ export default async function handler(request, response) {
   if (!key) return respond(response, 503, 'Acceso no disponible.');
   try {
     const derivedSection = !['vacaciones', 'dobles'].includes(section);
-    const raw = derivedSection
+    const imported = await savedLink(base, key, 'app_cpe_get_imported_portal_link', token, { p_section: section });
+    const raw = imported || (derivedSection
       ? await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: 'dobles' })
         || await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: 'vacaciones' })
         || await savedLink(base, key, 'app_cpe_get_manual_donde_voy_link', token)
         || await savedLink(base, key, 'app_cpe_get_noray_link', token, { p_section: section })
-      : await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: section });
+      : await savedLink(base, key, 'app_cpe_get_manual_noray_section_link', token, { p_section: section }));
     if (!raw) return respond(response, 404, 'Acceso no disponible.');
     const target = new URL(raw);
-    const sourceSections = derivedSection ? ['/dobles', '/vacaciones', '/donde-voy', `/${section}`] : [`/${section}`];
+    const sourceSections = imported ? [`/${section}`] : derivedSection ? ['/dobles', '/vacaciones', '/donde-voy', `/${section}`] : [`/${section}`];
     if (target.origin !== 'https://norayweb.cpevalencia.com' || !sourceSections.includes(target.pathname)
       || !/^\d{4,8}$/.test(target.searchParams.get('usr') || '')
       || !/^[1-9]\d{0,9}$/.test(target.searchParams.get('rec') || '')
