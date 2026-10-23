@@ -383,6 +383,17 @@ function QuickPremiumModal({ value, onChange, onClose, onSave, busy, error }) {
   </section></div>;
 }
 
+function JournalEditorDialog({ children, onClose, busy }) {
+  useEffect(() => {
+    const onKeyDown = (event) => { if (event.key === 'Escape' && !busy) onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [busy, onClose]);
+  return <div className="manual-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+    <div className="manual-jornal-dialog" role="dialog" aria-modal="true" aria-label="Editar jornal">{children}</div>
+  </div>;
+}
+
 function ExchangeNotifications({ rows, onOpen, onMarkAll }) {
   return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Actividad reciente</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
@@ -688,9 +699,23 @@ function Salary({ session, onSession }) {
     try { const result = await updateUserIrpf({ token: session.token, irpfRate: irpf }); const next = { ...session, ...result, irpfRate: irpf }; localStorage.setItem(SESSION_KEY, JSON.stringify(next)); onSession(next); setNotice('IRPF guardado.'); }
     catch (reason) { setError(reason.message); } finally { setBusy(false); }
   }
-  const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setError(''); setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); };
   const editPaidDay = (item) => { setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const unreadCount = notifications.filter((row) => !row.readAt).length;
+
+  const jornalEditor = <section className="manual-panel editor manual-editor-card manual-jornal-editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button type="button" disabled={busy} onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>{form.id && error && <p className="form-error manual-editor-error" role="alert">{error}</p>}
+      <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
+      <label>Turno<select value={form.shift} onChange={(event) => setForm({ ...form, shift: event.target.value })}>{['02-08','06-12','08-14','14-20','18-00','19-01','20-02'].map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>
+      <label>Puesto / especialidad<select value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} required>{optionsForGroup(form.worker_group, form.specialty).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
+      <label>Empresa o terminal<select value={form.company === 'TCV' ? 'APM' : form.company} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option>{form.company && !['CSP','TCV','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
+      <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
+      <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
+      <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>
+      {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
+      <div className="form-actions"><button type="button" disabled={busy} onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
+    </form></section>;
 
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}</header><div className="visual-content">
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
@@ -704,19 +729,7 @@ function Salary({ session, onSession }) {
       : <>
     {error && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showImport && <PortalJornalesImport existingItems={months.flatMap((entry) => entry.items)} manualRows={manualRows} busy={busy} onImport={importPastedJornales} onClose={() => setShowImport(false)} />}
-    {showForm && <section className="manual-panel editor manual-editor-card manual-jornal-editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>
-      <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
-      <label>Turno<select value={form.shift} onChange={(event) => setForm({ ...form, shift: event.target.value })}>{['02-08','06-12','08-14','14-20','18-00','19-01','20-02'].map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>
-      <label>Puesto / especialidad<select value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} required>{optionsForGroup(form.worker_group, form.specialty).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-      <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
-      <label>Empresa o terminal<select value={form.company === 'TCV' ? 'APM' : form.company} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option>{form.company && !['CSP','TCV','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
-      <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
-      <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
-      <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>
-      {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
-      <div className="form-actions"><button type="button" onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
-    </form></section>}
+    {showForm && (form.id ? <JournalEditorDialog onClose={() => setShowForm(false)} busy={busy}>{jornalEditor}</JournalEditorDialog> : jornalEditor)}
     {showPaidForm && <section className="manual-panel editor paid-day-editor manual-editor-card"><div className="section-head"><h2>{paidForm.id ? 'Editar día VA / FM' : 'Añadir día VA / FM'}</h2><button type="button" onClick={() => setShowPaidForm(false)}>Cerrar</button></div><form onSubmit={savePaidDay}>
       <label>Fecha<input type="date" value={paidForm.work_date} onChange={(event) => setPaidForm({ ...paidForm, work_date: event.target.value })} required /></label>
       <label>Concepto<select value={paidForm.concept_type} onChange={(event) => setPaidForm({ ...paidForm, concept_type: event.target.value })}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option></select></label>

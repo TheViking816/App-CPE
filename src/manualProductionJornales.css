@@ -50,6 +50,10 @@
 .manual-quick-premium-actions button { min-height:38px; padding:8px 12px; border:1px solid #cbdbea; border-radius:8px; background:#fff; color:#17558a; font:inherit; font-size:12px; font-weight:850; cursor:pointer; }
 .manual-quick-premium-actions button[type="submit"] { border-color:#1764ad; background:#1764ad; color:#fff; }
 .manual-quick-premium-actions button:disabled { opacity:.55; cursor:default; }
+.manual-jornal-dialog { width:min(100%,720px); max-height:min(90dvh,850px); overflow:auto; border-radius:16px; box-shadow:0 22px 60px #0005; }
+.manual-jornal-dialog .manual-editor-card { width:100%; margin:0; padding:0; border:2px solid #aac8e1; border-radius:16px; background:#fff; box-shadow:none; overflow:hidden; }
+.manual-jornal-dialog .manual-editor-error { grid-column:1/-1; margin:0; padding:9px 12px; border-radius:8px; font-size:13px; }
+@media(max-width:600px){.manual-detail-overlay:has(.manual-jornal-dialog) { padding:10px; }.manual-jornal-dialog { max-height:calc(100dvh - 20px); }}
 .manual-relay-hour { display:flex; align-items:center; gap:10px; width:max-content; max-width:100%; margin:0 0 16px; padding:10px 12px; border:1px solid #cbddeb; border-radius:9px; background:#f5f9fc; color:#143d63; cursor:pointer; }
 .manual-relay-hour.is-enabled { border-color:#23a17a; background:#e9f8f1; }
 .manual-relay-hour input { width:18px; height:18px; margin:0; accent-color:#16845f; cursor:pointer; }
