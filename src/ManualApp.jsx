@@ -364,7 +364,22 @@ function JornalDetail({ item, busy, relayBusy, relayError, onRelayChange, onClos
     {!paidDay && item.payroll.relayHourEligible && <label className={`manual-relay-hour${item.payroll.relayHourEnabled ? ' is-enabled' : ''}`}><input type="checkbox" checked={item.payroll.relayHourEnabled} disabled={busy || relayBusy} onChange={(event) => onRelayChange(item, event.target.checked)} /><span>Hora de relevo<small>{item.payroll.relayHourRateKey === 'FESTIVO' ? 'Festiva' : 'Laborable'} · +{formatEuro(item.payroll.relayHourRate)}</small></span></label>}
     {relayError && <p className="manual-relay-error" role="alert">{relayError}</p>}
     {!paidDay && (item.source === 'manual' ? item.manualPart : item.parte) && <p>Parte {item.source === 'manual' ? item.manualPart : item.parte}</p>}{item.notes && <p>{item.notes}</p>}
-    <div className="manual-detail-actions">{item.source === 'manual' && <><button disabled={busy} onClick={() => action(onEdit)}>Editar jornal</button><button disabled={busy} onClick={() => action(() => onRemove(item.id))}>Eliminar jornal</button></>}{item.source === 'historico' && <button disabled={busy} onClick={() => action(onPremium)}>Editar prima</button>}{item.source === 'manual_paid_day' && <><button disabled={busy} onClick={() => action(onEditPaid)}>Editar día</button><button disabled={busy} onClick={() => action(() => onRemovePaid(item.id))}>Eliminar día</button></>}</div>
+    <div className="manual-detail-actions">{item.source === 'manual' && <><button type="button" disabled={busy} onClick={() => action(onEdit)}>Editar jornal</button><button type="button" disabled={busy} onClick={() => action(onPremium)}>Editar prima</button><button type="button" className="is-danger" disabled={busy} onClick={() => action(() => onRemove(item.id))}>Eliminar jornal</button></>}{item.source === 'historico' && <button type="button" disabled={busy} onClick={() => action(onPremium)}>Editar prima</button>}{item.source === 'manual_paid_day' && <><button type="button" disabled={busy} onClick={() => action(onEditPaid)}>Editar día</button><button type="button" disabled={busy} onClick={() => action(() => onRemovePaid(item.id))}>Eliminar día</button></>}</div>
+  </section></div>;
+}
+
+function QuickPremiumModal({ value, onChange, onClose, onSave, busy, error }) {
+  useEffect(() => {
+    const onKeyDown = (event) => { if (event.key === 'Escape' && !busy) onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [busy, onClose]);
+  return <div className="manual-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}><section className="manual-detail-modal manual-quick-premium" role="dialog" aria-modal="true" aria-labelledby="quick-premium-title">
+    <header><h2 id="quick-premium-title">Editar prima</h2><button type="button" onClick={onClose} disabled={busy} aria-label="Cerrar"><X size={21} /></button></header>
+    <form onSubmit={onSave}><label htmlFor="quick-premium-amount">Importe de la prima (€)</label><input id="quick-premium-amount" inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0,00" autoFocus required />
+      {error && <p className="manual-quick-premium-error" role="alert">{error}</p>}
+      <div className="manual-quick-premium-actions"><button type="button" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar prima'}</button></div>
+    </form>
   </section></div>;
 }
 
@@ -416,6 +431,8 @@ function Salary({ session, onSession }) {
   const [vacationLinkAvailable, setVacationLinkAvailable] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
+  const [premiumEditor, setPremiumEditor] = useState(null);
+  const [premiumError, setPremiumError] = useState('');
   const [irpf, setIrpf] = useState(Number(session.irpfRate) || 0);
 
   const load = async () => {
@@ -627,16 +644,33 @@ function Salary({ session, onSession }) {
     } catch (reason) { setError(reason.message || 'No se pudo eliminar el día.'); }
     finally { setBusy(false); }
   }
-  async function editHistoricPremium(item) {
-    const value = window.prompt('Prima manual en euros (0 si no hubo prima):', String(item.payroll.prima ?? 0));
-    if (value === null) return;
-    const amount = euroInput(value);
-    if (!Number.isFinite(amount) || amount < 0) { setError('Introduce un importe válido.'); return; }
-    setBusy(true); setError('');
+  function editPremium(item) {
+    setPremiumError('');
+    setPremiumEditor({ item, value: item.payroll.primaPending ? '' : String(item.payroll.prima ?? 0) });
+  }
+  async function savePremium(event) {
+    event.preventDefault();
+    if (!premiumEditor) return;
+    const amount = euroInput(premiumEditor.value);
+    if (!Number.isFinite(amount) || amount < 0) { setPremiumError('Introduce un importe válido.'); return; }
+    setBusy(true); setPremiumError(''); setError('');
     try {
-      await setUserManualPremium({ token: session.token, jornalKey: item.payroll.manualPremiumKey, amount, portalAmount: item.payroll.portalPrima });
-      setPremiums(await getUserManualPremiums({ token: session.token })); setNotice('Prima guardada.');
-    } catch (reason) { setError(reason.message); } finally { setBusy(false); }
+      if (premiumEditor.item.source === 'manual') {
+        const row = manualRows.find((entry) => entry.id === premiumEditor.item.id);
+        if (!row) throw new Error('No se encontró el jornal. Actualiza el historial y vuelve a intentarlo.');
+        const saved = await rpc('app_cpe_save_manual_jornal', { p_token: session.token, p_id: row.id,
+          p_work_date: row.work_date, p_shift: row.shift, p_specialty: row.specialty,
+          p_worker_group: row.worker_group, p_operation_type: row.operation_type, p_premium: amount,
+          p_notes: packManualNotes({ ...unpackManualNotes(row.notes), premiumKnown: true }) });
+        setManualRows((rows) => rows.map((entry) => entry.id === saved.id ? saved : entry));
+      } else {
+        await setUserManualPremium({ token: session.token, jornalKey: premiumEditor.item.payroll.manualPremiumKey,
+          amount, portalAmount: premiumEditor.item.payroll.portalPrima });
+        setPremiums(await getUserManualPremiums({ token: session.token }));
+      }
+      setPremiumEditor(null); setNotice('Prima guardada.');
+    } catch (reason) { setPremiumError(reason.message || 'No se pudo guardar la prima.'); }
+    finally { setBusy(false); }
   }
   async function toggleRelayHour(item, enabled) {
     const jornalKey = item.payroll?.relayHourKey;
@@ -691,7 +725,7 @@ function Salary({ session, onSession }) {
     </form></section>}
     {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onImport={() => { setShowImport(true); setShowForm(false); setShowPaidForm(false); setNotice(''); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onAdd={() => { setForm(blank()); setShowForm(true); setShowImport(false); setShowPaidForm(false); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowImport(false); setShowForm(false); setNotice(''); }} portalAction={(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <div className="personal-portal-actions">{personalLinkAvailable && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="jornales" /><button type="submit">Jornales y primas <ExternalLink size={15} aria-hidden="true" /></button></form>}{doblesLinkAvailable && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="dobles" /><button type="submit">Solicitar dobles y HS <ExternalLink size={15} aria-hidden="true" /></button></form>}</div>}>
       {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="portal-jornales-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} onOpen={setSelectedDetail} />)}</div>}
-    </ManualSalaryDashboard>}{selectedDetailItem && <JornalDetail item={selectedDetailItem} busy={busy} relayBusy={Boolean(savingRelayHourKey)} relayError={relayHourError} onRelayChange={toggleRelayHour} onClose={() => { setSelectedDetail(null); setRelayHourError(''); }} onEdit={edit} onRemove={remove} onPremium={editHistoricPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}</>}</div>
+    </ManualSalaryDashboard>}{selectedDetailItem && <JornalDetail item={selectedDetailItem} busy={busy} relayBusy={Boolean(savingRelayHourKey)} relayError={relayHourError} onRelayChange={toggleRelayHour} onClose={() => { setSelectedDetail(null); setRelayHourError(''); }} onEdit={edit} onRemove={remove} onPremium={editPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}{premiumEditor && <QuickPremiumModal value={premiumEditor.value} onChange={(value) => setPremiumEditor((current) => ({ ...current, value }))} onClose={() => setPremiumEditor(null)} onSave={savePremium} busy={busy} error={premiumError} />}</>}</div>
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">
       {[
         ['chapero', 'Chapero', BriefcaseBusiness],
