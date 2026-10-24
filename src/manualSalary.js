@@ -51,7 +51,28 @@ export function manualPaidDayEntry(row) {
   };
 }
 
-export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}, manualPaidDays = []) {
+export function sharedPremiumRequest(item) {
+  if (!item?.payroll?.date || !item?.payroll?.shift || item.isVacation || item.isTraining) return null;
+  const key = item.source === 'manual' ? `manual:${item.id}` : item.payroll.manualPremiumKey;
+  if (!key) return null;
+  const parte = item.source === 'manual' ? item.manualPart : item.parte;
+  const vessel = String(item.buque || '').trim();
+  if (!/^\d{1,12}$/.test(String(parte || '')) && !vessel) return null;
+  return { key, fecha: item.payroll.date, jornada: item.payroll.shift,
+    puesto: item.especialidad, parte: /^\d{1,12}$/.test(String(parte || '')) ? String(parte) : '',
+    buque: vessel, empresa: String(item.empresa || '').trim() };
+}
+
+function applySharedPremium(item, sharedPremiums) {
+  const request = sharedPremiumRequest(item);
+  const shared = Number(sharedPremiums?.[request?.key]);
+  if (!request || !Number.isFinite(shared) || shared <= 0 || item.payroll.manualPrima != null) return item;
+  const previous = Number(item.payroll.prima || 0);
+  return { ...item, payroll: { ...item.payroll, prima: shared, primaPending: false,
+    primaSource: 'shared', total: money(item.payroll.total - previous + shared) } };
+}
+
+export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}, manualPaidDays = [], sharedPremiums = {}) {
   const payload = snapshot?.payload || {};
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
@@ -110,7 +131,9 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
         parte: details.part || `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig, relayHours, remateHours)[0];
-      const premiumKnown = details.premiumKnown !== false || row.operation_type === 'RECEPCION_ENTREGA';
+      const premiumKnown = details.premiumKnown === true
+        || (details.premiumKnown == null && Number(row.premium) > 0)
+        || row.operation_type === 'RECEPCION_ENTREGA';
       const premium = premiumKnown ? money(row.premium) : null;
       const operationLabel = details.operation || (row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
         : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT');
@@ -121,7 +144,7 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
     });
     const paidByDate = new Map();
     for (const item of manuallyPaid.filter((entry) => entry.payroll.date.startsWith(`${key}-`))) paidByDate.set(item.payroll.date, item);
-    const items = reconcileContinuousDoubleMeals([...historicItems, ...newItems, ...paidByDate.values()])
+    const items = reconcileContinuousDoubleMeals([...historicItems, ...newItems, ...paidByDate.values()].map((item) => applySharedPremium(item, sharedPremiums)))
       .sort((a, b) => b.payroll.date.localeCompare(a.payroll.date) || b.payroll.shift.localeCompare(a.payroll.shift));
     return { key, label: period.monthLabel, items, total: money(items.reduce((sum, item) => sum + item.payroll.total, 0)),
       premiums: money(items.reduce((sum, item) => sum + (item.payroll.prima || 0), 0)) };

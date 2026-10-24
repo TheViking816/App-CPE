@@ -6,7 +6,7 @@ import RestExchangePanel from './RestExchangePanel.jsx';
 import VacationExchangePanel from './VacationExchangePanel.jsx';
 import ExchangeConversations, { conversationHash, directConversationHash } from './ExchangeConversations.jsx';
 import { hashForExchangeOffer } from './navigation.js';
-import { buildManualSalaryMonths, companyImage, salaryPeriod } from './manualSalary.js';
+import { buildManualSalaryMonths, companyImage, salaryPeriod, sharedPremiumRequest } from './manualSalary.js';
 import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro, reconcileContinuousDoubleMeals } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { specialties as censoSpecialties } from './censo.js';
@@ -33,7 +33,7 @@ const viewFromHash = () => {
   return ACTIVE_PAGES.has(route) ? route : 'sueldometro';
 };
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
-const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: optionsForGroup('II')[0], worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '0', part: '', notes: '' });
+const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: optionsForGroup('II')[0], worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '', part: '', notes: '' });
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
@@ -436,6 +436,7 @@ function Salary({ session, onSession }) {
   const [manualRows, setManualRows] = useState([]);
   const [paidRows, setPaidRows] = useState([]);
   const [premiums, setPremiums] = useState({});
+  const [sharedPremiums, setSharedPremiums] = useState({});
   const [relayHours, setRelayHours] = useState({});
   const [savingRelayHourKey, setSavingRelayHourKey] = useState('');
   const [relayHourError, setRelayHourError] = useState('');
@@ -464,6 +465,16 @@ function Salary({ session, onSession }) {
   const [premiumError, setPremiumError] = useState('');
   const [irpf, setIrpf] = useState(Number(session.irpfRate) || 0);
 
+  const refreshSharedPremiums = async (oldData, rows, rateData, premiumData, relayData, remateData, paidDays) => {
+    const requests = buildManualSalaryMonths(oldData, rows || [], rateData, premiumData || {}, relayData || {}, remateData || {}, paidDays || [])
+      .flatMap((entry) => entry.items).map(sharedPremiumRequest).filter(Boolean);
+    const batches = [];
+    for (let i = 0; i < requests.length; i += 250) batches.push(requests.slice(i, i + 250));
+    const responses = await Promise.all(batches.map((items) =>
+      rpc('app_cpe_get_my_shared_manual_premiums', { p_token: session.token, p_requests: items })));
+    setSharedPremiums(Object.fromEntries(responses.flat().map((row) => [row.key, Number(row.amount)])));
+  };
+
   const load = async () => {
     setLoading(true); setError('');
     try {
@@ -475,9 +486,17 @@ function Salary({ session, onSession }) {
         getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token })
       ]);
       setSnapshot(oldData); setManualRows(newRows || []); setPaidRows(paidDays || []); setPremiums(premiumData || {}); setConfig(rateData); setRelayHours(relayData || {}); setRemateHours(remateData || {});
+      await refreshSharedPremiums(oldData, newRows, rateData, premiumData, relayData, remateData, paidDays).catch(() => {});
     } catch (reason) { setError(reason.message || 'No se pudieron cargar los datos.'); }
     finally { setLoading(false); }
   };
+  useEffect(() => {
+    if (!config) return undefined;
+    const timer = window.setInterval(() => {
+      refreshSharedPremiums(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows).catch(() => {});
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [session.token, snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
   useEffect(() => { load(); if (!session.supportAccess && String(session.chapa) !== '72683') trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
   useEffect(() => {
     let active = true;
@@ -549,7 +568,7 @@ function Salary({ session, onSession }) {
     } else navigate(section);
   };
 
-  const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
+  const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums]);
   const currentMonthKey = today().slice(0, 7);
   const selectedMonthKey = month || currentMonthKey;
   const chosen = months.find((item) => item.key === selectedMonthKey) || {
@@ -583,9 +602,10 @@ function Salary({ session, onSession }) {
       const saved = await rpc('app_cpe_save_manual_jornal', { p_token: session.token, p_id: form.id,
         p_work_date: form.work_date, p_shift: form.shift, p_specialty: form.specialty.trim(),
         p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_premium: premium,
-        p_notes: packManualNotes({ ...form, premiumKnown: true }) });
+        p_notes: packManualNotes({ ...form, premiumKnown: form.premium !== '' }) });
       setManualRows((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
       setMonth(saved.work_date.slice(0, 7)); setShowForm(false); setForm(blank()); setNotice('Jornal guardado.');
+      await load();
     } catch (reason) { setError(reason.message || 'No se pudo guardar el jornal.'); }
     finally { setBusy(false); }
   }
@@ -698,6 +718,7 @@ function Salary({ session, onSession }) {
         setPremiums(await getUserManualPremiums({ token: session.token }));
       }
       setPremiumEditor(null); setNotice('Prima guardada.');
+      await load();
     } catch (reason) { setPremiumError(reason.message || 'No se pudo guardar la prima.'); }
     finally { setBusy(false); }
   }
@@ -730,7 +751,7 @@ function Salary({ session, onSession }) {
       <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
       <label>Empresa o terminal<select value={selectedCompany} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option>{form.company && selectedCompany === form.company && !['CSP','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
       <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
-      <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
+      <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} placeholder="Pendiente" /></label>
       <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>
       {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
       <div className="form-actions"><button type="button" disabled={busy} onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>

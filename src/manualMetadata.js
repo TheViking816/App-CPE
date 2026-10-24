@@ -6,6 +6,7 @@ export function unpackManualNotes(value = '') {
   try {
     const data = JSON.parse(text.slice(PREFIX.length));
     const result = { company: String(data.company || ''), vessel: String(data.vessel || ''), part: String(data.part || ''), notes: String(data.notes || '') };
+    if (typeof data.premiumKnown === 'boolean') result.premiumKnown = data.premiumKnown;
     if (data.source === 'portal_paste') Object.assign(result, { source: 'portal_paste', portalType: String(data.portalType || ''), operation: String(data.operation || ''), premiumKnown: data.premiumKnown !== false });
     return result;
   } catch {
@@ -13,11 +14,12 @@ export function unpackManualNotes(value = '') {
   }
 }
 
-export function packManualNotes({ company = '', vessel = '', part = '', notes = '', source = '', portalType = '', operation = '', premiumKnown = true }) {
+export function packManualNotes({ company = '', vessel = '', part = '', notes = '', source = '', portalType = '', operation = '', premiumKnown }) {
   const partNumber = String(part).trim();
   if (partNumber && !/^\d{1,12}$/.test(partNumber)) throw new Error('Introduce un número de parte válido.');
   const data = { company: String(company).trim(), vessel: String(vessel).trim(), part: partNumber, notes: String(notes).trim() };
-  if (source === 'portal_paste') Object.assign(data, { source, portalType: String(portalType).trim(), operation: String(operation).trim(), premiumKnown: Boolean(premiumKnown) });
+  if (typeof premiumKnown === 'boolean') data.premiumKnown = premiumKnown;
+  if (source === 'portal_paste') Object.assign(data, { source, portalType: String(portalType).trim(), operation: String(operation).trim(), premiumKnown: premiumKnown !== false });
   const text = PREFIX + JSON.stringify(data);
   if (text.length > 500) throw new Error('Acorta el nombre del buque o el número de parte.');
   return text;

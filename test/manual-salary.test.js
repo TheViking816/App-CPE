@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildManualSalaryMonths, companyImage, manualPaidDayEntry, salaryPeriod } from '../src/manualSalary.js';
+import { buildManualSalaryMonths, companyImage, manualPaidDayEntry, salaryPeriod, sharedPremiumRequest } from '../src/manualSalary.js';
+
+test('a shared premium fills only a jornal without its own saved premium', () => {
+  const template = { work_date: '2026-10-09', shift: '14-20', specialty: 'CONDUCTOR 1a',
+    worker_group: 'II', operation_type: 'ESTIBA',
+    notes: packManualNotes({ part: '29211', vessel: 'MSC Lagos', company: 'MSC', premiumKnown: false }) };
+  const pending = { ...template, id: 'pending', premium: 0 };
+  const saved = { ...template, id: 'saved', premium: 83,
+    notes: packManualNotes({ part: '29211', vessel: 'MSC Lagos', company: 'MSC', premiumKnown: true }) };
+  const shared = { 'manual:pending': 176.64, 'manual:saved': 176.64 };
+  const items = buildManualSalaryMonths(null, [pending, saved], null, {}, {}, {}, [], shared)[0].items;
+  assert.equal(items.find((item) => item.id === 'pending').payroll.prima, 176.64);
+  assert.equal(items.find((item) => item.id === 'saved').payroll.prima, 83);
+  assert.equal(sharedPremiumRequest(items[0]).parte, '29211');
+});
 import { optionsForGroup } from '../src/manualSpecialties.js';
 import { enrichJornales } from '../src/payroll.js';
 import { packManualNotes, unpackManualNotes } from '../src/manualMetadata.js';
