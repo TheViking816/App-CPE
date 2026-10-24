@@ -13,6 +13,7 @@ import { specialties as censoSpecialties } from './censo.js';
 import { PROFESSIONAL_GROUPS, professionalGroupCode } from './professionalGroups.js';
 import { REST_GROUPS } from './restGroups.js';
 import { packManualNotes, unpackManualNotes } from './manualMetadata.js';
+import { companySelectValue } from './manualCompany.js';
 import { planPortalJornalesImport } from './portalJornalesPaste.js';
 import PortalJornalesImport from './PortalJornalesImport.jsx';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
@@ -719,6 +720,7 @@ function Salary({ session, onSession }) {
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setError(''); setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); };
   const editPaidDay = (item) => { setError(''); setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); };
   const unreadCount = notifications.filter((row) => !row.readAt).length;
+  const selectedCompany = companySelectValue(form.company);
 
   const jornalEditor = <section className="manual-panel editor manual-editor-card manual-jornal-editor"><div className="section-head"><h2>{form.id ? 'Editar jornal' : 'Nuevo jornal'}</h2><button type="button" disabled={busy} onClick={() => setShowForm(false)}>Cerrar</button></div><form onSubmit={save}>{error && <p className="form-error manual-editor-error" role="alert">{error}</p>}
       <label>Fecha<input type="date" value={form.work_date} onChange={(event) => setForm({ ...form, work_date: event.target.value })} required /></label>
@@ -726,7 +728,7 @@ function Salary({ session, onSession }) {
       <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>
       <label>Puesto / especialidad<select value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} required>{optionsForGroup(form.worker_group, form.specialty).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
       <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
-      <label>Empresa o terminal<select value={form.company === 'TCV' ? 'APM' : form.company} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option>{form.company && !['CSP','TCV','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
+      <label>Empresa o terminal<select value={selectedCompany} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option>{form.company && selectedCompany === form.company && !['CSP','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
       <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
       <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} required /></label>
       <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>
