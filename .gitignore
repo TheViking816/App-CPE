@@ -8,3 +8,4 @@ video-review/
 .vercel
 .env*.local
 .venv-cloudflare-lab/
+.local/noray-pilot-72683.json

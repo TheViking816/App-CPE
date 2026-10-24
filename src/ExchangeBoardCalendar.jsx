@@ -7,8 +7,12 @@ import { personalRestMarks, personalVacationMarks } from "./personalRestCalendar
 const LABELS = { swap: "Intercambio", give: "Cesión", want: "Busco descanso" };
 const dayKey = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 const monthName = (year, month) => new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+const officialMark = (code) => ({
+  DS: { type: 'manual-rest', label: 'DS' }, FS: { type: 'chosen-holiday', label: 'FS' },
+  VA: { type: 'vacation', label: 'VA' }, FM: { type: 'training', label: 'FM' }
+})[code];
 
-export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "", overrides = [], paidDays = [], holidays = [], jornales = {}, onEditDate }) {
+export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "", overrides = [], paidDays = [], holidays = [], jornales = {}, officialDays = {}, restHeader = null, onEditDate }) {
   const todayKey = madridTodayKey();
   const [visibleMonth, setVisibleMonth] = useState(() => todayKey.slice(0, 7));
   const group = parseRestGroup(restGroup);
@@ -38,6 +42,11 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
   };
   const restCalendarAvailable = !vacation && restMonths.includes(selectedMonth);
   return <section className="exchange-board-calendar" aria-label={`Calendario de ofertas de ${vacation ? "vacaciones" : "descansos"}`}>
+    {!vacation && restHeader?.year === selectedYear && restHeader?.monthNumber === selectedMonth && <div className="noray-pilot-rest-header">
+      <span><strong>Grupos descanso:</strong> {restHeader.groupVacation} / {restHeader.groupWeekly}</span>
+      <span><strong>FS:</strong> {restHeader.fsMonth?.used}/{restHeader.fsMonth?.max} mes | {restHeader.fsYear?.used}/{restHeader.fsYear?.max} año</span>
+      <span><strong>{restHeader.month?.name}:</strong> min {restHeader.month?.min} / max {restHeader.month?.max} ({restHeader.month?.current})</span>
+    </div>}
     <header><div><small>{vacation ? "Tablón de ofertas" : group ? `Descansos del grupo ${group.label} · Ofertas` : "Descansos y ofertas"}</small>
       <h3>{monthName(selectedYear, selectedMonth)}</h3></div>
       <div><button type="button" aria-label="Mes anterior" disabled={!vacation && todayKey.startsWith("2026-") && selectedYear === 2026 && selectedMonth === 1} onClick={() => changeMonth(-1)}>‹</button><button type="button" aria-label="Mes siguiente" disabled={!vacation && todayKey.startsWith("2026-") && selectedYear === 2026 && selectedMonth === 12} onClick={() => changeMonth(1)}>›</button></div>
@@ -61,8 +70,10 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
               const date = dayKey(year, month, index + 1);
               const isHoliday = !vacation && (holidayDates.has(date) || new Date(year, month - 1, index + 1).getDay() === 0);
               const dayOffers = entries.get(date) || [];
-              const marks = vacation ? personalVacationMarks(date, paidDays)
-                : personalRestMarks(date, group, overrides, paidDays);
+              const official = Object.hasOwn(officialDays, date) ? officialMark(officialDays[date]) : null;
+              const marks = vacation
+                ? official?.type === 'vacation' || official?.type === 'training' ? [official] : personalVacationMarks(date, paidDays)
+                : Object.hasOwn(officialDays, date) ? official ? [official] : [] : personalRestMarks(date, group, overrides, paidDays);
               const restType = marks[0]?.type || "";
               const restLabel = marks.map((mark) => mark.label).join(" y ");
               const dayJornales = vacation ? [] : jornales[date] || [];

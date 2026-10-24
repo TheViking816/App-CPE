@@ -17,6 +17,7 @@ import { companySelectValue } from './manualCompany.js';
 import { planPortalJornalesImport } from './portalJornalesPaste.js';
 import PortalJornalesImport from './PortalJornalesImport.jsx';
 import { ManualSalaryDashboard } from './ManualSalaryDashboard.jsx';
+import { loadNorayPilotSnapshot, mergeNorayPilotSalary } from './norayPilot.js';
 import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
@@ -478,15 +479,17 @@ function Salary({ session, onSession }) {
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const [oldData, newRows, paidDays, premiumData, rateData, relayData, remateData] = await Promise.all([
+      const [oldData, newRows, paidDays, premiumData, rateData, relayData, remateData, pilot] = await Promise.all([
         rpc('app_cpe_get_saved_salary_history', { p_token: session.token }),
         rpc('app_cpe_list_manual_jornales', { p_token: session.token }),
         rpc('app_cpe_list_manual_paid_days', { p_token: session.token }),
         getUserManualPremiums({ token: session.token }), loadPayrollConfig(),
-        getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token })
+        getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token }),
+        loadNorayPilotSnapshot(session.chapa).catch(() => null)
       ]);
-      setSnapshot(oldData); setManualRows(newRows || []); setPaidRows(paidDays || []); setPremiums(premiumData || {}); setConfig(rateData); setRelayHours(relayData || {}); setRemateHours(remateData || {});
-      await refreshSharedPremiums(oldData, newRows, rateData, premiumData, relayData, remateData, paidDays).catch(() => {});
+      const salaryData = mergeNorayPilotSalary(oldData, newRows || [], pilot);
+      setSnapshot(salaryData); setManualRows(newRows || []); setPaidRows(paidDays || []); setPremiums(premiumData || {}); setConfig(rateData); setRelayHours(relayData || {}); setRemateHours(remateData || {});
+      await refreshSharedPremiums(salaryData, newRows, rateData, premiumData, relayData, remateData, paidDays).catch(() => {});
     } catch (reason) { setError(reason.message || 'No se pudieron cargar los datos.'); }
     finally { setLoading(false); }
   };
@@ -498,6 +501,16 @@ function Salary({ session, onSession }) {
     return () => window.clearInterval(timer);
   }, [session.token, snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
   useEffect(() => { load(); if (!session.supportAccess && String(session.chapa) !== '72683') trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
+  useEffect(() => {
+    if (String(session.chapa) !== '72683' || !['localhost', '127.0.0.1'].includes(window.location.hostname)) return undefined;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      loadNorayPilotSnapshot(session.chapa).then((pilot) => {
+        if (pilot) setSnapshot((current) => mergeNorayPilotSalary(current, manualRows, pilot));
+      }).catch(() => {});
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [session.chapa, manualRows]);
   useEffect(() => {
     let active = true;
     refreshCurrentUser({ token: session.token }).then((current) => {

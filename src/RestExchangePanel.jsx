@@ -11,6 +11,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeTabIcon } from "./ExchangeVisual.
 import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import { loadNorayPilotSnapshot, norayPilotCalendar } from './norayPilot.js';
 import { deleteManualPaidDay, getPersonalRestCalendar, saveManualPaidDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
@@ -85,16 +86,24 @@ export default function RestExchangePanel({ session }) {
   const reloadCalendar = useCallback(async () => {
     if (!session?.token) return;
     try {
-      setCalendarData(await getPersonalRestCalendar(session.token));
+      const [personal, pilot] = await Promise.all([
+        getPersonalRestCalendar(session.token), loadNorayPilotSnapshot(session.chapa).catch(() => null)
+      ]);
+      setCalendarData({ ...personal, ...norayPilotCalendar(pilot) });
       setCalendarError("");
       setCalendarStatus("ready");
     } catch (loadError) {
       setCalendarError(loadError.message || "No se pudo cargar tu calendario personal.");
       setCalendarStatus("error");
     }
-  }, [session?.token]);
+  }, [session?.token, session?.chapa]);
 
   useEffect(() => { setCalendarStatus("loading"); reloadCalendar(); }, [reloadCalendar]);
+  useEffect(() => {
+    if (String(session?.chapa) !== '72683' || !['localhost', '127.0.0.1'].includes(window.location.hostname)) return undefined;
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') reloadCalendar(); }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [session?.chapa, reloadCalendar]);
 
   useEffect(() => {
     let active = true;
@@ -312,7 +321,7 @@ export default function RestExchangePanel({ session }) {
       {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
       <a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a>
     </div>
-    {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales}
+    {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales} officialDays={calendarData.officialDays} restHeader={calendarData.header}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
       : <section className="exchange-board-calendar rest-calendar-placeholder" role="status" aria-live="polite">
         <p>{calendarStatus === "loading" ? "Cargando tu calendario personal…" : "No se pudo cargar tu calendario personal."}</p>

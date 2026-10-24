@@ -8,6 +8,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeTabIcon } from "./ExchangeVisual.
 import { canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
 import { professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import { loadNorayPilotSnapshot, norayPilotCalendar } from './norayPilot.js';
 import { addManualPaidDayRange, deleteManualPaidDay, listManualPaidDays, saveManualPaidDay } from "./personalRestCalendarClient.js";
 import { supabase } from "./supabaseClient.js";
 import { madridTodayKey, vacationOfferExpired } from "./exchangeDeadline.js";
@@ -42,6 +43,7 @@ export default function VacationExchangePanel({ session }) {
   const [notice, setNotice] = useState("");
   const [personalVacationLink, setPersonalVacationLink] = useState(false);
   const [paidDays, setPaidDays] = useState([]);
+  const [pilotCalendar, setPilotCalendar] = useState({ officialDays: {}, vacationPeriods: [] });
   const [vacationEditorOpen, setVacationEditorOpen] = useState(false);
   const [personalBusy, setPersonalBusy] = useState(false);
   const [vacationStart, setVacationStart] = useState(madridTodayKey());
@@ -80,6 +82,16 @@ export default function VacationExchangePanel({ session }) {
   }, [session?.token]);
 
   useEffect(() => { reloadPaidDays(); }, [reloadPaidDays]);
+  useEffect(() => {
+    if (String(session?.chapa) !== '72683') return undefined;
+    let active = true;
+    const refresh = () => loadNorayPilotSnapshot(session.chapa).then((pilot) => {
+      if (active) setPilotCalendar(norayPilotCalendar(pilot));
+    }).catch(() => {});
+    refresh();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [session?.chapa]);
 
   useEffect(() => {
     if (vacationEditorOpen) vacationEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -302,7 +314,8 @@ export default function VacationExchangePanel({ session }) {
 
   return <section className="rest-exchange-panel vacation-exchange-panel exchange-redesign" ref={panelRef}>
     {personalVacationLink && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={15} aria-hidden="true" /></button></form>}
-    <ExchangeBoardCalendar offers={board} paidDays={paidDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />
+    <ExchangeBoardCalendar offers={board} paidDays={paidDays} officialDays={pilotCalendar.officialDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />
+    {pilotCalendar.vacationPeriods.length > 0 && <section className="noray-pilot-vacations" aria-label="Mis vacaciones concedidas"><strong>Mis vacaciones concedidas</strong><div>{pilotCalendar.vacationPeriods.map((period) => <span key={`${period.start}-${period.end}`}>{formatRange(period.start, period.end)} · {period.days} {period.days === 1 ? 'día' : 'días'}</span>)}</div></section>}
     <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir VA o FM</button><span>Los días VA y FM aparecen también en descansos y Sueldómetro.</span></div>
     {vacationEditorOpen && <form className="rest-calendar-editor" ref={vacationEditorRef} onSubmit={saveVacationDays}>
       <label>Desde<input type="date" value={vacationStart} onChange={(event) => { setVacationStart(event.target.value); setPaidType(paidDays.find((row) => row.work_date === event.target.value)?.concept_type || "VA"); if (vacationEnd < event.target.value) setVacationEnd(event.target.value); }} required /></label>

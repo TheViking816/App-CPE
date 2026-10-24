@@ -7,6 +7,12 @@
 .rest-portal-availability-link button{display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:100%;padding:7px 10px;border:1px solid #b9d3ed;border-radius:8px;background:#e8f3ff;color:#104f8a;font-size:12px;font-weight:800}
 .rest-portal-availability-link button:hover,.rest-portal-availability-link button:focus-visible{background:#d8ebff;text-decoration:underline}
 .exchange-board-calendar{padding:20px;border:1px solid #d8e3ef;border-radius:18px;background:#fff;box-shadow:0 8px 24px #152b4810}
+.noray-pilot-rest-header{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 13px;margin-bottom:14px;border:1px solid #cbdcf0;border-radius:11px;background:#edf5ff;color:#163b68;font-size:13px}
+.noray-pilot-rest-header strong{font-weight:800}
+.noray-pilot-vacations{margin-top:12px;padding:14px;border:1px solid #d8e3ef;border-radius:14px;background:#fff;color:#173b65}
+.noray-pilot-vacations>strong{display:block;margin-bottom:10px}
+.noray-pilot-vacations>div{display:flex;flex-wrap:wrap;gap:7px}
+.noray-pilot-vacations span{padding:6px 9px;border-radius:8px;background:#eef4fb;font-size:12px;font-weight:700}
 .exchange-board-calendar header,.exchange-board-calendar header>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .exchange-board-calendar header small{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#4776ae}
 .exchange-board-calendar h3{margin:3px 0;font-size:22px;text-transform:capitalize;color:#142b4c}
