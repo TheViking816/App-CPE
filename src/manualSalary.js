@@ -66,7 +66,7 @@ export function sharedPremiumRequest(item) {
 function applySharedPremium(item, sharedPremiums) {
   const request = sharedPremiumRequest(item);
   const shared = Number(sharedPremiums?.[request?.key]);
-  if (!request || !Number.isFinite(shared) || shared <= 0 || item.payroll.manualPrima != null) return item;
+  if (!request || !Number.isFinite(shared) || shared <= 0 || !item.payroll.primaPending) return item;
   const previous = Number(item.payroll.prima || 0);
   return { ...item, payroll: { ...item.payroll, prima: shared, primaPending: false,
     primaSource: 'shared', total: money(item.payroll.total - previous + shared) } };

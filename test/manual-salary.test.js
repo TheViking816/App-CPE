@@ -15,6 +15,18 @@ test('a shared premium fills only a jornal without its own saved premium', () =>
   assert.equal(items.find((item) => item.id === 'saved').payroll.prima, 83);
   assert.equal(sharedPremiumRequest(items[0]).parte, '29211');
 });
+
+test('a premium already saved in the historical extract is never replaced', () => {
+  const snapshot = { payload: { jornales: { monthLabel: 'Octubre de 2026', rows: [
+    { dia: '09', jornada: '14-20', especialidad: 'CONDUCTOR 1a', parte: '29211', buque: 'MSC Lagos' }
+  ] }, primas: { monthLabel: 'Octubre de 2026', rows: [
+    { parte: '29211', produccion: '83,00' }
+  ] } } };
+  const original = buildManualSalaryMonths(snapshot)[0].items[0];
+  const key = sharedPremiumRequest(original).key;
+  const after = buildManualSalaryMonths(snapshot, [], null, {}, {}, {}, [], { [key]: 176.64 })[0].items[0];
+  assert.equal(after.payroll.prima, 83);
+});
 import { optionsForGroup } from '../src/manualSpecialties.js';
 import { enrichJornales } from '../src/payroll.js';
 import { packManualNotes, unpackManualNotes } from '../src/manualMetadata.js';
