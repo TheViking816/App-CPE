@@ -1,5 +1,6 @@
 import { getUserRelayHours, supabase } from './supabaseClient.js';
 import { calendarJornales } from './calendarJornales.js';
+import { mergeNorayPilotSalary } from './norayPilot.js';
 
 async function rpc(name, args) {
   if (!supabase) throw new Error('Falta la configuración de la base de datos.');
@@ -8,7 +9,7 @@ async function rpc(name, args) {
   return data;
 }
 
-export async function getPersonalRestCalendar(token) {
+export async function getPersonalRestCalendar(token, pilot = null) {
   const [overrides, paidDays, holidays, salaryHistory, manualJornales, relayHours] = await Promise.all([
     rpc('app_cpe_list_rest_day_overrides', { p_token: token }),
     listManualPaidDays(token),
@@ -17,7 +18,8 @@ export async function getPersonalRestCalendar(token) {
     rpc('app_cpe_list_manual_jornales', { p_token: token }),
     getUserRelayHours({ token })
   ]);
-  return { overrides: overrides || [], paidDays: paidDays || [], holidays, jornales: calendarJornales(salaryHistory, manualJornales, relayHours) };
+  const salaryData = mergeNorayPilotSalary(salaryHistory, manualJornales || [], pilot);
+  return { overrides: overrides || [], paidDays: paidDays || [], holidays, jornales: calendarJornales(salaryData, manualJornales, relayHours) };
 }
 
 export async function listPayrollHolidays() {

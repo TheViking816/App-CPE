@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildNorayPilotSnapshot, compareNorayPilotSnapshots } from '../scripts/noray-personal-pilot-data.js';
 import { mergeNorayPilotSalary, norayPilotCalendar } from '../src/norayPilot.js';
 import { packManualNotes } from '../src/manualMetadata.js';
+import { calendarJornales } from '../src/calendarJornales.js';
 
 function fixture() {
   return buildNorayPilotSnapshot({
@@ -46,4 +47,10 @@ test('historial previo intacto; jornal manual del mismo parte prevalece', () => 
   assert.equal(merged.payload.jornales.history[1].rows.length, 0);
   assert.equal(merged.payload.other, 'preserved');
   assert.equal(mergeNorayPilotSalary(existing, [], pilot).payload.jornales.rows.length, 1);
+});
+
+test('el calendario recibe los mismos jornales que el Sueldómetro', () => {
+  const pilot = fixture();
+  const salary = mergeNorayPilotSalary(null, [], pilot);
+  assert.deepEqual(calendarJornales(salary)['2026-10-24'], ['02-08']);
 });

@@ -86,9 +86,8 @@ export default function RestExchangePanel({ session }) {
   const reloadCalendar = useCallback(async () => {
     if (!session?.token) return;
     try {
-      const [personal, pilot] = await Promise.all([
-        getPersonalRestCalendar(session.token), loadNorayPilotSnapshot(session.chapa).catch(() => null)
-      ]);
+      const pilot = await loadNorayPilotSnapshot(session.chapa).catch(() => null);
+      const personal = await getPersonalRestCalendar(session.token, pilot);
       setCalendarData({ ...personal, ...norayPilotCalendar(pilot) });
       setCalendarError("");
       setCalendarStatus("ready");
