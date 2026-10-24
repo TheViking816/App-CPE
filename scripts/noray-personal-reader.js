@@ -28,7 +28,7 @@ async function access(page, identity) {
       body: JSON.stringify({ usr, rec: Number(rec), pwd })
     });
     return { status: response.status, body: response.ok ? await response.json().catch(() => null) : null };
-  }, identity);
+  }, { usr: identity.chapa, rec: identity.rec, pwd: identity.pwd });
   if (result.status !== 200 || !result.body?.intranet_access_token || !result.body?.local_access_token)
     throw new Error(`Noray no autorizó la lectura: HTTP ${result.status}`);
   return result.body;
