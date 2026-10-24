@@ -14,7 +14,7 @@ La tarea `App CPE - Sincronizacion personal manual` se inicia al entrar en Windo
 
 ## Ejecución
 
-Solo el titular de la chapa 72683 inicia el lote desde Monitor, después de comprobar su conexión. Se incluyen únicamente las cuentas activas que tienen enlace personal guardado. El agente procesa una cuenta cada vez, con una pausa entre cuentas. Cada cuenta guarda una copia independiente de jornales, descansos y vacaciones. Los jornales introducidos manualmente no se sobrescriben.
+Solo el titular de la chapa 72683 inicia el lote desde Monitor, después de comprobar su conexión. Se incluyen únicamente las cuentas activas que tienen enlace personal guardado y actividad en la app durante los últimos siete días. Si un usuario vuelve a entrar, podrá participar en una próxima ejecución manual. El agente procesa una cuenta cada vez, con una pausa entre cuentas. Cada cuenta guarda una copia independiente de jornales, descansos y vacaciones. Los jornales introducidos manualmente no se sobrescriben.
 
 El primer error detiene todo el lote, también un HTTP 403, 429 o una comprobación de acceso. No hay reintentos ni ejecución automática posterior. El Monitor indica las cuentas terminadas y la causa de la parada. El registro local está en `%LOCALAPPDATA%\AppCPE\personal-noray\agent.log`; no incluye enlaces ni contraseñas.
 
