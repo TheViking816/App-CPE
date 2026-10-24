@@ -50,21 +50,21 @@ test('historial previo intacto; jornal manual del mismo parte prevalece', () => 
   assert.equal(mergeNorayPilotSalary(existing, [], pilot).payload.jornales.rows.length, 1);
 });
 
-test('jornal manual sin parte ni buque sustituye solo un jornal del mismo día, turno y puesto', () => {
+test('un jornal manual conserva su turno aunque el portal traiga otro puesto o varios partes', () => {
   const pilot = fixture('72668');
-  pilot.journals.rows.push({ ...pilot.journals.rows[0], parte: '30768', buque: 'OTRO BUQUE' });
-  const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 1a',
+  pilot.journals.rows.push({ ...pilot.journals.rows[0], parte: '30768', buque: 'OTRO BUQUE', especialidad: 'CLASIFICADOR' });
+  const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 2a',
     notes: packManualNotes({ company: 'MSC' }) }];
-  const rows = mergeNorayPilotSalary(null, manual, pilot).payload.jornales.rows;
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].parte, '30768');
-  assert.equal(mergeNorayPilotSalary(null, [{ ...manual[0], shift: '14-20' }], pilot).payload.jornales.rows.length, 2);
+  const merged = mergeNorayPilotSalary(null, manual, pilot);
+  assert.equal(merged.payload.jornales.rows.length, 0);
+  assert.deepEqual(calendarJornales(merged, manual)['2026-10-24'], ['02-08']);
+  assert.equal(mergeNorayPilotSalary(null, [{ ...manual[0], shift: '14-20' }], pilot).payload.jornales.rows.length, 1);
 });
 
-test('el buque guardado en notas identifica un jornal sin número de parte', () => {
+test('la fecha y el turno identifican el jornal aunque cambie el buque', () => {
   const pilot = fixture();
-  const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 1a',
-    notes: packManualNotes({ vessel: 'MSC RIDA VIII' }) }];
+  const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CLASIFICADOR',
+    notes: packManualNotes({ vessel: 'OTRO BUQUE', part: '99999' }) }];
   assert.equal(mergeNorayPilotSalary(null, manual, pilot).payload.jornales.rows.length, 0);
 });
 

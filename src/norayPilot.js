@@ -1,4 +1,3 @@
-import { unpackManualNotes } from './manualMetadata.js';
 import { dateRangeKeys } from './vacationExchange.js';
 import { supabase } from './supabaseClient.js';
 
@@ -24,12 +23,8 @@ export async function loadNorayPilotSnapshot(chapa, token) {
 
 export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot) {
   if (!pilot?.journals) return snapshot;
-  const manuallySaved = manualRows.map((row) => {
-    const details = unpackManualNotes(row.notes);
-    return { date: String(row.work_date || ''), part: String(details.part || ''),
-      shift: shift(row.shift), specialty: clean(row.specialty), vessel: clean(details.vessel || row.vessel) };
-  });
-  const matchedManualRows = new Set();
+  const manualSlots = new Set(manualRows.map((row) => `${row.work_date}|${shift(row.shift)}`));
+  const importedSlots = new Set();
   const payload = snapshot?.payload || {};
   const previous = payload.jornales || {};
   const importedMonths = pilot.journalHistory || [pilot.journals];
@@ -39,15 +34,10 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot) {
     const label = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
     const rows = importedRows.filter((row) => {
       const date = `${year}-${pad(month)}-${pad(row.dia)}`;
-      const match = manuallySaved.findIndex((manual, index) => {
-        if (matchedManualRows.has(index) || manual.date !== date) return false;
-        if (manual.part) return manual.part === String(row.parte || '');
-        if (manual.shift !== shift(row.jornada) || manual.specialty !== clean(row.especialidad)) return false;
-        return !manual.vessel || manual.vessel === clean(row.buque);
-      });
-      if (match < 0) return true;
-      matchedManualRows.add(match);
-      return false;
+      const slot = `${date}|${shift(row.jornada)}`;
+      if (manualSlots.has(slot) || importedSlots.has(slot)) return false;
+      importedSlots.add(slot);
+      return true;
     });
     history.push({ year, month, monthLabel: label, rows });
   }
