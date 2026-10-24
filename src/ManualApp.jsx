@@ -268,13 +268,18 @@ function ActivityMonitor({ session }) {
   const [journalError, setJournalError] = useState('');
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
+  const [personalSync, setPersonalSync] = useState(null);
+  const [personalSyncError, setPersonalSyncError] = useState('');
+  const [personalSyncBusy, setPersonalSyncBusy] = useState(false);
+  const [personalSyncReady, setPersonalSyncReady] = useState(false);
   const load = async () => {
-    const [usage, journals, calendar, signups, linkOpens] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens, syncStatus] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
       rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token })
+      rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token }),
+      rpc('app_cpe_admin_personal_sync_status', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -286,6 +291,17 @@ function ActivityMonitor({ session }) {
     else setRegistrationError(signups.reason?.message || 'No se pudieron cargar las nuevas altas.');
     if (linkOpens.status === 'fulfilled') { setPersonalLinks(linkOpens.value); setPersonalLinkError(''); }
     else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
+    if (syncStatus.status === 'fulfilled') { setPersonalSync(syncStatus.value); setPersonalSyncError(''); }
+    else setPersonalSyncError(syncStatus.reason?.message || 'No se pudo cargar la sincronización personal.');
+  };
+  const startPersonalSync = async () => {
+    setPersonalSyncBusy(true); setPersonalSyncError('');
+    try {
+      await rpc('app_cpe_admin_request_personal_sync', { p_token: session.token });
+      setPersonalSyncReady(false);
+      await load();
+    } catch (reason) { setPersonalSyncError(reason.message || 'No se pudo iniciar la sincronización.'); }
+    finally { setPersonalSyncBusy(false); }
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
@@ -307,6 +323,12 @@ function ActivityMonitor({ session }) {
       ? `${dayType(event.previous_day_type)} → ${dayType(event.day_type)}` : dayType(event.day_type);
   return <section className="manual-panel monitor-panel"><div className="section-head"><div><p className="eyebrow">Administración</p><h2>Monitor de actividad</h2></div><button onClick={load}>Actualizar</button></div>
     <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales y días del calendario se conservan en el registro.</p>
+    <div className="personal-sync-control"><div><h3>Sincronización personal</h3><p>Solo al pulsar desde este Monitor: el PC leerá uno a uno los enlaces guardados de las cuentas activas. Se detendrá ante cualquier error, incluido HTTP 403 o 429, sin reintentos.</p>
+      <p><strong>{personalSync?.eligibleCount ?? '—'}</strong> cuentas preparadas · PC {personalSync?.pcOnline ? 'conectado' : 'desconectado'}</p>
+      {personalSync?.status && <p>Última ejecución: <strong>{({ queued: 'pendiente', running: 'en curso', completed: 'terminada', stopped: 'detenida' })[personalSync.status] || personalSync.status}</strong> · {personalSync.completedCount || 0}/{personalSync.totalCount || 0} cuentas{personalSync.currentChapa ? ` · chapa ${personalSync.currentChapa}` : ''}{personalSync.message ? ` · ${personalSync.message}` : ''}</p>}
+      {personalSyncError && <p className="form-error" role="alert">{personalSyncError}</p>}
+      <label className="personal-sync-check"><input type="checkbox" checked={personalSyncReady} onChange={(event) => setPersonalSyncReady(event.target.checked)} /> He comprobado mi conexión antes de iniciar esta ejecución manual.</label>
+    </div><button className="primary" type="button" disabled={!personalSyncReady || !personalSync?.pcOnline || !personalSync?.eligibleCount || ['queued','running'].includes(personalSync?.status) || personalSyncBusy} onClick={startPersonalSync}>{personalSyncBusy ? 'Preparando…' : 'Sincronizar ahora'}</button></div>
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
     <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); setPersonalLinkLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
@@ -485,7 +507,7 @@ function Salary({ session, onSession }) {
         rpc('app_cpe_list_manual_paid_days', { p_token: session.token }),
         getUserManualPremiums({ token: session.token }), loadPayrollConfig(),
         getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token }),
-        loadNorayPilotSnapshot(session.chapa).catch(() => null)
+        loadNorayPilotSnapshot(session.chapa, session.token).catch(() => null)
       ]);
       const salaryData = mergeNorayPilotSalary(oldData, newRows || [], pilot);
       setSnapshot(salaryData); setManualRows(newRows || []); setPaidRows(paidDays || []); setPremiums(premiumData || {}); setConfig(rateData); setRelayHours(relayData || {}); setRemateHours(remateData || {});
@@ -502,15 +524,15 @@ function Salary({ session, onSession }) {
   }, [session.token, snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
   useEffect(() => { load(); if (!session.supportAccess && String(session.chapa) !== '72683') trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
   useEffect(() => {
-    if (String(session.chapa) !== '72683' || !['localhost', '127.0.0.1'].includes(window.location.hostname)) return undefined;
+    if (!session.token) return undefined;
     const timer = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      loadNorayPilotSnapshot(session.chapa).then((pilot) => {
+      loadNorayPilotSnapshot(session.chapa, session.token).then((pilot) => {
         if (pilot) setSnapshot((current) => mergeNorayPilotSalary(current, manualRows, pilot));
       }).catch(() => {});
     }, 60_000);
     return () => window.clearInterval(timer);
-  }, [session.chapa, manualRows]);
+  }, [session.chapa, session.token, manualRows]);
   useEffect(() => {
     let active = true;
     refreshCurrentUser({ token: session.token }).then((current) => {

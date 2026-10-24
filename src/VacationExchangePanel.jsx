@@ -83,15 +83,15 @@ export default function VacationExchangePanel({ session }) {
 
   useEffect(() => { reloadPaidDays(); }, [reloadPaidDays]);
   useEffect(() => {
-    if (String(session?.chapa) !== '72683') return undefined;
+    if (!session?.token) return undefined;
     let active = true;
-    const refresh = () => loadNorayPilotSnapshot(session.chapa).then((pilot) => {
+    const refresh = () => loadNorayPilotSnapshot(session.chapa, session.token).then((pilot) => {
       if (active) setPilotCalendar(norayPilotCalendar(pilot));
     }).catch(() => {});
     refresh();
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60_000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [session?.chapa]);
+  }, [session?.chapa, session?.token]);
 
   useEffect(() => {
     if (vacationEditorOpen) vacationEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });

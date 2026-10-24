@@ -86,7 +86,7 @@ export default function RestExchangePanel({ session }) {
   const reloadCalendar = useCallback(async () => {
     if (!session?.token) return;
     try {
-      const pilot = await loadNorayPilotSnapshot(session.chapa).catch(() => null);
+      const pilot = await loadNorayPilotSnapshot(session.chapa, session.token).catch(() => null);
       const personal = await getPersonalRestCalendar(session.token, pilot);
       setCalendarData({ ...personal, ...norayPilotCalendar(pilot) });
       setCalendarError("");
@@ -99,7 +99,7 @@ export default function RestExchangePanel({ session }) {
 
   useEffect(() => { setCalendarStatus("loading"); reloadCalendar(); }, [reloadCalendar]);
   useEffect(() => {
-    if (String(session?.chapa) !== '72683' || !['localhost', '127.0.0.1'].includes(window.location.hostname)) return undefined;
+    if (!session?.token) return undefined;
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') reloadCalendar(); }, 60_000);
     return () => window.clearInterval(timer);
   }, [session?.chapa, reloadCalendar]);

@@ -5,9 +5,9 @@ import { mergeNorayPilotSalary, norayPilotCalendar } from '../src/norayPilot.js'
 import { packManualNotes } from '../src/manualMetadata.js';
 import { calendarJornales } from '../src/calendarJornales.js';
 
-function fixture() {
+function fixture(chapa = '72683') {
   return buildNorayPilotSnapshot({
-    chapa: '72683', year: 2026, month: 10, updatedAt: '2026-10-24T06:00:00Z',
+    chapa, year: 2026, month: 10, updatedAt: '2026-10-24T06:00:00Z',
     base: { jornales: [{ numero: 1, parte: 30767, dia: 24, jornada: '02-08', especialidad: 'CONDUCTOR 1a', buque: 'MSC RIDA VIII', empresa: 'MSC' }] },
     vigentes: { jornales: [] },
     restHeader: { nombre_mes_actual: 'Octubre', fs_mes: { consumidos: 2, maximo: 10 }, fs_anyo: { consumidos: 7, maximo: 10 }, descansos_mes_actual: { actual: 7, minimo: 5, maximo: 6 } },
@@ -27,7 +27,8 @@ test('piloto 72683 conserva cabecera, calendario y periodos de vacaciones', () =
   assert.equal(calendar.officialDays['2026-10-25'], 'VA');
   assert.equal(calendar.officialDays['2026-10-26'], 'VA');
   assert.equal(calendar.vacationPeriods.length, 1);
-  assert.throws(() => buildNorayPilotSnapshot({ chapa: '72584' }), /72683/);
+  assert.equal(fixture('72584').chapa, '72584');
+  assert.throws(() => buildNorayPilotSnapshot({ chapa: 'invalid' }), /Chapa no válida/);
 });
 
 test('repetir la extracción no crea nuevos cambios y el cambio de mes sí', () => {

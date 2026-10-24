@@ -4,7 +4,7 @@ const DAY_CODES = new Set(['DS', 'FS', 'VA', 'FM', 'PA', 'FH', 'SL', 'IT']);
 const pad = (value) => String(value).padStart(2, '0');
 
 export function buildNorayPilotSnapshot({ chapa, year, month, base, vigentes, restHeader, restMonth, worker, vacationSummary, updatedAt }) {
-  if (String(chapa) !== '72683') throw new Error('El piloto solo admite la chapa 72683.');
+  if (!/^[0-9]{5}$/.test(String(chapa))) throw new Error('Chapa no válida.');
   if (Number(restMonth?.anyo) !== year || Number(restMonth?.mes) !== month || !Array.isArray(restMonth?.dias))
     throw new Error('El calendario de descansos no corresponde al mes solicitado.');
   if (Number(vacationSummary?.anyo) !== year || !Array.isArray(vacationSummary?.periodos))
@@ -20,7 +20,7 @@ export function buildNorayPilotSnapshot({ chapa, year, month, base, vigentes, re
     days: Number(period.dias) || 0
   })).filter((period) => /^\d{4}-\d{2}-\d{2}$/.test(period.start) && /^\d{4}-\d{2}-\d{2}$/.test(period.end));
   return {
-    schemaVersion: 1, chapa: '72683', updatedAt,
+    schemaVersion: 1, chapa: String(chapa), updatedAt,
     journals: { year, month, rows },
     rests: {
       year, month,
