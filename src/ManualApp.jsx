@@ -259,16 +259,20 @@ function ActivityMonitor({ session }) {
   const [registrations, setRegistrations] = useState(null);
   const [registrationError, setRegistrationError] = useState('');
   const [registrationLimit, setRegistrationLimit] = useState(10);
+  const [personalLinks, setPersonalLinks] = useState(null);
+  const [personalLinkError, setPersonalLinkError] = useState('');
+  const [personalLinkLimit, setPersonalLinkLimit] = useState(10);
   const [error, setError] = useState('');
   const [journalError, setJournalError] = useState('');
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, calendar, signups] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
-      rpc('app_cpe_admin_registration_monitor', { p_token: session.token })
+      rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
+      rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -278,15 +282,19 @@ function ActivityMonitor({ session }) {
     else setCalendarError(calendar.reason?.message || 'No se pudieron cargar los cambios del calendario.');
     if (signups.status === 'fulfilled') { setRegistrations(signups.value); setRegistrationError(''); }
     else setRegistrationError(signups.reason?.message || 'No se pudieron cargar las nuevas altas.');
+    if (linkOpens.status === 'fulfilled') { setPersonalLinks(linkOpens.value); setPersonalLinkError(''); }
+    else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
-  const pages = (data?.pages || []).filter((page) => ACTIVE_PAGES.has(page.page));
+  const pages = [...ACTIVE_PAGES].map((page) => (data?.pages || []).find((item) => item.page === page) || { page, views: 0, users: 0 });
   const recent = (data?.recent || []).filter((event) => String(event.chapa) !== '72683' && (event.type === 'page_visit'
     ? ACTIVE_PAGES.has(event.page) : ['login', 'register', 'app_open'].includes(event.type))).slice(0, displayLimit);
   const visibleJournalEvents = journalEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const matchingRegistrations = (registrations?.registrations || []).filter((user) => String(user.chapa || '').includes(filter));
+  const visiblePersonalLinks = (personalLinks?.recent || []).filter((event) => String(event.chapa || '').includes(filter));
+  const personalLinkLabels = { 'donde-voy': 'Mi contratación', vacaciones: 'Vacaciones', dobles: 'Dobles y HS', jornales: 'Jornales y primas', descansos: 'Descansos', chapero: 'Chapero', 'chapero-especialidades': 'Chapero por especialidades', puertas: 'Puertas', 'jornada-contratada': 'Jornada contratada' };
   const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
@@ -299,10 +307,19 @@ function ActivityMonitor({ session }) {
     <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales y días del calendario se conservan en el registro.</p>
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
-    <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
-    <h3>Pantallas</h3><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{page.views}</strong></span>)}</div>
+    <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); setPersonalLinkLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
+    <h3>Pantallas</h3><p>Visitas de las últimas 24 horas. También se muestran las pantallas sin visitas. Tus accesos de administrador y los de soporte no se contabilizan.</p><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{data ? page.views : '—'}</strong></span>)}</div>
     <h3>Usuarios recientes</h3>
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
+    <h3>Accesos a enlaces personales</h3>
+    <p>Aperturas desde los botones de la app, registradas desde esta actualización. Fecha y hora de Madrid.</p>
+    <div className="monitor-numbers"><span><strong>{personalLinks?.opens24h ?? '—'}</strong> aperturas en las últimas 24 horas</span><span><strong>{personalLinks?.users24h ?? '—'}</strong> usuarios</span></div>
+    <div className="monitor-pages">{(personalLinks?.sections || []).map((item) => <span key={item.section}>{personalLinkLabels[item.section] || item.section}: <strong>{item.opens}</strong></span>)}</div>
+    {personalLinkError && <p className="form-error" role="alert">{personalLinkError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Nombre</th><th>Enlace abierto</th></tr></thead><tbody>
+      {visiblePersonalLinks.slice(0, personalLinkLimit).map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{personalLinkLabels[event.section] || event.section}</td></tr>)}
+    </tbody></table>{!personalLinkError && personalLinks && visiblePersonalLinks.length === 0 && <p className="monitor-empty">Todavía no hay aperturas de enlaces personales para el filtro actual.</p>}</div>
+    {visiblePersonalLinks.length > personalLinkLimit && <button className="monitor-more-button" type="button" onClick={() => setPersonalLinkLimit((current) => current + 10)}>Ver más accesos<ChevronRight size={16} aria-hidden="true" /></button>}
     <h3>Nuevas altas</h3>
     <p>Últimos registros de la app, aunque no hayan vuelto a entrar. Fecha y hora de Madrid.</p>
     <div className="monitor-numbers"><span><strong>{registrations?.last24h ?? '—'}</strong> altas en las últimas 24 horas</span><span><strong>{registrations?.total ?? '—'}</strong> cuentas registradas</span></div>

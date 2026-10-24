@@ -1,3 +1,5 @@
+import { recordPersonalLinkOpen } from '../lib/personalLinkUsage.js';
+
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
 
 function respond(response, status, message) {
@@ -50,6 +52,7 @@ export default async function handler(request, response) {
       || !/^[a-f0-9]{64}$/i.test(target.searchParams.get('pwd') || '')) {
       return respond(response, 502, 'Enlace no válido.');
     }
+    await recordPersonalLinkOpen(base, key, token, 'donde-voy');
     response.statusCode = 303;
     response.setHeader('location', target.href);
     response.end();

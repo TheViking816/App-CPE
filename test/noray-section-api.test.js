@@ -15,7 +15,12 @@ test('personal Noray relay accepts only saved sections and the official host', a
   const previousFetch = globalThis.fetch;
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
   const requests = [];
+  const tracked = [];
   globalThis.fetch = async (url, options) => {
+    if (url.endsWith('/app_cpe_track_personal_link_open')) {
+      tracked.push(JSON.parse(options.body));
+      return { ok: true };
+    }
     requests.push({ url, body: JSON.parse(options.body) });
     return { ok: true, json: async () => 'https://norayweb.cpevalencia.com/vacaciones?cal=gwt&mode=PROD&req=login&usr=72683&rec=2611&pwd=' + 'a'.repeat(64) };
   };
@@ -30,12 +35,14 @@ test('personal Noray relay accepts only saved sections and the official host', a
     assert.equal(allowed.statusCode, 303);
     assert.equal(allowed.headers['referrer-policy'], 'no-referrer');
     assert.equal(requests[0].body.p_section, 'vacaciones');
+    assert.deepEqual(tracked[0], { p_token: 'session', p_section: 'vacaciones' });
 
     const jornales = response();
     await handler({ method: 'POST', body: { token: 'session', section: 'jornales' }, headers: {} }, jornales);
     assert.equal(jornales.statusCode, 303);
     assert.equal(new URL(jornales.headers.location).pathname, '/jornales');
     assert.equal(requests[1].body.p_section, 'dobles');
+    assert.deepEqual(tracked[1], { p_token: 'session', p_section: 'jornales' });
 
     const descansos = response();
     await handler({ method: 'POST', body: { token: 'session', section: 'descansos' }, headers: {} }, descansos);
@@ -48,6 +55,7 @@ test('personal Noray relay accepts only saved sections and the official host', a
       await handler({ method: 'POST', body: { token: 'session', section }, headers: {} }, personal);
       assert.equal(personal.statusCode, 303);
       assert.equal(new URL(personal.headers.location).pathname, `/${section}`);
+      assert.equal(tracked.at(-1).p_section, section);
     }
 
     globalThis.fetch = async () => ({ ok: true, json: async () => 'https://example.com/vacaciones?usr=72683&rec=2611&pwd=' + 'a'.repeat(64) });

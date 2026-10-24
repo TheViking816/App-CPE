@@ -1,3 +1,5 @@
+import { recordPersonalLinkOpen } from '../lib/personalLinkUsage.js';
+
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
 const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada']);
 
@@ -58,6 +60,7 @@ export default async function handler(request, response) {
       return respond(response, 502, 'Enlace no válido.');
     }
     if (derivedSection) target.pathname = `/${section}`;
+    await recordPersonalLinkOpen(base, key, token, section);
     response.statusCode = 303;
     response.setHeader('location', target.href);
     response.end();
