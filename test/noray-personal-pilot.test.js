@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildNorayPilotSnapshot, compareNorayPilotSnapshots } from '../scripts/noray-personal-pilot-data.js';
 import { mergeNorayPilotSalary, norayPilotCalendar } from '../src/norayPilot.js';
 import { buildManualSalaryMonths } from '../src/manualSalary.js';
+import { enrichJornales } from '../src/payroll.js';
 import { packManualNotes } from '../src/manualMetadata.js';
 import { calendarJornales } from '../src/calendarJornales.js';
 
@@ -96,4 +97,8 @@ test('la prima leída completa el jornal vacío y conserva la introducida por el
   assert.equal(third.payroll.primaSource, 'manual');
   const historic = buildManualSalaryMonths(mergeNorayPilotSalary(null, [], pilot, premiumPilot), [])[0].items[0];
   assert.equal(historic.payroll.prima, 169.96);
+  const key = enrichJornales(pilot.journals.rows, [], 'Octubre de 2026')[0].payroll.manualPremiumKey;
+  const ownHistoric = buildManualSalaryMonths(mergeNorayPilotSalary(null, [], pilot, premiumPilot), [], null,
+    { [key]: { amount: 33 } })[0].items[0];
+  assert.equal(ownHistoric.payroll.prima, 33);
 });
