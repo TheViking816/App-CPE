@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient.js';
 
 export default function PortalCredentialPilot({ session }) {
   const [open, setOpen] = useState(false), [password, setPassword] = useState(''), [show, setShow] = useState(false);
+  const [premiumKey, setPremiumKey] = useState(''), [showPremium, setShowPremium] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [done, setDone] = useState(false), [pending, setPending] = useState(false);
   const input = useRef(null), trigger = useRef(null), dialog = useRef(null);
   const enabled = Boolean(session.token);
@@ -14,12 +15,12 @@ export default function PortalCredentialPilot({ session }) {
     });
     return () => { active = false; };
   }, [enabled, session.token]);
-  function close() { if (busy) return; setOpen(false); setPassword(''); setShow(false); trigger.current?.focus(); }
+  function close() { if (busy) return; setOpen(false); setPassword(''); setShow(false); setPremiumKey(''); setShowPremium(false); trigger.current?.focus(); }
   useEffect(() => {
     if (!open) return;
     input.current?.focus();
     function onKey(event) {
-      if (event.key === 'Escape') { event.preventDefault(); if (!busy) { setOpen(false); setPassword(''); setShow(false); trigger.current?.focus(); } }
+      if (event.key === 'Escape') { event.preventDefault(); if (!busy) close(); }
       if (event.key === 'Tab') {
         const fields = [...dialog.current.querySelectorAll('button:not(:disabled),input:not(:disabled)')];
         const first=fields[0], last=fields[fields.length-1];
@@ -35,11 +36,12 @@ export default function PortalCredentialPilot({ session }) {
     event.preventDefault(); if (!password || busy) return;
     setBusy(true); setError('');
     try {
-      const { data, error: rpcError } = await supabase.rpc('app_cpe_request_portal_links', { p_token: session.token, p_portal_password: password });
+      const { data, error: rpcError } = await supabase.rpc('app_cpe_request_portal_links_with_premium',
+        { p_token: session.token, p_portal_password: password, p_security_key: premiumKey.trim() || null });
       if (rpcError || data?.status !== 'pending') throw new Error('No se pudo guardar. Revisa tu sesión y vuelve a intentarlo en unos minutos.');
       setPending(true); setDone(true);
     } catch (reason) { setError(reason.message || 'No se pudo guardar la contraseña.'); }
-    finally { setPassword(''); setShow(false); setBusy(false); }
+    finally { setPassword(''); setShow(false); setPremiumKey(''); setShowPremium(false); setBusy(false); }
   }
   return <>
     <section className="manual-panel manual-profile-settings portal-link-request-entry">
@@ -55,6 +57,9 @@ export default function PortalCredentialPilot({ session }) {
             <label htmlFor="portal-request-password">Contraseña del portal</label>
             <div className="portal-pilot-password"><input ref={input} id="portal-request-password" type={show ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="off" maxLength={256} required disabled={busy} />
               <button type="button" aria-label={show ? 'Ocultar contraseña del portal' : 'Mostrar contraseña del portal'} onClick={() => setShow(!show)} disabled={busy}>{show ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
+            <label htmlFor="portal-request-premium-key">Clave de primas (opcional)</label>
+            <div className="portal-pilot-password"><input id="portal-request-premium-key" type={showPremium ? 'text' : 'password'} value={premiumKey} onChange={event => setPremiumKey(event.target.value)} autoComplete="off" maxLength={256} disabled={busy} />
+              <button type="button" aria-label={showPremium ? 'Ocultar clave de primas' : 'Mostrar clave de primas'} onClick={() => setShowPremium(!showPremium)} disabled={busy}>{showPremium ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="primary" disabled={busy || !password}>{busy ? 'Guardando…' : 'Leer enlaces'}</button>
           </form>}
