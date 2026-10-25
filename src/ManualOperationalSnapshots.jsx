@@ -15,10 +15,10 @@ const formatDate = (value) => value
   : 'Sin actualizar';
 const formatDistance = (value) => value == null ? 'Sin dato' : value === 0 ? 'En puerta' : `${value} posiciones`;
 
-function DoorTable({ title, doors, tone }) {
+function DoorTable({ title, doors, tone, adjusted = false }) {
   return <section className="doors-table-section">
     <h2>{title}</h2><div className="doors-table-wrap"><table className="doors-table">
-      <thead><tr><th>TIPO</th><th>POS.</th><th>CHAPA</th><th>DIST.</th></tr></thead>
+      <thead><tr><th>TIPO</th><th>POS.</th><th>CHAPA</th><th>{adjusted ? 'NO CONTR. DELANTE' : 'DIST.'}</th></tr></thead>
       <tbody>{doors.map((door) => <tr key={door.key} className={classifyDistance(door.distance)}>
         <td><strong>{door.label}</strong><small>{door.shift}</small></td>
         <td><span className={`door-badge ${tone}`}>{door.doorPosition || '-'}</span></td>
@@ -66,10 +66,8 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
     const refresh = () => {
       if (pending) return;
       pending = true;
-      const request = view === 'puertas'
-        ? getLatestDoorSnapshots(DOOR_SPECIALTIES).then((data) => { if (active) setSnapshots(data); })
-        : Promise.all([getLatestDoorSnapshots(DOOR_SPECIALTIES), getLatestChaperoSnapshot()])
-          .then(([doors, status]) => { if (active) { setSnapshots(doors); setChapero(status); } });
+      const request = Promise.all([getLatestDoorSnapshots(DOOR_SPECIALTIES), getLatestChaperoSnapshot()])
+        .then(([doors, status]) => { if (active) { setSnapshots(doors); setChapero(status); } });
       request.catch(() => {}).finally(() => { pending = false; if (active) setLoading(false); });
     };
     const refreshWhenVisible = () => { if (document.visibilityState === 'visible') refresh(); };
@@ -82,7 +80,9 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
   const available = useMemo(() => specialties.filter((item) => savedIds.includes(item.id)), [savedIds]);
   const specialty = available.find((item) => item.id === selectedId) || available[0];
   const snapshot = snapshots.find((item) => item.specialty === specialty?.name);
-  const doors = specialty ? getDoorState(chapa, snapshot?.doors || [], specialty.id) : [];
+  const sameReading = snapshot?.updatedAt && chapero?.updatedAt
+    && Math.abs(new Date(snapshot.updatedAt).getTime() - new Date(chapero.updatedAt).getTime()) < 30 * 60_000;
+  const doors = specialty ? getDoorState(chapa, snapshot?.doors || [], specialty.id, sameReading ? chapero.workers : null) : [];
   const user = specialty ? findByChapa(chapa, specialty.id) : null;
   const chaperoWorker = chapero?.workers.find((item) => String(item.chapa) === String(chapa));
   const censusRows = (specialty?.censo || []).filter((item) => String(item.chapa).includes(censusQuery.trim()));
@@ -122,7 +122,7 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
     {selector}
     <div className="operational-context"><strong>{specialty?.name || 'Sin datos'}</strong><span>Censo: {specialty?.censo.length || 0} · Actualizado: {formatDate(snapshot?.updatedAt)}</span></div>
     {loading ? <p>Cargando Puertas…</p> : !doors.length ? <p>No hay puertas publicadas para esta especialidad.</p> : <>
-      <DoorTable title="Laborables" doors={doors.filter((door) => door.dayType === 'laborable')} tone="lab" />
+      <DoorTable title="Laborables · no contratados delante de ti" doors={doors.filter((door) => door.dayType === 'laborable')} tone="lab" adjusted />
       <DoorTable title="Festivas" doors={doors.filter((door) => door.dayType === 'festivo')} tone="fes" />
     </>}
     {census}

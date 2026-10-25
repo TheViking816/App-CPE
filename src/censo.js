@@ -418,23 +418,34 @@ export function distanceForward(fromPosition, toPosition, size) {
   return size - fromPosition + toPosition;
 }
 
-export function getDoorState(userChapa, doors, specialtyId = specialty.id) {
+export function getDoorState(userChapa, doors, specialtyId = specialty.id, chaperoWorkers) {
   const activeSpecialty = getSpecialty(specialtyId);
   const activeDoors = Array.isArray(doors) ? doors : activeSpecialty.doors;
   const user = findByChapa(userChapa, activeSpecialty.id);
+  const notContracted = Array.isArray(chaperoWorkers)
+    ? new Set(chaperoWorkers.filter((worker) => worker.status === 'nocontratado').map((worker) => normalizeChapa(worker.chapa || worker.rawChapa)))
+    : null;
 
   return DOOR_ORDER.map((key) => activeDoors.find((door) => door.key === key)).filter(Boolean).map((door) => {
     const doorChapa = normalizeDoor(door.raw);
     const doorWorker = findByChapa(doorChapa, activeSpecialty.id);
-    const distance = user && doorWorker
+    const totalDistance = user && doorWorker
       ? distanceForward(doorWorker.position, user.position, activeSpecialty.censo.length)
       : null;
+    const distance = door.dayType === 'laborable' && chaperoWorkers === null ? null
+      : door.dayType === 'laborable' && notContracted
+      ? totalDistance === null ? null : activeSpecialty.censo.reduce((count, worker) => {
+        const ahead = distanceForward(doorWorker.position, worker.position, activeSpecialty.censo.length);
+        return count + Number(ahead > 0 && ahead < totalDistance && notContracted.has(worker.chapa));
+      }, 0)
+      : totalDistance;
 
     return {
       ...door,
       doorChapa,
       doorPosition: doorWorker?.displayPosition || doorWorker?.position || null,
       userPosition: user?.position || null,
+      totalDistance,
       distance
     };
   });
