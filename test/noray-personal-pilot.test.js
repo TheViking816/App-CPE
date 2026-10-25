@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildNorayPilotSnapshot, compareNorayPilotSnapshots } from '../scripts/noray-personal-pilot-data.js';
 import { mergeNorayPilotSalary, norayPilotCalendar } from '../src/norayPilot.js';
+import { buildManualSalaryMonths } from '../src/manualSalary.js';
 import { packManualNotes } from '../src/manualMetadata.js';
 import { calendarJornales } from '../src/calendarJornales.js';
 
@@ -72,4 +73,27 @@ test('el calendario recibe los mismos jornales que el Sueldómetro', () => {
   const pilot = fixture();
   const salary = mergeNorayPilotSalary(null, [], pilot);
   assert.deepEqual(calendarJornales(salary)['2026-10-24'], ['02-08']);
+});
+
+test('la prima leída completa el jornal vacío y conserva la introducida por el usuario', () => {
+  const pilot = fixture();
+  const premiumPilot = { schemaVersion: 1, chapa: '72683', year: 2026, month: 10,
+    rows: [{ part: '30767', date: '2026-10-24', shift: '02-08', amount: 169.96, status: 'pending' }] };
+  const pending = { id: 1, work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 1a',
+    worker_group: 'II', operation_type: 'SP', premium: 0,
+    notes: packManualNotes({ part: '30767', premiumKnown: false }) };
+  const imported = mergeNorayPilotSalary(null, [pending], pilot, premiumPilot);
+  const first = buildManualSalaryMonths(imported, [pending])[0].items[0];
+  assert.equal(first.payroll.prima, 169.96);
+  assert.equal(first.payroll.primaSource, 'portal');
+  const own = { ...pending, premium: 25, notes: packManualNotes({ part: '30767', premiumKnown: true }) };
+  const second = buildManualSalaryMonths(mergeNorayPilotSalary(null, [own], pilot, premiumPilot), [own])[0].items[0];
+  assert.equal(second.payroll.prima, 25);
+  assert.equal(second.payroll.primaSource, 'manual');
+  const ownZero = { ...pending, premium: 0, notes: packManualNotes({ part: '30767', premiumKnown: true }) };
+  const third = buildManualSalaryMonths(mergeNorayPilotSalary(null, [ownZero], pilot, premiumPilot), [ownZero])[0].items[0];
+  assert.equal(third.payroll.prima, 0);
+  assert.equal(third.payroll.primaSource, 'manual');
+  const historic = buildManualSalaryMonths(mergeNorayPilotSalary(null, [], pilot, premiumPilot), [])[0].items[0];
+  assert.equal(historic.payroll.prima, 169.96);
 });

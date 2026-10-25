@@ -21,8 +21,23 @@ export async function loadNorayPilotSnapshot(chapa, token) {
   return value?.schemaVersion === 1 && value?.chapa === '72683' ? value : null;
 }
 
-export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot) {
+export async function loadNorayPilotPremiums(chapa, token) {
+  if (String(chapa) !== '72683' || !token || !supabase) return null;
+  const { data, error } = await supabase.rpc('app_cpe_mobile_get_my_premium_pilot', { p_token: token });
+  if (error) throw error;
+  return data?.schemaVersion === 1 && data.chapa === '72683' ? data : null;
+}
+
+export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumPilot = null) {
   if (!pilot?.journals) return snapshot;
+  const premiumRows = premiumPilot?.chapa === pilot.chapa && Array.isArray(premiumPilot?.rows) ? premiumPilot.rows : [];
+  const premiumsByPart = new Map(premiumRows.map((row) => [String(row.part), row]));
+  const premiumsBySlot = {};
+  for (const row of premiumRows) {
+    const slot = `${row.date}|${shift(row.shift)}`;
+    if (premiumsBySlot[slot] === undefined) premiumsBySlot[slot] = row;
+    else premiumsBySlot[slot] = null;
+  }
   const manualSlots = new Set(manualRows.map((row) => `${row.work_date}|${shift(row.shift)}`));
   const importedSlots = new Set();
   const payload = snapshot?.payload || {};
@@ -38,6 +53,13 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot) {
       if (manualSlots.has(slot) || importedSlots.has(slot)) return false;
       importedSlots.add(slot);
       return true;
+    }).map((row) => {
+      const slot = `${year}-${pad(month)}-${pad(row.dia)}|${shift(row.jornada)}`;
+      const byPart = premiumsByPart.get(String(row.parte));
+      const premium = byPart?.date.startsWith(`${year}-${pad(month)}-`) ? byPart : premiumsBySlot[slot];
+      return premium && Number(premium.amount) > 0
+        ? { ...row, produccion: String(premium.amount), produccionEstado: premium.status || 'verified' }
+        : row;
     });
     history.push({ year, month, monthLabel: label, rows });
   }
@@ -46,7 +68,7 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot) {
   const rows = history.find((period) => Number(period.year) === year && Number(period.month) === month)?.rows || [];
   const label = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
   return { ...snapshot, payload: { ...payload, jornales: { ...previous, recognized: true, year,
-    monthLabel: label, rows, history } } };
+    monthLabel: label, rows, history }, norayPremiumsBySlot: premiumsBySlot } };
 }
 
 export function norayPilotCalendar(pilot) {

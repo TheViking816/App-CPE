@@ -74,6 +74,7 @@ function applySharedPremium(item, sharedPremiums) {
 
 export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}, manualPaidDays = [], sharedPremiums = {}) {
   const payload = snapshot?.payload || {};
+  const norayPremiumsBySlot = payload.norayPremiumsBySlot || {};
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
   const currentLabel = payload.jornales?.monthLabel || payload.primas?.monthLabel || '';
@@ -134,11 +135,16 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       const premiumKnown = details.premiumKnown === true
         || (details.premiumKnown == null && Number(row.premium) > 0)
         || row.operation_type === 'RECEPCION_ENTREGA';
-      const premium = premiumKnown ? money(row.premium) : null;
+      const importedPremium = norayPremiumsBySlot[`${row.work_date}|${String(row.shift).replace(/(\d{2})(\d{2})$/, '$1-$2')}`];
+      const importedAmount = Number(importedPremium?.amount);
+      const hasImportedPremium = !premiumKnown && importedPremium && Number.isFinite(importedAmount) && importedAmount > 0;
+      const premium = premiumKnown ? money(row.premium) : hasImportedPremium ? money(importedAmount) : null;
       const operationLabel = details.operation || (row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
         : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT');
       return { ...calculated, operacion: operationLabel, id: row.id, manualPart: details.part, notes: details.notes, source: 'manual', payroll: {
-        ...calculated.payroll, prima: premium, manualPrima: premium, primaSource: premiumKnown ? 'manual' : 'pending', primaPending: !premiumKnown,
+        ...calculated.payroll, prima: premium, manualPrima: premiumKnown ? premium : null,
+        primaSource: premiumKnown ? 'manual' : hasImportedPremium ? 'portal' : 'pending',
+        primaPending: !premiumKnown && !hasImportedPremium,
         total: money(calculated.payroll.total + (premium || 0))
       } };
     });
