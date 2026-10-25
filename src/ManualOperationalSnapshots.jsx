@@ -13,16 +13,16 @@ const DOOR_SPECIALTIES = [
 const formatDate = (value) => value
   ? new Date(value).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
   : 'Sin actualizar';
-const formatDistance = (value) => value == null ? 'Sin dato' : value === 0 ? 'En puerta' : `${value} posiciones`;
+const formatDistance = (value, adjusted = false) => value == null ? 'Sin dato' : value === 0 && !adjusted ? 'En puerta' : `${value} posiciones`;
 
-function DoorTable({ title, doors, tone, adjusted = false }) {
+function DoorTable({ title, doors, tone }) {
   return <section className="doors-table-section">
     <h2>{title}</h2><div className="doors-table-wrap"><table className="doors-table">
-      <thead><tr><th>TIPO</th><th>POS.</th><th>CHAPA</th><th>{adjusted ? 'NO CONTR. DELANTE' : 'DIST.'}</th></tr></thead>
+      <thead><tr><th>TIPO</th><th>POS.</th><th>CHAPA</th><th>DIST.</th></tr></thead>
       <tbody>{doors.map((door) => <tr key={door.key} className={classifyDistance(door.distance)}>
         <td><strong>{door.label}</strong><small>{door.shift}</small></td>
         <td><span className={`door-badge ${tone}`}>{door.doorPosition || '-'}</span></td>
-        <td>{door.doorChapa || '-'}</td><td>{formatDistance(door.distance)}</td>
+        <td>{door.doorChapa || '-'}</td><td>{formatDistance(door.distance, door.key === 'LAB')}<small>{door.key === 'LAB' ? 'No contratados delante' : 'Distancia total'}</small></td>
       </tr>)}</tbody>
     </table></div>
   </section>;
@@ -35,7 +35,7 @@ function DoorRings({ doors, user, total }) {
         '--user-angle': `${user?.position && total ? user.position / total * 360 : 0}deg`,
         '--door-angle': `${door.doorPosition && total ? door.doorPosition / total * 360 : 0}deg`
       }} aria-hidden="true"><span className="ring-dot user-dot" /><span className="ring-dot door-dot" /><strong>{door.distance ?? '--'}</strong></div>
-      <div><span>{door.dayType === 'festivo' ? 'Festiva' : 'Laborable'}</span><strong>{door.label}</strong><small>{door.doorChapa || door.raw || '-'}</small></div>
+      <div><span>{door.dayType === 'festivo' ? 'Festiva' : 'Laborable'}</span><strong>{door.label}</strong><small>{door.doorChapa || door.raw || '-'}</small><small>{door.key === 'LAB' ? 'No contratados delante' : 'Distancia total'}</small></div>
     </article>)}
   </section>;
 }
@@ -122,7 +122,7 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
     {selector}
     <div className="operational-context"><strong>{specialty?.name || 'Sin datos'}</strong><span>Censo: {specialty?.censo.length || 0} · Actualizado: {formatDate(snapshot?.updatedAt)}</span></div>
     {loading ? <p>Cargando Puertas…</p> : !doors.length ? <p>No hay puertas publicadas para esta especialidad.</p> : <>
-      <DoorTable title="Laborables · no contratados delante de ti" doors={doors.filter((door) => door.dayType === 'laborable')} tone="lab" adjusted />
+      <DoorTable title="Laborables" doors={doors.filter((door) => door.dayType === 'laborable')} tone="lab" />
       <DoorTable title="Festivas" doors={doors.filter((door) => door.dayType === 'festivo')} tone="fes" />
     </>}
     {census}

@@ -63,7 +63,7 @@ test('la puerta Super 71026 tiene posición y distancia en conductor de primera'
   assert.equal(door.distance, 393);
 });
 
-test('las laborables cuentan solo los no contratados delante; las festivas conservan la distancia total', () => {
+test('solo Lab cuenta no contratados delante; Noc y festivas conservan la distancia total', () => {
   const doors = [
     { key: 'LAB', raw: 72543, dayType: 'laborable' },
     { key: 'NOC', raw: 71719, dayType: 'laborable' },
@@ -78,6 +78,8 @@ test('las laborables cuentan solo los no contratados delante; las festivas conse
   const result = getDoorState('72683', doors, 'conductor-1a', workers);
   assert.equal(result.find((door) => door.key === 'LAB').distance, 2);
   assert.equal(result.find((door) => door.key === 'LAB').totalDistance, 578);
+  assert.equal(result.find((door) => door.key === 'NOC').distance, result.find((door) => door.key === 'NOC').totalDistance);
   assert.equal(result.find((door) => door.key === 'FES').distance, result.find((door) => door.key === 'FES').totalDistance);
   assert.equal(getDoorState('72683', doors, 'conductor-1a', null).find((door) => door.key === 'LAB').distance, null);
+  assert.equal(getDoorState('72683', doors, 'conductor-1a', null).find((door) => door.key === 'NOC').distance, result.find((door) => door.key === 'NOC').totalDistance);
 });

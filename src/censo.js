@@ -432,8 +432,8 @@ export function getDoorState(userChapa, doors, specialtyId = specialty.id, chape
     const totalDistance = user && doorWorker
       ? distanceForward(doorWorker.position, user.position, activeSpecialty.censo.length)
       : null;
-    const distance = door.dayType === 'laborable' && chaperoWorkers === null ? null
-      : door.dayType === 'laborable' && notContracted
+    const distance = door.key === 'LAB' && chaperoWorkers === null ? null
+      : door.key === 'LAB' && notContracted
       ? totalDistance === null ? null : activeSpecialty.censo.reduce((count, worker) => {
         const ahead = distanceForward(doorWorker.position, worker.position, activeSpecialty.censo.length);
         return count + Number(ahead > 0 && ahead < totalDistance && notContracted.has(worker.chapa));
