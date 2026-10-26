@@ -28,8 +28,9 @@ import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, Clipboar
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
-const CONTRACTING_PREVIEW = import.meta.env.VITE_UPCOMING_PREVIEW === '1' || import.meta.env.VITE_GITHUB_SYNC_REF === 'codex/proximas-contrataciones-preview';
-const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_PREVIEW ? ['contratacion'] : [])]);
+// Released in production for the owner pilot; the reader remains manual and restricted to 72683.
+const CONTRACTING_PILOT_ENABLED = true;
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_PILOT_ENABLED ? ['contratacion'] : [])]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
@@ -480,7 +481,7 @@ function Salary({ session, onSession }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const isAdmin = session.chapa === '72683';
-  const contractingEnabled = CONTRACTING_PREVIEW && isAdmin;
+  const contractingEnabled = CONTRACTING_PILOT_ENABLED && isAdmin;
   const [tab, setTab] = useState(viewFromHash);
   const [notifications, setNotifications] = useState([]);
   const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
