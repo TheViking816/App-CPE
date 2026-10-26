@@ -48,14 +48,13 @@ export default function PortalCredentialPilot({ session }) {
         ? await supabase.rpc('app_cpe_save_portal_premium_key', { p_token: session.token, p_security_key: premiumKey.trim() })
         : await supabase.rpc('app_cpe_request_portal_links_with_premium', { p_token: session.token, p_portal_password: password, p_security_key: premiumKey.trim() || null });
       if (rpcError || !data) throw new Error('No se pudo guardar. Revisa tu sesión y vuelve a intentarlo en unos minutos.');
-      setPending(data.status === 'pending'); setHasPassword(Boolean(data.hasPortalPassword)); setHasPremiumKey(Boolean(data.hasPremiumKey)); setIncorrectPassword(Boolean(data.portalPasswordIncorrect)); setDone(true);
+      setPending(data.status === 'pending'); setHasPassword(Boolean(data.hasPortalPassword)); setHasPremiumKey(Boolean(data.hasPremiumKey)); setIncorrectPassword(Boolean(data.portalPasswordIncorrect)); setDone(true); window.dispatchEvent(new Event('app-cpe-portal-link-updated'));
     } catch (reason) { setError(reason.message || 'No se pudo guardar la contraseña.'); }
     finally { setPassword(''); setShow(false); setPremiumKey(''); setShowPremium(false); setBusy(false); }
   }
   return <>
     <section className="manual-panel manual-profile-settings portal-link-request-entry">
       <h2>Enlaces del portal</h2>
-      {incorrectPassword && <p className="portal-password-warning" role="alert"><strong>Contraseña del portal incorrecta.</strong> Revisa los datos en «Vincular portal» e introduce la contraseña de acceso al portal de SEVASA</p>}
       {pending && !incorrectPassword && <p>Enlaces pendientes de configuración.</p>}
       <button ref={trigger} type="button" className="primary" onClick={() => { setKeyOnly(hasPassword && !hasPremiumKey && !incorrectPassword); setOpen(true); setDone(false); setError(''); }}>{incorrectPassword ? 'Vincular portal' : hasPassword && !hasPremiumKey ? 'Guardar clave de primas' : hasPassword ? 'Actualizar contraseña del portal' : 'Vincular portal'}</button>
     </section>

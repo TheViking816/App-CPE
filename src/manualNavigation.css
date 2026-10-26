@@ -226,3 +226,5 @@
 }
 
 .portal-password-warning{padding:13px 15px;border:1px solid #f0c8ce;border-left:4px solid #d64b5c;border-radius:10px;background:#fff2f3;color:#81313b;font-size:13px;line-height:1.6}.portal-password-warning strong{font-weight:800;color:#a52739}
+
+.portal-password-global-notice{display:flex;align-items:center;gap:16px;margin:0 0 18px}.portal-password-global-notice p{margin:0;flex:1}.portal-password-global-notice>button{flex-shrink:0;white-space:nowrap}@media(max-width:600px){.portal-password-global-notice{flex-direction:column;align-items:stretch;gap:10px}.portal-password-global-notice>button{align-self:flex-start}}

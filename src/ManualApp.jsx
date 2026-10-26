@@ -547,9 +547,11 @@ function Salary({ session, onSession }) {
     let active = true;
     const refresh = () => supabase?.rpc('app_cpe_portal_link_request_status', { p_token: session.token })
       .then(({ data, error }) => { if (active && !error) setPortalLinkStatus(data); });
+    setPortalLinkStatus(null);
     refresh();
+    window.addEventListener('app-cpe-portal-link-updated', refresh);
     const timer = window.setInterval(refresh, 60_000);
-    return () => { active = false; window.clearInterval(timer); };
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('app-cpe-portal-link-updated', refresh); };
   }, [session.token]);
   useEffect(() => {
     if (!session.token) return undefined;
@@ -822,6 +824,7 @@ function Salary({ session, onSession }) {
     </form></section>;
 
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}</header><div className="visual-content">
+    {portalLinkStatus?.portalPasswordIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>Contraseña del portal incorrecta.</strong> Revisa los datos en «Vincular portal» e introduce la contraseña de acceso al portal de SEVASA</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
       : tab === 'cuenta' ? <PasswordSettings session={session} />
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
