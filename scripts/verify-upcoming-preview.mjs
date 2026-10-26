@@ -23,7 +23,7 @@ try {
     await page.route('https://norayweb.cpevalencia.com/**', (route) => { portalReads++; return route.abort(); });
     await page.route('**/rest/v1/rpc/**', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(route.request().url().includes('app_cpe_get_portal_snapshot') ? { chapa: '72683', payload: { asignaciones: { rows: [old] } } } : route.request().url().includes('app_cpe_get_portal_preview_snapshot') ? { chapa: '72683', payload: withReading ? { upcomingAssignments: { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', updatedAt: new Date().toISOString(), rows: [row] } } : {} } : { ok: true, detail: null }) }));
     await page.goto(`${origin}/App-CPE/.local/upcoming-preview.html`);
-    await page.getByText('Sin próximas contrataciones', { exact: true }).waitFor();
+    await page.getByText('No hay próximas contrataciones', { exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: /ejemplo|Cargar lectura|prueba/i }).count(), 0);
     withReading = true;
     await page.reload();
