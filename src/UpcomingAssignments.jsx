@@ -79,9 +79,10 @@ export default function UpcomingAssignments({ session, snapshot }) {
 }
 
 function AssignmentRow({ item, today, busy, onOpen }) {
-  return <button type="button" className="upcoming-row" onClick={() => onOpen(item)} disabled={busy}>
+  const logo = assignmentCompanyLogo(item.empresa);
+  return <button type="button" className={`upcoming-row${logo ? ' has-company-logo' : ''}`} style={logo ? { '--upcoming-company-logo': `url("${logo}")` } : undefined} onClick={() => onOpen(item)} disabled={busy}>
     <span className="upcoming-date"><small>{item.fecha === today ? 'HOY' : dateLabel(item.fecha, { weekday: 'short' })}</small><strong>{dateLabel(item.fecha, { day: 'numeric' })}</strong><span>{dateLabel(item.fecha, { month: 'short' })}</span></span>
-    <span className="upcoming-company">{assignmentCompanyLogo(item.empresa) ? <img src={assignmentCompanyLogo(item.empresa)} alt="" /> : <Building2 size={25} />}</span>
+    <span className="upcoming-company">{logo ? <img src={logo} alt="" /> : <Building2 size={25} />}</span>
     <span className="upcoming-copy"><strong>{item.especialidad || 'Jornal contratado'}</strong><span>{[clean(item.buque), clean(item.empresa)].filter(Boolean).join(' · ')}</span><small>{clean(item.operacion)}</small><span className="upcoming-row-meta"><b><Clock3 size={13} />{assignmentShift(item.jornada)}</b><b>Parte {item.parte}</b>{item.anticipada && <b>Anticipada</b>}</span></span><ChevronRight size={19} />
   </button>;
 }
