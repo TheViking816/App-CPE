@@ -47,10 +47,11 @@ try {
       const url = route.request().url();
       let body = [];
       if (url.includes('app_cpe_get_portal_preview_snapshot')) body = { chapa, payload: { upcomingAssignments: { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', updatedAt: new Date().toISOString(), rows: [row] } } };
-      else if (url.includes('app_cpe_get_portal_snapshot')) body = { chapa, payload: { asignaciones: { rows: [] } } };
+      else if (url.includes('app_cpe_get_portal_snapshot')) body = { chapa, payload: { asignaciones: { rows: [old] } } };
       else if (url.includes('app_cpe_get_saved_salary_history')) body = { chapa, payload: { jornales: { history: [], rows: [] } } };
       else if (url.includes('app_cpe_get_current_user') || url.includes('app_cpe_get_personal_noray_snapshot') || url.includes('app_cpe_mobile_get_my_salary_premiums')) body = null;
       else if (url.includes('app_cpe_portal_link_request_status')) body = { hasPortalPassword: true, hasPremiumKey: true };
+      else if (url.includes('app_cpe_has_manual_donde_voy_link')) body = true;
       else if (url.includes('app_cpe_has_manual') || url.includes('app_cpe_can_open')) body = false;
       else if (/get_(manual_premiums|relay_hours|remate_hours)/.test(url)) body = {};
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
@@ -58,14 +59,33 @@ try {
     await page.goto(`${origin}/App-CPE/#/sueldometro`);
     await page.getByRole('heading', { name: 'Sueldómetro', exact: true }).waitFor();
     const integrated = page.getByRole('region', { name: 'Próximas contrataciones' });
+    assert.equal(await integrated.count(), 0);
     if (chapa === '72683') {
+      assert.equal(await page.locator('form[action="/api/donde-voy"]').count(), 0);
+      await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+      await page.getByRole('heading', { name: 'Mi contratación', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Abrir mi contratación', exact: true }).waitFor();
       await integrated.waitFor();
       await integrated.getByRole('button', { name: /CONDUCTOR 1a/ }).waitFor();
-      assert.equal(await page.getByRole('button', { name: /ejemplo|Cargar lectura/i }).count(), 0);
+      assert.equal(await page.getByRole('button', { name: /Cargar lectura/i }).count(), 0);
+      const example = page.getByRole('region', { name: 'Parte de ejemplo' });
+      await example.getByRole('button', { name: /Ejemplo del historial/ }).waitFor();
       await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-full-app-1280.png'), fullPage: true });
       await page.setViewportSize({ width: 390, height: 850 });
       await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-full-app-390.png'), fullPage: true });
-    } else assert.equal(await integrated.count(), 0);
+      await example.getByRole('button').click();
+      await page.getByRole('dialog').getByText('EJEMPLO DEL HISTORIAL', { exact: false }).waitFor();
+      await page.getByRole('dialog').getByText('COMPAÑERO · PRUEBA', { exact: true }).waitFor();
+      await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-example-modal-390.png'), fullPage: true });
+      await page.keyboard.press('Escape');
+      await page.reload();
+      await page.getByRole('heading', { name: 'Mi contratación', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Sueldómetro', exact: true }).click();
+      await page.getByRole('heading', { name: 'Sueldómetro', exact: true }).waitFor();
+      assert.equal(await integrated.count(), 0);
+    } else {
+      assert.equal(await page.getByRole('button', { name: 'Inicio', exact: true }).count(), 0);
+    }
     console.log(`App completa ${chapa}: integración y visibilidad correctas.`);
     await page.close();
   }

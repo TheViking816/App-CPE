@@ -2,7 +2,9 @@
 
 Rama: `codex/proximas-contrataciones-preview`, creada desde el último commit remoto de producción `d8c6908` el 26/10/2026. Despliegue Vercel únicamente de preview. No modifica la web de producción ni el actualizador móvil.
 
-En Sueldómetro, solo 72683 ve la tarjeta Próximas contrataciones bajo el encabezado y antes del extracto salarial, integrada con el estilo normal de la aplicación. Lista hoy y los días posteriores de las lecturas guardadas, ordenados por fecha y jornada. Cada fecha/jornada aparece una vez. Al abrir el parte se muestra su equipo guardado, resaltando 72683, y la imagen del buque cuando está disponible. No muestra etiquetas, ejemplos ni controles de prueba en la interfaz.
+Solo 72683 ve la sección independiente «Mi contratación», accesible desde Inicio en la barra inferior y desde el menú lateral. Sueldómetro conserva únicamente sus contenidos salariales; el enlace personal a contratación se traslada al encabezado de la nueva sección. El Monitor continúa accesible desde la cabecera y el menú lateral para mantener seis accesos en la barra inferior.
+
+La tarjeta Próximos jornales lista hoy y los días posteriores de las lecturas guardadas, ordenados por fecha y jornada. Cada fecha/jornada aparece una vez. Al abrir el parte se muestra su equipo guardado, resaltando 72683, y la imagen del buque cuando está disponible. Por petición del usuario, se incluye también un parte real del historial propio como ejemplo visual, con su fecha original y la etiqueta «Ejemplo del historial». El ejemplo no se mezcla con los próximos jornales.
 
 El canal privado `upcoming-contracts-72683` usa la tabla de revisión y la RPC de lectura que ya existían. No se crea ni se altera ninguna tabla, función o permiso. Los datos de ese canal solo se consultan en esta rama y se renuevan cada minuto con la página visible. Los detalles compartidos se consultan por parte, fecha y jornada cuando no se dispone del equipo guardado. Si faltan, el modal lo indica y no presenta otro equipo como si fuera el suyo.
 

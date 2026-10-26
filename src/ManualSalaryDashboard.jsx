@@ -13,7 +13,7 @@ const shortMonthLabel = (item) => {
   return month >= 1 && month <= 12 && year ? `${titleCase(shortMonths[month - 1].toLocaleLowerCase('es-ES'))} ${year}` : titleCase(item.label);
 };
 
-export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onImport, onAdd, onAddPaidDay, portalAction, upcoming, children }) {
+export function ManualSalaryDashboard({ months, monthChoices, chosen, period, onPeriodChange, onMonthChange, onRefresh, irpf, onIrpfChange, onIrpfSave, busy, onImport, onAdd, onAddPaidDay, portalAction, children }) {
   const [annualExpanded, setAnnualExpanded] = useState(false);
   const [jornalesExpanded, setJornalesExpanded] = useState(true);
   const year = Number(chosen?.key?.slice(0, 4)) || new Date().getFullYear();
@@ -45,7 +45,6 @@ export function ManualSalaryDashboard({ months, monthChoices, chosen, period, on
 
   return <>
     <section className="visual-page-heading"><div><span>JORNALES Y SALARIO</span><h1>Sueldómetro</h1></div>{portalAction}</section>
-    {upcoming}
     <div className="visual-toolbar visual-toolbar-actions-only"><div><select aria-label="Mes del historial" value={chosen?.key || ''} onChange={(event) => onMonthChange(event.target.value)}>{monthChoices.map((item) => <option key={item.key} value={item.key}>{shortMonthLabel(item)}</option>)}</select><button type="button" onClick={onRefresh} disabled={busy} title="Actualizar historial" aria-label="Actualizar historial"><RefreshCw size={17} /></button><button type="button" className="visual-add-paid" onClick={onAddPaidDay}>+ Día VA / FM</button><button type="button" className="visual-add" onClick={onAdd}>+ Añadir jornal</button><button type="button" className="visual-import" onClick={onImport}>Importar jornales</button></div></div>
     <section className="visual-salary-card" aria-label="Extracto salarial">
       <div className="visual-salary-hero">
