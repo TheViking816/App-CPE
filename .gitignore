@@ -9,3 +9,4 @@ video-review/
 .env*.local
 .venv-cloudflare-lab/
 .local/noray-pilot-72683.json
+.local/upcoming-72683.json
