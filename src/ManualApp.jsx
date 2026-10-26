@@ -482,6 +482,7 @@ function Salary({ session, onSession }) {
   const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
   const [doblesLinkAvailable, setDoblesLinkAvailable] = useState(false);
   const [vacationLinkAvailable, setVacationLinkAvailable] = useState(false);
+  const [portalLinkStatus, setPortalLinkStatus] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [premiumEditor, setPremiumEditor] = useState(null);
@@ -537,6 +538,14 @@ function Salary({ session, onSession }) {
     return () => window.clearInterval(timer);
   }, [session.token, snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows]);
   useEffect(() => { load(); if (!session.supportAccess && String(session.chapa) !== '72683') trackUsageEvent({ eventType: 'app_open', chapa: session.chapa }).catch(() => {}); }, [session.token]);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => supabase?.rpc('app_cpe_portal_link_request_status', { p_token: session.token })
+      .then(({ data, error }) => { if (active && !error) setPortalLinkStatus(data); });
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [session.token]);
   useEffect(() => {
     if (!session.token) return undefined;
     const timer = window.setInterval(() => {
@@ -817,6 +826,10 @@ function Salary({ session, onSession }) {
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
+    {portalLinkStatus && !(portalLinkStatus.hasPortalPassword && portalLinkStatus.hasPremiumKey) && <div className="salary-link-notice" role="note">
+      <span>{portalLinkStatus.hasPortalPassword ? 'Guarda tu clave de primas para cargar automáticamente tus jornales y primas.' : 'Para cargar automáticamente tus jornales y primas, vincula la app con el portal.'}</span>
+      <button type="button" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>{portalLinkStatus.hasPortalPassword ? 'Guardar clave de primas' : 'Vincular portal'}</button>
+    </div>}
     {error && !showForm && !showPaidForm && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showImport && <ManualEditorDialog label="Importar jornales" wide onClose={() => setShowImport(false)} busy={busy}><PortalJornalesImport existingItems={months.flatMap((entry) => entry.items)} manualRows={manualRows} busy={busy} onImport={importPastedJornales} onClose={() => setShowImport(false)} /></ManualEditorDialog>}
     {showForm && <ManualEditorDialog label={form.id ? 'Editar jornal' : 'Añadir jornal'} onClose={() => setShowForm(false)} busy={busy}>{jornalEditor}</ManualEditorDialog>}

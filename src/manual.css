@@ -23,3 +23,6 @@
 .portal-link-request-body .primary { border:0; border-radius:10px; padding:13px 18px; font:inherit; font-weight:700; color:#fff; background:#155d8c; }
 .portal-link-request-body .primary:disabled { opacity:.55; }
 .portal-link-request-entry p { color:#506a84; }
+.salary-link-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 14px; padding:11px 14px; border:1px solid #e8bc54; border-left:4px solid #d59500; border-radius:12px; background:#fff3bf; color:#684500; font-weight:700; }
+.salary-link-notice button { flex:none; border:1px solid #ba8200; border-radius:8px; padding:8px 12px; background:#fff; color:#684500; font:inherit; cursor:pointer; }
+@media (max-width:600px) { .salary-link-notice { align-items:flex-start; flex-direction:column; } }
