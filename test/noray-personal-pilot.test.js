@@ -102,3 +102,18 @@ test('la prima leída completa el jornal vacío y conserva la introducida por el
     { [key]: { amount: 33 } })[0].items[0];
   assert.equal(ownHistoric.payroll.prima, 33);
 });
+
+test('la lectura salarial de otro usuario incorpora la prima sin duplicar su jornal manual', () => {
+  const pilot = fixture('72668');
+  const premium = { schemaVersion: 1, chapa: '72668', rows: [
+    { part: '30767', date: '2026-10-24', shift: '02-08', amount: 50.25, status: 'verified' }
+  ] };
+  const manual = { id: 8, work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 1a',
+    worker_group: 'II', operation_type: 'SP', premium: 0,
+    notes: packManualNotes({ part: '30767', premiumKnown: false }) };
+  const merged = mergeNorayPilotSalary(null, [manual], pilot, premium);
+  assert.equal(merged.payload.jornales.rows.length, 0);
+  const items = buildManualSalaryMonths(merged, [manual])[0].items;
+  assert.equal(items.length, 1);
+  assert.equal(items[0].payroll.prima, 50.25);
+});

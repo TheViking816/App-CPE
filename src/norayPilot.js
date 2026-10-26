@@ -22,10 +22,10 @@ export async function loadNorayPilotSnapshot(chapa, token) {
 }
 
 export async function loadNorayPilotPremiums(chapa, token) {
-  if (String(chapa) !== '72683' || !token || !supabase) return null;
-  const { data, error } = await supabase.rpc('app_cpe_mobile_get_my_premium_pilot', { p_token: token });
+  if (!token || !supabase) return null;
+  const { data, error } = await supabase.rpc('app_cpe_mobile_get_my_salary_premiums', { p_token: token });
   if (error) throw error;
-  return data?.schemaVersion === 1 && data.chapa === '72683' ? data : null;
+  return data?.schemaVersion === 1 && String(data.chapa) === String(chapa) ? data : null;
 }
 
 export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumPilot = null) {
