@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { canOpenNorayLinks, supabase } from './supabaseClient.js';
 
-export default function PersonalNoraySectionLink({ session, section, label }) {
+export default function PersonalNoraySectionLink({ session, section, label, className = 'rest-portal-availability-link' }) {
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function PersonalNoraySectionLink({ session, section, label }) {
   }, [session?.token]);
 
   if (!available) return null;
-  return <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer">
+  return <form className={className} action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer">
     <input type="hidden" name="token" value={session.token} />
     <input type="hidden" name="section" value={section} />
     <button type="submit">{label} <ExternalLink size={15} aria-hidden="true" /></button>

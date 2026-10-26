@@ -82,6 +82,17 @@ try {
       await page.getByRole('dialog').getByText('COMPAÑERO · PRUEBA', { exact: true }).waitFor();
       assert.equal(await page.getByRole('dialog').locator('.is-me').count(), chapa === '72683' ? 1 : 0);
       await page.keyboard.press('Escape');
+      for (const section of ['chapero','puertas']) {
+        await page.goto(`${origin}/App-CPE/#/${section}`);
+        const heading=page.locator('.operational-panel > .visual-page-heading');
+        await heading.locator('form').first().waitFor();
+        assert.equal(await heading.locator('form').count(), section === 'chapero' ? 2 : 1);
+        assert.equal(await page.locator('.operational-specialties').count(), 0);
+        await page.screenshot({path:path.join(os.tmpdir(),`operational-heading-${section}-${chapa}.png`),fullPage:true});
+      }
+      await page.goto(`${origin}/App-CPE/#/perfil`);
+      await page.locator('.manual-profile-specialties').first().waitFor();
+      await page.goto(`${origin}/App-CPE/#/contratacion`);
       linked = false;
       await page.reload();
       await page.getByRole('button', { name: 'Vincular portal', exact: true }).click();

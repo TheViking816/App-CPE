@@ -108,8 +108,7 @@ export default function ManualOperationalSnapshots({ view, session, onSession, h
   </section>;
 
   if (view === 'puertas') return <section className="operational-panel">
-    <section className="visual-page-heading"><div><span>PUERTAS DE TURNO</span><h1>Puertas</h1></div></section>
-    <PersonalNoraySectionLink session={session} section="puertas" label="Puertas" />
+    <section className="visual-page-heading"><div><span>PUERTAS DE TURNO</span><h1>Puertas</h1></div><div className="personal-portal-actions operational-heading-links"><PersonalNoraySectionLink session={session} section="puertas" label="Puertas" className="personal-portal-link" /></div></section>
     {selector}
     <div className="operational-context"><strong>{specialty?.name || 'Sin datos'}</strong><span>Censo: {specialty?.censo.length || 0} · Actualizado: {formatDate(snapshot?.updatedAt)}</span></div>
     {loading ? <p>Cargando Puertas…</p> : !doors.length ? <p>No hay puertas publicadas para esta especialidad.</p> : <>
@@ -121,8 +120,7 @@ export default function ManualOperationalSnapshots({ view, session, onSession, h
 
   const statusLabels = { contratado: 'Contratado', anticipado: 'Anticipado', nocontratado: 'No contratado', falta: 'No disponible', excepcion: 'Con excepción', doble: 'Doble' };
   return <section className="operational-panel">
-    <section className="visual-page-heading"><div><span>ESTADO Y POSICIÓN</span><h1>Chapero</h1></div></section>
-    <div className="operational-portal-links"><PersonalNoraySectionLink session={session} section="chapero" label="Chapero" /><PersonalNoraySectionLink session={session} section="chapero-especialidades" label="Chapero por especialidades" /></div>
+    <section className="visual-page-heading"><div><span>ESTADO Y POSICIÓN</span><h1>Chapero</h1></div><div className="personal-portal-actions operational-heading-links"><PersonalNoraySectionLink session={session} section="chapero" label="Chapero" className="personal-portal-link" /><PersonalNoraySectionLink session={session} section="chapero-especialidades" label="Chapero por especialidades" className="personal-portal-link" /></div></section>
     <section className={`chapero-card ${loading ? 'loading' : chaperoWorker?.status || 'empty'}`}>
       <div className="jornada-card"><span>Última jornada contratada</span><strong>{chapero?.jornadaDate && chapero?.fromHour ? `${chapero.jornadaDate} ${chapero.fromHour}-${chapero.toHour}` : 'Sin jornada'}</strong></div>
       <div className="chapero-meta-row"><span>{new Date().toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</span><small>Chapa {chapa}</small></div>

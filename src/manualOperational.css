@@ -302,3 +302,5 @@
 @media (max-width: 760px) {
   .visual-menu { left: 10px; top: calc(100% + 2px); }
 }
+
+.operational-heading-links{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;width:auto;gap:6px}.operational-heading-links .personal-portal-link button{white-space:nowrap}@media(max-width:600px){.operational-heading-links{width:100%;justify-content:flex-start}.operational-heading-links .personal-portal-link{flex:1 1 auto}}
