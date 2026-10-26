@@ -69,7 +69,7 @@ export default function PortalCredentialPilot({ session }) {
             <div className="portal-pilot-password"><input ref={keyOnly ? input : undefined} id="portal-request-premium-key" type={showPremium ? 'text' : 'password'} value={premiumKey} onChange={event => setPremiumKey(event.target.value)} autoComplete="off" maxLength={256} required={keyOnly} disabled={busy} />
               <button type="button" aria-label={showPremium ? 'Ocultar clave de primas' : 'Mostrar clave de primas'} onClick={() => setShowPremium(!showPremium)} disabled={busy}>{showPremium ? <EyeOff size={20} /> : <Eye size={20} />}</button></div>
             {error && <p className="form-error" role="alert">{error}</p>}
-            <button className="primary" disabled={busy || (keyOnly ? !premiumKey.trim() : !password)}>{busy ? 'Guardando…' : 'Guardar datos'}</button>
+            <button className="primary" disabled={busy || (keyOnly ? !premiumKey.trim() : !password)}>{busy ? 'Guardando…' : 'Vincular portal'}</button>
           </form>}
         </div>
       </section>
