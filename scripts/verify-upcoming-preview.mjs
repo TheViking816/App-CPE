@@ -48,7 +48,7 @@ try {
     await page.route('https://*.supabase.co/**', (route) => {
       const url = route.request().url();
       let body = [];
-      if (url.includes('app_cpe_get_portal_preview_snapshot')) body = { chapa, payload: realReading ? { upcomingAssignments: { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', updatedAt: new Date().toISOString(), rows: [row] } } : {} };
+      if (url.includes('app_cpe_get_portal_preview_snapshot')) body = { chapa, payload: realReading ? { upcomingAssignments: { schemaVersion: 1, kind: 'upcoming-assignments', chapa, updatedAt: new Date().toISOString(), rows: [row] } } : {} };
       else if (url.includes('app_cpe_get_portal_snapshot')) body = { chapa, payload: { asignaciones: { rows: [old] } } };
       else if (url.includes('app_cpe_get_saved_salary_history')) body = { chapa, payload: { jornales: { history: [], rows: [] } } };
       else if (url.includes('app_cpe_get_current_user') || url.includes('app_cpe_get_personal_noray_snapshot') || url.includes('app_cpe_mobile_get_my_salary_premiums')) body = null;
@@ -62,7 +62,7 @@ try {
     await page.getByRole('heading', { name: 'Sueldómetro', exact: true }).waitFor();
     const integrated = page.getByRole('region', { name: 'Próximas contrataciones' });
     assert.equal(await integrated.count(), 0);
-    if (chapa === '72683') {
+    {
       assert.equal(await page.locator('form[action="/api/donde-voy"]').count(), 0);
       await page.getByRole('button', { name: 'Inicio', exact: true }).click();
       await page.getByRole('heading', { name: 'Mi contratación', exact: true }).waitFor();
@@ -70,20 +70,18 @@ try {
       await integrated.waitFor();
       await page.getByRole('region', { name: 'Distancias a las puertas' }).waitFor();
       assert.equal(await page.getByRole('button', { name: /Cargar lectura/i }).count(), 0);
-      const example = page.getByRole('region', { name: 'Parte de ejemplo' });
-      await example.getByRole('button', { name: /Ejemplo del historial/ }).waitFor();
-      await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-full-app-1280.png'), fullPage: true });
-      await page.setViewportSize({ width: 390, height: 850 });
-      await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-full-app-390.png'), fullPage: true });
-      await example.getByRole('button').click();
-      await page.getByRole('dialog').getByText('EJEMPLO DEL HISTORIAL', { exact: false }).waitFor();
-      await page.getByRole('dialog').getByText('COMPAÑERO · PRUEBA', { exact: true }).waitFor();
-      await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-example-modal-390.png'), fullPage: true });
-      await page.keyboard.press('Escape');
+      assert.equal(await page.getByRole('region', { name: 'Parte de ejemplo' }).count(), 0);
       realReading = true;
       await page.reload();
       await integrated.getByRole('button', { name: /CONDUCTOR 1a/ }).waitFor();
-      assert.equal(await example.count(), 0);
+      await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-full-app-1280.png'), fullPage: true });
+      await page.setViewportSize({ width: 390, height: 850 });
+      assert.equal(await integrated.locator('.upcoming-company').isVisible(), true);
+      await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-full-app-390.png'), fullPage: true });
+      await integrated.getByRole('button').click();
+      await page.getByRole('dialog').getByText('COMPAÑERO · PRUEBA', { exact: true }).waitFor();
+      assert.equal(await page.getByRole('dialog').locator('.is-me').count(), chapa === '72683' ? 1 : 0);
+      await page.keyboard.press('Escape');
       linked = false;
       await page.reload();
       await page.getByRole('button', { name: 'Vincular portal', exact: true }).click();
@@ -98,8 +96,6 @@ try {
       await page.getByRole('button', { name: 'Sueldómetro', exact: true }).click();
       await page.getByRole('heading', { name: 'Sueldómetro', exact: true }).waitFor();
       assert.equal(await integrated.count(), 0);
-    } else {
-      assert.equal(await page.getByRole('button', { name: 'Inicio', exact: true }).count(), 0);
     }
     console.log(`App completa ${chapa}: integración y visibilidad correctas.`);
     await page.close();

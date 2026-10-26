@@ -28,9 +28,9 @@ import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, Clipboar
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
-// Released in production for the owner pilot; the reader remains manual and restricted to 72683.
-const CONTRACTING_PILOT_ENABLED = true;
-const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_PILOT_ENABLED ? ['contratacion'] : [])]);
+// Personal contracting is available to every account; the separate mobile reader remains manual.
+const CONTRACTING_ENABLED = true;
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_ENABLED ? ['contratacion'] : [])]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
@@ -481,7 +481,7 @@ function Salary({ session, onSession }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const isAdmin = session.chapa === '72683';
-  const contractingEnabled = CONTRACTING_PILOT_ENABLED && isAdmin;
+  const contractingEnabled = CONTRACTING_ENABLED;
   const [tab, setTab] = useState(viewFromHash);
   const [notifications, setNotifications] = useState([]);
   const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
@@ -825,7 +825,7 @@ function Salary({ session, onSession }) {
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
       : tab === 'cuenta' ? <PasswordSettings session={session} />
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
-      : tab === 'contratacion' && contractingEnabled ? <div className="contracting-page"><section className="visual-page-heading"><div><span>TU JORNADA</span><h1>Mi contratación</h1></div>{personalLinkAvailable && <div className="personal-portal-actions"><form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form></div>}</section>{portalLinkStatus && !portalLinkStatus.hasPortalPassword && !personalLinkAvailable && <div className="salary-link-notice" role="note"><span>Vincula la app con el portal para consultar tu contratación y tus próximos jornales.</span><button type="button" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}<UpcomingAssignments session={session} snapshot={snapshot} showExample /><ManualOperationalSnapshots view="distancias" session={session} onSession={onSession} /></div>
+      : tab === 'contratacion' && contractingEnabled ? <div className="contracting-page"><section className="visual-page-heading"><div><span>TU JORNADA</span><h1>Mi contratación</h1></div>{personalLinkAvailable && <div className="personal-portal-actions"><form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form></div>}</section>{portalLinkStatus && !portalLinkStatus.hasPortalPassword && !personalLinkAvailable && <div className="salary-link-notice" role="note"><span>Vincula la app con el portal para consultar tu contratación y tus próximos jornales.</span><button type="button" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}<UpcomingAssignments session={session} snapshot={snapshot} /><ManualOperationalSnapshots view="distancias" session={session} onSession={onSession} /></div>
       : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><PersonalNoraySectionLink session={session} section="jornada-contratada" label="Contratación" /><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} hideDistanceSummary={contractingEnabled} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>

@@ -33,3 +33,10 @@ Si faltan contraseña y enlace personal, Inicio muestra «Vincula la app con el 
 CPE Actualizador 1.0.14 incorpora «Leer partes · solo 72683» y una parada independiente. No está programado ni se lanza durante Actualizar ahora. La lectura exige VPN, detiene ante cambio de red, 403/429 o errores, y no empieza cerca de una actualización programada. Lee hoy y días posteriores del mes actual y siguiente, abre el número de parte visible o su mismo endpoint autenticado si no está renderizado y recoge todo el equipo. Publica únicamente cuando se completa la lectura; un fallo conserva la última lectura.
 
 El backend `mobile-upcoming-preview` usa el token del dispositivo existente y escribe solo en `app_cpe_portal_preview_snapshots`, canal `upcoming-contracts-72683`, sin alterar Sueldómetro, primas, calendario o datos operativos. Las pruebas automáticas usan fixtures; la primera lectura real la inicia el usuario.
+
+
+## Publicación para todas las cuentas (26/10/2026)
+
+Inicio está habilitado para todos. Ya no se muestra ningún parte de ejemplo. Los logos de terminal se muestran también en móvil y los principales usan recursos locales. Cada sesión solo valida y consulta lecturas de su propia chapa.
+
+El lector móvil de partes 1.0.15 es manual y recorre usuarios activos en los últimos 7 días con enlace personal válido, sin exigir clave de primas. La selección se calcula al iniciar y vuelve a verificarse por cuenta. El backend conserva el nombre histórico del canal `upcoming-contracts-72683`, pero separa cada fila por chapa. No se modifican jornales, primas ni calendarios. Si falla una cuenta, se detiene; lo guardado de cuentas anteriores se conserva.

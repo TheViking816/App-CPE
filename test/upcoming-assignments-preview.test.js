@@ -20,7 +20,7 @@ test('a different account or mismatched/incomplete team is rejected before stora
   const detail = { recognized: true, parte: row.parte, fecha: row.fecha, jornada: row.jornada, specialties: [{ name: 'CONDUCTOR 1a', workers: [{ code: '72683', name: 'ADRIAN' }] }] };
   const data = { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', rows: [{ ...row, detail }] };
   assert.equal(validateUpcomingReading(data).rows.length, 1);
-  assert.throws(() => validateUpcomingReading({ ...data, chapa: '72710' }), /72683/);
+  assert.throws(() => validateUpcomingReading({ ...data, chapa: '72710' }), /cuenta solicitada/);
   assert.throws(() => validateUpcomingReading({ ...data, rows: [{ ...row, detail: { ...detail, parte: '1' } }] }), /incompleto/);
   assert.throws(() => validateUpcomingReading({ ...data, rows: [{ ...row, detail: { ...detail, fecha: '27/10/2026' } }] }), /no coincide/);
 });
@@ -51,5 +51,7 @@ test('the manual publisher writes only the isolated preview channel and rejects 
   assert.equal(requests[0].body.channel, 'upcoming-contracts-72683');
   assert.equal(requests[0].body.chapa, '72683');
   assert.deepEqual(Object.keys(requests[0].body.payload), ['upcomingAssignments']);
-  await assert.rejects(publishUpcomingPreview({ ...data, chapa: '72710' }, 'test-key'), /72683/);
+  await assert.rejects(publishUpcomingPreview({ ...data, chapa: '72710' }, 'test-key'), /cuenta solicitada/);
 });
+
+test('reading is accepted only for the requested owner when enabled for all accounts',()=>{const v={schemaVersion:1,kind:'upcoming-assignments',chapa:'72710',rows:[]};assert.equal(validateUpcomingReading(v,'72710').chapa,'72710');assert.throws(()=>validateUpcomingReading(v,'72683'));});

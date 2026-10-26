@@ -23,9 +23,9 @@ export function madridDateKey(now = new Date()) {
 export function assignmentKey(row) {
   return [assignmentDateKey(row.fecha), assignmentShift(row.jornada), String(row.parte || '').trim()].join('|');
 }
-export function validateUpcomingReading(value) {
-  if (value?.schemaVersion !== 1 || value?.kind !== 'upcoming-assignments' || String(value.chapa) !== UPCOMING_PILOT_CHAPA || !Array.isArray(value.rows) || value.rows.length > 100)
-    throw new Error('La lectura debe corresponder a la prueba de contratación de 72683.');
+export function validateUpcomingReading(value, expectedChapa = UPCOMING_PILOT_CHAPA) {
+  if (value?.schemaVersion !== 1 || value?.kind !== 'upcoming-assignments' || !/^\d{5}$/.test(String(expectedChapa)) || String(value.chapa) !== String(expectedChapa) || !Array.isArray(value.rows) || value.rows.length > 100)
+    throw new Error('La lectura debe corresponder a la cuenta solicitada.');
   const rows = value.rows.map((row) => {
     if (!assignmentDateKey(row.fecha) || !assignmentShift(row.jornada) || !/^\d{1,10}$/.test(String(row.parte || '')))
       throw new Error('La lectura contiene un parte sin fecha o jornada válida.');
@@ -40,7 +40,7 @@ export function validateUpcomingReading(value) {
     }
     return { ...row, fecha: assignmentDateKey(row.fecha), jornada: assignmentShift(row.jornada) };
   });
-  return { schemaVersion: 1, kind: value.kind, chapa: UPCOMING_PILOT_CHAPA, updatedAt: String(value.updatedAt || ''), rows };
+  return { schemaVersion: 1, kind: value.kind, chapa: String(expectedChapa), updatedAt: String(value.updatedAt || ''), rows };
 }
 export function upcomingAssignments({ snapshot, reading, today = madridDateKey() } = {}) {
   const journal = snapshot?.payload?.jornales || {};
