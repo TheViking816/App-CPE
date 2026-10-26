@@ -43,15 +43,17 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
     const session = { chapa, token: 'test-only', supportAccess: true, displayName: 'USUARIO', irpfRate: 20 };
     await page.addInitScript((session) => localStorage.setItem('app-cpe-session', JSON.stringify(session)), session);
+    let realReading = false;
+    let linked = true;
     await page.route('https://*.supabase.co/**', (route) => {
       const url = route.request().url();
       let body = [];
-      if (url.includes('app_cpe_get_portal_preview_snapshot')) body = { chapa, payload: { upcomingAssignments: { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', updatedAt: new Date().toISOString(), rows: [row] } } };
+      if (url.includes('app_cpe_get_portal_preview_snapshot')) body = { chapa, payload: realReading ? { upcomingAssignments: { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', updatedAt: new Date().toISOString(), rows: [row] } } : {} };
       else if (url.includes('app_cpe_get_portal_snapshot')) body = { chapa, payload: { asignaciones: { rows: [old] } } };
       else if (url.includes('app_cpe_get_saved_salary_history')) body = { chapa, payload: { jornales: { history: [], rows: [] } } };
       else if (url.includes('app_cpe_get_current_user') || url.includes('app_cpe_get_personal_noray_snapshot') || url.includes('app_cpe_mobile_get_my_salary_premiums')) body = null;
-      else if (url.includes('app_cpe_portal_link_request_status')) body = { hasPortalPassword: true, hasPremiumKey: true };
-      else if (url.includes('app_cpe_has_manual_donde_voy_link')) body = true;
+      else if (url.includes('app_cpe_portal_link_request_status')) body = { hasPortalPassword: linked, hasPremiumKey: linked };
+      else if (url.includes('app_cpe_has_manual_donde_voy_link')) body = linked;
       else if (url.includes('app_cpe_has_manual') || url.includes('app_cpe_can_open')) body = false;
       else if (/get_(manual_premiums|relay_hours|remate_hours)/.test(url)) body = {};
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
@@ -66,7 +68,7 @@ try {
       await page.getByRole('heading', { name: 'Mi contratación', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Abrir mi contratación', exact: true }).waitFor();
       await integrated.waitFor();
-      await integrated.getByRole('button', { name: /CONDUCTOR 1a/ }).waitFor();
+      await page.getByRole('region', { name: 'Distancias a las puertas' }).waitFor();
       assert.equal(await page.getByRole('button', { name: /Cargar lectura/i }).count(), 0);
       const example = page.getByRole('region', { name: 'Parte de ejemplo' });
       await example.getByRole('button', { name: /Ejemplo del historial/ }).waitFor();
@@ -78,7 +80,20 @@ try {
       await page.getByRole('dialog').getByText('COMPAÑERO · PRUEBA', { exact: true }).waitFor();
       await page.screenshot({ path: path.join(os.tmpdir(), 'upcoming-example-modal-390.png'), fullPage: true });
       await page.keyboard.press('Escape');
+      realReading = true;
       await page.reload();
+      await integrated.getByRole('button', { name: /CONDUCTOR 1a/ }).waitFor();
+      assert.equal(await example.count(), 0);
+      linked = false;
+      await page.reload();
+      await page.getByRole('button', { name: 'Vincular portal', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Vincular portal' }).waitFor();
+      await page.keyboard.press('Escape');
+      await page.goto(`${origin}/App-CPE/#/chapero`);
+      await page.getByRole('heading', { name: 'Chapero', exact: true }).waitFor();
+      assert.equal(await page.locator('.doors-wrap').count(), 0);
+      await page.goto(`${origin}/App-CPE/#/contratacion`);
+
       await page.getByRole('heading', { name: 'Mi contratación', exact: true }).waitFor();
       await page.getByRole('button', { name: 'Sueldómetro', exact: true }).click();
       await page.getByRole('heading', { name: 'Sueldómetro', exact: true }).waitFor();

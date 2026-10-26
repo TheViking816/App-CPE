@@ -12,6 +12,7 @@ export default function UpcomingAssignments({ session, snapshot, showExample = f
   const [archive, setArchive] = useState(null);
   const [selected, setSelected] = useState(null);
   const [opening, setOpening] = useState('');
+  const [realReadingLoaded, setRealReadingLoaded] = useState(false);
   const [today, setToday] = useState(madridDateKey);
   useEffect(() => {
     const interval = setInterval(() => setToday(madridDateKey()), 60_000);
@@ -27,8 +28,10 @@ export default function UpcomingAssignments({ session, snapshot, showExample = f
       ]);
       if (!active) return;
       if (!saved.error && String(saved.data?.chapa) === '72683') setArchive(saved.data);
-      if (!preview.error && String(preview.data?.chapa) === '72683' && preview.data?.payload?.upcomingAssignments)
+      if (!preview.error && String(preview.data?.chapa) === '72683' && preview.data?.payload?.upcomingAssignments) {
         setReading(validateUpcomingReading(preview.data.payload.upcomingAssignments));
+        setRealReadingLoaded(true);
+      }
     };
     refresh().catch(() => {});
     const interval = setInterval(() => { if (document.visibilityState === 'visible') refresh().catch(() => {}); }, 60_000);
@@ -57,7 +60,7 @@ export default function UpcomingAssignments({ session, snapshot, showExample = f
     <header className="upcoming-heading"><span className="upcoming-heading-icon"><CalendarClock size={23} /></span><div><small>HOY Y PRÓXIMOS DÍAS</small><h2>Próximos jornales</h2></div><span className="upcoming-count">{rows.length} {rows.length === 1 ? 'jornal' : 'jornales'}</span></header>
     {rows.length ? <div className="upcoming-list">{rows.map((item) => <AssignmentRow key={assignmentKey(item)} item={item} today={today} busy={opening === assignmentKey(item)} onOpen={open} />)}</div> : <div className="upcoming-empty"><ClipboardList size={29} /><div><strong>Sin próximas contrataciones</strong><span>No tienes jornales guardados para hoy ni para los días siguientes.</span></div></div>}
     {reading?.updatedAt && Number.isFinite(Date.parse(reading.updatedAt)) && <footer className="upcoming-updated">Actualizado · {new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(reading.updatedAt))}</footer>}
-  </section>{showExample && example && <section className="upcoming-preview upcoming-example" aria-label="Parte de ejemplo"><header className="upcoming-heading"><span className="upcoming-heading-icon"><ClipboardList size={22} /></span><div><small>GUARDADO EL {dateLabel(example.fecha, { day: 'numeric', month: 'long', year: 'numeric' }).toLocaleUpperCase('es-ES')}</small><h2>Parte de ejemplo</h2></div></header><div className="upcoming-list"><AssignmentRow item={{ ...example, example: true }} today={today} busy={opening === assignmentKey(example)} onOpen={open} /></div></section>}
+  </section>{showExample && !realReadingLoaded && example && <section className="upcoming-preview upcoming-example" aria-label="Parte de ejemplo"><header className="upcoming-heading"><span className="upcoming-heading-icon"><ClipboardList size={22} /></span><div><small>GUARDADO EL {dateLabel(example.fecha, { day: 'numeric', month: 'long', year: 'numeric' }).toLocaleUpperCase('es-ES')}</small><h2>Parte de ejemplo</h2></div></header><div className="upcoming-list"><AssignmentRow item={{ ...example, example: true }} today={today} busy={opening === assignmentKey(example)} onOpen={open} /></div></section>}
     {selected && <AssignmentModal item={selected} onClose={() => setSelected(null)} />}
   </div>;
 }

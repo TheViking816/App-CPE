@@ -47,7 +47,7 @@ function initialSpecialtyIds(session) {
   return specialties.filter((item) => findByChapa(session.chapa, item.id)).map((item) => item.id).slice(0, 1);
 }
 
-export default function ManualOperationalSnapshots({ view, session, onSession }) {
+export default function ManualOperationalSnapshots({ view, session, onSession, hideDistanceSummary = false }) {
   const chapa = session.chapa;
   const [snapshots, setSnapshots] = useState([]);
   const [chapero, setChapero] = useState(null);
@@ -115,6 +115,25 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
       <div key={item.chapa} className={item.chapa === chapa ? 'is-self' : ''}><strong>{item.displayPosition || item.position}</strong><span>{item.chapa}</span></div>)}</div>
     {censusRows.length > 100 && <small>Mostrando 100 de {censusRows.length}. Busca una chapa para localizarla.</small>}
   </details>;
+  const distanceSummary = <>
+    <details className="operational-specialties">
+      <summary>Añadir especialidades · {draftIds.length} seleccionadas</summary>
+      <p>Marca todas las especialidades y polivalencias que quieras consultar.</p>
+      <div className="operational-specialty-list">{specialties.map((item) =>
+        <label key={item.id}><input type="checkbox" checked={draftIds.includes(item.id)} onChange={() => toggleSpecialty(item.id)} /><span>{item.name}</span><small>{item.kind === 'polivalencia' ? 'Polivalencia' : 'Especialidad'}</small></label>)}</div>
+      <button type="button" disabled={saving} onClick={saveSpecialties}>{saving ? 'Guardando…' : 'Guardar especialidades'}</button>
+      {message && <p role="status">{message}</p>}
+    </details>
+    {selector}
+    <div className="home-summary"><div><p>Tu posición</p><h1>{user?.displayPosition || user?.position || '-'} / {specialty?.censo.length || 0}</h1><span>Chapa {chapa}</span></div></div>
+    <DoorRings user={user} doors={doors} total={specialty?.censo.length || 0} />
+    {census}
+  </>;
+
+  if (view === 'distancias') return <section className="operational-panel contracting-distances" aria-label="Distancias a las puertas">
+    <div className="contracting-distances-heading"><span>ESTADO Y POSICIÓN</span><h2>Distancia a tus puertas</h2></div>
+    {distanceSummary}
+  </section>;
 
   if (view === 'puertas') return <section className="operational-panel">
     <section className="visual-page-heading"><div><span>PUERTAS DE TURNO</span><h1>Puertas</h1></div></section>
@@ -142,17 +161,6 @@ export default function ManualOperationalSnapshots({ view, session, onSession })
       </div>
       <div className="chapero-updated"><Clock3 size={14} /><span>Actualizado: {formatDate(chapero?.updatedAt)}</span></div>
     </section>
-    <details className="operational-specialties">
-      <summary>Añadir especialidades · {draftIds.length} seleccionadas</summary>
-      <p>Marca todas las especialidades y polivalencias que quieras consultar.</p>
-      <div className="operational-specialty-list">{specialties.map((item) =>
-        <label key={item.id}><input type="checkbox" checked={draftIds.includes(item.id)} onChange={() => toggleSpecialty(item.id)} /><span>{item.name}</span><small>{item.kind === 'polivalencia' ? 'Polivalencia' : 'Especialidad'}</small></label>)}</div>
-      <button type="button" disabled={saving} onClick={saveSpecialties}>{saving ? 'Guardando…' : 'Guardar especialidades'}</button>
-      {message && <p role="status">{message}</p>}
-    </details>
-    {selector}
-    <div className="home-summary"><div><p>Tu posición</p><h1>{user?.displayPosition || user?.position || '-'} / {specialty?.censo.length || 0}</h1><span>Chapa {chapa}</span></div></div>
-    <DoorRings user={user} doors={doors} total={specialty?.censo.length || 0} />
-    {census}
+    {!hideDistanceSummary && distanceSummary}
   </section>;
 }

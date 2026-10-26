@@ -22,3 +22,14 @@ La credencial local cifrada del worker se lee sin modificarla para guardar únic
 El lector se detiene ante cualquier error; no publica resultados parciales. No hay reintentos, alarmas ni acceso a otras cuentas. El agente no ejecuta este lector: solo lo inicia el usuario.
 
 Las comprobaciones locales del lector y del guardado usan respuestas simuladas, sin solicitudes a Noray ni escrituras remotas. Una lectura real iniciada por el usuario queda pendiente para validar el contenido actual de los equipos.
+
+
+## Inicio y lector móvil independiente
+
+Inicio muestra los próximos jornales, sus partes y, debajo, el resumen de distancias que antes estaba en Chapero. Conserva el selector y los cálculos existentes. En la prueba sigue habilitado únicamente para 72683. El ejemplo histórico desaparece cuando existe una lectura móvil/PC válida (también si está vacía).
+
+Si faltan contraseña y enlace personal, Inicio muestra «Vincula la app con el portal para consultar tu contratación y tus próximos jornales.» y «Vincular portal», que abre el modal existente en Mis datos. No se pide clave de primas para leer partes.
+
+CPE Actualizador 1.0.14 incorpora «Leer partes · solo 72683» y una parada independiente. No está programado ni se lanza durante Actualizar ahora. La lectura exige VPN, detiene ante cambio de red, 403/429 o errores, y no empieza cerca de una actualización programada. Lee hoy y días posteriores del mes actual y siguiente, abre el número de parte visible o su mismo endpoint autenticado si no está renderizado y recoge todo el equipo. Publica únicamente cuando se completa la lectura; un fallo conserva la última lectura.
+
+El backend `mobile-upcoming-preview` usa el token del dispositivo existente y escribe solo en `app_cpe_portal_preview_snapshots`, canal `upcoming-contracts-72683`, sin alterar Sueldómetro, primas, calendario o datos operativos. Las pruebas automáticas usan fixtures; la primera lectura real la inicia el usuario.
