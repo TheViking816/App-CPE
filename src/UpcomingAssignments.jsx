@@ -58,7 +58,7 @@ export default function UpcomingAssignments({ session, snapshot }) {
     setOpening(''); setSelected({ ...item, detail });
   };
   return <div className="contracting-journals"><section className="upcoming-preview" aria-label="Próximas contrataciones">
-    <header className="upcoming-heading"><span className="upcoming-heading-icon"><CalendarClock size={23} /></span><div><small>HOY Y PRÓXIMOS DÍAS</small><h2>Próximos jornales</h2></div><span className="upcoming-count">{rows.length} {rows.length === 1 ? 'jornal' : 'jornales'}</span></header>
+    <header className="upcoming-heading"><span className="upcoming-heading-icon"><CalendarClock size={23} /></span><div><h2>Próximos jornales</h2></div><span className="upcoming-count">{rows.length} {rows.length === 1 ? 'jornal' : 'jornales'}</span></header>
     {rows.length ? <div className="upcoming-list">{rows.map((item) => <AssignmentRow key={assignmentKey(item)} item={item} today={today} busy={opening === assignmentKey(item)} onOpen={open} />)}</div> : <div className="upcoming-empty"><ClipboardList size={29} /><div><strong>Sin próximas contrataciones</strong><span>No tienes jornales guardados para hoy ni para los días siguientes.</span></div></div>}
     {reading?.updatedAt && Number.isFinite(Date.parse(reading.updatedAt)) && <footer className="upcoming-updated">Actualizado · {new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(reading.updatedAt))}</footer>}
   </section>
