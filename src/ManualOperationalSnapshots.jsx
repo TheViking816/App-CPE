@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3 } from 'lucide-react';
+import { Clock3, LocateFixed } from 'lucide-react';
 import { classifyDistance, findByChapa, getDoorState, specialties } from './censo.js';
 import { getLatestChaperoSnapshot, getLatestDoorSnapshots, updateUserSpecialties } from './supabaseClient.js';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
@@ -131,7 +131,7 @@ export default function ManualOperationalSnapshots({ view, session, onSession, h
   </>;
 
   if (view === 'distancias') return <section className="operational-panel contracting-distances" aria-label="Distancias a las puertas">
-    <div className="contracting-distances-heading"><span>ESTADO Y POSICIÓN</span><h2>Distancia a tus puertas</h2></div>
+    <div className="contracting-distances-heading"><span className="contracting-distances-icon" aria-hidden="true"><LocateFixed size={23} /></span><div><span className="contracting-distances-kicker">ESTADO Y POSICIÓN</span><h2>Distancia a tus puertas</h2></div></div>
     {distanceSummary}
   </section>;
 
