@@ -1,5 +1,6 @@
 const pad = (value) => String(value).padStart(2, '0');
 export const UPCOMING_PILOT_CHAPA = '72683';
+export const UPCOMING_PREVIEW_CHANNEL = 'upcoming-contracts-72683';
 
 export function assignmentDateKey(value) {
   const text = String(value || '').trim();

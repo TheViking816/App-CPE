@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assignmentDateKey, madridDateKey, upcomingAssignments, validateUpcomingReading } from '../src/upcomingAssignments.js';
 import { readUpcomingNoray } from '../scripts/upcoming-noray-reader.js';
+import { publishUpcomingPreview } from '../scripts/publish-upcoming-preview.js';
 
 const row = { fecha: '26/10/2026', jornada: 'DE 02 A 08 H.', parte: '30964', empresa: 'CSP' };
 test('upcoming excludes the past, includes all of today and crosses year/month boundaries', () => {
@@ -38,4 +39,17 @@ test('manual reader uses the personal Jornales page and reads each upcoming part
   assert.equal(calls.filter((path) => path.includes('/partes/')).length, 1);
   assert.ok(calls.some((path) => path.includes('/2026/11')));
   assert.ok(calls.every((path) => !path.includes('portal.cpevalencia.com')));
+});
+
+test('the manual publisher writes only the isolated preview channel and rejects other accounts', async () => {
+  const detail = { recognized: true, parte: row.parte, fecha: row.fecha, jornada: row.jornada, specialties: [{ name: 'CONDUCTOR 1a', workers: [{ code: '72683', name: 'ADRIAN' }] }] };
+  const data = { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', updatedAt: '2026-10-26T11:00:00Z', rows: [{ ...row, detail }] };
+  const requests = [];
+  await publishUpcomingPreview(data, 'test-key', { fetcher: async (url, request) => { requests.push({ url, body: JSON.parse(request.body) }); return { ok: true }; } });
+  assert.equal(requests.length, 1);
+  assert.ok(requests[0].url.includes('/app_cpe_portal_preview_snapshots?'));
+  assert.equal(requests[0].body.channel, 'upcoming-contracts-72683');
+  assert.equal(requests[0].body.chapa, '72683');
+  assert.deepEqual(Object.keys(requests[0].body.payload), ['upcomingAssignments']);
+  await assert.rejects(publishUpcomingPreview({ ...data, chapa: '72710' }, 'test-key'), /72683/);
 });
