@@ -447,11 +447,11 @@ function ExchangeNotifications({ rows, onOpen, onMarkAll }) {
   </section>;
 }
 
-function ExchangeSection({ session, section, onSectionChange }) {
+function ExchangeSection({ session, section, onSectionChange, onPaidDaysChange }) {
   return <div className="exchange-area"><div className="exchange-type-switch" role="tablist" aria-label="Tipo de intercambio">
     <button type="button" role="tab" aria-selected={section === 'descansos'} className={section === 'descansos' ? 'is-active' : ''} onClick={() => onSectionChange('descansos')}>Descansos</button>
     <button type="button" role="tab" aria-selected={section === 'vacaciones'} className={section === 'vacaciones' ? 'is-active' : ''} onClick={() => onSectionChange('vacaciones')}>Vacaciones</button>
-  </div>{section === 'vacaciones' ? <VacationExchangePanel session={session} /> : <RestExchangePanel session={session} />}</div>;
+  </div>{section === 'vacaciones' ? <VacationExchangePanel session={session} onPaidDaysChange={onPaidDaysChange} /> : <RestExchangePanel session={session} onPaidDaysChange={onPaidDaysChange} />}</div>;
 }
 
 function Salary({ session, onSession }) {
@@ -515,6 +515,19 @@ function Salary({ session, onSession }) {
       await refreshSharedPremiums(salaryData, newRows, rateData, premiumData, relayData, remateData, paidDays).catch(() => {});
     } catch (reason) { setError(reason.message || 'No se pudieron cargar los datos.'); }
     finally { setLoading(false); }
+  };
+  const refreshPaidDays = async (workDate) => {
+    try {
+      const rows = await rpc('app_cpe_list_manual_paid_days', { p_token: session.token });
+      setPaidRows(rows || []);
+      setError('');
+      if (workDate) {
+        setMonth(workDate.slice(0, 7));
+        setPeriod('month');
+      }
+    } catch (reason) {
+      setError(reason.message || 'No se pudieron actualizar los días VA y FM en Sueldómetro.');
+    }
   };
   useEffect(() => {
     if (!config) return undefined;
@@ -800,7 +813,7 @@ function Salary({ session, onSession }) {
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
       : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general"><PersonalNoraySectionLink session={session} section="jornada-contratada" label="Contratación" /><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} />
-      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} /></SectionPage>
+      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>

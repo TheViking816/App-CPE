@@ -37,7 +37,7 @@ function formatDay(value) {
     .format(new Date(year, month - 1, day));
 }
 
-export default function RestExchangePanel({ session }) {
+export default function RestExchangePanel({ session, onPaidDaysChange }) {
   const [tab, setTab] = useState("board");
   const [kind, setKind] = useState("swap");
   const [offeredDate, setOfferedDate] = useState("");
@@ -200,6 +200,7 @@ export default function RestExchangePanel({ session }) {
         await saveRestDayOverride(session.token, editDate, editType);
       }
       await reloadCalendar();
+      if (paid || editType === "VA" || editType === "FM") await onPaidDaysChange?.(editDate);
       setNotice("Día guardado en tu calendario personal.");
       setEditCalendar(false);
     } catch (saveError) {

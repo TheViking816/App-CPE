@@ -29,7 +29,7 @@ function formatRange(start, end) {
   return start === end ? formatDay(start) : `${formatDay(start)} – ${formatDay(end)}`;
 }
 
-export default function VacationExchangePanel({ session }) {
+export default function VacationExchangePanel({ session, onPaidDaysChange }) {
   const [tab, setTab] = useState("board");
   const [offeredStart, setOfferedStart] = useState("");
   const [offeredEnd, setOfferedEnd] = useState("");
@@ -185,6 +185,7 @@ export default function VacationExchangePanel({ session }) {
         count = await addManualPaidDayRange(session.token, vacationStart, vacationEnd, paidType);
       }
       await reloadPaidDays();
+      await onPaidDaysChange?.(vacationStart);
       setNotice(`${count} ${count === 1 ? "día guardado" : "días guardados"} como ${paidType}.`);
       setVacationEditorOpen(false);
     } catch (saveError) {
@@ -203,6 +204,7 @@ export default function VacationExchangePanel({ session }) {
     try {
       await deleteManualPaidDay(session.token, row.id);
       await reloadPaidDays();
+      await onPaidDaysChange?.(vacationStart);
       setNotice(`Día ${row.concept_type} eliminado.`);
       setVacationEditorOpen(false);
     } catch (removeError) {

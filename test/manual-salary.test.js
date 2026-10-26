@@ -76,6 +76,18 @@ test('uses the shared paid-day table for FM even when the old snapshot contains 
   assert.equal(months[0].items.filter((item) => item.isVacation).length, 0);
 });
 
+test('five future FM saved in the calendar form a visible salary month without jornales', () => {
+  const paid = [23, 24, 25, 26, 27].map((day) => ({
+    id: `fm-${day}`, work_date: `2026-11-${day}`, concept_type: 'FM'
+  }));
+  const months = buildManualSalaryMonths(null, [], null, {}, {}, {}, paid);
+  assert.equal(months[0].key, '2026-11');
+  const period = salaryPeriod(months[0].items, 'month');
+  assert.equal(period.items.length, 5);
+  assert.ok(period.items.every((item) => item.isTraining));
+  assert.equal(period.total, Number((5 * manualPaidDayEntry(paid[0]).payroll.total).toFixed(2)));
+});
+
 test('deleted VA and FM stay absent even when still present in the old portal snapshot', () => {
   const snapshot = { payload: { vacaciones: { rows: [{ inicio: '03/10/2026', fin: '03/10/2026' }] },
     descansos: { months: [{ year: 2026, month: 10, days: [{ day: 8, code: 'FM' }] }] } } };
