@@ -224,3 +224,5 @@
   }
   .exchange-notification-icon { width: 36px; height: 36px; }
 }
+
+.portal-password-warning{padding:13px 15px;border:1px solid #f0c8ce;border-left:4px solid #d64b5c;border-radius:10px;background:#fff2f3;color:#81313b;font-size:13px;line-height:1.6}.portal-password-warning strong{font-weight:800;color:#a52739}
