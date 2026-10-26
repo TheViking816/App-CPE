@@ -20,6 +20,7 @@
 .visual-journal-content .portal-jornales-list strong { color:var(--ink); font-size:14px; font-weight:900; }
 .visual-journal-content .portal-jornales-list em { color:var(--muted); font-size:12px; font-style:normal; font-weight:700; }
 .visual-journal-content .portal-jornal-destination { margin-top:2px; color:var(--navy)!important; }
+.visual-journal-content .manual-jornal-company-warning { width:fit-content; margin-top:4px; padding:4px 7px; border-radius:5px; background:#fff2c7; color:#785000; font-size:10px; font-weight:800; }
 .visual-journal-content .portal-jornal-total { flex:0 0 auto; color:var(--navy); font-size:17px!important; font-weight:950!important; white-space:nowrap; }
 .visual-journal-content .portal-jornal-breakdown { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
 .visual-journal-content .portal-jornal-breakdown span { display:inline-flex; align-items:center; gap:4px; padding:5px 7px; border:1px solid #e0e8ef; border-radius:5px; background:#fff; color:#617086; font-size:10px; font-weight:800; }

@@ -55,6 +55,10 @@ export default function UpcomingAssignments({ session, snapshot }) {
   const rows = upcomingAssignments({ snapshot: combined, reading, today });
   const open = async (item) => {
     setOpening(assignmentKey(item));
+    if (!session.supportAccess && String(session.chapa) !== '72683') {
+      supabase.rpc('app_cpe_track_part_open', { p_token: session.token, p_parte: String(item.parte),
+        p_work_date: assignmentDateKey(item.fecha), p_shift: assignmentShift(item.jornada) }).catch(() => {});
+    }
     let detail = item.detail;
     try {
       if (!detail?.specialties?.length) {

@@ -266,6 +266,7 @@ function ActivityMonitor({ session }) {
   const [registrationError, setRegistrationError] = useState('');
   const [registrationLimit, setRegistrationLimit] = useState(10);
   const [personalLinks, setPersonalLinks] = useState(null);
+  const [partOpens, setPartOpens] = useState(null);
   const [personalLinkError, setPersonalLinkError] = useState('');
   const [personalLinkLimit, setPersonalLinkLimit] = useState(10);
   const [error, setError] = useState('');
@@ -277,13 +278,14 @@ function ActivityMonitor({ session }) {
   const [personalSyncBusy, setPersonalSyncBusy] = useState(false);
   const [personalSyncReady, setPersonalSyncReady] = useState(false);
   const load = async () => {
-    const [usage, journals, calendar, signups, linkOpens, syncStatus] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens, syncStatus, partActivity] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
       rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
       rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_personal_sync_status', { p_token: session.token })
+      rpc('app_cpe_admin_personal_sync_status', { p_token: session.token }),
+      rpc('app_cpe_admin_part_open_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -297,6 +299,7 @@ function ActivityMonitor({ session }) {
     else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
     if (syncStatus.status === 'fulfilled') { setPersonalSync(syncStatus.value); setPersonalSyncError(''); }
     else setPersonalSyncError(syncStatus.reason?.message || 'No se pudo cargar la sincronización personal.');
+    if (partActivity.status === 'fulfilled') setPartOpens(partActivity.value || []);
   };
   const startPersonalSync = async () => {
     setPersonalSyncBusy(true); setPersonalSyncError('');
@@ -316,6 +319,7 @@ function ActivityMonitor({ session }) {
   const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const matchingRegistrations = (registrations?.registrations || []).filter((user) => String(user.chapa || '').includes(filter));
   const visiblePersonalLinks = (personalLinks?.recent || []).filter((event) => String(event.chapa || '').includes(filter));
+  const visiblePartOpens = (partOpens || []).filter((event) => String(event.chapa || '').includes(filter)).slice(0, 10);
   const personalLinkLabels = { 'donde-voy': 'Mi contratación', vacaciones: 'Vacaciones', dobles: 'Dobles y HS', jornales: 'Jornales y primas', descansos: 'Descansos', chapero: 'Chapero', 'chapero-especialidades': 'Chapero por especialidades', puertas: 'Puertas', 'jornada-contratada': 'Jornada contratada' };
   const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
@@ -348,6 +352,11 @@ function ActivityMonitor({ session }) {
       {visiblePersonalLinks.slice(0, personalLinkLimit).map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{personalLinkLabels[event.section] || event.section}</td></tr>)}
     </tbody></table>{!personalLinkError && personalLinks && visiblePersonalLinks.length === 0 && <p className="monitor-empty">Todavía no hay aperturas de enlaces personales para el filtro actual.</p>}</div>
     {visiblePersonalLinks.length > personalLinkLimit && <button className="monitor-more-button" type="button" onClick={() => setPersonalLinkLimit((current) => current + 10)}>Ver más accesos<ChevronRight size={16} aria-hidden="true" /></button>}
+    <h3>Partes abiertos en Mi contratación</h3>
+    <p>Últimas 10 aperturas de partes por usuarios, con chapa y hora.</p>
+    <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Nombre</th><th>Parte</th><th>Jornada</th></tr></thead><tbody>
+      {visiblePartOpens.map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{event.parte}</td><td>{workDay(event.work_date)} · {event.shift}</td></tr>)}
+    </tbody></table>{partOpens && !visiblePartOpens.length && <p className="monitor-empty">No hay aperturas de partes para el filtro actual.</p>}</div>
     <h3>Nuevas altas</h3>
     <p>Últimos registros de la app, aunque no hayan vuelto a entrar. Fecha y hora de Madrid.</p>
     <div className="monitor-numbers"><span><strong>{registrations?.last24h ?? '—'}</strong> altas en las últimas 24 horas</span><span><strong>{registrations?.total ?? '—'}</strong> cuentas registradas</span></div>
@@ -381,6 +390,7 @@ function JornalCard({ item, onOpen }) {
     <div className="portal-jornal-content">
       <div className="portal-jornal-heading"><strong>{paidDay ? (item.isVacation ? 'Vacaciones' : 'Formación') : item.especialidad || 'Jornal'}</strong><strong className="portal-jornal-total">{formatEuro(item.payroll.total)}</strong></div>
       {paidDay ? <em>Día de {item.isVacation ? 'vacaciones' : 'formación'} retribuido</em> : <><em className="portal-jornal-destination">{destination}</em>{item.operacion && <em>{item.operacion}</em>}</>}
+      {!paidDay && item.companyNeedsSaving && <span className="manual-jornal-company-warning">{item.empresa ? 'Empresa tomada del parte. Guárdala al editar el jornal.' : 'Indica la empresa al editar el jornal para mostrar su logo.'}</span>}
       <div className="portal-jornal-breakdown">
         <span>{paidDay ? 'Importe' : 'Base'} <b>{formatEuro(item.payroll.base)}</b></span>
         {!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
@@ -507,16 +517,22 @@ function Salary({ session, onSession }) {
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const [oldData, newRows, paidDays, premiumData, rateData, relayData, remateData, pilot, pilotPremiums] = await Promise.all([
+      const [oldData, newRows, paidDays, premiumData, rateData, relayData, remateData, pilot, pilotPremiums, upcomingPreview] = await Promise.all([
         rpc('app_cpe_get_saved_salary_history', { p_token: session.token }),
         rpc('app_cpe_list_manual_jornales', { p_token: session.token }),
         rpc('app_cpe_list_manual_paid_days', { p_token: session.token }),
         getUserManualPremiums({ token: session.token }), loadPayrollConfig(),
         getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token }),
         loadNorayPilotSnapshot(session.chapa, session.token).catch(() => null),
-        loadNorayPilotPremiums(session.chapa, session.token).catch(() => null)
+        loadNorayPilotPremiums(session.chapa, session.token).catch(() => null),
+        rpc('app_cpe_get_portal_preview_snapshot', { p_token: session.token, p_channel: 'upcoming-contracts-72683' }).catch(() => null)
       ]);
-      const salaryData = mergeNorayPilotSalary(oldData, newRows || [], pilot, pilotPremiums);
+      const mergedSalary = mergeNorayPilotSalary(oldData, newRows || [], pilot, pilotPremiums);
+      const upcomingReading = upcomingPreview?.payload?.upcomingAssignments;
+      const upcomingRows = String(upcomingPreview?.chapa) === String(session.chapa)
+        && String(upcomingReading?.chapa) === String(session.chapa)
+        && Array.isArray(upcomingReading?.rows) ? upcomingReading.rows : [];
+      const salaryData = { ...mergedSalary, payload: { ...mergedSalary?.payload, upcomingAssignments: upcomingRows } };
       setSnapshot(salaryData); setManualRows(newRows || []); setPaidRows(paidDays || []); setPremiums(premiumData || {}); setConfig(rateData); setRelayHours(relayData || {}); setRemateHours(remateData || {});
       await refreshSharedPremiums(salaryData, newRows, rateData, premiumData, relayData, remateData, paidDays).catch(() => {});
     } catch (reason) { setError(reason.message || 'No se pudieron cargar los datos.'); }
@@ -665,6 +681,7 @@ function Salary({ session, onSession }) {
     try {
       const premium = euroInput(form.premium);
       if (!Number.isFinite(premium) || premium < 0) throw new Error('Introduce una prima válida.');
+      if (!String(form.company || '').trim()) throw new Error('Selecciona la empresa o terminal.');
       const saved = await rpc('app_cpe_save_manual_jornal', { p_token: session.token, p_id: form.id,
         p_work_date: form.work_date, p_shift: form.shift, p_specialty: form.specialty.trim(),
         p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_premium: premium,
@@ -815,7 +832,7 @@ function Salary({ session, onSession }) {
       <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>
       <label>Puesto / especialidad<select value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} required>{optionsForGroup(form.worker_group, form.specialty).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
       <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
-      <label>Empresa o terminal<select value={selectedCompany} onChange={(event) => setForm({ ...form, company: event.target.value })}><option value="">Sin indicar</option>{form.company && selectedCompany === form.company && !['CSP','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
+      <label>Empresa o terminal<select value={selectedCompany} onChange={(event) => setForm({ ...form, company: event.target.value })} required><option value="">Selecciona una empresa</option>{form.company && selectedCompany === form.company && !['CSP','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
       <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
       <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} placeholder="Pendiente" /></label>
       <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>

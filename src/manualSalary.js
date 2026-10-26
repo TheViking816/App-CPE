@@ -74,6 +74,7 @@ function applySharedPremium(item, sharedPremiums) {
 
 export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}, manualPaidDays = [], sharedPremiums = {}) {
   const payload = snapshot?.payload || {};
+  const upcomingRows = Array.isArray(payload.upcomingAssignments) ? payload.upcomingAssignments : [];
   const norayPremiumsBySlot = payload.norayPremiumsBySlot || {};
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
@@ -128,9 +129,14 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       });
     const newItems = manualRows.filter((row) => String(row.work_date).startsWith(key)).map((row) => {
       const details = unpackManualNotes(row.notes);
+      const matchingPart = /^\d{1,12}$/.test(details.part) ? upcomingRows.find((part) =>
+        String(part.fecha) === String(row.work_date)
+        && String(part.parte) === details.part
+        && String(part.jornada) === String(row.shift)) : null;
+      const savedCompany = row.company || details.company || '';
       const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, tipo: details.portalType || 'MAN', especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
-        parte: details.part || `MANUAL-${row.id}`, empresa: row.company || details.company, buque: row.vessel || details.vessel, produccion: '' };
+        parte: details.part || `MANUAL-${row.id}`, empresa: savedCompany || matchingPart?.empresa || '', buque: row.vessel || details.vessel, produccion: '' };
       const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig, relayHours, remateHours)[0];
       const premiumKnown = details.premiumKnown === true
         || (details.premiumKnown == null && Number(row.premium) > 0)
@@ -141,7 +147,8 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       const premium = premiumKnown ? money(row.premium) : hasImportedPremium ? money(importedAmount) : null;
       const operationLabel = details.operation || (row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
         : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT');
-      return { ...calculated, operacion: operationLabel, id: row.id, manualPart: details.part, notes: details.notes, source: 'manual', payroll: {
+      return { ...calculated, operacion: operationLabel, id: row.id, manualPart: details.part, notes: details.notes,
+        companyNeedsSaving: !savedCompany, source: 'manual', payroll: {
         ...calculated.payroll, prima: premium, manualPrima: premiumKnown ? premium : null,
         primaSource: premiumKnown ? 'manual' : hasImportedPremium ? 'portal' : 'pending',
         primaPending: !premiumKnown && !hasImportedPremium,
