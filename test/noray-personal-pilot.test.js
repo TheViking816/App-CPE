@@ -117,3 +117,15 @@ test('la lectura salarial de otro usuario incorpora la prima sin duplicar su jor
   assert.equal(items.length, 1);
   assert.equal(items[0].payroll.prima, 50.25);
 });
+
+test('la lectura nueva conserva jornales guardados del mes y sus primas', () => {
+  const pilot = fixture('72668');
+  pilot.journals.rows.push({ ...pilot.journals.rows[0], dia: '25', parte: '30768' });
+  const saved = { payload: { jornales: { monthLabel: 'octubre de 2026', history: [{ year: 2026, month: 10,
+    rows: [{ dia: '24', jornada: '02-08', parte: '30767', produccion: '55' }] }] } } };
+  const premiums = { chapa: '72668', rows: [{ part: '30767', date: '2026-10-24', shift: '02-08', amount: 80 }] };
+  const rows = mergeNorayPilotSalary(saved, [], pilot, premiums).payload.jornales.rows;
+  assert.equal(rows.length, 2);
+  assert.equal(rows.find(row => String(row.dia) === '24').produccion, '55');
+  assert.ok(rows.find(row => String(row.dia) === '25'));
+});

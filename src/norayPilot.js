@@ -47,7 +47,9 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumP
   const history = (previous.history || []).filter((period) => !importedKeys.has(`${period.year}-${period.month}`));
   for (const { year, month, rows: importedRows = [] } of importedMonths) {
     const label = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
-    const rows = importedRows.filter((row) => {
+    const previousMonth = (previous.history || []).find((period) => Number(period.year) === Number(year) && Number(period.month) === Number(month));
+    const savedRows = previousMonth?.rows || (String(previous.monthLabel || '').toLowerCase() === label.toLowerCase() ? previous.rows || [] : []);
+    const rows = [...savedRows, ...importedRows].filter((row) => {
       const date = `${year}-${pad(month)}-${pad(row.dia)}`;
       const slot = `${date}|${shift(row.jornada)}`;
       if (manualSlots.has(slot) || importedSlots.has(slot)) return false;
@@ -57,7 +59,7 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumP
       const slot = `${year}-${pad(month)}-${pad(row.dia)}|${shift(row.jornada)}`;
       const byPart = premiumsByPart.get(String(row.parte));
       const premium = byPart?.date.startsWith(`${year}-${pad(month)}-`) ? byPart : premiumsBySlot[slot];
-      return premium && Number(premium.amount) > 0
+      return premium && Number(premium.amount) > 0 && !(Number(row.produccion) > 0)
         ? { ...row, produccion: String(premium.amount), produccionEstado: premium.status || 'verified' }
         : row;
     });
