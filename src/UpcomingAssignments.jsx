@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Building2, CalendarClock, ChevronRight, ClipboardList, Clock3, Ship, Users, X } from 'lucide-react';
+import { Building2, CalendarClock, ChevronRight, ClipboardList, Clock3, LoaderCircle, Ship, Users, X } from 'lucide-react';
 import { supabase } from './supabaseClient.js';
 import { companyLogo, shipImage } from './generalBoard.js';
 import { assignmentDateKey, assignmentKey, assignmentShift, madridDateKey, upcomingAssignments, validateUpcomingReading, UPCOMING_PREVIEW_CHANNEL } from './upcomingAssignments.js';
@@ -19,28 +19,38 @@ export default function UpcomingAssignments({ session, snapshot }) {
   const [selected, setSelected] = useState(null);
   const [opening, setOpening] = useState('');
   const [today, setToday] = useState(madridDateKey);
+  const [loadState, setLoadState] = useState('loading');
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => setToday(madridDateKey()), 60_000);
     return () => clearInterval(interval);
   }, []);
   useEffect(() => {
     let active = true;
+    setReading(null);
+    setArchive(null);
+    setLoadState('loading');
     const refresh = async () => {
-      if (!supabase) return;
-      const [saved, preview] = await Promise.all([
-        supabase.rpc('app_cpe_get_portal_snapshot', { p_token: session.token }),
-        supabase.rpc('app_cpe_get_portal_preview_snapshot', { p_token: session.token, p_channel: UPCOMING_PREVIEW_CHANNEL })
-      ]);
-      if (!active) return;
-      if (!saved.error && String(saved.data?.chapa) === String(session.chapa)) setArchive(saved.data);
-      if (!preview.error && String(preview.data?.chapa) === String(session.chapa) && preview.data?.payload?.upcomingAssignments) {
-        setReading(validateUpcomingReading(preview.data.payload.upcomingAssignments, session.chapa));
+      try {
+        if (!supabase) throw new Error('Conexión no disponible');
+        const [saved, preview] = await Promise.all([
+          supabase.rpc('app_cpe_get_portal_snapshot', { p_token: session.token }),
+          supabase.rpc('app_cpe_get_portal_preview_snapshot', { p_token: session.token, p_channel: UPCOMING_PREVIEW_CHANNEL })
+        ]);
+        if (!active) return;
+        if (preview.error || String(preview.data?.chapa) !== String(session.chapa)) throw new Error('Lectura no disponible');
+        if (!saved.error && String(saved.data?.chapa) === String(session.chapa)) setArchive(saved.data);
+        setReading(preview.data?.payload?.upcomingAssignments
+          ? validateUpcomingReading(preview.data.payload.upcomingAssignments, session.chapa) : null);
+        setLoadState('ready');
+      } catch {
+        if (active) setLoadState('error');
       }
     };
-    refresh().catch(() => {});
-    const interval = setInterval(() => { if (document.visibilityState === 'visible') refresh().catch(() => {}); }, 60_000);
+    refresh();
+    const interval = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60_000);
     return () => { active = false; clearInterval(interval); };
-  }, [session.token]);
+  }, [session.token, retry]);
   const combined = { ...snapshot, payload: { ...snapshot?.payload, asignaciones: archive?.payload?.asignaciones } };
   const rows = upcomingAssignments({ snapshot: combined, reading, today });
   const open = async (item) => {
@@ -58,9 +68,11 @@ export default function UpcomingAssignments({ session, snapshot }) {
     setOpening(''); setSelected({ ...item, detail });
   };
   return <div className="contracting-journals"><section className="upcoming-preview" aria-label="Próximas contrataciones">
-    <header className="upcoming-heading"><span className="upcoming-heading-icon"><CalendarClock size={23} /></span><div><h2>Próximos jornales</h2></div><span className="upcoming-count">{rows.length} {rows.length === 1 ? 'jornal' : 'jornales'}</span></header>
-    {rows.length ? <div className="upcoming-list">{rows.map((item) => <AssignmentRow key={assignmentKey(item)} item={item} today={today} busy={opening === assignmentKey(item)} onOpen={open} />)}</div> : <div className="upcoming-empty"><ClipboardList size={29} /><div><strong>No hay próximas contrataciones</strong></div></div>}
-    {reading?.updatedAt && Number.isFinite(Date.parse(reading.updatedAt)) && <footer className="upcoming-updated">Actualizado · {new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(reading.updatedAt))}</footer>}
+    <header className="upcoming-heading"><span className="upcoming-heading-icon"><CalendarClock size={23} /></span><div><h2>Próximos jornales</h2></div><span className="upcoming-count">{loadState === 'loading' ? 'Cargando…' : loadState === 'error' ? '—' : `${rows.length} ${rows.length === 1 ? 'jornal' : 'jornales'}`}</span></header>
+    {loadState === 'loading' ? <div className="upcoming-empty upcoming-loading" role="status" aria-live="polite"><LoaderCircle size={25} /><div><strong>Cargando próximos jornales…</strong></div></div>
+      : loadState === 'error' ? <div className="upcoming-empty upcoming-error" role="alert"><ClipboardList size={29} /><div><strong>No se pudieron cargar los próximos jornales.</strong><button type="button" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></div></div>
+      : rows.length ? <div className="upcoming-list">{rows.map((item) => <AssignmentRow key={assignmentKey(item)} item={item} today={today} busy={opening === assignmentKey(item)} onOpen={open} />)}</div> : <div className="upcoming-empty"><ClipboardList size={29} /><div><strong>No hay próximas contrataciones</strong></div></div>}
+    {loadState === 'ready' && reading?.updatedAt && Number.isFinite(Date.parse(reading.updatedAt)) && <footer className="upcoming-updated">Actualizado · {new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(reading.updatedAt))}</footer>}
   </section>
     {selected && <AssignmentModal item={selected} chapa={session.chapa} onClose={() => setSelected(null)} />}
   </div>;
