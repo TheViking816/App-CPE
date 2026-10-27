@@ -50,7 +50,7 @@ test('personal Noray relay accepts only saved sections and the official host', a
     assert.equal(new URL(descansos.headers.location).pathname, '/descansos');
     assert.equal(requests[2].body.p_section, 'dobles');
 
-    for (const section of ['chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada', 'situacion-trabajador', 'excepciones-pedidas', 'mis-especialidades']) {
+    for (const section of ['chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada', 'situacion-trabajador', 'excepciones-pedidas', 'mis-especialidades', 'solicito-formacion']) {
       const personal = response();
       await handler({ method: 'POST', body: { token: 'session', section }, headers: {} }, personal);
       assert.equal(personal.statusCode, 303);
