@@ -329,13 +329,6 @@ function ActivityMonitor({ session }) {
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
     <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); setPersonalLinkLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
-    <h3>Notificaciones activadas</h3>
-    <p>Usuarios que tienen actualmente avisos del móvil activados. Fecha y hora de Madrid.</p>
-    <div className="monitor-numbers"><span><strong>{pushActivations?.total ?? '—'}</strong> usuarios</span></div>
-    {pushActivationError && <p className="form-error" role="alert">{pushActivationError}</p>}
-    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Nombre</th><th>Activadas</th><th>Dispositivos</th></tr></thead><tbody>
-      {visiblePushActivations.map((user) => <tr key={user.chapa}><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td><td>{registrationTime(user.activated_at)}</td><td>{user.devices}</td></tr>)}
-    </tbody></table>{pushActivations && visiblePushActivations.length === 0 && <p className="monitor-empty">Ningún usuario con notificaciones activadas para el filtro actual.</p>}</div>
     <h3>Pantallas</h3><p>Visitas de las últimas 24 horas. También se muestran las pantallas sin visitas. Tus accesos de administrador y los de soporte no se contabilizan.</p><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{data ? page.views : '—'}</strong></span>)}</div>
     <h3>Usuarios recientes</h3>
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
@@ -375,6 +368,16 @@ function ActivityMonitor({ session }) {
       {visibleCalendarEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${workDay(event.previous_work_date)}` : ''}</td><td>{dayChange(event)}</td></tr>)}
     </tbody></table>{!calendarError && visibleCalendarEvents.length === 0 && <p className="monitor-empty">No hay cambios de días para el filtro actual.</p>}</div>
     <h3>Actividad reciente</h3><div className="recent-list">{recent.map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
+    <h3>Notificaciones activadas</h3>
+    <p>Usuarios que tienen actualmente avisos del móvil activados. Fecha y hora de Madrid.</p>
+    <div className="monitor-numbers"><span><strong>{pushActivations?.total ?? '—'}</strong> usuarios</span></div>
+    {pushActivationError && <p className="form-error" role="alert">{pushActivationError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Nombre</th><th>Activadas</th><th>Dispositivos</th></tr></thead><tbody>
+      {visiblePushActivations.map((user) => <tr key={user.chapa}><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td><td>{registrationTime(user.activated_at)}</td><td>{user.devices}</td></tr>)}
+    </tbody></table>{pushActivations && visiblePushActivations.length === 0 && <p className="monitor-empty">Ningún usuario con notificaciones activadas para el filtro actual.</p>}</div>
+    {(pushActivations?.recentDisabled || []).filter((item) => String(item.chapa || '').includes(filter)).length > 0 && <><h4>Últimas desactivaciones</h4><div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Fecha y hora</th><th>Motivo</th></tr></thead><tbody>
+      {(pushActivations?.recentDisabled || []).filter((item) => String(item.chapa || '').includes(filter)).map((item, index) => <tr key={`${item.chapa}-${index}`}><td><strong>{item.chapa}</strong></td><td>{registrationTime(item.disabled_at)}</td><td>{item.disabled_reason === 'sign_out' ? 'Sesión cerrada' : item.disabled_reason?.startsWith('push_http_') ? 'Suscripción caducada' : 'Desactivada'}</td></tr>)}
+    </tbody></table></div></>}
   </section>;
 }
 
@@ -571,7 +574,15 @@ function Salary({ session, onSession }) {
   useEffect(() => {
     if (!('Notification' in window) || !('PushManager' in window)) { setPushState('unsupported'); return; }
     if (Notification.permission === 'denied') { setPushState('denied'); return; }
-    if (Notification.permission === 'granted') refreshPushSubscription(session.token).then((ok) => setPushState(ok ? 'enabled' : 'idle')).catch(() => {});
+    if (Notification.permission !== 'granted') return;
+    let active = true;
+    const refresh = () => refreshPushSubscription(session.token)
+      .then((ok) => { if (active) setPushState(ok ? 'enabled' : 'idle'); })
+      .catch(() => { if (active) setPushState('idle'); });
+    refresh();
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { active = false; document.removeEventListener('visibilitychange', onVisibility); };
   }, [session.token]);
   useEffect(() => {
     if (!session.token) return undefined;
