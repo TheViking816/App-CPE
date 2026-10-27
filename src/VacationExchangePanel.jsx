@@ -8,6 +8,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeTabIcon } from "./ExchangeVisual.
 import { canRespondToVacationOffer, dateRangeKeys } from "./vacationExchange.js";
 import { professionalGroupCode, professionalGroupLabel } from "./professionalGroups.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import PersonalNoraySectionLink from "./PersonalNoraySectionLink.jsx";
 import { loadNorayPilotSnapshot, norayPilotCalendar } from './norayPilot.js';
 import { addManualPaidDayRange, deleteManualPaidDay, listManualPaidDays, saveManualPaidDay } from "./personalRestCalendarClient.js";
 import { supabase } from "./supabaseClient.js";
@@ -315,7 +316,7 @@ export default function VacationExchangePanel({ session, onPaidDaysChange }) {
   }
 
   return <section className="rest-exchange-panel vacation-exchange-panel exchange-redesign" ref={panelRef}>
-    {personalVacationLink && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={15} aria-hidden="true" /></button></form>}
+    <div className="rest-portal-links">{personalVacationLink && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={15} aria-hidden="true" /></button></form>}<PersonalNoraySectionLink session={session} section="disponibilidad12m" label="Disponibilidad · últimos 12 meses" /></div>
     <ExchangeBoardCalendar offers={board} paidDays={paidDays} officialDays={pilotCalendar.officialDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />
     {pilotCalendar.vacationPeriods.length > 0 && <section className="noray-pilot-vacations" aria-label="Mis vacaciones concedidas"><strong>Mis vacaciones concedidas</strong><div>{pilotCalendar.vacationPeriods.map((period) => <span key={`${period.start}-${period.end}`}>{formatRange(period.start, period.end)} · {period.days} {period.days === 1 ? 'día' : 'días'}</span>)}</div></section>}
     <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir VA o FM</button><span>Los días VA y FM aparecen también en descansos y Sueldómetro.</span></div>
