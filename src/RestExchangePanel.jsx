@@ -11,6 +11,7 @@ import { ExchangeAvatar, ExchangeDate, ExchangeTabIcon } from "./ExchangeVisual.
 import { professionalGroupLabel } from "./professionalGroups.js";
 import useExchangeOfferFocus from "./useExchangeOfferFocus.js";
 import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
+import PersonalNoraySectionLink from "./PersonalNoraySectionLink.jsx";
 import { loadNorayPilotSnapshot, norayPilotCalendar } from './norayPilot.js';
 import { deleteManualPaidDay, getPersonalRestCalendar, saveManualPaidDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
@@ -319,6 +320,7 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-portal-links">
       {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
+      <PersonalNoraySectionLink session={session} section="excepciones-pedidas" label="Excepciones" />
       <a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a>
     </div>
     {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales} officialDays={calendarData.officialDays} restHeader={calendarData.header}
