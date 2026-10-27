@@ -21,8 +21,16 @@ test('a different account or mismatched/incomplete team is rejected before stora
   const data = { schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', rows: [{ ...row, detail }] };
   assert.equal(validateUpcomingReading(data).rows.length, 1);
   assert.throws(() => validateUpcomingReading({ ...data, chapa: '72710' }), /cuenta solicitada/);
-  assert.throws(() => validateUpcomingReading({ ...data, rows: [{ ...row, detail: { ...detail, parte: '1' } }] }), /incompleto/);
+  assert.throws(() => validateUpcomingReading({ ...data, rows: [{ ...row, detail: { ...detail, parte: '1' } }] }), /no es válido/);
   assert.throws(() => validateUpcomingReading({ ...data, rows: [{ ...row, detail: { ...detail, fecha: '27/10/2026' } }] }), /no coincide/);
+});
+test('a portal journal appears in Mi contratación even if it was already added manually', () => {
+  const saved = { ...row, fecha: '2026-10-26', parte: '', buque: '', empresa: '' };
+  const reading = validateUpcomingReading({ schemaVersion: 1, kind: 'upcoming-assignments', chapa: '72683', rows: [{ ...row, parte: '30964' }] });
+  const rows = upcomingAssignments({ today: '2026-10-26', snapshot: { payload: { asignaciones: { rows: [saved] } } }, reading });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].parte, '30964');
+  assert.equal(rows[0].empresa, 'CSP');
 });
 test('manual reader uses the personal Jornales page and reads each upcoming part once', async () => {
   const calls = [];

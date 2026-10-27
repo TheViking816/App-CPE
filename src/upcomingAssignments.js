@@ -30,13 +30,15 @@ export function validateUpcomingReading(value, expectedChapa = UPCOMING_PILOT_CH
     if (!assignmentDateKey(row.fecha) || !assignmentShift(row.jornada) || !/^\d{1,10}$/.test(String(row.parte || '')))
       throw new Error('La lectura contiene un parte sin fecha o jornada válida.');
     const detail = row.detail;
-    if (!detail?.recognized || String(detail.parte) !== String(row.parte) || !Array.isArray(detail.specialties) || !detail.specialties.length)
-      throw new Error(`El equipo del parte ${row.parte} está incompleto en el archivo.`);
-    if (assignmentDateKey(detail.fecha) !== assignmentDateKey(row.fecha) || assignmentShift(detail.jornada) !== assignmentShift(row.jornada))
-      throw new Error(`La fecha o jornada del parte ${row.parte} no coincide.`);
-    for (const group of detail.specialties) {
-      if (!group.name || !Array.isArray(group.workers) || group.workers.some((worker) => !/^\d{4,8}$/.test(String(worker.code || ''))))
+    if (detail != null) {
+      if (!detail.recognized || String(detail.parte) !== String(row.parte) || !Array.isArray(detail.specialties) || !detail.specialties.length)
         throw new Error(`El equipo del parte ${row.parte} no es válido.`);
+      if (assignmentDateKey(detail.fecha) !== assignmentDateKey(row.fecha) || assignmentShift(detail.jornada) !== assignmentShift(row.jornada))
+        throw new Error(`La fecha o jornada del parte ${row.parte} no coincide.`);
+      for (const group of detail.specialties) {
+        if (!group.name || !Array.isArray(group.workers) || group.workers.some((worker) => !/^\d{4,8}$/.test(String(worker.code || ''))))
+          throw new Error(`El equipo del parte ${row.parte} no es válido.`);
+      }
     }
     return { ...row, fecha: assignmentDateKey(row.fecha), jornada: assignmentShift(row.jornada) };
   });
