@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { supabase, loginUser, updateUserPassword, updateUserProfile, refreshCurrentUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, setUserRelayHour, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
 import { touchDirectPresence } from './exchangeClient.js';
 import { EXCHANGE_PREVIEW_READ_ONLY } from './exchangePreview.js';
@@ -599,6 +599,9 @@ function Salary({ session, onSession }) {
     window.addEventListener('hashchange', followHash);
     return () => window.removeEventListener('hashchange', followHash);
   }, []);
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [tab]);
   useEffect(() => { if (!session.supportAccess && String(session.chapa) !== '72683' && ACTIVE_PAGES.has(tab)) trackPageVisit({ token: session.token, page: tab }).catch(() => {}); }, [session.token, session.supportAccess, session.chapa, tab]);
   useEffect(() => {
     if (session.supportAccess) return undefined;
@@ -631,7 +634,7 @@ function Salary({ session, onSession }) {
     ));
   }, [session.token]);
 
-  const navigate = (next) => { const page = (next === 'monitor' && isAdmin) || next === 'novedades' || ACTIVE_PAGES.has(next) ? next : 'sueldometro'; setTab(page); setMenuOpen(false); if (page !== 'monitor' && page !== 'novedades') window.location.hash = `#/${page}`; };
+  const navigate = (next) => { const page = (next === 'monitor' && isAdmin) || next === 'novedades' || ACTIVE_PAGES.has(next) ? next : 'sueldometro'; window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); setTab(page); setMenuOpen(false); if (page !== 'monitor' && page !== 'novedades') window.location.hash = `#/${page}`; };
   const openNotification = (item) => {
     if (!item.readAt) {
       setNotifications((rows) => rows.map((row) => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
