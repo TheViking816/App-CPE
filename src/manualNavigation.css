@@ -197,6 +197,16 @@
 }
 .visual-bottom-nav button:hover { background: #f0f6fb; color: #174c7d; }
 .visual-bottom-nav button.is-active { background: #e4f2fc; color: #0c568d; }
+.visual-bottom-nav button.is-salary { color: #0b4d83; }
+.visual-bottom-nav button.is-salary .visual-bottom-icon {
+  width: 37px;
+  min-height: 37px;
+  border-radius: 12px;
+  background: #d9edf9;
+  color: #07558d;
+}
+.visual-bottom-nav button.is-salary.is-active { background: #e4f2fc; color: #074c80; }
+.visual-bottom-nav button.is-salary.is-active .visual-bottom-icon { background: #0c629c; color: #fff; }
 .visual-bottom-icon { position: relative; display: grid; place-items: center; min-height: 23px; }
 .visual-bottom-icon i {
   position: absolute;

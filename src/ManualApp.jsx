@@ -916,13 +916,12 @@ function Salary({ session, onSession }) {
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">
       {[
         ...(contractingEnabled ? [['contratacion', 'Inicio', House]] : []),
-        ['chapero', 'Chapero', BriefcaseBusiness],
         ['puertas', 'Puertas', DoorOpen],
         ['sueldometro', 'Sueldómetro', WalletCards],
         ['tablon', 'Tablón', ClipboardList],
         ['descansos', 'Descansos', CalendarDays],
         ...(isAdmin && !contractingEnabled ? [['monitor', 'Monitor', Activity]] : [])
-      ].map(([page, label, Icon]) => <button key={page} type="button" className={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'is-active' : ''}
+      ].map(([page, label, Icon]) => <button key={page} type="button" className={`${page === 'sueldometro' ? 'is-salary' : ''} ${(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'is-active' : ''}`.trim()}
         aria-current={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 'page' : undefined} onClick={() => navigate(page)}>
         <span className="visual-bottom-icon"><Icon size={21} strokeWidth={(tab === page || (page === 'descansos' && tab === 'vacaciones')) ? 2.5 : 2} />{page === 'novedades' && notifications.some((row) => !row.readAt) && <i aria-hidden="true" />}</span>
         <span>{label}</span>
