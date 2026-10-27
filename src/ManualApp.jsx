@@ -24,6 +24,7 @@ import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
 import PortalCredentialPilot from './PortalCredentialPilot.jsx';
 import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, House, KeyRound, LogOut, MessageCircle, Settings, WalletCards, X } from 'lucide-react';
+import { enablePushNotifications, refreshPushSubscription, disablePushNotifications } from './pushNotifications.js';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
@@ -31,10 +32,10 @@ const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
 // Personal contracting is available to every account; the separate mobile reader remains manual.
 const CONTRACTING_ENABLED = true;
 const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_ENABLED ? ['contratacion'] : [])]);
-const ACTIVE_NOTIFICATION_TYPES = new Set(['rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
+const ACTIVE_NOTIFICATION_TYPES = new Set(['new_journal', 'new_premium', 'rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
-  return ACTIVE_PAGES.has(route) ? route : 'sueldometro';
+  return route === 'novedades' || ACTIVE_PAGES.has(route) ? route : 'sueldometro';
 };
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
 const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: optionsForGroup('II')[0], worker_group: 'II', operation_type: 'ESTIBA', company: '', vessel: '', premium: '', part: '', notes: '' });
@@ -432,9 +433,10 @@ function ManualEditorDialog({ children, onClose, busy, label, wide = false }) {
   </div>;
 }
 
-function ExchangeNotifications({ rows, onOpen, onMarkAll }) {
+function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, onEnablePush }) {
   return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Actividad reciente</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
+    {pushState !== 'enabled' && pushState !== 'unsupported' && <div className="notification-push-prompt"><span>Recibe avisos también cuando cierres la app.</span><button type="button" onClick={onEnablePush}>Activar notificaciones</button>{pushState === 'denied' && <small>Permite las notificaciones para App CPE en los ajustes del navegador.</small>}</div>}
     <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
       className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
       <span className="exchange-notification-icon"><Bell size={19} aria-hidden="true" /></span>
@@ -552,6 +554,12 @@ function Salary({ session, onSession }) {
     const timer = window.setInterval(refresh, 60_000);
     return () => { active = false; window.clearInterval(timer); window.removeEventListener('app-cpe-portal-link-updated', refresh); };
   }, [session.token]);
+  const [pushState, setPushState] = useState('idle');
+  useEffect(() => {
+    if (!('Notification' in window) || !('PushManager' in window)) { setPushState('unsupported'); return; }
+    if (Notification.permission === 'denied') { setPushState('denied'); return; }
+    if (Notification.permission === 'granted') refreshPushSubscription(session.token).then((ok) => setPushState(ok ? 'enabled' : 'idle')).catch(() => {});
+  }, [session.token]);
   useEffect(() => {
     if (!session.token) return undefined;
     const timer = window.setInterval(() => {
@@ -596,7 +604,8 @@ function Salary({ session, onSession }) {
   useEffect(() => {
     let active = true;
     const refresh = () => getUserNotifications({ token: session.token, limit: 100 })
-      .then((data) => { if (active) setNotifications((data.rows || []).filter((row) => ACTIVE_NOTIFICATION_TYPES.has(row.eventType))); })
+      .then((data) => { if (active) setNotifications((data.rows || []).filter((row) => ACTIVE_NOTIFICATION_TYPES.has(row.eventType)
+        && (!['new_journal', 'new_premium'].includes(row.eventType) || new Date(row.createdAt).getTime() >= Date.parse('2026-10-27T00:00:00Z')))); })
       .catch(() => {});
     refresh();
     const timer = window.setInterval(refresh, 15_000);
@@ -617,13 +626,14 @@ function Salary({ session, onSession }) {
     ));
   }, [session.token]);
 
-  const navigate = (next) => { const page = (next === 'monitor' && isAdmin) || next === 'novedades' || ACTIVE_PAGES.has(next) ? next : 'sueldometro'; window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); setTab(page); setMenuOpen(false); if (page !== 'monitor' && page !== 'novedades') window.location.hash = `#/${page}`; };
+  const navigate = (next) => { const page = (next === 'monitor' && isAdmin) || next === 'novedades' || ACTIVE_PAGES.has(next) ? next : 'sueldometro'; window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); setTab(page); setMenuOpen(false); if (page !== 'monitor') window.location.hash = `#/${page}`; };
   const openNotification = (item) => {
     if (!item.readAt) {
       setNotifications((rows) => rows.map((row) => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => {});
     }
     const section = item.eventType?.startsWith('vacation_') ? 'vacaciones' : 'descansos';
+    if (item.eventType === 'new_journal' || item.eventType === 'new_premium') { navigate('sueldometro'); return; }
     if (item.eventType === 'direct_message' && item.metadata?.conversationId) {
       window.location.hash = directConversationHash(item.metadata.conversationId);
       setTab('conversaciones');
@@ -826,7 +836,8 @@ function Salary({ session, onSession }) {
       <div className="form-actions"><button type="button" disabled={busy} onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
     </form></section>;
 
-  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}</header><div className="visual-content">
+  const signOut = () => { disablePushNotifications(session.token).catch(() => {}); localStorage.removeItem(SESSION_KEY); onSession(null); };
+  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={signOut}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={signOut} />}</header><div className="visual-content">
     {portalLinkStatus?.portalPasswordIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>Contraseña del portal incorrecta.</strong> Revisa los datos en «Vincular portal» e introduce la contraseña de acceso al portal de SEVASA</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
       : tab === 'cuenta' ? <PasswordSettings session={session} />
@@ -836,7 +847,7 @@ function Salary({ session, onSession }) {
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} hideDistanceSummary={contractingEnabled} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
-      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
+      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} onEnablePush={() => enablePushNotifications(session.token).then((ok) => setPushState(ok ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'idle')).catch(() => setPushState('idle'))} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
     {portalLinkStatus && !(portalLinkStatus.hasPortalPassword && portalLinkStatus.hasPremiumKey) && <div className="salary-link-notice" role="note">
       <span>{portalLinkStatus.hasPortalPassword ? 'Guarda tu clave de primas para cargar automáticamente tus jornales y primas.' : 'Para cargar automáticamente tus jornales y primas, vincula la app con el portal.'}</span>
