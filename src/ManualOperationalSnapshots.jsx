@@ -103,8 +103,8 @@ export default function ManualOperationalSnapshots({ view, session, onSession, h
   </>;
 
   if (view === 'distancias') return <section className="operational-panel contracting-distances" aria-label="Distancias a las puertas">
-    <div className="contracting-distances-heading"><span className="contracting-distances-icon" aria-hidden="true"><LocateFixed size={23} /></span><div><span className="contracting-distances-kicker">ESTADO Y POSICIÓN</span><h2>Distancia a tus puertas</h2></div></div>
-    {distanceSummary}
+    <div className="contracting-distances-heading"><span className="contracting-distances-icon" aria-hidden="true"><LocateFixed size={23} /></span><div><span className="contracting-distances-kicker">ESTADO Y POSICIÓN</span><h2>Distancia a puertas</h2></div></div>
+    <div className="contracting-distances-body">{distanceSummary}</div>
   </section>;
 
   if (view === 'puertas') return <section className="operational-panel">
