@@ -273,18 +273,13 @@ function ActivityMonitor({ session }) {
   const [journalError, setJournalError] = useState('');
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
-  const [personalSync, setPersonalSync] = useState(null);
-  const [personalSyncError, setPersonalSyncError] = useState('');
-  const [personalSyncBusy, setPersonalSyncBusy] = useState(false);
-  const [personalSyncReady, setPersonalSyncReady] = useState(false);
   const load = async () => {
-    const [usage, journals, calendar, signups, linkOpens, syncStatus, partActivity] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens, partActivity] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
       rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
       rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_personal_sync_status', { p_token: session.token }),
       rpc('app_cpe_admin_part_open_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
@@ -297,18 +292,7 @@ function ActivityMonitor({ session }) {
     else setRegistrationError(signups.reason?.message || 'No se pudieron cargar las nuevas altas.');
     if (linkOpens.status === 'fulfilled') { setPersonalLinks(linkOpens.value); setPersonalLinkError(''); }
     else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
-    if (syncStatus.status === 'fulfilled') { setPersonalSync(syncStatus.value); setPersonalSyncError(''); }
-    else setPersonalSyncError(syncStatus.reason?.message || 'No se pudo cargar la sincronización personal.');
     if (partActivity.status === 'fulfilled') setPartOpens(partActivity.value || []);
-  };
-  const startPersonalSync = async () => {
-    setPersonalSyncBusy(true); setPersonalSyncError('');
-    try {
-      await rpc('app_cpe_admin_request_personal_sync', { p_token: session.token });
-      setPersonalSyncReady(false);
-      await load();
-    } catch (reason) { setPersonalSyncError(reason.message || 'No se pudo iniciar la sincronización.'); }
-    finally { setPersonalSyncBusy(false); }
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
@@ -319,6 +303,10 @@ function ActivityMonitor({ session }) {
   const visibleCalendarEvents = calendarEvents.filter((event) => String(event.chapa) !== '72683' && String(event.chapa || '').includes(filter)).slice(0, displayLimit);
   const matchingRegistrations = (registrations?.registrations || []).filter((user) => String(user.chapa || '').includes(filter));
   const visiblePersonalLinks = (personalLinks?.recent || []).filter((event) => String(event.chapa || '').includes(filter));
+  const recentPersonalLinkUsers = [...new Map((personalLinks?.recent || [])
+    .filter((event) => new Date(event.opened_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000)
+    .map((event) => [String(event.chapa), event])).values()]
+    .filter((event) => String(event.chapa || '').includes(filter));
   const visiblePartOpens = (partOpens || []).filter((event) => String(event.chapa || '').includes(filter)).slice(0, 10);
   const personalLinkLabels = { 'donde-voy': 'Mi contratación', vacaciones: 'Vacaciones', dobles: 'Dobles y HS', jornales: 'Jornales y primas', descansos: 'Descansos', chapero: 'Chapero', 'chapero-especialidades': 'Chapero por especialidades', puertas: 'Puertas', 'jornada-contratada': 'Jornada contratada' };
   const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
@@ -331,12 +319,6 @@ function ActivityMonitor({ session }) {
       ? `${dayType(event.previous_day_type)} → ${dayType(event.day_type)}` : dayType(event.day_type);
   return <section className="manual-panel monitor-panel"><div className="section-head"><div><p className="eyebrow">Administración</p><h2>Monitor de actividad</h2></div><button onClick={load}>Actualizar</button></div>
     <p>Accesos y pantallas visitadas durante las últimas 24 horas. Los cambios de jornales y días del calendario se conservan en el registro.</p>
-    <div className="personal-sync-control"><div><h3>Sincronización personal</h3><p>Solo al pulsar desde este Monitor: el PC leerá uno a uno los enlaces guardados de las cuentas activas. Se detendrá ante cualquier error, incluido HTTP 403 o 429, sin reintentos.</p>
-      <p><strong>{personalSync?.eligibleCount ?? '—'}</strong> cuentas con actividad en los últimos 7 días · <strong>{personalSync?.inactiveCount ?? '—'}</strong> excluidas por inactividad · PC {personalSync?.pcOnline ? 'conectado' : 'desconectado'}</p>
-      {personalSync?.status && <p>Última ejecución: <strong>{({ queued: 'pendiente', running: 'en curso', completed: 'terminada', stopped: 'detenida' })[personalSync.status] || personalSync.status}</strong> · {personalSync.completedCount || 0}/{personalSync.totalCount || 0} cuentas{personalSync.currentChapa ? ` · chapa ${personalSync.currentChapa}` : ''}{personalSync.message ? ` · ${personalSync.message}` : ''}</p>}
-      {personalSyncError && <p className="form-error" role="alert">{personalSyncError}</p>}
-      <label className="personal-sync-check"><input type="checkbox" checked={personalSyncReady} onChange={(event) => setPersonalSyncReady(event.target.checked)} /> He comprobado mi conexión antes de iniciar esta ejecución manual.</label>
-    </div><button className="primary" type="button" disabled={!personalSyncReady || !personalSync?.pcOnline || !personalSync?.eligibleCount || ['queued','running'].includes(personalSync?.status) || personalSyncBusy} onClick={startPersonalSync}>{personalSyncBusy ? 'Preparando…' : 'Sincronizar ahora'}</button></div>
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
     <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); setPersonalLinkLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
@@ -346,6 +328,7 @@ function ActivityMonitor({ session }) {
     <h3>Accesos a enlaces personales</h3>
     <p>Aperturas desde los botones de la app, registradas desde esta actualización. Fecha y hora de Madrid.</p>
     <div className="monitor-numbers"><span><strong>{personalLinks?.opens24h ?? '—'}</strong> aperturas en las últimas 24 horas</span><span><strong>{personalLinks?.users24h ?? '—'}</strong> usuarios</span></div>
+    <div className="monitor-personal-link-users"><strong>Chapas de las últimas 24 horas</strong><div>{recentPersonalLinkUsers.map((event) => <span key={event.chapa}><strong>{event.chapa}</strong> · {personalLinkLabels[event.section] || event.section} · {registrationTime(event.opened_at)}</span>)}{personalLinks && recentPersonalLinkUsers.length === 0 && <span>Ninguna apertura para el filtro actual.</span>}</div></div>
     <div className="monitor-pages">{(personalLinks?.sections || []).map((item) => <span key={item.section}>{personalLinkLabels[item.section] || item.section}: <strong>{item.opens}</strong></span>)}</div>
     {personalLinkError && <p className="form-error" role="alert">{personalLinkError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Nombre</th><th>Enlace abierto</th></tr></thead><tbody>
