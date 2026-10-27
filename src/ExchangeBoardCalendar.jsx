@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { madridTodayKey } from "./exchangeDeadline.js";
 import { dateRangeKeys } from "./vacationExchange.js";
 import { availableRestMonths, parseRestGroup } from "./companyRestCalendar.js";
@@ -15,6 +15,7 @@ const officialMark = (code) => ({
 export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "", overrides = [], paidDays = [], holidays = [], jornales = {}, officialDays = {}, restHeader = null, onEditDate }) {
   const todayKey = madridTodayKey();
   const [visibleMonth, setVisibleMonth] = useState(() => todayKey.slice(0, 7));
+  const swipeStart = useRef(null);
   const group = parseRestGroup(restGroup);
   const [selectedYear, selectedMonth] = visibleMonth.split("-").map(Number);
   const months = [[selectedYear, selectedMonth]];
@@ -40,8 +41,25 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
     if (!vacation && todayKey.startsWith("2026-") && date.getFullYear() !== 2026) return;
     setVisibleMonth(dayKey(date.getFullYear(), date.getMonth() + 1, 1).slice(0, 7));
   };
+  const onTouchStart = (event) => {
+    if (event.touches.length !== 1) { swipeStart.current = null; return; }
+    const touch = event.touches[0];
+    swipeStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+  const onTouchEnd = (event) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || event.changedTouches.length !== 1) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) >= 55 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+      event.preventDefault();
+      changeMonth(dx < 0 ? 1 : -1);
+    }
+  };
   const restCalendarAvailable = !vacation && restMonths.includes(selectedMonth);
-  return <section className="exchange-board-calendar" aria-label={`Calendario de ofertas de ${vacation ? "vacaciones" : "descansos"}`}>
+  return <section className="exchange-board-calendar" aria-label={`Calendario de ofertas de ${vacation ? "vacaciones" : "descansos"}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { swipeStart.current = null; }}>
     {!vacation && restHeader?.year === selectedYear && restHeader?.monthNumber === selectedMonth && <div className="noray-pilot-rest-header">
       <span><strong>Grupos descanso:</strong> {restHeader.groupVacation} / {restHeader.groupWeekly}</span>
       <span><strong>FS:</strong> {restHeader.fsMonth?.used}/{restHeader.fsMonth?.max} mes | {restHeader.fsYear?.used}/{restHeader.fsYear?.max} año</span>
