@@ -54,6 +54,18 @@ export async function enablePushNotifications(token) {
   return syncPushSubscription(token);
 }
 
+export async function testDeviceNotification() {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !('serviceWorker' in navigator)) {
+    throw new Error('Las notificaciones no están permitidas en este dispositivo.');
+  }
+  const registration = await navigator.serviceWorker.ready;
+  await registration.showNotification('App CPE · prueba', {
+    body: 'Prueba de avisos en este dispositivo.',
+    icon: `${import.meta.env.BASE_URL}logo.jpg`,
+    tag: 'app-cpe-local-test'
+  });
+}
+
 export async function disablePushNotifications(token) {
   if (!supabase || !token || !('serviceWorker' in navigator)) return;
   if (pendingSync) await pendingSync.catch(() => {});

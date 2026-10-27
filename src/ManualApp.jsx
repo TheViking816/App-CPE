@@ -24,7 +24,7 @@ import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
 import PortalCredentialPilot from './PortalCredentialPilot.jsx';
 import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, House, KeyRound, LogOut, MessageCircle, Settings, WalletCards, X } from 'lucide-react';
-import { enablePushNotifications, refreshPushSubscription, disablePushNotifications } from './pushNotifications.js';
+import { enablePushNotifications, refreshPushSubscription, disablePushNotifications, testDeviceNotification } from './pushNotifications.js';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
@@ -453,9 +453,11 @@ function ManualEditorDialog({ children, onClose, busy, label, wide = false }) {
 }
 
 function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, pushError, onEnablePush }) {
+  const [testMessage, setTestMessage] = useState('');
   return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Actividad reciente</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
     {pushState !== 'enabled' && pushState !== 'unsupported' && <div className="notification-push-prompt"><span>Recibe avisos también cuando cierres la app.</span><button type="button" onClick={onEnablePush}>Activar notificaciones</button>{pushState === 'denied' && <small>Permite las notificaciones para App CPE en los ajustes del navegador.</small>}{pushError && <small role="alert">No se pudieron activar: {pushError}</small>}</div>}
+    {pushState === 'enabled' && <div className="notification-push-prompt"><span>Avisos activados en este dispositivo.</span><button type="button" onClick={() => testDeviceNotification().then(() => setTestMessage('Prueba enviada. Si no aparece en el móvil, revisa los permisos de notificaciones de App CPE y Chrome en Android.')).catch((error) => setTestMessage(error?.message || 'No se pudo mostrar la prueba.'))}>Probar aviso</button>{testMessage && <small role="status">{testMessage}</small>}</div>}
     <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
       className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
       <span className="exchange-notification-icon"><Bell size={19} aria-hidden="true" /></span>

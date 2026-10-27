@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261027-calendar-swipe-66";
+self.__APP_CPE_SW_VERSION__ = "20261027-push-local-test-67";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
