@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261027-salary-updates-62";
+self.__APP_CPE_SW_VERSION__ = "20261027-notifications-part-opens-63";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

@@ -268,6 +268,7 @@ function ActivityMonitor({ session }) {
   const [registrationLimit, setRegistrationLimit] = useState(10);
   const [personalLinks, setPersonalLinks] = useState(null);
   const [partOpens, setPartOpens] = useState(null);
+  const [partOpenError, setPartOpenError] = useState('');
   const [pushActivations, setPushActivations] = useState(null);
   const [pushActivationError, setPushActivationError] = useState('');
   const [personalLinkError, setPersonalLinkError] = useState('');
@@ -296,7 +297,8 @@ function ActivityMonitor({ session }) {
     else setRegistrationError(signups.reason?.message || 'No se pudieron cargar las nuevas altas.');
     if (linkOpens.status === 'fulfilled') { setPersonalLinks(linkOpens.value); setPersonalLinkError(''); }
     else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
-    if (partActivity.status === 'fulfilled') setPartOpens(partActivity.value || []);
+    if (partActivity.status === 'fulfilled') { setPartOpens(partActivity.value || []); setPartOpenError(''); }
+    else setPartOpenError(partActivity.reason?.message || 'No se pudieron cargar las aperturas de partes.');
     if (pushActivity.status === 'fulfilled') { setPushActivations(pushActivity.value); setPushActivationError(''); }
     else setPushActivationError(pushActivity.reason?.message || 'No se pudieron cargar las activaciones.');
   };
@@ -343,7 +345,8 @@ function ActivityMonitor({ session }) {
     </tbody></table>{!personalLinkError && personalLinks && visiblePersonalLinks.length === 0 && <p className="monitor-empty">Todavía no hay aperturas de enlaces personales para el filtro actual.</p>}</div>
     {visiblePersonalLinks.length > personalLinkLimit && <button className="monitor-more-button" type="button" onClick={() => setPersonalLinkLimit((current) => current + 10)}>Ver más accesos<ChevronRight size={16} aria-hidden="true" /></button>}
     <h3>Partes abiertos en Mi contratación</h3>
-    <p>Últimas 10 aperturas de partes por usuarios, con chapa y hora.</p>
+    <p>Últimas 10 aperturas de otros usuarios, con chapa y hora. La chapa 72683 no se registra.</p>
+    {partOpenError && <p className="form-error" role="alert">{partOpenError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Nombre</th><th>Parte</th><th>Jornada</th></tr></thead><tbody>
       {visiblePartOpens.map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{event.parte}</td><td>{workDay(event.work_date)} · {event.shift}</td></tr>)}
     </tbody></table>{partOpens && !visiblePartOpens.length && <p className="monitor-empty">No hay aperturas de partes para el filtro actual.</p>}</div>
@@ -449,10 +452,10 @@ function ManualEditorDialog({ children, onClose, busy, label, wide = false }) {
   </div>;
 }
 
-function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, onEnablePush }) {
+function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, pushError, onEnablePush }) {
   return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Actividad reciente</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
-    {pushState !== 'enabled' && pushState !== 'unsupported' && <div className="notification-push-prompt"><span>Recibe avisos también cuando cierres la app.</span><button type="button" onClick={onEnablePush}>Activar notificaciones</button>{pushState === 'denied' && <small>Permite las notificaciones para App CPE en los ajustes del navegador.</small>}</div>}
+    {pushState !== 'enabled' && pushState !== 'unsupported' && <div className="notification-push-prompt"><span>Recibe avisos también cuando cierres la app.</span><button type="button" onClick={onEnablePush}>Activar notificaciones</button>{pushState === 'denied' && <small>Permite las notificaciones para App CPE en los ajustes del navegador.</small>}{pushError && <small role="alert">No se pudieron activar: {pushError}</small>}</div>}
     <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
       className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
       <span className="exchange-notification-icon"><Bell size={19} aria-hidden="true" /></span>
@@ -571,18 +574,20 @@ function Salary({ session, onSession }) {
     return () => { active = false; window.clearInterval(timer); window.removeEventListener('app-cpe-portal-link-updated', refresh); };
   }, [session.token]);
   const [pushState, setPushState] = useState('idle');
+  const [pushError, setPushError] = useState('');
   useEffect(() => {
     if (!('Notification' in window) || !('PushManager' in window)) { setPushState('unsupported'); return; }
     if (Notification.permission === 'denied') { setPushState('denied'); return; }
     if (Notification.permission !== 'granted') return;
     let active = true;
     const refresh = () => refreshPushSubscription(session.token)
-      .then((ok) => { if (active) setPushState(ok ? 'enabled' : 'idle'); })
-      .catch(() => { if (active) setPushState('idle'); });
+      .then((ok) => { if (active) { setPushState(ok ? 'enabled' : 'idle'); if (ok) setPushError(''); } })
+      .catch((error) => { if (active) { setPushState('idle'); setPushError(error?.message || 'Error de conexión'); } });
     refresh();
     const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
     document.addEventListener('visibilitychange', onVisibility);
-    return () => { active = false; document.removeEventListener('visibilitychange', onVisibility); };
+    const timer = window.setInterval(onVisibility, 5 * 60_000);
+    return () => { active = false; document.removeEventListener('visibilitychange', onVisibility); window.clearInterval(timer); };
   }, [session.token]);
   useEffect(() => {
     if (!session.token) return undefined;
@@ -871,7 +876,7 @@ function Salary({ session, onSession }) {
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} hideDistanceSummary={contractingEnabled} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
-      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} onEnablePush={() => enablePushNotifications(session.token).then((ok) => setPushState(ok ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'idle')).catch(() => setPushState('idle'))} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
+      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} pushError={pushError} onEnablePush={() => enablePushNotifications(session.token).then((ok) => { setPushState(ok ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'idle'); setPushError(ok ? '' : 'Comprueba los permisos del navegador.'); }).catch((error) => { setPushState('idle'); setPushError(error?.message || 'Error de conexión'); })} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
     {portalLinkStatus && !(portalLinkStatus.hasPortalPassword && portalLinkStatus.hasPremiumKey) && <div className="salary-link-notice" role="note">
       <span>{portalLinkStatus.hasPortalPassword ? 'Guarda tu clave de primas para cargar automáticamente tus jornales y primas.' : 'Para cargar automáticamente tus jornales y primas, vincula la app con el portal.'}</span>

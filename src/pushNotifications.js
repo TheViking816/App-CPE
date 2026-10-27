@@ -1,5 +1,7 @@
 import { supabase } from './supabaseClient.js';
 
+let pendingSync = null;
+
 function decodeBase64Url(value) {
   const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
   const bytes = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='));
@@ -16,11 +18,19 @@ export async function refreshPushSubscription(token) {
   return syncPushSubscription(token);
 }
 
-async function syncPushSubscription(token) {
+function syncPushSubscription(token) {
+  if (!pendingSync) {
+    pendingSync = performPushSubscriptionSync(token).finally(() => { pendingSync = null; });
+  }
+  return pendingSync;
+}
+
+async function performPushSubscriptionSync(token) {
   if (!supabase || !token || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false;
   if (Notification.permission !== 'granted') return false;
   const { data: publicKey, error } = await supabase.rpc('app_cpe_push_public_key');
-  if (error || !publicKey) return false;
+  if (error) throw error;
+  if (!publicKey) throw new Error('La clave de notificaciones no está disponible.');
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
   if (subscription) {
@@ -46,6 +56,7 @@ export async function enablePushNotifications(token) {
 
 export async function disablePushNotifications(token) {
   if (!supabase || !token || !('serviceWorker' in navigator)) return;
+  if (pendingSync) await pendingSync.catch(() => {});
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return;
