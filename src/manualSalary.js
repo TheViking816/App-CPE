@@ -76,6 +76,7 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
   const payload = snapshot?.payload || {};
   const upcomingRows = Array.isArray(payload.upcomingAssignments) ? payload.upcomingAssignments : [];
   const norayPremiumsBySlot = payload.norayPremiumsBySlot || {};
+  const norayJournalSlots = new Set(payload.norayJournalSlots || []);
   const historic = selectPortalJornalesHistory(payload.jornales, payload.primas);
   const current = selectPortalJornales(payload.jornales, payload.primas);
   const currentLabel = payload.jornales?.monthLabel || payload.primas?.monthLabel || '';
@@ -119,6 +120,13 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       || (String(payload.primas?.monthLabel || '').toLowerCase() === String(period.monthLabel).toLowerCase() ? payload.primas?.rows || [] : []);
     const historicItems = enrichJornales(period.rows, savedPremiumRows, period.monthLabel, payrollConfig, relayHours, remateHours, manualPremiums)
       .map((item) => {
+        const synced = norayPremiumsBySlot[`${item.payroll.date}|${item.payroll.shift}`];
+        if (synced && Number(synced.amount) > 0) {
+          const premium = money(Number(synced.amount));
+          return { ...item, source: 'historico', payroll: { ...item.payroll, prima: premium,
+            manualPrima: null, primaSource: 'portal', primaPending: false,
+            total: money(item.payroll.total - (item.payroll.prima || 0) + premium) } };
+        }
         const saved = manualPremiums[item.payroll.manualPremiumKey];
         const amount = Number(saved?.amount);
         if (saved == null || !Number.isFinite(amount) || item.payroll.manualPrima != null) return { ...item, source: 'historico' };
@@ -127,7 +135,8 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
           manualPrima: premium, primaSource: 'manual', primaPending: false,
           total: money(item.payroll.total - (item.payroll.prima || 0) + premium) } };
       });
-    const newItems = manualRows.filter((row) => String(row.work_date).startsWith(key)).map((row) => {
+    const newItems = manualRows.filter((row) => String(row.work_date).startsWith(key)
+      && !norayJournalSlots.has(`${row.work_date}|${row.shift}`)).map((row) => {
       const details = unpackManualNotes(row.notes);
       const matchingPart = /^\d{1,12}$/.test(details.part) ? upcomingRows.find((part) =>
         String(part.fecha) === String(row.work_date)
@@ -143,14 +152,14 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
         || row.operation_type === 'RECEPCION_ENTREGA';
       const importedPremium = norayPremiumsBySlot[`${row.work_date}|${String(row.shift).replace(/(\d{2})(\d{2})$/, '$1-$2')}`];
       const importedAmount = Number(importedPremium?.amount);
-      const hasImportedPremium = !premiumKnown && importedPremium && Number.isFinite(importedAmount) && importedAmount > 0;
-      const premium = premiumKnown ? money(row.premium) : hasImportedPremium ? money(importedAmount) : null;
+      const hasImportedPremium = importedPremium && Number.isFinite(importedAmount) && importedAmount > 0;
+      const premium = hasImportedPremium ? money(importedAmount) : premiumKnown ? money(row.premium) : null;
       const operationLabel = details.operation || (row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
         : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT');
       return { ...calculated, operacion: operationLabel, id: row.id, manualPart: details.part, notes: details.notes,
         companyNeedsSaving: !savedCompany, source: 'manual', payroll: {
-        ...calculated.payroll, prima: premium, manualPrima: premiumKnown ? premium : null,
-        primaSource: premiumKnown ? 'manual' : hasImportedPremium ? 'portal' : 'pending',
+        ...calculated.payroll, prima: premium, manualPrima: premiumKnown && !hasImportedPremium ? premium : null,
+        primaSource: hasImportedPremium ? 'portal' : premiumKnown ? 'manual' : 'pending',
         primaPending: !premiumKnown && !hasImportedPremium,
         total: money(calculated.payroll.total + (premium || 0))
       } };

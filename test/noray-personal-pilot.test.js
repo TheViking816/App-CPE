@@ -40,25 +40,26 @@ test('repetir la extracción no crea nuevos cambios y el cambio de mes sí', () 
   assert.equal(compareNorayPilotSnapshots(pilot, nextMonth).newJournals, 1);
 });
 
-test('historial previo intacto; jornal manual del mismo parte prevalece', () => {
+test('historial previo intacto; la lectura prevalece sobre el jornal manual del mismo turno', () => {
   const pilot = fixture();
   const existing = { payload: { jornales: { history: [{ year: 2026, month: 9, rows: [{ parte: '100' }] }] }, other: 'preserved' } };
   const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 1a', vessel: 'MSC RIDA VIII', notes: packManualNotes({ part: '30767' }) }];
   const merged = mergeNorayPilotSalary(existing, manual, pilot);
   assert.equal(merged.payload.jornales.history.length, 2);
   assert.equal(merged.payload.jornales.history[0].rows[0].parte, '100');
-  assert.equal(merged.payload.jornales.history[1].rows.length, 0);
+  assert.equal(merged.payload.jornales.history[1].rows.length, 1);
+  assert.equal(buildManualSalaryMonths(merged, manual)[0].items.length, 1);
   assert.equal(merged.payload.other, 'preserved');
   assert.equal(mergeNorayPilotSalary(existing, [], pilot).payload.jornales.rows.length, 1);
 });
 
-test('un jornal manual conserva su turno aunque el portal traiga otro puesto o varios partes', () => {
+test('la lectura sustituye el jornal manual sin duplicar varios partes del mismo turno', () => {
   const pilot = fixture('72668');
   pilot.journals.rows.push({ ...pilot.journals.rows[0], parte: '30768', buque: 'OTRO BUQUE', especialidad: 'CLASIFICADOR' });
   const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CONDUCTOR 2a',
     notes: packManualNotes({ company: 'MSC' }) }];
   const merged = mergeNorayPilotSalary(null, manual, pilot);
-  assert.equal(merged.payload.jornales.rows.length, 0);
+  assert.equal(merged.payload.jornales.rows.length, 1);
   assert.deepEqual(calendarJornales(merged, manual)['2026-10-24'], ['02-08']);
   assert.equal(mergeNorayPilotSalary(null, [{ ...manual[0], shift: '14-20' }], pilot).payload.jornales.rows.length, 1);
 });
@@ -67,7 +68,7 @@ test('la fecha y el turno identifican el jornal aunque cambie el buque', () => {
   const pilot = fixture();
   const manual = [{ work_date: '2026-10-24', shift: '02-08', specialty: 'CLASIFICADOR',
     notes: packManualNotes({ vessel: 'OTRO BUQUE', part: '99999' }) }];
-  assert.equal(mergeNorayPilotSalary(null, manual, pilot).payload.jornales.rows.length, 0);
+  assert.equal(mergeNorayPilotSalary(null, manual, pilot).payload.jornales.rows.length, 1);
 });
 
 test('el calendario recibe los mismos jornales que el Sueldómetro', () => {
@@ -76,7 +77,7 @@ test('el calendario recibe los mismos jornales que el Sueldómetro', () => {
   assert.deepEqual(calendarJornales(salary)['2026-10-24'], ['02-08']);
 });
 
-test('la prima leída completa el jornal vacío y conserva la introducida por el usuario', () => {
+test('la prima leída sustituye la introducida por el usuario', () => {
   const pilot = fixture();
   const premiumPilot = { schemaVersion: 1, chapa: '72683', year: 2026, month: 10,
     rows: [{ part: '30767', date: '2026-10-24', shift: '02-08', amount: 169.96, status: 'pending' }] };
@@ -89,18 +90,18 @@ test('la prima leída completa el jornal vacío y conserva la introducida por el
   assert.equal(first.payroll.primaSource, 'portal');
   const own = { ...pending, premium: 25, notes: packManualNotes({ part: '30767', premiumKnown: true }) };
   const second = buildManualSalaryMonths(mergeNorayPilotSalary(null, [own], pilot, premiumPilot), [own])[0].items[0];
-  assert.equal(second.payroll.prima, 25);
-  assert.equal(second.payroll.primaSource, 'manual');
+  assert.equal(second.payroll.prima, 169.96);
+  assert.equal(second.payroll.primaSource, 'portal');
   const ownZero = { ...pending, premium: 0, notes: packManualNotes({ part: '30767', premiumKnown: true }) };
   const third = buildManualSalaryMonths(mergeNorayPilotSalary(null, [ownZero], pilot, premiumPilot), [ownZero])[0].items[0];
-  assert.equal(third.payroll.prima, 0);
-  assert.equal(third.payroll.primaSource, 'manual');
+  assert.equal(third.payroll.prima, 169.96);
+  assert.equal(third.payroll.primaSource, 'portal');
   const historic = buildManualSalaryMonths(mergeNorayPilotSalary(null, [], pilot, premiumPilot), [])[0].items[0];
   assert.equal(historic.payroll.prima, 169.96);
   const key = enrichJornales(pilot.journals.rows, [], 'Octubre de 2026')[0].payroll.manualPremiumKey;
   const ownHistoric = buildManualSalaryMonths(mergeNorayPilotSalary(null, [], pilot, premiumPilot), [], null,
     { [key]: { amount: 33 } })[0].items[0];
-  assert.equal(ownHistoric.payroll.prima, 33);
+  assert.equal(ownHistoric.payroll.prima, 169.96);
 });
 
 test('la lectura salarial de otro usuario incorpora la prima sin duplicar su jornal manual', () => {
@@ -112,13 +113,13 @@ test('la lectura salarial de otro usuario incorpora la prima sin duplicar su jor
     worker_group: 'II', operation_type: 'SP', premium: 0,
     notes: packManualNotes({ part: '30767', premiumKnown: false }) };
   const merged = mergeNorayPilotSalary(null, [manual], pilot, premium);
-  assert.equal(merged.payload.jornales.rows.length, 0);
+  assert.equal(merged.payload.jornales.rows.length, 1);
   const items = buildManualSalaryMonths(merged, [manual])[0].items;
   assert.equal(items.length, 1);
   assert.equal(items[0].payroll.prima, 50.25);
 });
 
-test('la lectura nueva conserva jornales guardados del mes y sus primas', () => {
+test('la lectura nueva reemplaza el jornal y la prima anterior de la misma jornada', () => {
   const pilot = fixture('72668');
   pilot.journals.rows.push({ ...pilot.journals.rows[0], dia: '25', parte: '30768' });
   const saved = { payload: { jornales: { monthLabel: 'octubre de 2026', history: [{ year: 2026, month: 10,
@@ -126,6 +127,6 @@ test('la lectura nueva conserva jornales guardados del mes y sus primas', () => 
   const premiums = { chapa: '72668', rows: [{ part: '30767', date: '2026-10-24', shift: '02-08', amount: 80 }] };
   const rows = mergeNorayPilotSalary(saved, [], pilot, premiums).payload.jornales.rows;
   assert.equal(rows.length, 2);
-  assert.equal(rows.find(row => String(row.dia) === '24').produccion, '55');
+  assert.equal(rows.find(row => String(row.dia) === '24').produccion, '80');
   assert.ok(rows.find(row => String(row.dia) === '25'));
 });

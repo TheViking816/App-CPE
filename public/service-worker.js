@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261027-push-recovery-61";
+self.__APP_CPE_SW_VERSION__ = "20261027-salary-updates-62";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

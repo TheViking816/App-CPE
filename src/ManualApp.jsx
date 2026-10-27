@@ -32,7 +32,7 @@ const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
 // Personal contracting is available to every account; the separate mobile reader remains manual.
 const CONTRACTING_ENABLED = true;
 const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_ENABLED ? ['contratacion'] : [])]);
-const ACTIVE_NOTIFICATION_TYPES = new Set(['new_journal', 'new_premium', 'rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
+const ACTIVE_NOTIFICATION_TYPES = new Set(['new_journal', 'new_premium', 'journal_updated', 'premium_updated', 'rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
   return route === 'novedades' || ACTIVE_PAGES.has(route) ? route : 'sueldometro';
@@ -629,7 +629,7 @@ function Salary({ session, onSession }) {
     let active = true;
     const refresh = () => getUserNotifications({ token: session.token, limit: 100 })
       .then((data) => { if (active) setNotifications((data.rows || []).filter((row) => ACTIVE_NOTIFICATION_TYPES.has(row.eventType)
-        && (!['new_journal', 'new_premium'].includes(row.eventType) || new Date(row.createdAt).getTime() >= Date.parse('2026-10-27T00:00:00Z')))); })
+        && (!['new_journal', 'new_premium', 'journal_updated', 'premium_updated'].includes(row.eventType) || new Date(row.createdAt).getTime() >= Date.parse('2026-10-27T00:00:00Z')))); })
       .catch(() => {});
     refresh();
     const timer = window.setInterval(refresh, 15_000);
@@ -657,7 +657,7 @@ function Salary({ session, onSession }) {
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => {});
     }
     const section = item.eventType?.startsWith('vacation_') ? 'vacaciones' : 'descansos';
-    if (item.eventType === 'new_journal' || item.eventType === 'new_premium') { navigate('sueldometro'); return; }
+    if (['new_journal', 'new_premium', 'journal_updated', 'premium_updated'].includes(item.eventType)) { navigate('sueldometro'); return; }
     if (item.eventType === 'direct_message' && item.metadata?.conversationId) {
       window.location.hash = directConversationHash(item.metadata.conversationId);
       setTab('conversaciones');

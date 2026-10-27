@@ -38,7 +38,6 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumP
     if (premiumsBySlot[slot] === undefined) premiumsBySlot[slot] = row;
     else premiumsBySlot[slot] = null;
   }
-  const manualSlots = new Set(manualRows.map((row) => `${row.work_date}|${shift(row.shift)}`));
   const importedSlots = new Set();
   const payload = snapshot?.payload || {};
   const previous = payload.jornales || {};
@@ -49,17 +48,18 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumP
     const label = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
     const previousMonth = (previous.history || []).find((period) => Number(period.year) === Number(year) && Number(period.month) === Number(month));
     const savedRows = previousMonth?.rows || (String(previous.monthLabel || '').toLowerCase() === label.toLowerCase() ? previous.rows || [] : []);
-    const rows = [...savedRows, ...importedRows].filter((row) => {
+    const sourceSlots = new Set(importedRows.map((row) => `${year}-${pad(month)}-${pad(row.dia)}|${shift(row.jornada)}`));
+    const rows = [...savedRows.filter((row) => !sourceSlots.has(`${year}-${pad(month)}-${pad(row.dia)}|${shift(row.jornada)}`)), ...importedRows].filter((row) => {
       const date = `${year}-${pad(month)}-${pad(row.dia)}`;
       const slot = `${date}|${shift(row.jornada)}`;
-      if (manualSlots.has(slot) || importedSlots.has(slot)) return false;
+      if (importedSlots.has(slot)) return false;
       importedSlots.add(slot);
       return true;
     }).map((row) => {
       const slot = `${year}-${pad(month)}-${pad(row.dia)}|${shift(row.jornada)}`;
       const byPart = premiumsByPart.get(String(row.parte));
       const premium = byPart?.date.startsWith(`${year}-${pad(month)}-`) ? byPart : premiumsBySlot[slot];
-      return premium && Number(premium.amount) > 0 && !(Number(row.produccion) > 0)
+      return premium && Number(premium.amount) > 0
         ? { ...row, produccion: String(premium.amount), produccionEstado: premium.status || 'verified' }
         : row;
     });
@@ -70,7 +70,8 @@ export function mergeNorayPilotSalary(snapshot, manualRows = [], pilot, premiumP
   const rows = history.find((period) => Number(period.year) === year && Number(period.month) === month)?.rows || [];
   const label = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
   return { ...snapshot, payload: { ...payload, jornales: { ...previous, recognized: true, year,
-    monthLabel: label, rows, history }, norayPremiumsBySlot: premiumsBySlot } };
+    monthLabel: label, rows, history }, norayPremiumsBySlot: premiumsBySlot,
+    norayJournalSlots: [...importedSlots] } };
 }
 
 export function norayPilotCalendar(pilot) {
