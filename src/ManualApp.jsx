@@ -169,7 +169,7 @@ function ProfileSettings({ session, onSession }) {
       {notice && <p className="banner success" role="status">{notice}</p>}
       <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar mis datos'}</button>
     </form>
-  </section><PortalCredentialPilot session={session} /></SectionPage>;
+  </section><PersonalNoraySectionLink session={session} section="mis-especialidades" label="Abrir mis especialidades" cardTitle="Especialidades del portal" /><PortalCredentialPilot session={session} /></SectionPage>;
 }
 
 function PasswordSettings({ session }) {
