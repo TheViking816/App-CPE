@@ -21,6 +21,7 @@ export default function UpcomingAssignments({ session, snapshot }) {
   const [today, setToday] = useState(madridDateKey);
   const [loadState, setLoadState] = useState('loading');
   const [retry, setRetry] = useState(0);
+  const openedDeepLink = useRef('');
   useEffect(() => {
     const interval = setInterval(() => setToday(madridDateKey()), 60_000);
     return () => clearInterval(interval);
@@ -73,6 +74,20 @@ export default function UpcomingAssignments({ session, snapshot }) {
     } catch { /* Keep the saved journal visible even when no part detail is available. */ }
     setOpening(''); setSelected({ ...item, detail });
   };
+  useEffect(() => {
+    const hash = window.location.hash;
+    const match = hash.match(/^#\/contratacion\/parte\/(\d{4}-\d{2}-\d{2})\/(\d{2}-\d{2})\/(\d+)$/);
+    if (!match || loadState !== 'ready' || openedDeepLink.current === hash) return;
+    const item = rows.find((row) => assignmentDateKey(row.fecha) === match[1]
+      && assignmentShift(row.jornada) === match[2] && String(row.parte) === match[3]);
+    openedDeepLink.current = hash;
+    if (item) open(item);
+    else window.location.hash = '#/sueldometro';
+  }, [loadState, reading, archive, snapshot, today]);
+  const closePart = () => {
+    setSelected(null);
+    if (window.location.hash.startsWith('#/contratacion/parte/')) window.location.hash = '#/contratacion';
+  };
   return <div className="contracting-journals"><section className="upcoming-preview" aria-label="Próximas contrataciones">
     <header className="upcoming-heading"><span className="upcoming-heading-icon"><CalendarClock size={23} /></span><div><h2>Próximos jornales</h2></div><span className="upcoming-count">{loadState === 'loading' ? 'Cargando…' : loadState === 'error' ? '—' : `${rows.length} ${rows.length === 1 ? 'jornal' : 'jornales'}`}</span></header>
     {loadState === 'loading' ? <div className="upcoming-empty upcoming-loading" role="status" aria-live="polite"><LoaderCircle size={25} /><div><strong>Cargando próximos jornales…</strong></div></div>
@@ -80,7 +95,7 @@ export default function UpcomingAssignments({ session, snapshot }) {
       : rows.length ? <div className="upcoming-list">{rows.map((item) => <AssignmentRow key={assignmentKey(item)} item={item} today={today} busy={opening === assignmentKey(item)} onOpen={open} />)}</div> : <div className="upcoming-empty"><ClipboardList size={29} /><div><strong>No hay próximas contrataciones</strong></div></div>}
     {loadState === 'ready' && reading?.updatedAt && Number.isFinite(Date.parse(reading.updatedAt)) && <footer className="upcoming-updated">Actualizado · {new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(reading.updatedAt))}</footer>}
   </section>
-    {selected && <AssignmentModal item={selected} chapa={session.chapa} onClose={() => setSelected(null)} />}
+    {selected && <AssignmentModal item={selected} chapa={session.chapa} onClose={closePart} />}
   </div>;
 }
 

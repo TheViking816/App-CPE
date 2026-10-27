@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261027-push-local-test-67";
+self.__APP_CPE_SW_VERSION__ = "20261027-notification-links-68";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -33,7 +33,10 @@ self.addEventListener("message", (event) => {
 self.addEventListener("push", (event) => {
   let payload = {};
   try { payload = event.data?.json() || {}; } catch { /* A notification without payload still opens the activity page. */ }
-  const target = payload.targetTab === "sueldometro" ? "sueldometro" : "novedades";
+  const notificationId = String(payload.notificationId || "");
+  const target = /^[0-9a-f-]{36}$/i.test(notificationId)
+    ? `novedades/${notificationId}`
+    : payload.targetTab === "sueldometro" ? "sueldometro" : "novedades";
   event.waitUntil(self.registration.showNotification(payload.title || "App CPE", {
     body: payload.body || "Tienes una novedad.",
     icon: `${self.registration.scope}logo.jpg`,

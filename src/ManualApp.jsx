@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { supabase, loginUser, updateUserPassword, updateUserProfile, refreshCurrentUser, getUserManualPremiums, setUserManualPremium, getUserRelayHours, setUserRelayHour, getUserRemateHours, loadPayrollConfig, updateUserIrpf, trackUsageEvent, trackPageVisit, getUsageMonitor, getUserNotifications, markUserNotificationsRead, canOpenNorayLinks } from './supabaseClient.js';
 import { touchDirectPresence } from './exchangeClient.js';
 import { EXCHANGE_PREVIEW_READ_ONLY } from './exchangePreview.js';
@@ -500,6 +500,7 @@ function Salary({ session, onSession }) {
   const contractingEnabled = CONTRACTING_ENABLED;
   const [tab, setTab] = useState(viewFromHash);
   const [notifications, setNotifications] = useState([]);
+  const handledNotification = useRef('');
   const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
   const [doblesLinkAvailable, setDoblesLinkAvailable] = useState(false);
   const [vacationLinkAvailable, setVacationLinkAvailable] = useState(false);
@@ -664,6 +665,13 @@ function Salary({ session, onSession }) {
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => {});
     }
     const section = item.eventType?.startsWith('vacation_') ? 'vacaciones' : 'descansos';
+    if (item.eventType === 'new_journal' && /^\d{4}-\d{2}-\d{2}$/.test(String(item.metadata?.date || ''))
+      && /^\d{2}-\d{2}$/.test(String(item.metadata?.shift || '')) && /^\d+$/.test(String(item.metadata?.part || ''))
+      && item.metadata.date >= today()) {
+      window.location.hash = `#/contratacion/parte/${item.metadata.date}/${item.metadata.shift}/${item.metadata.part}`;
+      setTab('contratacion');
+      return;
+    }
     if (['new_journal', 'new_premium', 'journal_updated', 'premium_updated'].includes(item.eventType)) { navigate('sueldometro'); return; }
     if (item.eventType === 'direct_message' && item.metadata?.conversationId) {
       window.location.hash = directConversationHash(item.metadata.conversationId);
@@ -676,6 +684,15 @@ function Salary({ session, onSession }) {
       setTab(section);
     } else navigate(section);
   };
+  useEffect(() => {
+    const id = window.location.hash.match(/^#\/novedades\/([0-9a-f-]{36})$/i)?.[1];
+    if (!id) { handledNotification.current = ''; return; }
+    if (tab !== 'novedades' || handledNotification.current === id) return;
+    const item = notifications.find((row) => row.id === id);
+    if (!item) return;
+    handledNotification.current = id;
+    openNotification(item);
+  }, [notifications, tab]);
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums]);
   const currentMonthKey = today().slice(0, 7);
