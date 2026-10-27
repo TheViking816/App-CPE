@@ -81,3 +81,48 @@
 .contracting-distances-body{display:grid;gap:12px;padding:16px}
 .contracting-distances-body .specialty-select{margin:0}
 @media(max-width:600px){.contracting-distances-body{gap:11px;padding:12px}}
+
+/* Clearer hierarchy for contracting cards and the part detail. */
+.contracting-page>.visual-page-heading,
+.upcoming-preview,
+.contracting-distances{border-color:#acc8df;box-shadow:0 8px 24px #12335412}
+.upcoming-heading,
+.contracting-distances .contracting-distances-heading{background:linear-gradient(110deg,#e4f1fc,#f6fbff);border-bottom-color:#bfd6e9}
+.upcoming-heading h2,
+.contracting-distances-heading h2{color:#062b51;font-weight:900}
+.contracting-distances-kicker{color:#315e83}
+.upcoming-count{border-color:#b9d2e7;color:#08375f;font-weight:850}
+.upcoming-row{border-color:#aac5da!important;box-shadow:0 2px 8px #143b5d0d}
+.upcoming-row.has-company-logo{background:linear-gradient(110deg,#fff 28%,#e9f3fb 100%)!important}
+.upcoming-row.has-company-logo::before{opacity:.09}
+.upcoming-date{background:#dcecf9;color:#072f59}
+.upcoming-date small,.upcoming-date>span{color:#285d87}
+.upcoming-copy>strong{color:#062b51}
+.upcoming-copy>span:not(.upcoming-row-meta){color:#173e61}
+.upcoming-copy>small{color:#3d6282;font-weight:750}
+.upcoming-row-meta b{background:#dfedf9;color:#174d77;font-weight:800}
+.upcoming-updated{border-top-color:#c8dced;color:#486d8d}
+.upcoming-part-modal{border-color:#acc8df;color:#0a3156}
+.upcoming-part-modal>header{background:#e7f2fc;border-bottom-color:#b9d2e6}
+.upcoming-part-modal h2{color:#062b51;font-weight:900}
+.upcoming-part-modal>header small{color:#315e83;font-weight:850}
+.upcoming-part-modal>header>div>span{color:#315e83;font-weight:750}
+.upcoming-part-facts>div{background:#eaf3fb;border-color:#c3d8e9}
+.upcoming-part-facts dt{color:#3a6284;font-weight:750}
+.upcoming-part-facts dd{color:#092e52;font-weight:850}
+.upcoming-team-title h3{color:#082f55;font-weight:900}
+.upcoming-team-title>span{color:#315e83;font-weight:800}
+.upcoming-team>section{border-color:#b5cee2}
+.upcoming-team section>header{background:#d9eaf8;border-bottom:1px solid #c4dbea}
+.upcoming-team h4{color:#072e54;font-size:13px;font-weight:900;letter-spacing:.035em}
+.upcoming-team header>span{color:#0a385f;font-weight:850}
+.upcoming-team li{color:#173e61;font-size:12px;border-bottom-color:#dbe8f2}
+.upcoming-team li>b{color:#092f55;font-weight:850}
+.upcoming-team li>span{font-weight:650}
+.upcoming-team li:nth-child(even){background:#f5f9fd}
+.contracting-distances-body .specialty-select{border-color:#c0d5e7}
+.contracting-distances-body .specialty-select span{color:#315e83}
+@media(max-width:600px){
+  .upcoming-team h4{font-size:14px}
+  .upcoming-team li{font-size:13px}
+}

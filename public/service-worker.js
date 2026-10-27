@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261027-notifications-part-opens-63";
+self.__APP_CPE_SW_VERSION__ = "20261027-contrast-contracting-64";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
