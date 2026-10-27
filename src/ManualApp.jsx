@@ -268,6 +268,8 @@ function ActivityMonitor({ session }) {
   const [registrationLimit, setRegistrationLimit] = useState(10);
   const [personalLinks, setPersonalLinks] = useState(null);
   const [partOpens, setPartOpens] = useState(null);
+  const [pushActivations, setPushActivations] = useState(null);
+  const [pushActivationError, setPushActivationError] = useState('');
   const [personalLinkError, setPersonalLinkError] = useState('');
   const [personalLinkLimit, setPersonalLinkLimit] = useState(10);
   const [error, setError] = useState('');
@@ -275,13 +277,14 @@ function ActivityMonitor({ session }) {
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, calendar, signups, linkOpens, partActivity] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens, partActivity, pushActivity] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
       rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
       rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_part_open_monitor', { p_token: session.token })
+      rpc('app_cpe_admin_part_open_monitor', { p_token: session.token }),
+      rpc('app_cpe_admin_push_activation_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -294,6 +297,8 @@ function ActivityMonitor({ session }) {
     if (linkOpens.status === 'fulfilled') { setPersonalLinks(linkOpens.value); setPersonalLinkError(''); }
     else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
     if (partActivity.status === 'fulfilled') setPartOpens(partActivity.value || []);
+    if (pushActivity.status === 'fulfilled') { setPushActivations(pushActivity.value); setPushActivationError(''); }
+    else setPushActivationError(pushActivity.reason?.message || 'No se pudieron cargar las activaciones.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
@@ -309,6 +314,7 @@ function ActivityMonitor({ session }) {
     .map((event) => [String(event.chapa), event])).values()]
     .filter((event) => String(event.chapa || '').includes(filter));
   const visiblePartOpens = (partOpens || []).filter((event) => String(event.chapa || '').includes(filter)).slice(0, 10);
+  const visiblePushActivations = (pushActivations?.users || []).filter((user) => String(user.chapa || '').includes(filter)).slice(0, 10);
   const personalLinkLabels = { 'donde-voy': 'Mi contratación', vacaciones: 'Vacaciones', dobles: 'Dobles y HS', jornales: 'Jornales y primas', descansos: 'Descansos', chapero: 'Chapero', 'chapero-especialidades': 'Chapero por especialidades', puertas: 'Puertas', 'jornada-contratada': 'Jornada contratada' };
   const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
@@ -323,6 +329,13 @@ function ActivityMonitor({ session }) {
     {error && <p className="form-error">{error}</p>}
     <div className="monitor-numbers"><span><strong>{data?.summary?.uniqueUsers ?? '—'}</strong> usuarios</span><span><strong>{data?.summary?.activeNow ?? '—'}</strong> activos</span><span><strong>{pages.reduce((sum, page) => sum + Number(page.views || 0), 0)}</strong> pantallas vistas</span><span><strong>{data?.summary?.logins ?? '—'}</strong> accesos</span></div>
     <input aria-label="Buscar chapa en el monitor" value={filter} onChange={(event) => { setFilter(event.target.value); setRegistrationLimit(10); setPersonalLinkLimit(10); }} placeholder="Buscar chapa" inputMode="numeric" />
+    <h3>Notificaciones activadas</h3>
+    <p>Usuarios que tienen actualmente avisos del móvil activados. Fecha y hora de Madrid.</p>
+    <div className="monitor-numbers"><span><strong>{pushActivations?.total ?? '—'}</strong> usuarios</span></div>
+    {pushActivationError && <p className="form-error" role="alert">{pushActivationError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Nombre</th><th>Activadas</th><th>Dispositivos</th></tr></thead><tbody>
+      {visiblePushActivations.map((user) => <tr key={user.chapa}><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td><td>{registrationTime(user.activated_at)}</td><td>{user.devices}</td></tr>)}
+    </tbody></table>{pushActivations && visiblePushActivations.length === 0 && <p className="monitor-empty">Ningún usuario con notificaciones activadas para el filtro actual.</p>}</div>
     <h3>Pantallas</h3><p>Visitas de las últimas 24 horas. También se muestran las pantallas sin visitas. Tus accesos de administrador y los de soporte no se contabilizan.</p><div className="monitor-pages">{pages.map((page) => <span key={page.page}>{page.page}: <strong>{data ? page.views : '—'}</strong></span>)}</div>
     <h3>Usuarios recientes</h3>
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Última pantalla</th><th>Visitas</th><th>Última actividad</th></tr></thead><tbody>{users.map((user) => <tr key={user.chapa}><td>{user.chapa}</td><td>{user.lastPage || '—'}</td><td>{user.views}</td><td>{time(user.lastSeen)}</td></tr>)}</tbody></table></div>
