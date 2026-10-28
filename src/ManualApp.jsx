@@ -23,8 +23,8 @@ import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
 import PortalCredentialPilot from './PortalCredentialPilot.jsx';
-import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, House, KeyRound, LogOut, MessageCircle, Settings, WalletCards, X } from 'lucide-react';
-import { enablePushNotifications, refreshPushSubscription, disablePushNotifications, testDeviceNotification } from './pushNotifications.js';
+import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, House, KeyRound, LogOut, MessageCircle, Settings, Trash2, WalletCards, X } from 'lucide-react';
+import { enablePushNotifications, refreshPushSubscription, disablePushNotifications, optOutPushNotifications, testDeviceNotification } from './pushNotifications.js';
 
 const SESSION_KEY = 'app-cpe-session';
 const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
@@ -42,7 +42,7 @@ const blank = () => ({ id: null, work_date: today(), shift: '08-14', specialty: 
 const readSession = () => { try { const value = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return value?.token && value?.chapa ? value : null; } catch { return null; } };
 const euroInput = (value) => Number(String(value).replace(',', '.'));
 
-function ManualSideMenu({ tab, isAdmin, showContracting, navigate, onClose, onLogout }) {
+function ManualSideMenu({ tab, isAdmin, showContracting, navigate, onClose, onLogout, onDeleteAccount }) {
   const [settingsOpen, setSettingsOpen] = useState(tab === 'cuenta' || tab === 'perfil');
   const item = (page, label, Icon) => <button key={page} type="button" className={tab === page ? 'is-active' : ''} aria-current={tab === page ? 'page' : undefined} onClick={() => navigate(page)}>
     <Icon size={19} aria-hidden="true" /><span>{label}</span><ChevronRight size={16} aria-hidden="true" />
@@ -70,6 +70,7 @@ function ManualSideMenu({ tab, isAdmin, showContracting, navigate, onClose, onLo
       <button type="button" className={tab === 'cuenta' || tab === 'perfil' ? 'is-active' : ''} aria-expanded={settingsOpen} onClick={() => setSettingsOpen((open) => !open)}><Settings size={19} aria-hidden="true" /><span>Ajustes</span><ChevronRight className={settingsOpen ? 'is-open' : ''} size={16} aria-hidden="true" /></button>
       {settingsOpen && <div id="manual-settings-submenu" className="visual-menu-group visual-menu-submenu">{item('perfil', 'Mis datos', WalletCards)}{item('cuenta', 'Cambiar contraseña', KeyRound)}</div>}
       <button type="button" className="menu-signout" onClick={onLogout}><LogOut size={19} aria-hidden="true" /><span>Salir</span></button>
+      <button type="button" className="menu-delete-account" onClick={onDeleteAccount}><Trash2 size={19} aria-hidden="true" /><span>Eliminar cuenta</span></button>
     </div>
   </nav>;
 }
@@ -271,6 +272,8 @@ function ActivityMonitor({ session }) {
   const [partOpenError, setPartOpenError] = useState('');
   const [pushActivations, setPushActivations] = useState(null);
   const [pushActivationError, setPushActivationError] = useState('');
+  const [pushDeliveries, setPushDeliveries] = useState(null);
+  const [pushDeliveryError, setPushDeliveryError] = useState('');
   const [personalLinkError, setPersonalLinkError] = useState('');
   const [personalLinkLimit, setPersonalLinkLimit] = useState(10);
   const [error, setError] = useState('');
@@ -278,14 +281,15 @@ function ActivityMonitor({ session }) {
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, calendar, signups, linkOpens, partActivity, pushActivity] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens, partActivity, pushActivity, deliveryActivity] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
       rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
       rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token }),
       rpc('app_cpe_admin_part_open_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_push_activation_monitor', { p_token: session.token })
+      rpc('app_cpe_admin_push_activation_monitor', { p_token: session.token }),
+      rpc('app_cpe_admin_push_delivery_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -301,6 +305,8 @@ function ActivityMonitor({ session }) {
     else setPartOpenError(partActivity.reason?.message || 'No se pudieron cargar las aperturas de partes.');
     if (pushActivity.status === 'fulfilled') { setPushActivations(pushActivity.value); setPushActivationError(''); }
     else setPushActivationError(pushActivity.reason?.message || 'No se pudieron cargar las activaciones.');
+    if (deliveryActivity.status === 'fulfilled') { setPushDeliveries(deliveryActivity.value); setPushDeliveryError(''); }
+    else setPushDeliveryError(deliveryActivity.reason?.message || 'No se pudieron cargar los envíos.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
@@ -378,9 +384,12 @@ function ActivityMonitor({ session }) {
     <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Nombre</th><th>Activadas</th><th>Dispositivos</th></tr></thead><tbody>
       {visiblePushActivations.map((user) => <tr key={user.chapa}><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td><td>{registrationTime(user.activated_at)}</td><td>{user.devices}</td></tr>)}
     </tbody></table>{pushActivations && visiblePushActivations.length === 0 && <p className="monitor-empty">Ningún usuario con notificaciones activadas para el filtro actual.</p>}</div>
-    {(pushActivations?.recentDisabled || []).filter((item) => String(item.chapa || '').includes(filter)).length > 0 && <><h4>Últimas desactivaciones</h4><div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Fecha y hora</th><th>Motivo</th></tr></thead><tbody>
-      {(pushActivations?.recentDisabled || []).filter((item) => String(item.chapa || '').includes(filter)).map((item, index) => <tr key={`${item.chapa}-${index}`}><td><strong>{item.chapa}</strong></td><td>{registrationTime(item.disabled_at)}</td><td>{item.disabled_reason === 'sign_out' ? 'Sesión cerrada' : item.disabled_reason?.startsWith('push_http_') ? 'Suscripción caducada' : 'Desactivada'}</td></tr>)}
-    </tbody></table></div></>}
+    <h4>Notificaciones enviadas</h4>
+    <p>Estado del envío al servicio de avisos y aperturas registradas desde la app.</p>
+    {pushDeliveryError && <p className="form-error" role="alert">{pushDeliveryError}</p>}
+    <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Aviso</th><th>Estado</th><th>Abierta</th></tr></thead><tbody>
+      {(pushDeliveries?.rows || []).filter((item) => String(item.chapa || '').includes(filter)).slice(0, 30).map((item) => <tr key={item.id}><td>{registrationTime(item.updated_at)}</td><td><strong>{item.chapa}</strong></td><td>{item.title}</td><td>{item.state === 'sent' ? 'Enviada' : item.state === 'failed' ? 'Fallida' : item.state === 'processing' ? 'En proceso' : 'Pendiente'}</td><td>{item.opened_at ? `${registrationTime(item.opened_at)} · ${item.opened_source === 'push' ? 'Aviso móvil' : 'Novedades'}` : '—'}</td></tr>)}
+    </tbody></table>{pushDeliveries && !(pushDeliveries.rows || []).some((item) => String(item.chapa || '').includes(filter)) && <p className="monitor-empty">No hay envíos para el filtro actual.</p>}</div>
   </section>;
 }
 
@@ -452,12 +461,12 @@ function ManualEditorDialog({ children, onClose, busy, label, wide = false }) {
   </div>;
 }
 
-function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, pushError, onEnablePush }) {
+function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, pushError, onEnablePush, onDisablePush }) {
   const [testMessage, setTestMessage] = useState('');
   return <section className="manual-panel exchange-notifications"><div className="section-head"><div><p className="eyebrow">ACTIVIDAD</p><h2>Actividad reciente</h2></div>
     {rows.some((item) => !item.readAt) && <button type="button" onClick={onMarkAll}>Marcar todo leído</button>}</div>
     {pushState !== 'enabled' && pushState !== 'unsupported' && <div className="notification-push-prompt"><span>Recibe avisos también cuando cierres la app.</span><button type="button" onClick={onEnablePush}>Activar notificaciones</button>{pushState === 'denied' && <small>Permite las notificaciones para App CPE en los ajustes del navegador.</small>}{pushError && <small role="alert">No se pudieron activar: {pushError}</small>}</div>}
-    {pushState === 'enabled' && <div className="notification-push-prompt"><span>Avisos activados en este dispositivo.</span><button type="button" onClick={() => testDeviceNotification().then(() => setTestMessage('Prueba enviada. Si no aparece en el móvil, revisa los permisos de notificaciones de App CPE y Chrome en Android.')).catch((error) => setTestMessage(error?.message || 'No se pudo mostrar la prueba.'))}>Probar aviso</button>{testMessage && <small role="status">{testMessage}</small>}</div>}
+    {pushState === 'enabled' && <div className="notification-push-prompt"><span>Avisos activados en este dispositivo.</span><button type="button" onClick={() => testDeviceNotification().then(() => setTestMessage('Prueba enviada. Si no aparece en el móvil, revisa los permisos de notificaciones de App CPE y Chrome en Android.')).catch((error) => setTestMessage(error?.message || 'No se pudo mostrar la prueba.'))}>Probar aviso</button><button type="button" className="notification-push-disable" onClick={onDisablePush}>Desactivar notificaciones</button>{testMessage && <small role="status">{testMessage}</small>}{pushError && <small role="alert">{pushError}</small>}</div>}
     <div className="exchange-notification-list">{rows.map((item) => <button type="button" key={item.id}
       className={item.readAt ? 'is-read' : 'is-unread'} onClick={() => onOpen(item)}>
       <span className="exchange-notification-icon"><Bell size={19} aria-hidden="true" /></span>
@@ -465,6 +474,42 @@ function ExchangeNotifications({ rows, onOpen, onMarkAll, pushState, pushError, 
       <ChevronRight size={19} className="exchange-notification-arrow" aria-hidden="true" />
     </button>)}</div>
   </section>;
+}
+
+function DeleteAccountDialog({ session, onClose, onDeleted }) {
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (event) => {
+    event.preventDefault();
+    if (confirmation !== 'ELIMINAR' || !password || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await rpc('app_cpe_delete_account', {
+        p_token: session.token,
+        p_current_password: password,
+        p_confirmation: confirmation
+      });
+      onDeleted();
+    } catch (cause) {
+      setError(cause?.message || 'No se pudo eliminar la cuenta.');
+      setBusy(false);
+    }
+  };
+  return <div className="account-delete-backdrop" onClick={() => { if (!busy) onClose(); }}>
+    <section className="account-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="account-delete-title" onClick={(event) => event.stopPropagation()}>
+      <div className="account-delete-heading"><Trash2 size={25} aria-hidden="true" /><h2 id="account-delete-title">Eliminar cuenta</h2><button type="button" aria-label="Cerrar" disabled={busy} onClick={onClose}><X size={20} /></button></div>
+      <p>Se borrarán definitivamente tu cuenta, jornales, primas, días guardados, enlaces del portal, ofertas, conversaciones y notificaciones. Esta acción no se puede deshacer.</p>
+      <form onSubmit={submit}>
+        <label>Contraseña de App CPE<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label>Escribe ELIMINAR para confirmar<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="off" required /></label>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="account-delete-actions"><button type="button" disabled={busy} onClick={onClose}>Cancelar</button><button type="submit" className="account-delete-confirm" disabled={busy || !password || confirmation !== 'ELIMINAR'}>{busy ? 'Eliminando…' : 'Eliminar mi cuenta'}</button></div>
+      </form>
+    </section>
+  </div>;
 }
 
 function ExchangeSection({ session, section, onSectionChange, onPaidDaysChange }) {
@@ -578,6 +623,7 @@ function Salary({ session, onSession }) {
   }, [session.token]);
   const [pushState, setPushState] = useState('idle');
   const [pushError, setPushError] = useState('');
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   useEffect(() => {
     if (!('Notification' in window) || !('PushManager' in window)) { setPushState('unsupported'); return; }
     if (Notification.permission === 'denied') { setPushState('denied'); return; }
@@ -659,7 +705,8 @@ function Salary({ session, onSession }) {
   }, [session.token]);
 
   const navigate = (next) => { const page = (next === 'monitor' && isAdmin) || next === 'novedades' || ACTIVE_PAGES.has(next) ? next : 'sueldometro'; window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); setTab(page); setMenuOpen(false); if (page !== 'monitor') window.location.hash = `#/${page}`; };
-  const openNotification = (item) => {
+  const openNotification = (item, source = 'app') => {
+    rpc('app_cpe_record_notification_open', { p_token: session.token, p_notification_id: item.id, p_source: source }).catch(() => {});
     if (!item.readAt) {
       setNotifications((rows) => rows.map((row) => row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row));
       markUserNotificationsRead({ token: session.token, notificationId: item.id }).catch(() => {});
@@ -685,13 +732,13 @@ function Salary({ session, onSession }) {
     } else navigate(section);
   };
   useEffect(() => {
-    const id = window.location.hash.match(/^#\/novedades\/([0-9a-f-]{36})$/i)?.[1];
+    const id = window.location.hash.match(/^#\/novedades\/([0-9a-f-]{36})(?:\?source=push)?$/i)?.[1];
     if (!id) { handledNotification.current = ''; return; }
     if (tab !== 'novedades' || handledNotification.current === id) return;
     const item = notifications.find((row) => row.id === id);
     if (!item) return;
     handledNotification.current = id;
-    openNotification(item);
+    openNotification(item, window.location.hash.endsWith('?source=push') ? 'push' : 'app');
   }, [notifications, tab]);
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums]);
@@ -885,7 +932,7 @@ function Salary({ session, onSession }) {
     </form></section>;
 
   const signOut = () => { disablePushNotifications(session.token).catch(() => {}); localStorage.removeItem(SESSION_KEY); onSession(null); };
-  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={signOut}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={signOut} />}</header><div className="visual-content">
+  return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={signOut}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={signOut} onDeleteAccount={() => { setMenuOpen(false); setDeleteAccountOpen(true); }} />}</header><div className="visual-content">
     {portalLinkStatus?.portalPasswordIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>Contraseña del portal incorrecta.</strong> Revisa los datos en «Vincular portal» e introduce la contraseña de acceso al portal de SEVASA</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
       : tab === 'cuenta' ? <PasswordSettings session={session} />
@@ -895,7 +942,7 @@ function Salary({ session, onSession }) {
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} hideDistanceSummary={contractingEnabled} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
-      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} pushError={pushError} onEnablePush={() => enablePushNotifications(session.token).then((ok) => { setPushState(ok ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'idle'); setPushError(ok ? '' : 'Comprueba los permisos del navegador.'); }).catch((error) => { setPushState('idle'); setPushError(error?.message || 'Error de conexión'); })} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
+      : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} pushError={pushError} onEnablePush={() => enablePushNotifications(session.token).then((ok) => { setPushState(ok ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'idle'); setPushError(ok ? '' : 'Comprueba los permisos del navegador.'); }).catch((error) => { setPushState('idle'); setPushError(error?.message || 'Error de conexión'); })} onDisablePush={() => optOutPushNotifications(session.token).then(() => { setPushState('idle'); setPushError(''); }).catch((error) => setPushError(error?.message || 'No se pudieron desactivar.'))} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
     {portalLinkStatus && !(portalLinkStatus.hasPortalPassword && portalLinkStatus.hasPremiumKey) && <div className="salary-link-notice" role="note">
       <span>{portalLinkStatus.hasPortalPassword ? 'Guarda tu clave de primas para cargar automáticamente tus jornales y primas.' : 'Para cargar automáticamente tus jornales y primas, vincula la app con el portal.'}</span>
@@ -927,6 +974,7 @@ function Salary({ session, onSession }) {
         <span>{label}</span>
       </button>)}
     </nav>
+    {deleteAccountOpen && <DeleteAccountDialog session={session} onClose={() => setDeleteAccountOpen(false)} onDeleted={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}
   </main>;
 }
 

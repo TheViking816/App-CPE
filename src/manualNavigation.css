@@ -90,7 +90,22 @@
 .exchange-notifications .section-head { margin-bottom: 18px; }
 .notification-push-prompt { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid #cbdff2; border-radius: 12px; background: #f0f7ff; color: #12365b; font-weight: 600; }
 .notification-push-prompt button { border: 1px solid #256fb4; border-radius: 9px; padding: 8px 12px; background: #1663a4; color: #fff; font: inherit; cursor: pointer; }
+.notification-push-prompt .notification-push-disable { border-color: #ca7d83; background: #fff; color: #a9222d; }
+.notification-push-prompt .notification-push-disable:hover { background: #ffebed; }
 .notification-push-prompt small { width: 100%; font-weight: 400; }
+.account-delete-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(5, 20, 38, .72); }
+.account-delete-dialog { width: min(100%, 480px); padding: 24px; border: 2px solid #d64b57; border-radius: 17px; background: #fff; color: #14304e; box-shadow: 0 22px 60px rgba(0,0,0,.28); }
+.account-delete-heading { display: flex; align-items: center; gap: 10px; color: #a71d28; }
+.account-delete-heading h2 { flex: 1; margin: 0; font-size: 24px; }
+.account-delete-heading > button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #d4e0eb; border-radius: 8px; background: #fff; color: #153453; }
+.account-delete-dialog > p { line-height: 1.5; }
+.account-delete-dialog form { display: grid; gap: 14px; }
+.account-delete-dialog label { display: grid; gap: 6px; font-weight: 800; }
+.account-delete-dialog input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #b7c9da; border-radius: 8px; background: #fff; color: #123; font: inherit; }
+.account-delete-actions { display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+.account-delete-actions button { min-height: 43px; padding: 8px 13px; border: 1px solid #c8d8e6; border-radius: 8px; background: #fff; color: #14304e; font: inherit; font-weight: 800; }
+.account-delete-actions .account-delete-confirm { border-color: #9d1e28; background: #ba2834; color: #fff; }
+.account-delete-actions .account-delete-confirm:disabled { opacity: .5; cursor: not-allowed; }
 .exchange-notification-list { display: grid; gap: 11px; }
 .exchange-notification-list > button {
   display: grid;

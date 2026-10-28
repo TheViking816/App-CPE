@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261027-notification-links-68";
+self.__APP_CPE_SW_VERSION__ = "20261029-notification-opens-69";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -41,7 +41,7 @@ self.addEventListener("push", (event) => {
     body: payload.body || "Tienes una novedad.",
     icon: `${self.registration.scope}logo.jpg`,
     tag: payload.notificationId || undefined,
-    data: { url: `${self.registration.scope}#/${target}` }
+    data: { url: `${self.registration.scope}#/${target}${notificationId ? '?source=push' : ''}` }
   }));
 });
 

@@ -15,7 +15,14 @@ async function saveSubscription(token, subscription) {
 
 export async function refreshPushSubscription(token) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+  if (!await pushNotificationsWanted(token)) return false;
   return syncPushSubscription(token);
+}
+
+export async function pushNotificationsWanted(token) {
+  const { data, error } = await supabase.rpc('app_cpe_push_preference', { p_token: token });
+  if (error) throw error;
+  return data === true;
 }
 
 function syncPushSubscription(token) {
@@ -51,7 +58,19 @@ async function performPushSubscriptionSync(token) {
 export async function enablePushNotifications(token) {
   if (!('Notification' in window)) return false;
   if (Notification.permission !== 'granted' && await Notification.requestPermission() !== 'granted') return false;
+  const { error } = await supabase.rpc('app_cpe_push_set_preference', { p_token: token, p_enabled: true });
+  if (error) throw error;
   return syncPushSubscription(token);
+}
+
+export async function optOutPushNotifications(token) {
+  if (pendingSync) await pendingSync.catch(() => {});
+  const { error } = await supabase.rpc('app_cpe_push_set_preference', { p_token: token, p_enabled: false });
+  if (error) throw error;
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.getSubscription();
+  if (subscription) await subscription.unsubscribe();
 }
 
 export async function testDeviceNotification() {
