@@ -31,7 +31,7 @@ const appLogo = `${import.meta.env.BASE_URL}logo.jpg`;
 const OPERATIONAL_PAGES = new Set(['tablon', 'puertas', 'chapero']);
 // Personal contracting is available to every account; the separate mobile reader remains manual.
 const CONTRACTING_ENABLED = true;
-const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_ENABLED ? ['contratacion'] : [])]);
+const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'novedades', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_ENABLED ? ['contratacion'] : [])]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['new_journal', 'new_premium', 'journal_updated', 'premium_updated', 'rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
   const route = window.location.hash.split('/')[1];
