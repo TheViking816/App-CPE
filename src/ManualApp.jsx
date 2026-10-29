@@ -34,7 +34,7 @@ const CONTRACTING_ENABLED = true;
 const ACTIVE_PAGES = new Set(['sueldometro', 'descansos', 'vacaciones', 'conversaciones', 'novedades', 'cuenta', 'perfil', ...OPERATIONAL_PAGES, ...(CONTRACTING_ENABLED ? ['contratacion'] : [])]);
 const ACTIVE_NOTIFICATION_TYPES = new Set(['new_journal', 'new_premium', 'journal_updated', 'premium_updated', 'rest_offer_published', 'rest_proposal', 'rest_response', 'rest_message', 'vacation_offer_published', 'vacation_proposal', 'vacation_response', 'vacation_message', 'direct_message']);
 const viewFromHash = () => {
-  const route = window.location.hash.split('/')[1];
+  const route = window.location.hash.split('/')[1]?.split('?')[0];
   return route === 'novedades' || ACTIVE_PAGES.has(route) ? route : 'sueldometro';
 };
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
@@ -385,7 +385,7 @@ function ActivityMonitor({ session }) {
       {visiblePushActivations.map((user) => <tr key={user.chapa}><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td><td>{registrationTime(user.activated_at)}</td><td>{user.devices}</td></tr>)}
     </tbody></table>{pushActivations && visiblePushActivations.length === 0 && <p className="monitor-empty">Ningún usuario con notificaciones activadas para el filtro actual.</p>}</div>
     <h4>Notificaciones enviadas</h4>
-    <p>Estado del envío al servicio de avisos y aperturas registradas desde la app.</p>
+    <p>Cada fila registra un envío. En el móvil, los avisos próximos se agrupan en una sola tarjeta.</p>
     {pushDeliveryError && <p className="form-error" role="alert">{pushDeliveryError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Aviso</th><th>Estado</th><th>Abierta</th></tr></thead><tbody>
       {(pushDeliveries?.rows || []).filter((item) => String(item.chapa || '').includes(filter)).slice(0, 30).map((item) => <tr key={item.id}><td>{registrationTime(item.updated_at)}</td><td><strong>{item.chapa}</strong></td><td>{item.title}</td><td>{item.state === 'sent' ? 'Enviada' : item.state === 'failed' ? 'Fallida' : item.state === 'processing' ? 'En proceso' : 'Pendiente'}</td><td>{item.opened_at ? `${registrationTime(item.opened_at)} · ${item.opened_source === 'push' ? 'Aviso móvil' : 'Novedades'}` : '—'}</td></tr>)}
@@ -544,6 +544,7 @@ function Salary({ session, onSession }) {
   const isAdmin = session.chapa === '72683';
   const contractingEnabled = CONTRACTING_ENABLED;
   const [tab, setTab] = useState(viewFromHash);
+  const [notificationRoute, setNotificationRoute] = useState(() => window.location.hash);
   const [notifications, setNotifications] = useState([]);
   const handledNotification = useRef('');
   const [personalLinkAvailable, setPersonalLinkAvailable] = useState(false);
@@ -663,6 +664,7 @@ function Salary({ session, onSession }) {
     const followHash = () => {
       const page = viewFromHash();
       setTab(page);
+      setNotificationRoute(window.location.hash);
     };
     followHash();
     window.addEventListener('hashchange', followHash);
@@ -732,6 +734,15 @@ function Salary({ session, onSession }) {
     } else navigate(section);
   };
   useEffect(() => {
+    const group = window.location.hash.match(/^#\/novedades\?source=push&ids=([0-9a-f,-]+)$/i)?.[1];
+    if (group) {
+      if (tab !== 'novedades' || handledNotification.current === group) return;
+      handledNotification.current = group;
+      for (const id of group.split(',').filter((value) => /^[0-9a-f-]{36}$/i.test(value))) {
+        rpc('app_cpe_record_notification_open', { p_token: session.token, p_notification_id: id, p_source: 'push' }).catch(() => {});
+      }
+      return;
+    }
     const id = window.location.hash.match(/^#\/novedades\/([0-9a-f-]{36})(?:\?source=push)?$/i)?.[1];
     if (!id) { handledNotification.current = ''; return; }
     if (tab !== 'novedades' || handledNotification.current === id) return;
@@ -739,7 +750,7 @@ function Salary({ session, onSession }) {
     if (!item) return;
     handledNotification.current = id;
     openNotification(item, window.location.hash.endsWith('?source=push') ? 'push' : 'app');
-  }, [notifications, tab]);
+  }, [notifications, tab, notificationRoute]);
 
   const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums]);
   const currentMonthKey = today().slice(0, 7);
