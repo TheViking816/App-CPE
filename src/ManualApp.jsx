@@ -388,7 +388,7 @@ function ActivityMonitor({ session }) {
     <p>Cada fila registra un envío. En el móvil, los avisos próximos se agrupan en una sola tarjeta.</p>
     {pushDeliveryError && <p className="form-error" role="alert">{pushDeliveryError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Aviso</th><th>Estado</th><th>Abierta</th></tr></thead><tbody>
-      {(pushDeliveries?.rows || []).filter((item) => String(item.chapa || '').includes(filter)).slice(0, 30).map((item) => <tr key={item.id}><td>{registrationTime(item.updated_at)}</td><td><strong>{item.chapa}</strong></td><td>{item.title}</td><td>{item.state === 'sent' ? 'Enviada' : item.state === 'failed' ? 'Fallida' : item.state === 'processing' ? 'En proceso' : 'Pendiente'}</td><td>{item.opened_at ? `${registrationTime(item.opened_at)} · ${item.opened_source === 'push' ? 'Aviso móvil' : 'Novedades'}` : '—'}</td></tr>)}
+      {(pushDeliveries?.rows || []).filter((item) => String(item.chapa || '').includes(filter)).slice(0, 10).map((item) => <tr key={item.id}><td>{registrationTime(item.updated_at)}</td><td><strong>{item.chapa}</strong></td><td>{item.title}</td><td>{item.state === 'sent' ? 'Enviada' : item.state === 'failed' ? 'Fallida' : item.state === 'processing' ? 'En proceso' : 'Pendiente'}</td><td>{item.opened_at ? `${registrationTime(item.opened_at)} · ${item.opened_source === 'push' ? 'Aviso móvil' : 'Novedades'}` : '—'}</td></tr>)}
     </tbody></table>{pushDeliveries && !(pushDeliveries.rows || []).some((item) => String(item.chapa || '').includes(filter)) && <p className="monitor-empty">No hay envíos para el filtro actual.</p>}</div>
   </section>;
 }
