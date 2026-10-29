@@ -63,6 +63,7 @@ export default function PortalCredentialPilot({ session }) {
         <header><h2 id="portal-link-request-title">Vincular portal</h2><button type="button" onClick={close} disabled={busy} aria-label="Cerrar vinculación del portal"><X size={21} /></button></header>
         <div className="portal-link-request-body">
           {done ? <><p className="banner success" role="status">Datos guardados. Revisaremos los enlaces personales.</p><button type="button" className="primary" onClick={close}>Cerrar</button></> : <form onSubmit={submit}>
+            {keyOnly && <button type="button" className="portal-pilot-change-password" onClick={() => { setKeyOnly(false); setError(''); }}>¿Necesitas cambiar la contraseña del portal?</button>}
             {!keyOnly && <><label htmlFor="portal-request-password">Contraseña del portal</label>
             <div className="portal-pilot-password"><input ref={input} id="portal-request-password" type={show ? 'text' : 'password'} value={password} onChange={event => setPassword(event.target.value)} autoComplete="off" maxLength={256} required disabled={busy} />
               <button type="button" aria-label={show ? 'Ocultar contraseña del portal' : 'Mostrar contraseña del portal'} onClick={() => setShow(!show)} disabled={busy}>{show ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></>}
