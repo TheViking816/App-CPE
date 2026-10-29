@@ -93,6 +93,16 @@
 .notification-push-prompt .notification-push-disable { border-color: #ca7d83; background: #fff; color: #a9222d; }
 .notification-push-prompt .notification-push-disable:hover { background: #ffebed; }
 .notification-push-prompt small { width: 100%; font-weight: 400; }
+.home-push-prompt { display: flex; align-items: center; gap: 14px; margin: 0 0 18px; padding: 16px; border: 1px solid #a9d0ec; border-left: 5px solid #1880be; border-radius: 16px; background: #edf7fd; color: #0b3154; box-shadow: 0 8px 22px #123f6212; }
+.home-push-prompt-icon { display: grid; place-items: center; flex: 0 0 42px; height: 42px; border-radius: 12px; background: #d5ebf9; color: #14669b; }
+.home-push-prompt-copy { flex: 1; min-width: 0; }
+.home-push-prompt-copy strong { font-size: 1.05rem; }
+.home-push-prompt-copy p { margin: 4px 0 0; line-height: 1.4; }
+.home-push-prompt-copy small { display: block; margin-top: 6px; color: #aa2b37; }
+.home-push-prompt-actions { display: flex; align-items: center; gap: 8px; }
+.home-push-prompt-actions button { padding: 9px 12px; border: 1px solid #b5cfe0; border-radius: 9px; background: white; color: #17446c; font: inherit; font-weight: 700; cursor: pointer; }
+.home-push-prompt-actions button.primary { border-color: #1769a4; background: #1769a4; color: white; }
+@media (max-width: 700px) { .home-push-prompt { align-items: flex-start; flex-wrap: wrap; } .home-push-prompt-actions { width: 100%; padding-left: 56px; flex-wrap: wrap; } }
 .account-delete-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(5, 20, 38, .72); }
 .account-delete-dialog { width: min(100%, 480px); padding: 24px; border: 2px solid #d64b57; border-radius: 17px; background: #fff; color: #14304e; box-shadow: 0 22px 60px rgba(0,0,0,.28); }
 .account-delete-heading { display: flex; align-items: center; gap: 10px; color: #a71d28; }
