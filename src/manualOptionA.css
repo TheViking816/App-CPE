@@ -1,6 +1,9 @@
 /* Option A's navy and teal palette, applied to the existing layouts. */
 :root:not([data-theme="dark"]) .contracting-page > .visual-page-heading,
-:root:not([data-theme="dark"]) .doors-page > .visual-page-heading {
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading,
+:root:not([data-theme="dark"]) .salary-page-heading,
+:root:not([data-theme="dark"]) .board-section-page > .visual-page-heading,
+:root:not([data-theme="dark"]) .exchange-section-page > .visual-page-heading {
   border-color: #174d78;
   border-left-color: #19a7bb;
   background: linear-gradient(115deg, #092545, #174d78);
@@ -8,21 +11,29 @@
   color: #fff;
 }
 :root:not([data-theme="dark"]) .contracting-page > .visual-page-heading span,
-:root:not([data-theme="dark"]) .doors-page > .visual-page-heading span {
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading span,
+:root:not([data-theme="dark"]) .salary-page-heading span,
+:root:not([data-theme="dark"]) .board-section-page > .visual-page-heading span,
+:root:not([data-theme="dark"]) .exchange-section-page > .visual-page-heading span {
   color: #80deea;
 }
 :root:not([data-theme="dark"]) .contracting-page > .visual-page-heading h1,
-:root:not([data-theme="dark"]) .doors-page > .visual-page-heading h1 {
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading h1,
+:root:not([data-theme="dark"]) .salary-page-heading h1,
+:root:not([data-theme="dark"]) .board-section-page > .visual-page-heading h1,
+:root:not([data-theme="dark"]) .exchange-section-page > .visual-page-heading h1 {
   color: #fff;
 }
 :root:not([data-theme="dark"]) .contracting-page > .visual-page-heading .personal-portal-link button,
-:root:not([data-theme="dark"]) .doors-page > .visual-page-heading .personal-portal-link button {
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading .personal-portal-link button,
+:root:not([data-theme="dark"]) .salary-page-heading .personal-portal-link button {
   border-color: #d2e9f5;
   background: #eff8ff;
   color: #10446e;
 }
 :root:not([data-theme="dark"]) .contracting-page > .visual-page-heading .personal-portal-link button:hover,
-:root:not([data-theme="dark"]) .doors-page > .visual-page-heading .personal-portal-link button:hover {
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading .personal-portal-link button:hover,
+:root:not([data-theme="dark"]) .salary-page-heading .personal-portal-link button:hover {
   background: #d9f1f8;
 }
 
