@@ -19,7 +19,7 @@ export default function PortalCredentialPilot({ session }) {
     return () => { active = false; };
   }, [enabled, session.token]);
   useEffect(() => {
-    const openRequested = () => { if (sessionStorage.getItem('app-cpe-open-portal-link') === '1') { sessionStorage.removeItem('app-cpe-open-portal-link'); setOpen(true); setDone(false); setError(''); } };
+    const openRequested = () => { const request = sessionStorage.getItem('app-cpe-open-portal-link'); if (request === '1' || request === 'premium') { sessionStorage.removeItem('app-cpe-open-portal-link'); if (request === 'premium') setKeyOnly(true); setOpen(true); setDone(false); setError(''); } };
     openRequested(); window.addEventListener('app-cpe-open-portal-link', openRequested);
     return () => window.removeEventListener('app-cpe-open-portal-link', openRequested);
   }, []);
