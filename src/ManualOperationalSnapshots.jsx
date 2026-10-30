@@ -16,7 +16,7 @@ const formatDate = (value) => value
 const formatDistance = (value, adjusted = false) => value == null ? 'Sin dato' : value === 0 && !adjusted ? 'En puerta' : `${value} posiciones`;
 
 function DoorTable({ title, doors, tone }) {
-  return <section className="doors-table-section">
+  return <section className={`doors-table-section ${tone}`}>
     <h2>{title}</h2><div className="doors-table-wrap"><table className="doors-table">
       <thead><tr><th>TIPO</th><th>POS.</th><th>CHAPA</th><th>DIST.</th></tr></thead>
       <tbody>{doors.map((door) => <tr key={door.key} className={classifyDistance(door.distance)}>
@@ -107,7 +107,7 @@ export default function ManualOperationalSnapshots({ view, session, onSession, h
     <div className="contracting-distances-body">{distanceSummary}</div>
   </section>;
 
-  if (view === 'puertas') return <section className="operational-panel">
+  if (view === 'puertas') return <section className="operational-panel doors-page">
     <section className="visual-page-heading"><div><span>PUERTAS DE TURNO</span><h1>Puertas</h1></div><div className="personal-portal-actions operational-heading-links"><PersonalNoraySectionLink session={session} section="puertas" label="Puertas" className="personal-portal-link" /></div></section>
     {selector}
     <div className="operational-context"><strong>{specialty?.name || 'Sin datos'}</strong><span>Censo: {specialty?.censo.length || 0} · Actualizado: {formatDate(snapshot?.updatedAt)}</span></div>

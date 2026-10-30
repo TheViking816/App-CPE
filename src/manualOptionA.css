@@ -1,0 +1,99 @@
+/* Option A's navy and teal palette, applied to the existing layouts. */
+:root:not([data-theme="dark"]) .contracting-page > .visual-page-heading,
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading {
+  border-color: #174d78;
+  border-left-color: #19a7bb;
+  background: linear-gradient(115deg, #092545, #174d78);
+  box-shadow: 0 13px 28px #0925452b;
+  color: #fff;
+}
+:root:not([data-theme="dark"]) .contracting-page > .visual-page-heading span,
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading span {
+  color: #80deea;
+}
+:root:not([data-theme="dark"]) .contracting-page > .visual-page-heading h1,
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading h1 {
+  color: #fff;
+}
+:root:not([data-theme="dark"]) .contracting-page > .visual-page-heading .personal-portal-link button,
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading .personal-portal-link button {
+  border-color: #d2e9f5;
+  background: #eff8ff;
+  color: #10446e;
+}
+:root:not([data-theme="dark"]) .contracting-page > .visual-page-heading .personal-portal-link button:hover,
+:root:not([data-theme="dark"]) .doors-page > .visual-page-heading .personal-portal-link button:hover {
+  background: #d9f1f8;
+}
+
+:root:not([data-theme="dark"]) .contracting-page .upcoming-preview {
+  border-color: #b9d3e1;
+  background: #fff;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-heading {
+  border-bottom: 1px solid #d8e7ed;
+  background: #fff;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-heading-icon {
+  background: #e2f3f7;
+  color: #0f7890;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-count {
+  border-color: #badde8;
+  background: #e4f3f8;
+  color: #0b496b;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-row {
+  border-color: #b8d4df !important;
+  border-top: 4px solid #1197ae !important;
+  box-shadow: 0 5px 15px #12335412;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-row.has-company-logo {
+  background: linear-gradient(110deg, #fff 30%, #eef7fa 100%) !important;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-date {
+  background: #e5f3f7;
+}
+:root:not([data-theme="dark"]) .contracting-page .upcoming-row-meta b {
+  background: #e4f2f7;
+  color: #12536e;
+}
+:root:not([data-theme="dark"]) .contracting-page .contracting-distances-heading {
+  border-bottom-color: #bcdce5;
+  background: #e4f1f7;
+}
+:root:not([data-theme="dark"]) .contracting-page .contracting-distances-icon {
+  border-color: #b5dbe6;
+  background: #d2ebf3;
+  color: #117d95;
+}
+
+:root:not([data-theme="dark"]) .doors-page .specialty-select {
+  border-color: #b8d5e2;
+  background: #fff;
+}
+:root:not([data-theme="dark"]) .doors-page .operational-context {
+  color: #0b3859;
+}
+:root:not([data-theme="dark"]) .doors-page .doors-table-section h2 {
+  color: #0b3659;
+}
+:root:not([data-theme="dark"]) .doors-page .doors-table-wrap {
+  border: 1px solid #bdd5e1;
+  box-shadow: 0 5px 15px #12335414;
+}
+:root:not([data-theme="dark"]) .doors-page .doors-table th {
+  background: #0d3554;
+}
+:root:not([data-theme="dark"]) .doors-page .doors-table-section.lab .doors-table-wrap {
+  border-top: 4px solid #11998e;
+}
+:root:not([data-theme="dark"]) .doors-page .doors-table-section.fes .doors-table-wrap {
+  border-top: 4px solid #c58a30;
+}
+:root:not([data-theme="dark"]) .doors-page .door-badge.lab {
+  background: linear-gradient(135deg, #10a598, #087d76);
+}
+:root:not([data-theme="dark"]) .doors-page .door-badge.fes {
+  background: linear-gradient(135deg, #d5a34d, #a36a20);
+}
