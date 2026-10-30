@@ -82,46 +82,48 @@
 .contracting-distances-body .specialty-select{margin:0}
 @media(max-width:600px){.contracting-distances-body{gap:11px;padding:12px}}
 
-/* Clearer hierarchy for contracting cards and the part detail. */
+/* Stronger blue hierarchy for contracting cards and the part detail. */
 .contracting-page>.visual-page-heading,
 .upcoming-preview,
-.contracting-distances{border-color:#acc8df;box-shadow:0 8px 24px #12335412}
+.contracting-distances{border-color:#8fb6d4;box-shadow:0 8px 24px #1233541c}
+.contracting-page>.visual-page-heading{background:linear-gradient(115deg,#a8cce9,#e8f3fb 72%,#fff);border-left-color:#1269ae}
+.contracting-page>.visual-page-heading span{color:#174e7e}
 .upcoming-heading,
-.contracting-distances .contracting-distances-heading{background:linear-gradient(110deg,#d9eafa,#eef6fc);border-bottom-color:#abc9e1}
+.contracting-distances .contracting-distances-heading{background:linear-gradient(110deg,#98bfdf,#d8eafb);border-bottom-color:#87afd0}
 .upcoming-heading h2,
 .contracting-distances-heading h2{color:#062b51;font-weight:900}
-.contracting-distances-kicker{color:#315e83}
-.upcoming-count{border-color:#b9d2e7;color:#08375f;font-weight:850}
-.upcoming-row{border-color:#8aafca!important;box-shadow:0 2px 8px #143b5d16}
-.upcoming-row.has-company-logo{background:linear-gradient(110deg,#f8fbff 28%,#deedf8 100%)!important}
-.upcoming-row.has-company-logo::before{opacity:.09}
-.upcoming-date{background:#cfe3f5;color:#072f59}
-.upcoming-date small,.upcoming-date>span{color:#285d87}
+.contracting-distances-kicker{color:#174e7e}
+.upcoming-count{border-color:#91b9d7;color:#08375f;font-weight:850}
+.upcoming-row{border-color:#6d9bbd!important;box-shadow:0 2px 8px #143b5d20}
+.upcoming-row.has-company-logo{background:linear-gradient(110deg,#f5faff 23%,#c8e1f3 100%)!important}
+.upcoming-row.has-company-logo::before{opacity:.11}
+.upcoming-date{background:#b2d3ed;color:#072f59}
+.upcoming-date small,.upcoming-date>span{color:#174e7e}
 .upcoming-copy>strong{color:#062b51}
 .upcoming-copy>span:not(.upcoming-row-meta){color:#173e61}
-.upcoming-copy>small{color:#3d6282;font-weight:750}
-.upcoming-row-meta b{background:#d3e6f6;color:#174d77;font-weight:800}
-.upcoming-updated{border-top-color:#c8dced;color:#486d8d}
-.upcoming-part-modal{border-color:#acc8df;color:#0a3156}
-.upcoming-part-modal>header{background:#d9eafa;border-bottom-color:#a9c8e0}
+.upcoming-copy>small{color:#315978;font-weight:750}
+.upcoming-row-meta b{background:#b9d8ed;color:#123f66;font-weight:800}
+.upcoming-updated{border-top-color:#a9c9e1;color:#315978}
+.upcoming-part-modal{border-color:#77a6ca;color:#0a3156}
+.upcoming-part-modal>header{background:linear-gradient(110deg,#8fb9dc,#c8dff2);border-bottom-color:#76a5c8}
 .upcoming-part-modal h2{color:#062b51;font-weight:900}
-.upcoming-part-modal>header small{color:#315e83;font-weight:850}
-.upcoming-part-modal>header>div>span{color:#315e83;font-weight:750}
-.upcoming-part-facts>div{background:#dcebf7;border-color:#acc9df}
-.upcoming-part-facts dt{color:#3a6284;font-weight:750}
+.upcoming-part-modal>header small{color:#174e7e;font-weight:850}
+.upcoming-part-modal>header>div>span{color:#174e7e;font-weight:750}
+.upcoming-part-facts>div{background:#bdd9ee;border-color:#91b9d7}
+.upcoming-part-facts dt{color:#315978;font-weight:750}
 .upcoming-part-facts dd{color:#092e52;font-weight:850}
 .upcoming-team-title h3{color:#082f55;font-weight:900}
-.upcoming-team-title>span{color:#315e83;font-weight:800}
-.upcoming-team>section{border-color:#9ebed8}
-.upcoming-team section>header{background:#c9e0f3;border-bottom:1px solid #a8c8df}
+.upcoming-team-title>span{color:#174e7e;font-weight:800}
+.upcoming-team>section{border-color:#80aacb}
+.upcoming-team section>header{background:#94bfdf;border-bottom:1px solid #78a8cc}
 .upcoming-team h4{color:#072e54;font-size:13px;font-weight:900;letter-spacing:.035em}
 .upcoming-team header>span{color:#0a385f;font-weight:850}
 .upcoming-team li{color:#173e61;font-size:12px;border-bottom-color:#dbe8f2}
 .upcoming-team li>b{color:#092f55;font-weight:850}
 .upcoming-team li>span{font-weight:650}
-.upcoming-team li:nth-child(even){background:#f5f9fd}
-.contracting-distances-body .specialty-select{border-color:#c0d5e7}
-.contracting-distances-body .specialty-select span{color:#315e83}
+.upcoming-team li:nth-child(even){background:#e8f3fb}
+.contracting-distances-body .specialty-select{border-color:#9dbed8}
+.contracting-distances-body .specialty-select span{color:#174e7e}
 @media(max-width:600px){
   .upcoming-team h4{font-size:14px}
   .upcoming-team li{font-size:13px}
