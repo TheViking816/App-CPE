@@ -8,6 +8,24 @@ function decodeBase64Url(value) {
   return Uint8Array.from(bytes, (character) => character.charCodeAt(0));
 }
 
+async function subscribeWithRetry(registration, publicKey) {
+  const options = { userVisibleOnly: true, applicationServerKey: decodeBase64Url(publicKey) };
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await registration.pushManager.subscribe(options);
+    } catch (error) {
+      const transient = /Registration failed - (push service error|could not connect to push server)/i.test(error?.message || '');
+      if (!transient) throw error;
+      const existing = await registration.pushManager.getSubscription().catch(() => null);
+      if (existing) return existing;
+      if (attempt === 2) {
+        throw new Error('No se pudo conectar con el servicio de avisos del móvil. Comprueba la conexión y vuelve a intentarlo.', { cause: error });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+}
+
 async function saveSubscription(token, subscription) {
   const { error } = await supabase.rpc('app_cpe_push_subscribe', { p_token: token, p_subscription: subscription.toJSON() });
   if (error) throw error;
@@ -50,7 +68,7 @@ async function performPushSubscriptionSync(token) {
       subscription = null;
     }
   }
-  subscription ||= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodeBase64Url(publicKey) });
+  subscription ||= await subscribeWithRetry(registration, publicKey);
   await saveSubscription(token, subscription);
   return true;
 }

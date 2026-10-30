@@ -65,8 +65,8 @@ export default function UpcomingAssignments({ session, snapshot }) {
     let detail = item.detail;
     try {
       if (!detail?.specialties?.length) {
-        const { data, error: failure } = await supabase.rpc('app_cpe_get_shared_part_detail', {
-          p_parte: String(item.parte), p_fecha: assignmentDateKey(item.fecha), p_jornada: assignmentShift(item.jornada)
+        const { data, error: failure } = await supabase.rpc('app_cpe_get_my_part_detail', {
+          p_token: session.token, p_parte: String(item.parte), p_fecha: assignmentDateKey(item.fecha), p_jornada: assignmentShift(item.jornada)
         });
         if (failure) throw failure;
         detail = data?.detail;

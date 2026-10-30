@@ -1,4 +1,4 @@
-self.__APP_CPE_SW_VERSION__ = "20261029-notification-bundles-70";
+self.__APP_CPE_SW_VERSION__ = "20261030-part-details-push-71";
 
 const ACTIVITY_TAG = "app-cpe-activity";
 const ACTIVITY_BUNDLE_WINDOW_MS = 90_000;
