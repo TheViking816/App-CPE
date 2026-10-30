@@ -83,11 +83,8 @@
 @media(max-width:600px){.contracting-distances-body{gap:11px;padding:12px}}
 
 /* Stronger blue hierarchy for contracting cards and the part detail. */
-.contracting-page>.visual-page-heading,
 .upcoming-preview,
 .contracting-distances{border-color:#8fb6d4;box-shadow:0 8px 24px #1233541c}
-.contracting-page>.visual-page-heading{background:linear-gradient(115deg,#a8cce9,#e8f3fb 72%,#fff);border-left-color:#1269ae}
-.contracting-page>.visual-page-heading span{color:#174e7e}
 .upcoming-heading,
 .contracting-distances .contracting-distances-heading{background:linear-gradient(110deg,#98bfdf,#d8eafb);border-bottom-color:#87afd0}
 .upcoming-heading h2,
