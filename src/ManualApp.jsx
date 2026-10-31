@@ -1005,5 +1005,11 @@ function Salary({ session, onSession }) {
 
 export function ManualApp() {
   const [session, setSession] = useState(readSession);
-  return session ? <Salary session={session} onSession={setSession} /> : <Access onAccess={setSession} />;
+  return <>
+    {session ? <Salary session={session} onSession={setSession} /> : <Access onAccess={setSession} />}
+    <footer className="app-contact-footer">
+      <span>© {new Date().getFullYear()} App CPE · Hecha por Adrián Luján</span>
+      <a href="mailto:portalestibavlc@gmail.com">portalestibavlc@gmail.com</a>
+    </footer>
+  </>;
 }
