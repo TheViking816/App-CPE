@@ -1,5 +1,6 @@
 import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, reconcileContinuousDoubleMeals, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
 import { unpackManualNotes } from './manualMetadata.js';
+import { assignmentDateKey, assignmentShift } from './upcomingAssignments.js';
 
 const pad = (value) => String(value).padStart(2, '0');
 const monthName = (year, month) => new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
@@ -98,6 +99,26 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
     months.set(`${year}-${pad(month)}`, { year, month, monthLabel: currentLabel, rows: current });
+  }
+
+  // The upcoming-contracts reading can contain a new month before the salary
+  // history reader reaches it. Show those contracted jornales in Sueldómetro.
+  const manualSlots = new Set(manualRows.map((row) => `${row.work_date}|${assignmentShift(row.shift)}`));
+  for (const assignment of upcomingRows) {
+    const date = assignmentDateKey(assignment.fecha);
+    const shift = assignmentShift(assignment.jornada);
+    if (!date || !shift || !/^\d{1,12}$/.test(String(assignment.parte || '')) || !assignment.especialidad) continue;
+    const key = date.slice(0, 7);
+    const [year, month] = key.split('-').map(Number);
+    if (!months.has(key)) months.set(key, { year, month, monthLabel: monthName(year, month), rows: [] });
+    const period = months.get(key);
+    const slot = `${date}|${shift}`;
+    if (manualSlots.has(slot) || norayJournalSlots.has(slot)
+      || period.rows.some((row) => Number(row.dia) === Number(date.slice(-2)) && assignmentShift(row.jornada) === shift)) continue;
+    period.rows = [...period.rows, { dia: date.slice(-2), jornada: shift, tipo: assignment.tipo || 'TUR',
+      especialidad: assignment.especialidad, operacion: assignment.operacion || 'ESTIBA',
+      parte: String(assignment.parte), empresa: assignment.empresa || '', buque: assignment.buque || '',
+      produccion: '', upcomingAssignment: true }];
   }
 
   for (const row of manualRows) {

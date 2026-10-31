@@ -57,6 +57,33 @@ test('retains saved history and adds new manual jornales without altering it', (
   assert.equal(companyImage('TCV'), '/assets/empresas/apm.jpeg');
 });
 
+test('shows a contracted November jornal before the salary history reaches November', () => {
+  const assignment = { fecha: '2026-11-02', jornada: '02-08', parte: '31755', tipo: 'TUR',
+    especialidad: 'CONDUCTOR 1a', empresa: 'CSP IBERIAN VALENCIA TERMINAL',
+    buque: 'CMA CGM MARCO POLO', operacion: 'CONT. C/SPREADER AUT' };
+  const snapshot = { payload: { jornales: { history: [{ year: 2026, month: 10,
+    monthLabel: 'Octubre de 2026', rows: [] }] }, upcomingAssignments: [assignment] } };
+  const months = buildManualSalaryMonths(snapshot);
+  assert.deepEqual(months.map((entry) => entry.key), ['2026-11', '2026-10']);
+  assert.equal(months[0].items.length, 1);
+  assert.equal(months[0].items[0].parte, '31755');
+  assert.equal(months[0].items[0].payroll.date, '2026-11-02');
+  assert.ok(months[0].items[0].payroll.total > 0);
+});
+
+test('does not count a contracted jornal twice when it is already saved', () => {
+  const assignment = { fecha: '2026-11-02', jornada: '02-08', parte: '31755',
+    especialidad: 'CONDUCTOR 1a', empresa: 'CSP', operacion: 'ESTIBA' };
+  const row = { dia: '02', jornada: '02-08', parte: '31755', especialidad: 'CONDUCTOR 1a' };
+  const snapshot = { payload: { jornales: { history: [{ year: 2026, month: 11,
+    monthLabel: 'Noviembre de 2026', rows: [row] }] }, upcomingAssignments: [assignment] } };
+  assert.equal(buildManualSalaryMonths(snapshot)[0].items.length, 1);
+  assert.equal(snapshot.payload.jornales.history[0].rows.length, 1);
+  const manual = { id: 'manual-1', work_date: '2026-11-02', shift: '02-08',
+    specialty: 'CONDUCTOR 1a', worker_group: 'II', operation_type: 'ESTIBA', premium: 0 };
+  assert.equal(buildManualSalaryMonths({ payload: { upcomingAssignments: [assignment] } }, [manual])[0].items.length, 1);
+});
+
 test('shows imported vacation days from the shared paid-day table', () => {
   const snapshot = { payload: { descansos: { months: [{ year: 2026, month: 10, days: [{ day: 3, code: 'VA' }, { day: 4, code: 'VA' }] }] } } };
   const paid = [3, 4].map((day) => ({ id: `va-${day}`, work_date: `2026-10-0${day}`, concept_type: 'VA' }));
