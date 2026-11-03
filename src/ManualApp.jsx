@@ -985,6 +985,7 @@ function Salary({ session, onSession }) {
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">
       {[
         ...(contractingEnabled ? [['contratacion', 'Inicio', House]] : []),
+        ['chapero', 'Chapero', BriefcaseBusiness],
         ['puertas', 'Puertas', DoorOpen],
         ['sueldometro', 'Sueldómetro', WalletCards],
         ['tablon', 'Tablón', ClipboardList],
