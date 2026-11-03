@@ -268,12 +268,6 @@ function ActivityMonitor({ session }) {
   const [registrationError, setRegistrationError] = useState('');
   const [registrationLimit, setRegistrationLimit] = useState(10);
   const [personalLinks, setPersonalLinks] = useState(null);
-  const [partOpens, setPartOpens] = useState(null);
-  const [partOpenError, setPartOpenError] = useState('');
-  const [pushActivations, setPushActivations] = useState(null);
-  const [pushActivationError, setPushActivationError] = useState('');
-  const [pushDeliveries, setPushDeliveries] = useState(null);
-  const [pushDeliveryError, setPushDeliveryError] = useState('');
   const [personalLinkError, setPersonalLinkError] = useState('');
   const [personalLinkLimit, setPersonalLinkLimit] = useState(10);
   const [error, setError] = useState('');
@@ -281,15 +275,12 @@ function ActivityMonitor({ session }) {
   const [calendarError, setCalendarError] = useState('');
   const [filter, setFilter] = useState('');
   const load = async () => {
-    const [usage, journals, calendar, signups, linkOpens, partActivity, pushActivity, deliveryActivity] = await Promise.allSettled([
+    const [usage, journals, calendar, signups, linkOpens] = await Promise.allSettled([
       getUsageMonitor({ token: session.token }),
       rpc('app_cpe_admin_manual_jornal_activity', { p_token: session.token }),
       rpc('app_cpe_admin_calendar_day_activity', { p_token: session.token }),
       rpc('app_cpe_admin_registration_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_part_open_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_push_activation_monitor', { p_token: session.token }),
-      rpc('app_cpe_admin_push_delivery_monitor', { p_token: session.token })
+      rpc('app_cpe_admin_personal_link_monitor', { p_token: session.token })
     ]);
     if (usage.status === 'fulfilled') { setData(usage.value); setError(''); }
     else setError(usage.reason?.message || 'No se pudo cargar la actividad.');
@@ -301,12 +292,6 @@ function ActivityMonitor({ session }) {
     else setRegistrationError(signups.reason?.message || 'No se pudieron cargar las nuevas altas.');
     if (linkOpens.status === 'fulfilled') { setPersonalLinks(linkOpens.value); setPersonalLinkError(''); }
     else setPersonalLinkError(linkOpens.reason?.message || 'No se pudieron cargar los accesos a enlaces personales.');
-    if (partActivity.status === 'fulfilled') { setPartOpens(partActivity.value || []); setPartOpenError(''); }
-    else setPartOpenError(partActivity.reason?.message || 'No se pudieron cargar las aperturas de partes.');
-    if (pushActivity.status === 'fulfilled') { setPushActivations(pushActivity.value); setPushActivationError(''); }
-    else setPushActivationError(pushActivity.reason?.message || 'No se pudieron cargar las activaciones.');
-    if (deliveryActivity.status === 'fulfilled') { setPushDeliveries(deliveryActivity.value); setPushDeliveryError(''); }
-    else setPushDeliveryError(deliveryActivity.reason?.message || 'No se pudieron cargar los envíos.');
   };
   useEffect(() => { load(); const timer = setInterval(load, 60_000); return () => clearInterval(timer); }, [session.token]);
   const users = (data?.users || []).filter((user) => String(user.chapa) !== '72683' && ACTIVE_PAGES.has(user.lastPage) && String(user.chapa || '').includes(filter)).slice(0, displayLimit);
@@ -321,8 +306,6 @@ function ActivityMonitor({ session }) {
     .filter((event) => new Date(event.opened_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000)
     .map((event) => [String(event.chapa), event])).values()]
     .filter((event) => String(event.chapa || '').includes(filter));
-  const visiblePartOpens = (partOpens || []).filter((event) => String(event.chapa || '').includes(filter)).slice(0, 10);
-  const visiblePushActivations = (pushActivations?.users || []).filter((user) => String(user.chapa || '').includes(filter)).slice(0, 10);
   const personalLinkLabels = { 'donde-voy': 'Mi contratación', vacaciones: 'Vacaciones', dobles: 'Dobles y HS', jornales: 'Jornales y primas', descansos: 'Descansos', chapero: 'Chapero', 'chapero-especialidades': 'Chapero por especialidades', puertas: 'Puertas', 'jornada-contratada': 'Jornada contratada', 'situacion-trabajador': 'Jornada flexible' };
   const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
@@ -350,12 +333,6 @@ function ActivityMonitor({ session }) {
       {visiblePersonalLinks.slice(0, personalLinkLimit).map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{personalLinkLabels[event.section] || event.section}</td></tr>)}
     </tbody></table>{!personalLinkError && personalLinks && visiblePersonalLinks.length === 0 && <p className="monitor-empty">Todavía no hay aperturas de enlaces personales para el filtro actual.</p>}</div>
     {visiblePersonalLinks.length > personalLinkLimit && <button className="monitor-more-button" type="button" onClick={() => setPersonalLinkLimit((current) => current + 10)}>Ver más accesos<ChevronRight size={16} aria-hidden="true" /></button>}
-    <h3>Partes abiertos en Mi contratación</h3>
-    <p>Últimas 10 aperturas de otros usuarios, con chapa y hora. La chapa 72683 no se registra.</p>
-    {partOpenError && <p className="form-error" role="alert">{partOpenError}</p>}
-    <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Nombre</th><th>Parte</th><th>Jornada</th></tr></thead><tbody>
-      {visiblePartOpens.map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{event.parte}</td><td>{workDay(event.work_date)} · {event.shift}</td></tr>)}
-    </tbody></table>{partOpens && !visiblePartOpens.length && <p className="monitor-empty">No hay aperturas de partes para el filtro actual.</p>}</div>
     <h3>Nuevas altas</h3>
     <p>Últimos registros de la app, aunque no hayan vuelto a entrar. Fecha y hora de Madrid.</p>
     <div className="monitor-numbers"><span><strong>{registrations?.last24h ?? '—'}</strong> altas en las últimas 24 horas</span><span><strong>{registrations?.total ?? '—'}</strong> cuentas registradas</span></div>
@@ -377,19 +354,6 @@ function ActivityMonitor({ session }) {
       {visibleCalendarEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${workDay(event.previous_work_date)}` : ''}</td><td>{dayChange(event)}</td></tr>)}
     </tbody></table>{!calendarError && visibleCalendarEvents.length === 0 && <p className="monitor-empty">No hay cambios de días para el filtro actual.</p>}</div>
     <h3>Actividad reciente</h3><div className="recent-list">{recent.map((event) => <div key={event.id}><strong>{event.chapa || 'Anónimo'}</strong><span>{event.type === 'page_visit' ? `Visita ${event.page}` : event.type}</span><time>{time(event.at)}</time></div>)}</div>
-    <h3>Notificaciones activadas</h3>
-    <p>Usuarios que tienen actualmente avisos del móvil activados. Fecha y hora de Madrid.</p>
-    <div className="monitor-numbers"><span><strong>{pushActivations?.total ?? '—'}</strong> usuarios</span></div>
-    {pushActivationError && <p className="form-error" role="alert">{pushActivationError}</p>}
-    <div className="table-wrap"><table><thead><tr><th>Chapa</th><th>Nombre</th><th>Activadas</th><th>Dispositivos</th></tr></thead><tbody>
-      {visiblePushActivations.map((user) => <tr key={user.chapa}><td><strong>{user.chapa}</strong></td><td>{user.display_name || 'Sin nombre informado'}</td><td>{registrationTime(user.activated_at)}</td><td>{user.devices}</td></tr>)}
-    </tbody></table>{pushActivations && visiblePushActivations.length === 0 && <p className="monitor-empty">Ningún usuario con notificaciones activadas para el filtro actual.</p>}</div>
-    <h4>Notificaciones enviadas</h4>
-    <p>Cada fila registra un envío. En el móvil, los avisos próximos se agrupan en una sola tarjeta.</p>
-    {pushDeliveryError && <p className="form-error" role="alert">{pushDeliveryError}</p>}
-    <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Aviso</th><th>Estado</th><th>Abierta</th></tr></thead><tbody>
-      {(pushDeliveries?.rows || []).filter((item) => String(item.chapa || '').includes(filter)).slice(0, 10).map((item) => <tr key={item.id}><td>{registrationTime(item.updated_at)}</td><td><strong>{item.chapa}</strong></td><td>{item.title}</td><td>{item.state === 'sent' ? 'Enviada' : item.state === 'failed' ? 'Fallida' : item.state === 'processing' ? 'En proceso' : 'Pendiente'}</td><td>{item.opened_at ? `${registrationTime(item.opened_at)} · ${item.opened_source === 'push' ? 'Aviso móvil' : 'Novedades'}` : '—'}</td></tr>)}
-    </tbody></table>{pushDeliveries && !(pushDeliveries.rows || []).some((item) => String(item.chapa || '').includes(filter)) && <p className="monitor-empty">No hay envíos para el filtro actual.</p>}</div>
   </section>;
 }
 
