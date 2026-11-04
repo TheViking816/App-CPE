@@ -1,7 +1,7 @@
 import { recordPersonalLinkOpen } from '../lib/personalLinkUsage.js';
 
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
-const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'excepciones-pedidas', 'mis-especialidades', 'solicito-formacion', 'disponibilidad12m', 'chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada', 'situacion-trabajador']);
+const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'descansos-permuta', 'excepciones-pedidas', 'mis-especialidades', 'solicito-formacion', 'disponibilidad12m', 'chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada', 'situacion-trabajador']);
 
 function respond(response, status, message) {
   response.statusCode = status;
@@ -56,7 +56,9 @@ export default async function handler(request, response) {
       || !/^\d{4,8}$/.test(target.searchParams.get('usr') || '')
       || !/^[1-9]\d{0,9}$/.test(target.searchParams.get('rec') || '')
       || !/^[a-f0-9]{64}$/i.test(target.searchParams.get('pwd') || '')
-      || target.searchParams.get('mode') !== 'PROD' || target.searchParams.get('req') !== 'login') {
+      || !(['gwt', 'php'].includes(target.searchParams.get('cal')))
+      || (target.searchParams.get('mode') && target.searchParams.get('mode') !== 'PROD')
+      || target.searchParams.get('req') !== 'login') {
       return respond(response, 502, 'Enlace no válido.');
     }
     if (derivedSection) target.pathname = `/${section}`;

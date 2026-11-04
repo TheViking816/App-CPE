@@ -320,6 +320,7 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
     <div className="rest-portal-links">
       {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
+      <PersonalNoraySectionLink session={session} section="descansos-permuta" label="Cambio de descansos" />
       <PersonalNoraySectionLink session={session} section="excepciones-pedidas" label="Excepciones" />
       <a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a>
     </div>
