@@ -2,15 +2,11 @@ import { useMemo, useRef, useState } from "react";
 import { madridTodayKey } from "./exchangeDeadline.js";
 import { dateRangeKeys } from "./vacationExchange.js";
 import { availableRestMonths, parseRestGroup } from "./companyRestCalendar.js";
-import { personalRestMarks, personalVacationMarks } from "./personalRestCalendar.js";
+import { calendarDayMarks } from "./personalRestCalendar.js";
 
 const LABELS = { swap: "Intercambio", give: "Cesión", want: "Busco descanso" };
 const dayKey = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 const monthName = (year, month) => new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
-const officialMark = (code) => ({
-  DS: { type: 'manual-rest', label: 'DS' }, FS: { type: 'chosen-holiday', label: 'FS' },
-  VA: { type: 'vacation', label: 'VA' }, FM: { type: 'training', label: 'FM' }
-})[code];
 
 export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "", overrides = [], paidDays = [], holidays = [], jornales = {}, officialDays = {}, restHeader = null, onEditDate }) {
   const todayKey = madridTodayKey();
@@ -88,10 +84,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
               const date = dayKey(year, month, index + 1);
               const isHoliday = !vacation && (holidayDates.has(date) || new Date(year, month - 1, index + 1).getDay() === 0);
               const dayOffers = entries.get(date) || [];
-              const official = Object.hasOwn(officialDays, date) ? officialMark(officialDays[date]) : null;
-              const marks = vacation
-                ? official?.type === 'vacation' || official?.type === 'training' ? [official] : personalVacationMarks(date, paidDays)
-                : Object.hasOwn(officialDays, date) ? official ? [official] : [] : personalRestMarks(date, group, overrides, paidDays);
+              const marks = calendarDayMarks(date, vacation, group, overrides, paidDays, officialDays);
               const restType = marks[0]?.type || "";
               const restLabel = marks.map((mark) => mark.label).join(" y ");
               const dayJornales = vacation ? [] : jornales[date] || [];

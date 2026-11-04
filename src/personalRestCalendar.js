@@ -18,3 +18,16 @@ export function personalRestMarks(date, restGroup, overrides = [], paidDays = []
   const [year, month, day] = date.split('-').map(Number);
   return companyRestMarks(year, month, day, restGroup);
 }
+
+export function calendarDayMarks(date, vacation, restGroup, overrides = [], paidDays = [], officialDays = {}) {
+  const paid = personalVacationMarks(date, paidDays);
+  if (paid.length) return paid;
+  const official = Object.hasOwn(officialDays, date) ? ({
+    DS: { type: 'manual-rest', label: 'DS' },
+    FS: { type: 'chosen-holiday', label: 'FS' },
+    VA: { type: 'vacation', label: 'VA' },
+    FM: { type: 'training', label: 'FM' }
+  })[officialDays[date]] : null;
+  if (vacation) return official?.type === 'vacation' || official?.type === 'training' ? [official] : [];
+  return Object.hasOwn(officialDays, date) ? official ? [official] : [] : personalRestMarks(date, restGroup, overrides, paidDays);
+}
