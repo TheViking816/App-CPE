@@ -484,6 +484,9 @@ function ExchangeSection({ session, section, onSectionChange, onPaidDaysChange }
 }
 
 function Salary({ session, onSession }) {
+  const announcementKey = `app-cpe-rest-permuta-announcement-v1-${session.chapa}`;
+  const [announcementSeen, setAnnouncementSeen] = useState(() => localStorage.getItem(announcementKey) === '1');
+  const acknowledgeAnnouncement = () => { localStorage.setItem(announcementKey, '1'); setAnnouncementSeen(true); };
   const [snapshot, setSnapshot] = useState(null);
   const [manualRows, setManualRows] = useState([]);
   const [paidRows, setPaidRows] = useState([]);
@@ -588,18 +591,10 @@ function Salary({ session, onSession }) {
   }, [session.token]);
   const [pushState, setPushState] = useState('idle');
   const [pushError, setPushError] = useState('');
-  const [pushPromptDismissedAt, setPushPromptDismissedAt] = useState(() => Number(localStorage.getItem(`app-cpe-push-prompt-dismissed-${session.chapa}`) || 0));
-  const [pushPromptDone, setPushPromptDone] = useState(false);
   const enablePush = () => enablePushNotifications(session.token).then((ok) => {
     setPushState(ok ? 'enabled' : Notification.permission === 'denied' ? 'denied' : 'idle');
     setPushError(ok ? '' : 'Comprueba los permisos del navegador.');
-    if (ok) setPushPromptDone(true);
   }).catch((error) => { setPushState('idle'); setPushError(error?.message || 'Error de conexión'); });
-  const dismissPushPrompt = () => {
-    const now = Date.now();
-    localStorage.setItem(`app-cpe-push-prompt-dismissed-${session.chapa}`, String(now));
-    setPushPromptDismissedAt(now);
-  };
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   useEffect(() => {
     if (!('Notification' in window) || !('PushManager' in window)) { setPushState('unsupported'); return; }
@@ -920,19 +915,28 @@ function Salary({ session, onSession }) {
 
   const signOut = () => { disablePushNotifications(session.token).catch(() => {}); localStorage.removeItem(SESSION_KEY); onSession(null); };
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={signOut}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={signOut} onDeleteAccount={() => { setMenuOpen(false); setDeleteAccountOpen(true); }} />}</header><div className="visual-content">
+    {!announcementSeen && <aside className="rest-link-announcement" role="status" aria-label="Nuevo enlace de cambio de descansos">
+      <span className="rest-link-announcement-icon"><CalendarDays size={23} aria-hidden="true" /></span>
+      <div className="rest-link-announcement-copy"><strong>Nuevo: Cambio de descansos</strong><p>Ya puedes abrir tu enlace personal desde la sección Descansos.</p></div>
+      <div className="rest-link-announcement-actions">
+        {(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable)
+          ? <form action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer" onSubmit={acknowledgeAnnouncement}><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos-permuta" /><button type="submit" className="primary">Abrir cambio <ExternalLink size={16} aria-hidden="true" /></button></form>
+          : <button type="button" className="primary" onClick={() => { acknowledgeAnnouncement(); navigate('descansos'); }}>Ver Descansos</button>}
+        <button type="button" onClick={acknowledgeAnnouncement}>Entendido</button>
+      </div>
+    </aside>}
     {false && portalLinkStatus?.portalPasswordIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>Contraseña del portal incorrecta.</strong> Revisa los datos en «Vincular portal» e introduce la contraseña de acceso al portal de SEVASA</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}
     {false && portalLinkStatus?.premiumKeyIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>La clave de primas guardada ya no funciona.</strong> Introduce tu clave actual en «Vincular portal» para volver a cargar las primas automáticamente.</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', 'premium'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Actualizar clave de primas</button></div>}
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
       : tab === 'cuenta' ? <PasswordSettings session={session} />
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
-      : tab === 'contratacion' && contractingEnabled ? <div className="contracting-page">{pushState !== 'unsupported' && !pushPromptDone && (pushState !== 'enabled' || String(session.chapa) === '72683') && Date.now() - pushPromptDismissedAt > 30 * 24 * 60 * 60 * 1000 && <div className="home-push-prompt" role="note"><div className="home-push-prompt-icon"><Bell size={22} aria-hidden="true" /></div><div className="home-push-prompt-copy"><strong>¿Quieres recibir avisos?</strong><p>La app te avisará de mensajes y propuestas de intercambio.</p>{pushError && <small role="alert">{pushError}</small>}</div><div className="home-push-prompt-actions"><button type="button" className="primary" onClick={enablePush}>Activar notificaciones</button><button type="button" onClick={dismissPushPrompt}>Ahora no</button></div></div>}<section className="visual-page-heading"><div><span>INICIO</span><h1>Mi contratación</h1></div>{personalLinkAvailable && <div className="personal-portal-actions"><form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form></div>}</section>{portalLinkStatus && !portalLinkStatus.hasPortalPassword && !personalLinkAvailable && <div className="salary-link-notice" role="note"><span>Vincula la app con el portal para consultar tu contratación y tus próximos jornales.</span><button type="button" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}<UpcomingAssignments session={session} snapshot={snapshot} /><ManualOperationalSnapshots view="distancias" session={session} onSession={onSession} /></div>
+      : tab === 'contratacion' && contractingEnabled ? <div className="contracting-page"><section className="visual-page-heading"><div><span>INICIO</span><h1>Mi contratación</h1></div>{personalLinkAvailable && <div className="personal-portal-actions"><form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form></div>}</section>{portalLinkStatus && !portalLinkStatus.hasPortalPassword && !personalLinkAvailable && <div className="salary-link-notice" role="note"><span>Vincula la app con el portal para consultar tu contratación y tus próximos jornales.</span><button type="button" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}<UpcomingAssignments session={session} snapshot={snapshot} /><ManualOperationalSnapshots view="distancias" session={session} onSession={onSession} /></div>
       : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general" className="board-section-page"><PersonalNoraySectionLink session={session} section="jornada-contratada" label="Contratación" /><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} hideDistanceSummary={contractingEnabled} />
       : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios" className="exchange-section-page"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} pushError={pushError} onEnablePush={enablePush} onDisablePush={() => optOutPushNotifications(session.token).then(() => { setPushState('idle'); setPushError(''); }).catch((error) => setPushError(error?.message || 'No se pudieron desactivar.'))} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
-    {tab === 'sueldometro' && pushState !== 'unsupported' && pushState !== 'enabled' && !pushPromptDone && Date.now() - pushPromptDismissedAt > 30 * 24 * 60 * 60 * 1000 && <div className="home-push-prompt" role="note"><div className="home-push-prompt-icon"><Bell size={22} aria-hidden="true" /></div><div className="home-push-prompt-copy"><strong>¿Quieres recibir avisos?</strong><p>La app te avisará de mensajes y propuestas de intercambio.</p>{pushError && <small role="alert">{pushError}</small>}</div><div className="home-push-prompt-actions"><button type="button" className="primary" onClick={enablePush}>Activar notificaciones</button><button type="button" onClick={dismissPushPrompt}>Ahora no</button></div></div>}
     <div className="salary-link-notice" role="note"><strong>Ahora los jornales y las primas se añaden manualmente.</strong></div>
     {error && !showForm && !showPaidForm && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showImport && <ManualEditorDialog label="Importar jornales" wide onClose={() => setShowImport(false)} busy={busy}><PortalJornalesImport existingItems={months.flatMap((entry) => entry.items)} manualRows={manualRows} busy={busy} onImport={importPastedJornales} onClose={() => setShowImport(false)} /></ManualEditorDialog>}
