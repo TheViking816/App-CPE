@@ -34,6 +34,9 @@
 .visual-journal-content .portal-jornales-list article.is-training { border-color:#fb7185; background:linear-gradient(135deg,#fff,#fff1f2); }
 .visual-journal-content .portal-jornales-list article.is-training::before { background:#f43f5e; box-shadow:0 0 0 1px #f43f5e; }
 .visual-journal-content .portal-jornales-list article.is-training .portal-jornal-date { color:#9f1239; background:#ffe4e6; }
+.visual-journal-content .portal-jornales-list article.is-paid-leave { border-color:#22a06b; background:linear-gradient(135deg,#fff,#ecfdf5); }
+.visual-journal-content .portal-jornales-list article.is-paid-leave::before { background:#16a34a; box-shadow:0 0 0 1px #16a34a; }
+.visual-journal-content .portal-jornales-list article.is-paid-leave .portal-jornal-date { color:#14532d; background:#dcfce7; }
 .manual-detail-overlay { position:fixed; z-index:1000; inset:0; display:grid; place-items:center; padding:16px; background:#06172dcc; }
 .manual-detail-modal { width:min(100%,560px); max-height:90dvh; overflow:auto; padding:23px; border-radius:14px; background:#fff; box-shadow:0 22px 60px #0005; }
 .manual-detail-modal header { display:flex; justify-content:space-between; gap:15px; align-items:start; }.manual-detail-modal header small { color:#6d7c91; font-weight:750; }.manual-detail-modal h2 { margin:5px 0 0; color:#08264b; }.manual-detail-modal header button { display:grid; place-items:center; width:38px; height:38px; border:1px solid #d9e2ec; border-radius:8px; background:#fff; color:#08264b; }

@@ -16,7 +16,7 @@ const EVENT_LABELS = {
   password_change: "Cambia la contraseña", portal_open: "Abre Portal",
   tablon_general_open: "Abre el tablón", page_visit: "Visita una página"
 };
-const DAY_LABELS = { REST: "DS", FS: "FS", WORK: "Disponible", VA: "VA", FM: "FM" };
+const DAY_LABELS = { REST: "DS", FS: "FS", WORK: "Disponible", VA: "VA", FM: "FM", VP: "VP" };
 const ACTION_LABELS = { added: "Añadido", edited: "Cambiado", deleted: "Eliminado" };
 
 function formatWorkDate(value) {
@@ -310,7 +310,7 @@ export default function AdminMonitor({ session }) {
 
           <article className="monitor-card monitor-calendar-card">
             <div className="monitor-card-heading"><div><small>Calendario personal</small><h2>Cambios de días</h2></div><Activity size={21} /></div>
-            <p className="monitor-sync-help">Últimos 200 cambios de DS, FS, Disponible, VA y FM, también cuando VA o FM se añaden desde Sueldómetro.</p>
+            <p className="monitor-sync-help">Últimos 200 cambios de DS, FS, Disponible, VA, FM y VP, también cuando se añaden desde Sueldómetro.</p>
             {calendarActivityError && <p className="monitor-sync-message is-error" role="alert">{calendarActivityError}</p>}
             <div className="monitor-table-wrap">
               <table className="monitor-table">

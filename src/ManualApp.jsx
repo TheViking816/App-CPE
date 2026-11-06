@@ -7,7 +7,7 @@ import VacationExchangePanel from './VacationExchangePanel.jsx';
 import ExchangeConversations, { conversationHash, directConversationHash } from './ExchangeConversations.jsx';
 import { hashForExchangeOffer } from './navigation.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod, sharedPremiumRequest } from './manualSalary.js';
-import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro, reconcileContinuousDoubleMeals } from './payroll.js';
+import { PAID_LEAVE_DAY_RATE, TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro, reconcileContinuousDoubleMeals } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { specialties as censoSpecialties } from './censo.js';
 import { PROFESSIONAL_GROUPS, professionalGroupCode } from './professionalGroups.js';
@@ -75,9 +75,9 @@ function ManualSideMenu({ tab, isAdmin, showContracting, navigate, onClose, onLo
   </nav>;
 }
 
-function SectionPage({ eyebrow, title, children, className = '' }) {
+function SectionPage({ eyebrow, title, children, className = '', headingActions = null }) {
   return <div className={`manual-section-page ${className}`.trim()}>
-    <section className="visual-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div></section>
+    <section className="visual-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div>{headingActions && <div className="personal-portal-actions">{headingActions}</div>}</section>
     {children}
   </div>;
 }
@@ -153,7 +153,7 @@ function ProfileSettings({ session, onSession }) {
     } catch (reason) { setError(reason.message || 'No se pudieron guardar los datos.'); }
     finally { setBusy(false); }
   }
-  return <SectionPage eyebrow="AJUSTES" title="Mis datos"><section className="manual-panel manual-profile-settings manual-profile-name">
+  return <SectionPage eyebrow="AJUSTES" title="Mis datos" headingActions={<><PersonalNoraySectionLink session={session} section="mis-especialidades" label="Mis especialidades" className="personal-portal-link" /><PersonalNoraySectionLink session={session} section="solicito-formacion" label="Solicitar formación" className="personal-portal-link" /></>}><section className="manual-panel manual-profile-settings manual-profile-name">
     <h2>Nombre visible</h2>
     <p>Escribe el nombre que verán tus compañeros en chats e intercambios de descansos y vacaciones.</p>
     <form onSubmit={saveName}>
@@ -170,7 +170,7 @@ function ProfileSettings({ session, onSession }) {
       {notice && <p className="banner success" role="status">{notice}</p>}
       <button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar mis datos'}</button>
     </form>
-  </section><PersonalNoraySectionLink session={session} section="mis-especialidades" label="Abrir mis especialidades" cardTitle="Especialidades del portal" /><PersonalNoraySectionLink session={session} section="solicito-formacion" label="Solicitar formación" cardTitle="Formación del portal" /></SectionPage>;
+  </section></SectionPage>;
 }
 
 function PasswordSettings({ session }) {
@@ -311,7 +311,7 @@ function ActivityMonitor({ session }) {
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
   const action = (value) => ({ added: 'Añadido', edited: 'Editado', deleted: 'Eliminado' })[value] || value;
-  const dayType = (value) => ({ REST: 'DS', FS: 'FS', WORK: 'Disponible', VA: 'VA', FM: 'FM' })[value] || value || '—';
+  const dayType = (value) => ({ REST: 'DS', FS: 'FS', WORK: 'Disponible', VA: 'VA', FM: 'FM', VP: 'VP' })[value] || value || '—';
   const dayChange = (event) => event.event_type === 'deleted' ? dayType(event.previous_day_type)
     : event.previous_day_type && event.previous_day_type !== event.day_type
       ? `${dayType(event.previous_day_type)} → ${dayType(event.day_type)}` : dayType(event.day_type);
@@ -348,7 +348,7 @@ function ActivityMonitor({ session }) {
       {visibleJournalEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}</td><td>{event.shift}</td><td>{event.specialty}</td><td>{event.worker_group}</td><td>{event.operation_type === 'RECEPCION_ENTREGA' ? 'OC' : 'SP'}</td></tr>)}
     </tbody></table>{!journalError && visibleJournalEvents.length === 0 && <p className="monitor-empty">No hay movimientos de jornales manuales para el filtro actual.</p>}</div>
     <h3>Cambios en el calendario personal</h3>
-    <p>Últimos 10 movimientos de DS, FS, Disponible, VA y FM, incluidos VA y FM añadidos desde Sueldómetro.</p>
+    <p>Últimos 10 movimientos de DS, FS, Disponible, VA, FM y VP, incluidos los días añadidos desde Sueldómetro.</p>
     {calendarError && <p className="form-error" role="alert">{calendarError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día</th><th>Tipo</th></tr></thead><tbody>
       {visibleCalendarEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${workDay(event.previous_work_date)}` : ''}</td><td>{dayChange(event)}</td></tr>)}
@@ -358,14 +358,14 @@ function ActivityMonitor({ session }) {
 }
 
 function JornalCard({ item, onOpen }) {
-  const paidDay = item.isVacation || item.isTraining;
+  const paidDay = item.isVacation || item.isTraining || item.isPaidLeave;
   const logo = paidDay ? '' : companyImage(item.empresa);
   const destination = [item.buque, item.empresa].filter((value) => value && !/^(?:--?|—)$/.test(String(value).trim())).join(' · ');
-  return <article className={`production-jornal${logo ? ' has-company-logo' : ''}${item.isVacation ? ' is-vacation' : ''}${item.isTraining ? ' is-training' : ''}`} style={logo ? { '--jornal-company-logo': `url("${logo}")` } : undefined} role="button" tabIndex={0} aria-label={`Ver detalle ${paidDay ? 'del día retribuido' : 'del jornal'} del ${item.dia || item.payroll.date.slice(-2)}`} onClick={() => onOpen(item)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item); } }}>
-    <div className="portal-jornal-date"><strong>{Number(item.dia || item.payroll.date.slice(-2))}</strong><span>{paidDay ? (item.isVacation ? 'VA' : 'FM') : item.payroll.shift}</span></div>
+  return <article className={`production-jornal${logo ? ' has-company-logo' : ''}${item.isVacation ? ' is-vacation' : ''}${item.isTraining ? ' is-training' : ''}${item.isPaidLeave ? ' is-paid-leave' : ''}`} style={logo ? { '--jornal-company-logo': `url("${logo}")` } : undefined} role="button" tabIndex={0} aria-label={`Ver detalle ${paidDay ? 'del día retribuido' : 'del jornal'} del ${item.dia || item.payroll.date.slice(-2)}`} onClick={() => onOpen(item)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item); } }}>
+    <div className="portal-jornal-date"><strong>{Number(item.dia || item.payroll.date.slice(-2))}</strong><span>{paidDay ? item.tipo : item.payroll.shift}</span></div>
     <div className="portal-jornal-content">
-      <div className="portal-jornal-heading"><strong>{paidDay ? (item.isVacation ? 'Vacaciones' : 'Formación') : item.especialidad || 'Jornal'}</strong><strong className="portal-jornal-total">{formatEuro(item.payroll.total)}</strong></div>
-      {paidDay ? <em>Día de {item.isVacation ? 'vacaciones' : 'formación'} retribuido</em> : <><em className="portal-jornal-destination">{destination}</em>{item.operacion && <em>{item.operacion}</em>}</>}
+      <div className="portal-jornal-heading"><strong>{paidDay ? (item.isVacation ? 'Vacaciones' : item.isTraining ? 'Formación' : 'Permiso retribuido') : item.especialidad || 'Jornal'}</strong><strong className="portal-jornal-total">{formatEuro(item.payroll.total)}</strong></div>
+      {paidDay ? <em>{item.operacion}{item.isPaidLeave ? '' : ' retribuido'}</em> : <><em className="portal-jornal-destination">{destination}</em>{item.operacion && <em>{item.operacion}</em>}</>}
       {!paidDay && item.companyNeedsSaving && <span className="manual-jornal-company-warning">{item.empresa ? 'Empresa tomada del parte. Guárdala al editar el jornal.' : 'Indica la empresa al editar el jornal para mostrar su logo.'}</span>}
       <div className="portal-jornal-breakdown">
         <span>{paidDay ? 'Importe' : 'Base'} <b>{formatEuro(item.payroll.base)}</b></span>
@@ -386,10 +386,10 @@ function JornalDetail({ item, busy, relayBusy, relayError, onRelayChange, onClos
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
-  const paidDay = item.isVacation || item.isTraining;
+  const paidDay = item.isVacation || item.isTraining || item.isPaidLeave;
   const action = (callback) => { onClose(); callback(item); };
   return <div className="manual-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="manual-detail-modal" role="dialog" aria-modal="true" aria-label={`Detalle del ${paidDay ? 'día' : 'jornal'} ${item.payroll.date}`}>
-    <header><div><small>{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} · {item.payroll.shift}</small><h2>{paidDay ? (item.isVacation ? 'Vacaciones' : 'Formación') : item.especialidad || 'Jornal'}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
+    <header><div><small>{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} · {item.payroll.shift}</small><h2>{paidDay ? (item.isVacation ? 'Vacaciones' : item.isTraining ? 'Formación' : 'Permiso retribuido') : item.especialidad || 'Jornal'}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
     {!paidDay && <p>{[item.buque, item.empresa, item.operacion].filter(Boolean).join(' · ')}</p>}
     <div className="manual-detail-values"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}{!paidDay && <span>Prima <b>{item.payroll.primaPending ? 'Pendiente' : formatEuro(item.payroll.prima || 0)}</b></span>}{!paidDay && item.payroll.continuousDoubleMeal > 0 && <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>}{!paidDay && item.payroll.relayHour > 0 && <span>Hora de relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}{!paidDay && item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}<span>Total <b>{formatEuro(item.payroll.total)}</b></span></div>
     {!paidDay && item.payroll.relayHourEligible && <label className={`manual-relay-hour${item.payroll.relayHourEnabled ? ' is-enabled' : ''}`}><input type="checkbox" checked={item.payroll.relayHourEnabled} disabled={busy || relayBusy} onChange={(event) => onRelayChange(item, event.target.checked)} /><span>Hora de relevo<small>{item.payroll.relayHourRateKey === 'FESTIVO' ? 'Festiva' : 'Laborable'} · +{formatEuro(item.payroll.relayHourRate)}</small></span></label>}
@@ -568,7 +568,7 @@ function Salary({ session, onSession }) {
         setPeriod('month');
       }
     } catch (reason) {
-      setError(reason.message || 'No se pudieron actualizar los días VA y FM en Sueldómetro.');
+      setError(reason.message || 'No se pudieron actualizar los días VA, FM y VP en Sueldómetro.');
     }
   };
   useEffect(() => {
@@ -826,9 +826,9 @@ function Salary({ session, onSession }) {
   async function savePaidDay(event) {
     event.preventDefault(); setError(''); setNotice('');
     const existing = months.flatMap((entry) => entry.items).find((item) =>
-      (item.isVacation || item.isTraining) && item.payroll.date === paidForm.work_date && item.id !== paidForm.id
+      (item.isVacation || item.isTraining || item.isPaidLeave) && item.payroll.date === paidForm.work_date && item.id !== paidForm.id
     );
-    if (existing) { setError('Ya existe un día VA o FM registrado en esa fecha.'); return; }
+    if (existing) { setError('Ya existe un día VA, FM o VP registrado en esa fecha.'); return; }
     setBusy(true);
     try {
       const saved = await rpc('app_cpe_save_manual_paid_day', { p_token: session.token, p_id: paidForm.id,
@@ -841,7 +841,7 @@ function Salary({ session, onSession }) {
     finally { setBusy(false); }
   }
   async function removePaidDay(id) {
-    if (!window.confirm('¿Eliminar este día VA o FM manual?')) return;
+    if (!window.confirm('¿Eliminar este día VA, FM o VP manual?')) return;
     setBusy(true); setError('');
     try {
       await rpc('app_cpe_delete_manual_paid_day', { p_token: session.token, p_id: id });
@@ -895,7 +895,7 @@ function Salary({ session, onSession }) {
     catch (reason) { setError(reason.message); } finally { setBusy(false); }
   }
   const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setError(''); setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); };
-  const editPaidDay = (item) => { setError(''); setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.isVacation ? 'VA' : 'FM' }); setShowPaidForm(true); setShowForm(false); };
+  const editPaidDay = (item) => { setError(''); setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.tipo }); setShowPaidForm(true); setShowForm(false); };
   const unreadCount = notifications.filter((row) => !row.readAt).length;
   const selectedCompany = companySelectValue(form.company);
 
@@ -931,9 +931,9 @@ function Salary({ session, onSession }) {
       : tab === 'cuenta' ? <PasswordSettings session={session} />
       : tab === 'monitor' ? <SectionPage eyebrow="ADMINISTRACIÓN" title="Monitor"><ActivityMonitor session={session} /></SectionPage>
       : tab === 'contratacion' && contractingEnabled ? <div className="contracting-page"><section className="visual-page-heading"><div><span>INICIO</span><h1>Mi contratación</h1></div>{personalLinkAvailable && <div className="personal-portal-actions"><form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Abrir mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form></div>}</section>{portalLinkStatus && !portalLinkStatus.hasPortalPassword && !personalLinkAvailable && <div className="salary-link-notice" role="note"><span>Vincula la app con el portal para consultar tu contratación y tus próximos jornales.</span><button type="button" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}<UpcomingAssignments session={session} snapshot={snapshot} /><ManualOperationalSnapshots view="distancias" session={session} onSession={onSession} /></div>
-      : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general" className="board-section-page"><PersonalNoraySectionLink session={session} section="jornada-contratada" label="Contratación" /><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
+      : tab === 'tablon' ? <SectionPage eyebrow="CONTRATACIÓN COMPLETA" title="Tablón general" className="board-section-page" headingActions={<PersonalNoraySectionLink session={session} section="jornada-contratada" label="Contratación" className="personal-portal-link" />}><GeneralBoard chapa={session.chapa} supabaseOnly showHeading={false} /></SectionPage>
       : (tab === 'puertas' || tab === 'chapero') ? <ManualOperationalSnapshots view={tab} session={session} onSession={onSession} hideDistanceSummary={contractingEnabled} />
-      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios" className="exchange-section-page"><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
+      : (tab === 'descansos' || tab === 'vacaciones') ? <SectionPage eyebrow="DESCANSOS Y VACACIONES" title="Intercambios" className="exchange-section-page" headingActions={tab === 'vacaciones' ? <><PersonalNoraySectionLink session={session} section="vacaciones" label="Solicitar vacaciones" className="personal-portal-link" /><PersonalNoraySectionLink session={session} section="disponibilidad12m" label="Disponibilidad · últimos 12 meses" className="personal-portal-link" /></> : <><PersonalNoraySectionLink session={session} section="descansos" label="Descansos" className="personal-portal-link" /><PersonalNoraySectionLink session={session} section="descansos-permuta" label="Cambio de descansos" className="personal-portal-link" /><PersonalNoraySectionLink session={session} section="excepciones-pedidas" label="Excepciones" className="personal-portal-link" /></>}><ExchangeSection session={session} section={tab} onSectionChange={navigate} onPaidDaysChange={refreshPaidDays} /></SectionPage>
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} pushError={pushError} onEnablePush={enablePush} onDisablePush={() => optOutPushNotifications(session.token).then(() => { setPushState('idle'); setPushError(''); }).catch((error) => setPushError(error?.message || 'No se pudieron desactivar.'))} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
@@ -941,10 +941,10 @@ function Salary({ session, onSession }) {
     {error && !showForm && !showPaidForm && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showImport && <ManualEditorDialog label="Importar jornales" wide onClose={() => setShowImport(false)} busy={busy}><PortalJornalesImport existingItems={months.flatMap((entry) => entry.items)} manualRows={manualRows} busy={busy} onImport={importPastedJornales} onClose={() => setShowImport(false)} /></ManualEditorDialog>}
     {showForm && <ManualEditorDialog label={form.id ? 'Editar jornal' : 'Añadir jornal'} onClose={() => setShowForm(false)} busy={busy}>{jornalEditor}</ManualEditorDialog>}
-    {showPaidForm && <ManualEditorDialog label={paidForm.id ? 'Editar día VA / FM' : 'Añadir día VA / FM'} onClose={() => setShowPaidForm(false)} busy={busy}><section className="manual-panel editor paid-day-editor manual-editor-card"><div className="section-head"><h2>{paidForm.id ? 'Editar día VA / FM' : 'Añadir día VA / FM'}</h2><button type="button" disabled={busy} onClick={() => setShowPaidForm(false)}>Cerrar</button></div><form onSubmit={savePaidDay}>{error && <p className="form-error manual-editor-error" role="alert">{error}</p>}
+    {showPaidForm && <ManualEditorDialog label={paidForm.id ? 'Editar día VA / FM / VP' : 'Añadir día VA / FM / VP'} onClose={() => setShowPaidForm(false)} busy={busy}><section className="manual-panel editor paid-day-editor manual-editor-card"><div className="section-head"><h2>{paidForm.id ? 'Editar día VA / FM / VP' : 'Añadir día VA / FM / VP'}</h2><button type="button" disabled={busy} onClick={() => setShowPaidForm(false)}>Cerrar</button></div><form onSubmit={savePaidDay}>{error && <p className="form-error manual-editor-error" role="alert">{error}</p>}
       <label>Fecha<input type="date" value={paidForm.work_date} onChange={(event) => setPaidForm({ ...paidForm, work_date: event.target.value })} required /></label>
-      <label>Concepto<select value={paidForm.concept_type} onChange={(event) => setPaidForm({ ...paidForm, concept_type: event.target.value })}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option></select></label>
-      <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : TRAINING_DAY_RATE)}</strong></div>
+      <label>Concepto<select value={paidForm.concept_type} onChange={(event) => setPaidForm({ ...paidForm, concept_type: event.target.value })}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option></select></label>
+      <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : paidForm.concept_type === 'FM' ? TRAINING_DAY_RATE : PAID_LEAVE_DAY_RATE)}</strong></div>
       <div className="form-actions"><button type="button" disabled={busy} onClick={() => setShowPaidForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar día'}</button></div>
     </form></section></ManualEditorDialog>}
     {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onImport={() => { setShowImport(true); setShowForm(false); setShowPaidForm(false); setError(''); setNotice(''); }} onAdd={() => { setForm(blank()); setShowForm(true); setShowImport(false); setShowPaidForm(false); setError(''); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowImport(false); setShowForm(false); setError(''); setNotice(''); }} portalAction={(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <div className="personal-portal-actions">{personalLinkAvailable && !contractingEnabled && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="jornales" /><button type="submit">Jornales y primas <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="situacion-trabajador" /><button type="submit">Jornada flexible <ExternalLink size={15} aria-hidden="true" /></button></form>}{doblesLinkAvailable && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="dobles" /><button type="submit">Solicitar dobles y HS <ExternalLink size={15} aria-hidden="true" /></button></form>}</div>}>

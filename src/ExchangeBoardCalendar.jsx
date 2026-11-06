@@ -67,10 +67,10 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
     </header>
     {!vacation && !group && <p className="exchange-rest-group-notice">Elige tu grupo de descansos en <a href="#/perfil">Mis datos</a> para ver tus descansos de todo el año.</p>}
     {!vacation && group && !restCalendarAvailable && <p className="exchange-rest-group-notice">El calendario laboral de este año aún no está disponible. Consulta tus descansos en el portal oficial.</p>}
-    <div className="exchange-board-legend">{Object.entries(vacation ? { offered: "Ofrece vacaciones", wanted: "Busca vacaciones" } : LABELS).map(([kind, label]) => <span key={kind} className={`is-${kind}`}>{label}</span>)}{vacation && <><span className="is-personal-vacation">Mis vacaciones · VA</span><span className="is-personal-training">Mi formación · FM</span></>}</div>
+    <div className="exchange-board-legend">{Object.entries(vacation ? { offered: "Ofrece vacaciones", wanted: "Busca vacaciones" } : LABELS).map(([kind, label]) => <span key={kind} className={`is-${kind}`}>{label}</span>)}{vacation && <><span className="is-personal-vacation">Mis vacaciones · VA</span><span className="is-personal-training">Mi formación · FM</span><span className="is-paid-leave">Permiso retribuido · VP</span></>}</div>
     {!vacation && <div className="exchange-rest-legend" aria-label="Colores del calendario personal">
       <span className="is-rest-day">DS</span>{restCalendarAvailable && group && <span className="is-holiday">Festivo inhábil</span>}
-      <span className="is-chosen-holiday">FS</span><span className="is-training">FM</span><span className="is-vacation">VA</span>
+      <span className="is-chosen-holiday">FS</span><span className="is-training">FM</span><span className="is-vacation">VA</span><span className="is-paid-leave">VP</span>
     </div>}
     <div className={`exchange-board-months${vacation ? " is-single" : ""}`}>
       {months.map(([year, month]) => {

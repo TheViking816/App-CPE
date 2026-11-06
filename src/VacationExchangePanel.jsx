@@ -316,14 +316,13 @@ export default function VacationExchangePanel({ session, onPaidDaysChange }) {
   }
 
   return <section className="rest-exchange-panel vacation-exchange-panel exchange-redesign" ref={panelRef}>
-    <div className="rest-portal-links">{personalVacationLink && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="vacaciones" /><button type="submit">Solicitar vacaciones <ExternalLink size={15} aria-hidden="true" /></button></form>}<PersonalNoraySectionLink session={session} section="disponibilidad12m" label="Disponibilidad · últimos 12 meses" /></div>
     <ExchangeBoardCalendar offers={board} paidDays={paidDays} officialDays={pilotCalendar.officialDays} selectedDate={filters.date} vacation onSelectDate={selectCalendarOffer} onEditDate={openVacationEditor} />
     {pilotCalendar.vacationPeriods.length > 0 && <section className="noray-pilot-vacations" aria-label="Mis vacaciones concedidas"><strong>Mis vacaciones concedidas</strong><div>{pilotCalendar.vacationPeriods.map((period) => <span key={`${period.start}-${period.end}`}>{formatRange(period.start, period.end)} · {period.days} {period.days === 1 ? 'día' : 'días'}</span>)}</div></section>}
-    <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir VA o FM</button><span>Los días VA y FM aparecen también en descansos y Sueldómetro.</span></div>
+    <div className="rest-calendar-controls"><button type="button" onClick={() => vacationEditorOpen ? setVacationEditorOpen(false) : openVacationEditor()}>Añadir VA, FM o VP</button><span>Los días VA, FM y VP aparecen también en descansos y Sueldómetro.</span></div>
     {vacationEditorOpen && <form className="rest-calendar-editor" ref={vacationEditorRef} onSubmit={saveVacationDays}>
       <label>Desde<input type="date" value={vacationStart} onChange={(event) => { setVacationStart(event.target.value); setPaidType(paidDays.find((row) => row.work_date === event.target.value)?.concept_type || "VA"); if (vacationEnd < event.target.value) setVacationEnd(event.target.value); }} required /></label>
       <label>Hasta<input type="date" min={vacationStart} value={vacationEnd} onChange={(event) => setVacationEnd(event.target.value)} required /></label>
-      <label>Tipo<select value={paidType} onChange={(event) => setPaidType(event.target.value)}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option></select></label>
+      <label>Tipo<select value={paidType} onChange={(event) => setPaidType(event.target.value)}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option></select></label>
       <div><button type="submit" disabled={personalBusy}>Guardar días</button>{vacationStart === vacationEnd && paidDays.some((row) => row.work_date === vacationStart) && <button type="button" disabled={personalBusy} onClick={removeVacationDay}>Quitar día</button>}</div>
     </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">

@@ -194,14 +194,14 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
     setCalendarBusy(true);
     setCalendarError("");
     try {
-      if (editType === "VA" || editType === "FM") {
+      if (editType === "VA" || editType === "FM" || editType === "VP") {
         await saveManualPaidDay(session.token, editDate, editType, paid?.id || null);
       } else {
         if (paid) await deleteManualPaidDay(session.token, paid.id);
         await saveRestDayOverride(session.token, editDate, editType);
       }
       await reloadCalendar();
-      if (paid || editType === "VA" || editType === "FM") await onPaidDaysChange?.(editDate);
+      if (paid || editType === "VA" || editType === "FM" || editType === "VP") await onPaidDaysChange?.(editDate);
       setNotice("Día guardado en tu calendario personal.");
       setEditCalendar(false);
     } catch (saveError) {
@@ -318,12 +318,7 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
   }
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
-    <div className="rest-portal-links">
-      {portalRestsAvailable && <form className="rest-portal-availability-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="descansos" /><button type="submit">Descansos <ExternalLink size={15} aria-hidden="true" /></button></form>}
-      <PersonalNoraySectionLink session={session} section="descansos-permuta" label="Cambio de descansos" />
-      <PersonalNoraySectionLink session={session} section="excepciones-pedidas" label="Excepciones" />
-      <a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a>
-    </div>
+    <div className="rest-portal-links"><a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a></div>
     {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales} officialDays={calendarData.officialDays} restHeader={calendarData.header}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
       : <section className="exchange-board-calendar rest-calendar-placeholder" role="status" aria-live="polite">
@@ -335,7 +330,7 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
       <div className="rest-calendar-editor-heading"><strong>Editar día</strong><button type="button" disabled={calendarBusy} onClick={() => setEditCalendar(false)}>Cerrar</button></div>
       <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type || calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
       <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
-        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Disponible</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option>
+        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Disponible</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option>
       </select></label>
       {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
       <div><button type="submit" disabled={calendarBusy}>Guardar</button></div>

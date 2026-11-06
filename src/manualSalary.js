@@ -1,4 +1,4 @@
-import { TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, reconcileContinuousDoubleMeals, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
+import { PAID_LEAVE_DAY_RATE, TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, reconcileContinuousDoubleMeals, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
 import { unpackManualNotes } from './manualMetadata.js';
 import { assignmentDateKey, assignmentShift } from './upcomingAssignments.js';
 
@@ -36,24 +36,27 @@ export function companyImage(company = '') {
 export function manualPaidDayEntry(row) {
   const date = String(row?.work_date || '');
   const type = String(row?.concept_type || '').toUpperCase();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !['VA', 'FM'].includes(type)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !['VA', 'FM', 'VP'].includes(type)) return null;
   const isVacation = type === 'VA';
-  const amount = isVacation ? VACATION_DAY_RATE : TRAINING_DAY_RATE;
+  const isTraining = type === 'FM';
+  const isPaidLeave = type === 'VP';
+  const label = isVacation ? 'VACACIONES' : isTraining ? 'FORMACIÓN' : 'PERMISO RETRIBUIDO';
+  const amount = isVacation ? VACATION_DAY_RATE : isTraining ? TRAINING_DAY_RATE : PAID_LEAVE_DAY_RATE;
   return {
     id: row.id, source: 'manual_paid_day', jornal: `${type}-${date}`, dia: date.slice(-2),
-    tipo: type, jornada: isVacation ? 'VACACIONES' : 'FORMACIÓN',
-    especialidad: isVacation ? 'VACACIONES' : 'FORMACIÓN',
-    operacion: isVacation ? 'Día de vacaciones' : 'Día de formación',
-    isVacation, isTraining: !isVacation,
-    payroll: { conceptType: isVacation ? 'VACATION' : 'TRAINING', date, shift: type,
-      group: '', operationType: isVacation ? 'VACACIONES' : 'FORMACIÓN', rateKey: type,
+    tipo: type, jornada: label,
+    especialidad: label,
+    operacion: isVacation ? 'Día de vacaciones' : isTraining ? 'Día de formación' : 'Día de permiso retribuido',
+    isVacation, isTraining, isPaidLeave,
+    payroll: { conceptType: isVacation ? 'VACATION' : isTraining ? 'TRAINING' : 'PAID_LEAVE', date, shift: type,
+      group: '', operationType: label, rateKey: type,
       base: amount, complement: 0, prima: null, primaPending: false,
       relayHourEligible: false, relayHour: 0, total: amount }
   };
 }
 
 export function sharedPremiumRequest(item) {
-  if (!item?.payroll?.date || !item?.payroll?.shift || item.isVacation || item.isTraining) return null;
+  if (!item?.payroll?.date || !item?.payroll?.shift || item.isVacation || item.isTraining || item.isPaidLeave) return null;
   const key = item.source === 'manual' ? `manual:${item.id}` : item.payroll.manualPremiumKey;
   if (!key) return null;
   const parte = item.source === 'manual' ? item.manualPart : item.parte;

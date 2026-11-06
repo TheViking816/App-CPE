@@ -2,6 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildManualSalaryMonths, companyImage, manualPaidDayEntry, salaryPeriod, sharedPremiumRequest } from '../src/manualSalary.js';
 
+test('VP uses the paid-leave tariff and appears in the shared salary history', () => {
+  const paid = { id: 'vp-1', work_date: '2026-11-23', concept_type: 'VP' };
+  const entry = manualPaidDayEntry(paid);
+  assert.equal(entry.payroll.total, 149.33);
+  assert.equal(entry.isPaidLeave, true);
+  const months = buildManualSalaryMonths(null, [], null, {}, {}, {}, [paid]);
+  assert.equal(months[0].total, 149.33);
+  assert.equal(months[0].items[0].payroll.conceptType, 'PAID_LEAVE');
+});
+
 test('a shared premium fills only a jornal without its own saved premium', () => {
   const template = { work_date: '2026-10-09', shift: '14-20', specialty: 'CONDUCTOR 1a',
     worker_group: 'II', operation_type: 'ESTIBA',

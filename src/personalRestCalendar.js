@@ -2,14 +2,14 @@ import { companyRestMarks } from './companyRestCalendar.js';
 
 export function personalVacationMarks(date, paidDays = []) {
   const paid = paidDays.find((row) => row.work_date === date && row.concept_type === 'VA')
-    || paidDays.find((row) => row.work_date === date && row.concept_type === 'FM');
-  return paid ? [{ type: paid.concept_type === 'VA' ? 'vacation' : 'training', label: paid.concept_type }] : [];
+    || paidDays.find((row) => row.work_date === date && ['FM', 'VP'].includes(row.concept_type));
+  return paid ? [{ type: paid.concept_type === 'VA' ? 'vacation' : paid.concept_type === 'FM' ? 'training' : 'paid-leave', label: paid.concept_type }] : [];
 }
 
 export function personalRestMarks(date, restGroup, overrides = [], paidDays = []) {
   const paid = paidDays.find((row) => row.work_date === date && row.concept_type === 'VA')
-    || paidDays.find((row) => row.work_date === date && row.concept_type === 'FM');
-  if (paid) return [{ type: paid.concept_type === 'FM' ? 'training' : 'vacation', label: paid.concept_type }];
+    || paidDays.find((row) => row.work_date === date && ['FM', 'VP'].includes(row.concept_type));
+  if (paid) return [{ type: paid.concept_type === 'VA' ? 'vacation' : paid.concept_type === 'FM' ? 'training' : 'paid-leave', label: paid.concept_type }];
   const override = overrides.find((row) => row.work_date === date);
   if (override) {
     if (override.day_type === 'WORK') return [];
@@ -26,8 +26,9 @@ export function calendarDayMarks(date, vacation, restGroup, overrides = [], paid
     DS: { type: 'manual-rest', label: 'DS' },
     FS: { type: 'chosen-holiday', label: 'FS' },
     VA: { type: 'vacation', label: 'VA' },
-    FM: { type: 'training', label: 'FM' }
+    FM: { type: 'training', label: 'FM' },
+    VP: { type: 'paid-leave', label: 'VP' }
   })[officialDays[date]] : null;
-  if (vacation) return official?.type === 'vacation' || official?.type === 'training' ? [official] : [];
+  if (vacation) return ['vacation', 'training', 'paid-leave'].includes(official?.type) ? [official] : [];
   return Object.hasOwn(officialDays, date) ? official ? [official] : [] : personalRestMarks(date, restGroup, overrides, paidDays);
 }

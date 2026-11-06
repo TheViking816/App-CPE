@@ -32,3 +32,10 @@ test('VA appears in the vacation calendar from the shared salary records', () =>
   assert.deepEqual(personalVacationMarks('2026-10-10', rows), [{ type: 'vacation', label: 'VA' }]);
   assert.deepEqual(personalVacationMarks('2026-10-11', rows), [{ type: 'training', label: 'FM' }]);
 });
+
+test('VP appears in both calendars from the shared paid-day record', () => {
+  const date = '2026-11-23';
+  const rows = [{ work_date: date, concept_type: 'VP' }];
+  assert.deepEqual(personalRestMarks(date, 'A - N', [], rows), [{ type: 'paid-leave', label: 'VP' }]);
+  assert.deepEqual(personalVacationMarks(date, rows), [{ type: 'paid-leave', label: 'VP' }]);
+});

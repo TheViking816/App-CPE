@@ -65,6 +65,9 @@
 .exchange-rest-legend .is-chosen-holiday::before{background:#fff0d0;border:1px solid #e9b65e}
 .exchange-rest-legend .is-training::before{background:#e9defb;border:1px solid #b99aea}
 .exchange-rest-legend .is-vacation::before{background:#fce8f3;border:1px solid #f3a8cc}
+.exchange-board-legend .is-paid-leave::before,.exchange-rest-legend .is-paid-leave::before{background:#dcfce7;border:1px solid #86cfa2}
+.exchange-board-grid button.is-paid-leave{background:#dcfce7;color:#14532d;border-color:#86cfa2}
+.rest-day-marks b.is-paid-leave{background:#bbf7d0;border-color:#86cfa2;color:#14532d}
 .rest-calendar-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:10px 0 16px;color:#60748d;font-size:12px}
 .rest-calendar-placeholder{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#60748d;text-align:center}
 .rest-calendar-placeholder button{border:1px solid #b9d3ed;border-radius:9px;background:#e8f3ff;color:#104f8a;padding:9px 13px;font-weight:800;cursor:pointer}
