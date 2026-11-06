@@ -322,7 +322,7 @@ export default function VacationExchangePanel({ session, onPaidDaysChange }) {
     {vacationEditorOpen && <form className="rest-calendar-editor" ref={vacationEditorRef} onSubmit={saveVacationDays}>
       <label>Desde<input type="date" value={vacationStart} onChange={(event) => { setVacationStart(event.target.value); setPaidType(paidDays.find((row) => row.work_date === event.target.value)?.concept_type || "VA"); if (vacationEnd < event.target.value) setVacationEnd(event.target.value); }} required /></label>
       <label>Hasta<input type="date" min={vacationStart} value={vacationEnd} onChange={(event) => setVacationEnd(event.target.value)} required /></label>
-      <label>Tipo<select value={paidType} onChange={(event) => setPaidType(event.target.value)}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option></select></label>
+      <label>Tipo<select value={paidType} onChange={(event) => setPaidType(event.target.value)}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option><option value="RS">RS · Representación sindical</option><option value="MO">MO · Monitor</option></select></label>
       <div><button type="submit" disabled={personalBusy}>Guardar días</button>{vacationStart === vacationEnd && paidDays.some((row) => row.work_date === vacationStart) && <button type="button" disabled={personalBusy} onClick={removeVacationDay}>Quitar día</button>}</div>
     </form>}
     <div className="rest-exchange-tabs" role="tablist" aria-label="Intercambios de vacaciones">

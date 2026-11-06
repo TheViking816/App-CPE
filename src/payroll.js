@@ -197,6 +197,8 @@ const SHIFT_ORDER = {
 export const VACATION_DAY_RATE = 214.11;
 export const TRAINING_DAY_RATE = 60.68;
 export const PAID_LEAVE_DAY_RATE = 149.33;
+export const UNION_LEAVE_DAY_RATE = 274.09;
+export const MONITOR_DAY_RATE = 351.83;
 
 export const RELAY_HOUR_RATES = Object.freeze({
   LABORABLE: 66.05,
@@ -232,7 +234,7 @@ function continuousDoubleMeals(jornales = []) {
 export function reconcileContinuousDoubleMeals(items = []) {
   const meals = continuousDoubleMeals(items);
   return items.map((item, index) => {
-    if (!item.payroll || item.isVacation || item.isTraining || item.isPaidLeave) return item;
+    if (!item.payroll || item.isVacation || item.isTraining || item.isPaidLeave || item.isUnionLeave || item.isMonitorDay) return item;
     const meal = meals.get(index) || null;
     const previous = Number(item.payroll.continuousDoubleMeal || 0);
     const amount = meal ? CONTINUOUS_DOUBLE_MEAL_RATE : 0;
@@ -738,11 +740,13 @@ export function summarizePayroll(items = []) {
     if (item.isVacation) acc.vacationDays += 1;
     else if (item.isTraining) acc.trainingDays += 1;
     else if (item.isPaidLeave) acc.paidLeaveDays += 1;
+    else if (item.isUnionLeave) acc.unionDays += 1;
+    else if (item.isMonitorDay) acc.monitorDays += 1;
     else acc.workCount += 1;
     if (day <= 15) acc.firstHalf += total;
     else acc.secondHalf += total;
     return acc;
-  }, { total: 0, firstHalf: 0, secondHalf: 0, workCount: 0, vacationDays: 0, trainingDays: 0, paidLeaveDays: 0 });
+  }, { total: 0, firstHalf: 0, secondHalf: 0, workCount: 0, vacationDays: 0, trainingDays: 0, paidLeaveDays: 0, unionDays: 0, monitorDays: 0 });
 }
 
 export function filterJornalesByPeriod(items = [], period = "month") {

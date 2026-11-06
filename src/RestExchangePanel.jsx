@@ -194,14 +194,14 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
     setCalendarBusy(true);
     setCalendarError("");
     try {
-      if (editType === "VA" || editType === "FM" || editType === "VP") {
+      if (["VA", "FM", "VP", "RS", "MO"].includes(editType)) {
         await saveManualPaidDay(session.token, editDate, editType, paid?.id || null);
       } else {
         if (paid) await deleteManualPaidDay(session.token, paid.id);
         await saveRestDayOverride(session.token, editDate, editType);
       }
       await reloadCalendar();
-      if (paid || editType === "VA" || editType === "FM" || editType === "VP") await onPaidDaysChange?.(editDate);
+      if (paid || ["VA", "FM", "VP", "RS", "MO"].includes(editType)) await onPaidDaysChange?.(editDate);
       setNotice("Día guardado en tu calendario personal.");
       setEditCalendar(false);
     } catch (saveError) {
@@ -330,7 +330,7 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
       <div className="rest-calendar-editor-heading"><strong>Editar día</strong><button type="button" disabled={calendarBusy} onClick={() => setEditCalendar(false)}>Cerrar</button></div>
       <label>Fecha<input type="date" value={editDate} onChange={(event) => { setEditDate(event.target.value); setEditType(calendarData.paidDays.find((row) => row.work_date === event.target.value)?.concept_type || calendarData.overrides.find((row) => row.work_date === event.target.value)?.day_type || "REST"); }} required /></label>
       <label>Marcar día<select value={editType} onChange={(event) => setEditType(event.target.value)}>
-        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Disponible</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option>
+        <option value="REST">DS · Descanso</option><option value="FS">FS · Festivo seleccionado</option><option value="WORK">Disponible</option><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option><option value="RS">RS · Representación sindical</option><option value="MO">MO · Monitor</option>
       </select></label>
       {calendarError && <p className="rest-exchange-error" role="alert">{calendarError}</p>}
       <div><button type="submit" disabled={calendarBusy}>Guardar</button></div>

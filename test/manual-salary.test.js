@@ -12,6 +12,11 @@ test('VP uses the paid-leave tariff and appears in the shared salary history', (
   assert.equal(months[0].items[0].payroll.conceptType, 'PAID_LEAVE');
 });
 
+test('union representation and monitor days use their own tariff', () => {
+  assert.equal(manualPaidDayEntry({ work_date: '2026-11-24', concept_type: 'RS' }).payroll.total, 274.09);
+  assert.equal(manualPaidDayEntry({ work_date: '2026-11-25', concept_type: 'MO' }).payroll.total, 351.83);
+});
+
 test('a shared premium fills only a jornal without its own saved premium', () => {
   const template = { work_date: '2026-10-09', shift: '14-20', specialty: 'CONDUCTOR 1a',
     worker_group: 'II', operation_type: 'ESTIBA',
