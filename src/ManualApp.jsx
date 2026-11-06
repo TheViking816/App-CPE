@@ -311,7 +311,7 @@ function ActivityMonitor({ session }) {
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
   const action = (value) => ({ added: 'Añadido', edited: 'Editado', deleted: 'Eliminado' })[value] || value;
-  const dayType = (value) => ({ REST: 'DS', FS: 'FS', WORK: 'Disponible', VA: 'VA', FM: 'FM', VP: 'VP' })[value] || value || '—';
+  const dayType = (value) => ({ REST: 'DS', FS: 'FS', WORK: 'Disponible', VA: 'VA', FM: 'FM', VP: 'VP', RS: 'RS', MO: 'MO' })[value] || value || '—';
   const dayChange = (event) => event.event_type === 'deleted' ? dayType(event.previous_day_type)
     : event.previous_day_type && event.previous_day_type !== event.day_type
       ? `${dayType(event.previous_day_type)} → ${dayType(event.day_type)}` : dayType(event.day_type);
@@ -348,7 +348,7 @@ function ActivityMonitor({ session }) {
       {visibleJournalEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}</td><td>{event.shift}</td><td>{event.specialty}</td><td>{event.worker_group}</td><td>{event.operation_type === 'RECEPCION_ENTREGA' ? 'OC' : 'SP'}</td></tr>)}
     </tbody></table>{!journalError && visibleJournalEvents.length === 0 && <p className="monitor-empty">No hay movimientos de jornales manuales para el filtro actual.</p>}</div>
     <h3>Cambios en el calendario personal</h3>
-    <p>Últimos 10 movimientos de DS, FS, Disponible, VA, FM y VP, incluidos los días añadidos desde Sueldómetro.</p>
+    <p>Últimos 10 movimientos de DS, FS, Disponible y días retribuidos, incluidos los añadidos desde Sueldómetro.</p>
     {calendarError && <p className="form-error" role="alert">{calendarError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Acción</th><th>Día</th><th>Tipo</th></tr></thead><tbody>
       {visibleCalendarEvents.map((event) => <tr key={event.id}><td>{time(event.occurred_at)}</td><td><strong>{event.chapa}</strong></td><td>{action(event.event_type)}</td><td>{workDay(event.work_date)}{event.previous_work_date && event.previous_work_date !== event.work_date ? ` · antes ${workDay(event.previous_work_date)}` : ''}</td><td>{dayChange(event)}</td></tr>)}
@@ -568,7 +568,7 @@ function Salary({ session, onSession }) {
         setPeriod('month');
       }
     } catch (reason) {
-      setError(reason.message || 'No se pudieron actualizar los días VA, FM y VP en Sueldómetro.');
+      setError(reason.message || 'No se pudieron actualizar los días retribuidos en Sueldómetro.');
     }
   };
   useEffect(() => {
@@ -828,7 +828,7 @@ function Salary({ session, onSession }) {
     const existing = months.flatMap((entry) => entry.items).find((item) =>
       (item.isVacation || item.isTraining || item.isPaidLeave || item.isUnionLeave || item.isMonitorDay) && item.payroll.date === paidForm.work_date && item.id !== paidForm.id
     );
-    if (existing) { setError('Ya existe un día VA, FM o VP registrado en esa fecha.'); return; }
+    if (existing) { setError('Ya existe un día retribuido registrado en esa fecha.'); return; }
     setBusy(true);
     try {
       const saved = await rpc('app_cpe_save_manual_paid_day', { p_token: session.token, p_id: paidForm.id,
@@ -841,7 +841,7 @@ function Salary({ session, onSession }) {
     finally { setBusy(false); }
   }
   async function removePaidDay(id) {
-    if (!window.confirm('¿Eliminar este día VA, FM o VP manual?')) return;
+    if (!window.confirm('¿Eliminar este día retribuido manual?')) return;
     setBusy(true); setError('');
     try {
       await rpc('app_cpe_delete_manual_paid_day', { p_token: session.token, p_id: id });
@@ -941,7 +941,7 @@ function Salary({ session, onSession }) {
     {error && !showForm && !showPaidForm && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showImport && <ManualEditorDialog label="Importar jornales" wide onClose={() => setShowImport(false)} busy={busy}><PortalJornalesImport existingItems={months.flatMap((entry) => entry.items)} manualRows={manualRows} busy={busy} onImport={importPastedJornales} onClose={() => setShowImport(false)} /></ManualEditorDialog>}
     {showForm && <ManualEditorDialog label={form.id ? 'Editar jornal' : 'Añadir jornal'} onClose={() => setShowForm(false)} busy={busy}>{jornalEditor}</ManualEditorDialog>}
-    {showPaidForm && <ManualEditorDialog label={paidForm.id ? 'Editar día VA / FM / VP / RS / MO' : 'Añadir día VA / FM / VP / RS / MO'} onClose={() => setShowPaidForm(false)} busy={busy}><section className="manual-panel editor paid-day-editor manual-editor-card"><div className="section-head"><h2>{paidForm.id ? 'Editar día VA / FM / VP / RS / MO' : 'Añadir día VA / FM / VP / RS / MO'}</h2><button type="button" disabled={busy} onClick={() => setShowPaidForm(false)}>Cerrar</button></div><form onSubmit={savePaidDay}>{error && <p className="form-error manual-editor-error" role="alert">{error}</p>}
+    {showPaidForm && <ManualEditorDialog label={paidForm.id ? 'Editar día' : 'Añadir día'} onClose={() => setShowPaidForm(false)} busy={busy}><section className="manual-panel editor paid-day-editor manual-editor-card"><div className="section-head"><h2>{paidForm.id ? 'Editar día' : 'Añadir día'}</h2><button type="button" disabled={busy} onClick={() => setShowPaidForm(false)}>Cerrar</button></div><form onSubmit={savePaidDay}>{error && <p className="form-error manual-editor-error" role="alert">{error}</p>}
       <label>Fecha<input type="date" value={paidForm.work_date} onChange={(event) => setPaidForm({ ...paidForm, work_date: event.target.value })} required /></label>
       <label>Concepto<select value={paidForm.concept_type} onChange={(event) => setPaidForm({ ...paidForm, concept_type: event.target.value })}><option value="VA">VA · Vacaciones</option><option value="FM">FM · Formación</option><option value="VP">VP · Permiso retribuido</option><option value="RS">RS · Representación sindical</option><option value="MO">MO · Monitor</option></select></label>
       <div className="paid-day-rate"><span>Importe del día</span><strong>{formatEuro(paidForm.concept_type === 'VA' ? VACATION_DAY_RATE : paidForm.concept_type === 'FM' ? TRAINING_DAY_RATE : paidForm.concept_type === 'VP' ? PAID_LEAVE_DAY_RATE : paidForm.concept_type === 'RS' ? UNION_LEAVE_DAY_RATE : MONITOR_DAY_RATE)}</strong></div>
