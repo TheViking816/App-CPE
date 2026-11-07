@@ -1,0 +1,35 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true });
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  const page = await browser.newPage({ viewport });
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('http://127.0.0.1:5173/');
+  await page.getByLabel('Usuario').fill('DEMO-CPE');
+  await page.getByLabel('Contraseña').fill('DemoEstiba!2026');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.getByText('Próximos jornales').waitFor();
+  await page.screenshot({ path: `demo-${viewport.width}.png`, fullPage: true });
+  await page.locator('.jornal-card').first().click();
+  await page.getByText('Equipo del parte').waitFor();
+  const visiblePhoto = await page.locator('.ship-photo').isVisible();
+  await page.getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('button', { name: 'Sueldómetro' }).last().click();
+  await page.getByText('Resumen anual 2026').waitFor();
+  await page.getByRole('button', { name: '+ Añadir jornal' }).click();
+  await page.getByText('Añadir jornal').last().waitFor();
+  await page.getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('button', { name: 'Descansos' }).last().click();
+  await page.getByText('Ofertas de descansos').waitFor();
+  await page.getByRole('button', { name: 'Vacaciones' }).click();
+  await page.getByText('Ofertas de vacaciones').waitFor();
+  await page.getByRole('button', { name: 'Menú' }).count().catch(() => 0);
+  await page.locator('.menu-toggle').click();
+  await page.locator('.drawer').getByRole('button', { name: 'Chats' }).click();
+  await page.getByPlaceholder('Escribe un mensaje…').fill('Mensaje de prueba');
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await page.getByText('Mensaje de prueba').waitFor();
+  console.log(JSON.stringify({ viewport: viewport.width, visiblePhoto, errors }));
+  await page.close();
+}
+await browser.close();
