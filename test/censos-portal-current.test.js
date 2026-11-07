@@ -12,11 +12,12 @@ const totals = {
 };
 
 test('las capturas actuales contienen los quince censos completos sin credenciales', () => {
-  assert.deepEqual(new Set(capture.sourceUsers), new Set(['72683', '71206', '72509', '63178']));
+  assert.deepEqual(new Set(capture.sourceUsers), new Set(['72683', '71206', '72509', '63178', '72710']));
   assert.match(capture.capturedAt, /^2026-11-07T/);
   for (const card of capture.cards) {
-    assert.match(card.capturedAt, /^conductor-/.test(card.id) ? /^2026-11-07T/ : /^2026-10-22T/);
+    assert.match(card.capturedAt, /^conductor-/.test(card.id) || card.id === 'pol-trincador' ? /^2026-11-07T/ : /^2026-10-22T/);
     if (/^conductor-/.test(card.id)) assert.equal(card.sourceUser, '72683');
+    if (card.id === 'pol-trincador') assert.equal(card.sourceUser, '72710');
     assert.ok(capture.sourceUsers.includes(card.sourceUser));
     assert.equal(card.portalType, card.name.startsWith('POL.') ? 'TP' : 'TU');
   }
@@ -49,10 +50,11 @@ for (const [id, count] of Object.entries(totals)) {
 test('las nuevas altas tienen las especialidades y posiciones exactas del portal', () => {
   for (const [id, chapa, position] of [
     ['conductor-1a', '72745', 47], ['conductor-2a', '72745', 45],
-    ['pol-trincador', '72748', 13], ['pol-trinca-coches', '72749', 2],
+    ['pol-trincador', '72758', 13], ['pol-trincador', '72710', 76], ['pol-trinca-coches', '72749', 2],
     ['pol-especialista', '72788', 414]
   ]) assert.equal(findByChapa(chapa, id)?.position, position);
   assert.equal(findByChapa('72745', 'pol-trincador'), null);
+  assert.equal(findByChapa('72748', 'pol-trincador'), null);
   assert.equal(findByChapa('72745', 'pol-trinca-coches'), null);
 });
 
