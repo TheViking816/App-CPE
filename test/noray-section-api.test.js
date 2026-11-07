@@ -69,3 +69,42 @@ test('personal Noray relay accepts only saved sections and the official host', a
     else process.env.VITE_SUPABASE_PUBLISHABLE_KEY = previousKey;
   }
 });
+
+test('calendario personal usa la identidad guardada de cada sesión y el formato PHP', async () => {
+  const previousKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'test-key';
+  try {
+    for (const [savedPath, chapa, rec] of [['dobles', '71111', '101'], ['vacaciones', '72222', '202'], ['donde-voy', '73333', '303'], ['descansos', '74444', '404']]) {
+      const calls = [];
+      globalThis.fetch = async (url, options) => {
+        const body = JSON.parse(options.body);
+        calls.push({ url, body });
+        if (url.endsWith('/app_cpe_track_personal_link_open')) return { ok: true };
+        const matches = savedPath === 'donde-voy' ? url.endsWith('/app_cpe_get_manual_donde_voy_link')
+          : savedPath === 'descansos' ? url.endsWith('/app_cpe_get_noray_link') && body.p_section === 'descansos'
+          : url.endsWith('/app_cpe_get_manual_noray_section_link') && body.p_section === savedPath;
+        return { ok: true, json: async () => matches ? `https://norayweb.cpevalencia.com/${savedPath}?cal=gwt&mode=PROD&req=login&usr=${chapa}&rec=${rec}&pwd=${'b'.repeat(64)}` : null };
+      };
+      const result = response();
+      // Identidades recibidas del formulario no pueden sustituir la sesión.
+      await handler({ method: 'POST', headers: {}, body: { token: `session-${chapa}`, section: 'calendario-base', usr: '79999', rec: '999' } }, result);
+      assert.equal(result.statusCode, 303);
+      const target = new URL(result.headers.location);
+      assert.equal(target.origin, 'https://norayweb.cpevalencia.com');
+      assert.equal(target.pathname, '/calendario-base');
+      assert.deepEqual(Object.fromEntries(target.searchParams), { cal: 'php', req: 'login', usr: chapa, rec, pwd: 'b'.repeat(64) });
+      assert.ok(calls.every(call => call.body.p_token === `session-${chapa}`));
+      assert.equal(result.headers['cache-control'], 'private, no-store, max-age=0');
+    }
+    globalThis.fetch = async () => ({ ok: true, json: async () => null });
+    const missing = response();
+    await handler({ method: 'POST', headers: {}, body: { token: 'no-links', section: 'calendario-base' } }, missing);
+    assert.equal(missing.statusCode, 404);
+    assert.equal(missing.headers.location, undefined);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    else process.env.VITE_SUPABASE_PUBLISHABLE_KEY = previousKey;
+  }
+});
