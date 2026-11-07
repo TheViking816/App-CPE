@@ -1,7 +1,8 @@
 import { recordPersonalLinkOpen } from '../lib/personalLinkUsage.js';
+import { personalLinkLabels } from '../lib/personalLinkSections.js';
 
 const SUPABASE_REF = 'wvwdiywtlbffumshbboa';
-const SECTIONS = new Set(['vacaciones', 'dobles', 'jornales', 'descansos', 'descansos-permuta', 'excepciones-pedidas', 'calendario-base', 'mis-especialidades', 'solicito-formacion', 'disponibilidad12m', 'chapero', 'chapero-especialidades', 'puertas', 'jornada-contratada', 'situacion-trabajador']);
+const SECTIONS = new Set(Object.keys(personalLinkLabels).filter(section => section !== 'donde-voy'));
 
 function respond(response, status, message) {
   response.statusCode = status;

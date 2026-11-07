@@ -22,6 +22,8 @@ import { loadNorayPilotSnapshot, loadNorayPilotPremiums, mergeNorayPilotSalary }
 import GeneralBoard from './GeneralBoard.jsx';
 import ManualOperationalSnapshots from './ManualOperationalSnapshots.jsx';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
+import { personalLinkLabels, personalLinkCounts } from '../lib/personalLinkSections.js';
+import { afterNativeSubmit } from './afterNativeSubmit.js';
 import PortalCredentialPilot from './PortalCredentialPilot.jsx';
 import { Activity, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, DoorOpen, ExternalLink, Eye, EyeOff, House, KeyRound, LogOut, MessageCircle, Settings, Trash2, WalletCards, X } from 'lucide-react';
 import { enablePushNotifications, refreshPushSubscription, disablePushNotifications, optOutPushNotifications, testDeviceNotification } from './pushNotifications.js';
@@ -306,7 +308,6 @@ function ActivityMonitor({ session }) {
     .filter((event) => new Date(event.opened_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000)
     .map((event) => [String(event.chapa), event])).values()]
     .filter((event) => String(event.chapa || '').includes(filter));
-  const personalLinkLabels = { 'donde-voy': 'Mi contratación', vacaciones: 'Vacaciones', dobles: 'Dobles y HS', jornales: 'Jornales y primas', descansos: 'Descansos', 'descansos-permuta': 'Cambio de descansos', chapero: 'Chapero', 'chapero-especialidades': 'Chapero por especialidades', puertas: 'Puertas', 'jornada-contratada': 'Jornada contratada', 'situacion-trabajador': 'Jornada flexible' };
   const registrationTime = (value) => value ? new Date(value).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'medium' }) : '—';
   const time = (value) => value ? new Date(value).toLocaleString('es-ES') : '—';
   const workDay = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString('es-ES') : '—';
@@ -327,7 +328,7 @@ function ActivityMonitor({ session }) {
     <p>Aperturas desde los botones de la app, registradas desde esta actualización. Fecha y hora de Madrid.</p>
     <div className="monitor-numbers"><span><strong>{personalLinks?.opens24h ?? '—'}</strong> aperturas en las últimas 24 horas</span><span><strong>{personalLinks?.users24h ?? '—'}</strong> usuarios</span></div>
     <div className="monitor-personal-link-users"><strong>Chapas de las últimas 24 horas</strong><div>{recentPersonalLinkUsers.map((event) => <span key={event.chapa}><strong>{event.chapa}</strong> · {personalLinkLabels[event.section] || event.section} · {registrationTime(event.opened_at)}</span>)}{personalLinks && recentPersonalLinkUsers.length === 0 && <span>Ninguna apertura para el filtro actual.</span>}</div></div>
-    <div className="monitor-pages">{(personalLinks?.sections || []).map((item) => <span key={item.section}>{personalLinkLabels[item.section] || item.section}: <strong>{item.opens}</strong></span>)}</div>
+    <div className="monitor-pages">{personalLinkCounts(personalLinks?.sections).map((item) => <span key={item.section}>{personalLinkLabels[item.section]}: <strong>{personalLinks ? item.opens : '—'}</strong></span>)}</div>
     {personalLinkError && <p className="form-error" role="alert">{personalLinkError}</p>}
     <div className="table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Chapa</th><th>Nombre</th><th>Enlace abierto</th></tr></thead><tbody>
       {visiblePersonalLinks.slice(0, personalLinkLimit).map((event) => <tr key={event.id}><td>{registrationTime(event.opened_at)}</td><td><strong>{event.chapa}</strong></td><td>{event.display_name || 'Sin nombre informado'}</td><td>{personalLinkLabels[event.section] || event.section}</td></tr>)}
@@ -484,7 +485,7 @@ function ExchangeSection({ session, section, onSectionChange, onPaidDaysChange }
 }
 
 function Salary({ session, onSession }) {
-  const announcementKey = `app-cpe-calendar-announcement-v1-${session.chapa}`;
+  const announcementKey = `app-cpe-calendar-announcement-v2-${session.chapa}`;
   const [announcementSeen, setAnnouncementSeen] = useState(() => localStorage.getItem(announcementKey) === '1');
   const acknowledgeAnnouncement = () => { localStorage.setItem(announcementKey, '1'); setAnnouncementSeen(true); };
   const [snapshot, setSnapshot] = useState(null);
@@ -920,7 +921,7 @@ function Salary({ session, onSession }) {
       <div className="rest-link-announcement-copy"><strong>Nuevo: Calendario personal</strong><p>Ya puedes consultar tu calendario desde Descansos, junto a Excepciones.</p></div>
       <div className="rest-link-announcement-actions">
         {(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable)
-          ? <form action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer" onSubmit={acknowledgeAnnouncement}><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="calendario-base" /><button type="submit" className="primary">Abrir calendario <ExternalLink size={16} aria-hidden="true" /></button></form>
+          ? <form action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer" onSubmit={() => afterNativeSubmit(acknowledgeAnnouncement)}><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="calendario-base" /><button type="submit" className="primary">Abrir calendario <ExternalLink size={16} aria-hidden="true" /></button></form>
           : <button type="button" className="primary" onClick={() => { acknowledgeAnnouncement(); navigate('descansos'); }}>Ver Descansos</button>}
         <button type="button" onClick={acknowledgeAnnouncement}>Entendido</button>
       </div>
