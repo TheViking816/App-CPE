@@ -1,5 +1,6 @@
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
+import { doorDistanceLabel } from './doorDistanceLabel.js';
 import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
 import {
   BriefcaseBusiness,
@@ -303,7 +304,7 @@ function getInitialTheme() {
 
 function formatDistance(value) {
   if (value === null) return "Sin dato";
-  if (value === 0) return "En puerta";
+  if (value === 0) return "Estás en puerta";
   return `${value} posiciones`;
 }
 
@@ -2101,12 +2102,13 @@ function DoorMiniRing({ user, door, total }) {
       >
         <span className="ring-dot user-dot" />
         <span className="ring-dot door-dot" />
-        <strong>{formatCompactDistance(door.distance)}</strong>
+        <strong className={door.distance === 0 && !door.estimated ? 'at-door-label' : ''}>{doorDistanceLabel(door.distance, { ...door, compact: true })}</strong>
       </div>
       <div>
         <span>{getDoorGroupLabel(door)}</span>
         <strong>{door.label}</strong>
         <small>{door.doorChapa || door.raw || "-"}</small>
+        {door.estimated && <small>Aproximada · siguiente chapa {door.referenceChapa}</small>}
       </div>
     </article>
   );
@@ -2137,7 +2139,7 @@ function DoorsTable({ title, doors, tone }) {
                   <span className={`door-badge ${tone}`}>{door.doorPosition || "-"}</span>
                 </td>
                 <td>{door.doorChapa || "-"}</td>
-                <td>{formatDistance(door.distance)}</td>
+                <td>{doorDistanceLabel(door.distance, door)}{door.estimated && door.distance != null && <small>Siguiente chapa {door.referenceChapa}</small>}</td>
               </tr>
             ))}
           </tbody>

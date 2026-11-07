@@ -375,6 +375,13 @@ a {
   line-height: 1;
 }
 
+.mini-position-ring strong.at-door-label {
+  max-width: 34px;
+  font-size: 9px;
+  line-height: 1.05;
+  text-align: center;
+}
+
 .door-ring-card.near .mini-position-ring,
 .door-ring-card.now .mini-position-ring {
   border-color: rgba(21, 184, 136, 0.42);

@@ -361,6 +361,7 @@ const portalSpecialties = [...currentPortalCards.values()].map((item) => ({
   kind: item.kind,
   expectedSize: item.expectedSize,
   censo: portalCensoRows(item.censo),
+  referenceCenso: item.sourceUser === '72683' ? item.previousCenso || [] : [],
   doors: item.doors
 }));
 const portalSpecialtiesById = new Map(portalSpecialties.map((item) => [item.id, item]));
@@ -418,17 +419,45 @@ export function distanceForward(fromPosition, toPosition, size) {
   return size - fromPosition + toPosition;
 }
 
+// Solo se estima entre dos vecinos que siguen siendo consecutivos en el censo
+// destino. La numeración de las chapas nunca determina el orden de contratación.
+export function estimateDoorReference(chapa, censo, references) {
+  const target = new Map(censo.map((row) => [row.chapa, row]));
+  for (const reference of references) {
+    const index = reference.indexOf(chapa);
+    if (index < 0) continue;
+    const neighbor = (direction) => {
+      for (let step = 1; step <= Math.min(10, reference.length - 1); step += 1) {
+        const row = target.get(reference[(index + direction * step + reference.length) % reference.length]);
+        if (row) return row;
+      }
+      return null;
+    };
+    const before = neighbor(-1);
+    const after = neighbor(1);
+    if (before && after && distanceForward(before.position, after.position, censo.length) === 1)
+      return { ...after, estimated: true };
+  }
+  return null;
+}
+
 export function getDoorState(userChapa, doors, specialtyId = specialty.id, chaperoWorkers) {
   const activeSpecialty = getSpecialty(specialtyId);
   const activeDoors = Array.isArray(doors) ? doors : activeSpecialty.doors;
   const user = findByChapa(userChapa, activeSpecialty.id);
+  const personalConductors = portalWorkersCapture.cards.filter((card) =>
+    card.sourceUser === '72683' && ['conductor-1a', 'conductor-2a'].includes(card.id));
+  const references = ['conductor-1a', 'conductor-2a'].includes(activeSpecialty.id)
+    ? [activeSpecialty.referenceCenso || [],
+      ...personalConductors.filter((card) => card.id !== activeSpecialty.id).map((card) => card.censo)] : [];
   const notContracted = Array.isArray(chaperoWorkers)
     ? new Set(chaperoWorkers.filter((worker) => worker.status === 'nocontratado').map((worker) => normalizeChapa(worker.chapa || worker.rawChapa)))
     : null;
 
   return DOOR_ORDER.map((key) => activeDoors.find((door) => door.key === key)).filter(Boolean).map((door) => {
     const doorChapa = normalizeDoor(door.raw);
-    const doorWorker = findByChapa(doorChapa, activeSpecialty.id);
+    const exactWorker = findByChapa(doorChapa, activeSpecialty.id);
+    const doorWorker = exactWorker || estimateDoorReference(doorChapa, activeSpecialty.censo, references);
     const totalDistance = user && doorWorker
       ? distanceForward(doorWorker.position, user.position, activeSpecialty.censo.length)
       : null;
@@ -436,7 +465,7 @@ export function getDoorState(userChapa, doors, specialtyId = specialty.id, chape
       : door.key === 'LAB' && notContracted
       ? totalDistance === null ? null : activeSpecialty.censo.reduce((count, worker) => {
         const ahead = distanceForward(doorWorker.position, worker.position, activeSpecialty.censo.length);
-        return count + Number(ahead > 0 && ahead < totalDistance && notContracted.has(worker.chapa));
+        return count + Number((ahead > 0 || Boolean(doorWorker.estimated) && ahead === 0) && ahead < totalDistance && notContracted.has(worker.chapa));
       }, 0)
       : totalDistance;
 
@@ -445,6 +474,8 @@ export function getDoorState(userChapa, doors, specialtyId = specialty.id, chape
       doorChapa,
       doorPosition: doorWorker?.displayPosition || doorWorker?.position || null,
       userPosition: user?.position || null,
+      estimated: Boolean(doorWorker?.estimated),
+      referenceChapa: doorWorker?.estimated ? doorWorker.chapa : null,
       totalDistance,
       distance
     };

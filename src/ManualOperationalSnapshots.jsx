@@ -3,6 +3,7 @@ import { Clock3, LocateFixed } from 'lucide-react';
 import { classifyDistance, findByChapa, getDoorState, specialties } from './censo.js';
 import { getLatestChaperoSnapshot, getLatestDoorSnapshots } from './supabaseClient.js';
 import PersonalNoraySectionLink from './PersonalNoraySectionLink.jsx';
+import { doorDistanceLabel } from './doorDistanceLabel.js';
 
 const DOOR_SPECIALTIES = [
   'MAFIS', 'APOYO OPERACION', 'CONDUCTOR 1a', 'CONDUCTOR 2a',
@@ -13,7 +14,6 @@ const DOOR_SPECIALTIES = [
 const formatDate = (value) => value
   ? new Date(value).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
   : 'Sin actualizar';
-const formatDistance = (value, adjusted = false) => value == null ? 'Sin dato' : value === 0 && !adjusted ? 'En puerta' : `${value} posiciones`;
 
 function DoorTable({ title, doors, tone }) {
   return <section className={`doors-table-section ${tone}`}>
@@ -22,20 +22,20 @@ function DoorTable({ title, doors, tone }) {
       <tbody>{doors.map((door) => <tr key={door.key} className={classifyDistance(door.distance)}>
         <td><strong>{door.label}</strong><small>{door.shift}</small></td>
         <td><span className={`door-badge ${tone}`}>{door.doorPosition || '-'}</span></td>
-        <td>{door.doorChapa || '-'}</td><td>{formatDistance(door.distance, door.key === 'LAB')}<small>{door.key === 'LAB' ? 'No contratados delante' : 'Distancia total'}</small></td>
+        <td>{door.doorChapa || '-'}</td><td>{doorDistanceLabel(door.distance, door)}<small>{door.key === 'LAB' ? 'No contratados delante' : 'Distancia total'}</small>{door.estimated && door.distance != null && <small>Aproximada · siguiente chapa {door.referenceChapa}</small>}</td>
       </tr>)}</tbody>
     </table></div>
   </section>;
 }
 
-function DoorRings({ doors, user, total }) {
+export function DoorRings({ doors, user, total }) {
   return <section className="door-rings-grid" aria-label="Distancia visual a puertas">
-    {doors.map((door) => <article key={door.key} className={`door-ring-card ${classifyDistance(door.distance)}`}>
+    {doors.map((door) => <article key={door.key} className={`door-ring-card ${classifyDistance(door.distance)}`} aria-label={`${door.label}, chapa ${door.doorChapa || door.raw}, ${doorDistanceLabel(door.distance, door)}`}>
       <div className="mini-position-ring" style={{
         '--user-angle': `${user?.position && total ? user.position / total * 360 : 0}deg`,
         '--door-angle': `${door.doorPosition && total ? door.doorPosition / total * 360 : 0}deg`
-      }} aria-hidden="true"><span className="ring-dot user-dot" /><span className="ring-dot door-dot" /><strong>{door.distance ?? '--'}</strong></div>
-      <div><span>{door.dayType === 'festivo' ? 'Festiva' : 'Laborable'}</span><strong>{door.label}</strong><small>{door.doorChapa || door.raw || '-'}</small><small>{door.key === 'LAB' ? 'No contratados delante' : 'Distancia total'}</small></div>
+      }} aria-hidden="true"><span className="ring-dot user-dot" /><span className="ring-dot door-dot" /><strong className={door.distance === 0 && !door.estimated ? 'at-door-label' : ''}>{doorDistanceLabel(door.distance, { ...door, compact: true })}</strong></div>
+      <div><span>{door.dayType === 'festivo' ? 'Festiva' : 'Laborable'}</span><strong>{door.label}</strong><small>{door.doorChapa || door.raw || '-'}</small><small>{door.key === 'LAB' ? 'No contratados delante' : 'Distancia total'}</small>{door.estimated && door.distance != null && <small>Aproximada · siguiente chapa {door.referenceChapa}</small>}</div>
     </article>)}
   </section>;
 }
