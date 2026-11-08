@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { ManualApp } from "./ManualApp.jsx";
+import { PasswordRecoveryRoot } from "./PasswordRecovery.jsx";
 import "./manual.css";
 import "./manualSalaryVisual.css";
 import "./manualProductionJornales.css";
@@ -18,7 +19,7 @@ import "./manualOptionA.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ManualApp />
+    <PasswordRecoveryRoot><ManualApp /></PasswordRecoveryRoot>
   </React.StrictMode>
 );
 
@@ -75,13 +76,13 @@ if ("serviceWorker" in navigator) {
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      forceReload("20261027-notification-links-68");
+      forceReload("20261108-password-recovery-74");
     });
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_CPE_FORCE_RELOAD") forceReload(event.data.version);
     });
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261030-contracting-doors-option-a-73`, {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js?v=20261108-password-recovery-74`, {
       updateViaCache: "none"
     }).then((registration) => {
       registration.waiting?.postMessage({ type: "SKIP_WAITING" });
