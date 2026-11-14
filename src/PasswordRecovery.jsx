@@ -46,7 +46,7 @@ export function PasswordRecovery({ initialChapa = '', token = null, onBack }) {
     {sent ? <p role="status">{resetting
       ? 'Tu contraseña se ha actualizado. Ya puedes entrar con la nueva contraseña.'
       : 'Si tu chapa tiene un correo asociado, recibirás un enlace válido durante una hora. Revisa también la carpeta de spam.'}</p>
-      : <form onSubmit={submit}>
+      : <form className="recovery-form" onSubmit={submit}>
         {resetting ? <>
           <p>Elige una contraseña exclusiva de App CPE.</p>
           <label>Nueva contraseña<input type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
@@ -81,9 +81,9 @@ export function RecoveryEmailSettings({ session, onSession }) {
     } catch (reason) { setError(reason.message || 'No se pudo guardar el correo.'); }
     finally { setBusy(false); }
   }
-  return <section className="manual-panel manual-profile-settings">
+  return <section className="manual-panel manual-profile-settings recovery-settings">
     <h2>Correo de recuperación</h2><p>Se usará para recuperar tu contraseña. Comprueba que tienes acceso a este correo.</p>
-    <form onSubmit={save}>
+    <form className="recovery-form" onSubmit={save}>
       <label>Correo electrónico<input type="email" autoComplete="email" maxLength={254} required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
       <label>Contraseña actual<input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
