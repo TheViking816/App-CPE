@@ -12,8 +12,8 @@ const expected = {
   "pol-capataz": ["polivalencia", 44, [71003, 71434, 71434, 71434]],
   "pol-sobordista": ["polivalencia", 48, [71003, 71434, 71434, 71434]],
   "pol-elevadoras": ["polivalencia", 129, [71358, 71767, 71481, 71490]],
-  "pol-trincador": ["polivalencia", 602, [71334, 71617, 72001, 71259]],
-  "pol-especialista": ["polivalencia", 1339, [63089, 72507, 71497, 72345]],
+  "pol-trincador": ["polivalencia", 600, [24165, 72583, 72584, 72254]],
+  "pol-especialista": ["polivalencia", 1339, [71841, 71846, 71989, 71459]],
   "pol-conductor-2a": ["polivalencia", 489, [71434, 63291, 71135, 63301]]
 };
 

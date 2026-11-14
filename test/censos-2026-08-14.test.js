@@ -5,8 +5,8 @@ import { specialties } from "../src/censo.js";
 
 const expected = {
   "conductor-1a": { count: 613, first: "72678", last: "72547" },
-  "conductor-2a": { count: 537, first: "72678", last: "71155" },
-  "pol-especialista": { count: 1339, first: "72663", last: "72744" }
+  "conductor-2a": { count: 536, first: "72678", last: "71155" },
+  "pol-especialista": { count: 1339, first: "72749", last: "72678" }
 };
 
 for (const [id, values] of Object.entries(expected)) {
