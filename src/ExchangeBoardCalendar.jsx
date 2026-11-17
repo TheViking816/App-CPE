@@ -85,6 +85,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
               const isHoliday = !vacation && (holidayDates.has(date) || new Date(year, month - 1, index + 1).getDay() === 0);
               const dayOffers = entries.get(date) || [];
               const marks = calendarDayMarks(date, vacation, group, overrides, paidDays, officialDays);
+              if (!vacation && !marks.length && holidayDates.has(date)) marks.push({ type: 'holiday', label: 'FH' });
               const restType = marks[0]?.type || "";
               const restLabel = marks.map((mark) => mark.label).join(" y ");
               const dayJornales = vacation ? [] : jornales[date] || [];

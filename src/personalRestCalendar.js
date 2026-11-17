@@ -13,7 +13,7 @@ export function personalRestMarks(date, restGroup, overrides = [], paidDays = []
   const override = overrides.find((row) => row.work_date === date);
   if (override) {
     if (override.day_type === 'WORK') return [];
-    return [{ type: override.day_type === 'FS' ? 'chosen-holiday' : 'manual-rest', label: override.day_type === 'FS' ? 'FS' : 'DS' }];
+    return [{ type: override.day_type === 'FH' ? 'holiday' : override.day_type === 'FS' ? 'chosen-holiday' : 'manual-rest', label: override.day_type === 'FH' ? 'FH' : override.day_type === 'FS' ? 'FS' : 'DS' }];
   }
   const [year, month, day] = date.split('-').map(Number);
   return companyRestMarks(year, month, day, restGroup);
@@ -22,9 +22,12 @@ export function personalRestMarks(date, restGroup, overrides = [], paidDays = []
 export function calendarDayMarks(date, vacation, restGroup, overrides = [], paidDays = [], officialDays = {}) {
   const paid = personalVacationMarks(date, paidDays);
   if (paid.length) return paid;
+  const override = overrides.find((row) => row.work_date === date);
+  if (!vacation && override) return personalRestMarks(date, restGroup, overrides, paidDays);
   const official = Object.hasOwn(officialDays, date) ? ({
     DS: { type: 'manual-rest', label: 'DS' },
     FS: { type: 'chosen-holiday', label: 'FS' },
+    FH: { type: 'holiday', label: 'FH' },
     VA: { type: 'vacation', label: 'VA' },
     FM: { type: 'training', label: 'FM' },
     VP: { type: 'paid-leave', label: 'VP' }, RS: { type: 'paid-leave', label: 'RS' }, MO: { type: 'paid-leave', label: 'MO' }
