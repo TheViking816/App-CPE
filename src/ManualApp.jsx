@@ -490,9 +490,6 @@ function ExchangeSection({ session, section, onSectionChange, onPaidDaysChange }
 }
 
 function Salary({ session, onSession }) {
-  const announcementKey = `app-cpe-calendar-announcement-v2-${session.chapa}`;
-  const [announcementSeen, setAnnouncementSeen] = useState(() => localStorage.getItem(announcementKey) === '1');
-  const acknowledgeAnnouncement = () => { localStorage.setItem(announcementKey, '1'); setAnnouncementSeen(true); };
   const [snapshot, setSnapshot] = useState(null);
   const [manualRows, setManualRows] = useState([]);
   const [paidRows, setPaidRows] = useState([]);
@@ -921,16 +918,6 @@ function Salary({ session, onSession }) {
 
   const signOut = () => { disablePushNotifications(session.token).catch(() => {}); localStorage.removeItem(SESSION_KEY); onSession(null); };
   return <main className="manual-shell visual-shell"><header className="app-header visual-header"><div className="brand"><button className="visual-menu-mark" type="button" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><img className="brand-logo" src={appLogo} alt="Centro Portuario de Empleo de Valencia" /><strong>App CPE</strong></div><div className="header-actions"><span>Chapa {session.chapa}</span><button type="button" className={`header-notifications${unreadCount ? ' is-unread' : ''}`} aria-label={`Novedades${unreadCount ? `, ${unreadCount} sin leer` : ''}`} onClick={() => navigate('novedades')}><Bell size={20} />{unreadCount > 0 && <b>{unreadCount}</b>}</button>{session.chapa === '72683' && <button className={tab === 'monitor' ? 'selected' : ''} onClick={() => navigate(tab === 'monitor' ? 'sueldometro' : 'monitor')}>{tab === 'monitor' ? 'Sueldómetro' : 'Monitor'}</button>}<button className="header-signout" onClick={signOut}>Salir</button></div>{menuOpen && <ManualSideMenu tab={tab} isAdmin={isAdmin} showContracting={contractingEnabled} navigate={navigate} onClose={() => setMenuOpen(false)} onLogout={signOut} onDeleteAccount={() => { setMenuOpen(false); setDeleteAccountOpen(true); }} />}</header><div className="visual-content">
-    {!announcementSeen && <aside className="rest-link-announcement" role="status" aria-label="Nuevo enlace de calendario personal">
-      <span className="rest-link-announcement-icon"><CalendarDays size={23} aria-hidden="true" /></span>
-      <div className="rest-link-announcement-copy"><strong>Nuevo: Calendario personal</strong><p>Ya puedes consultar tu calendario desde Descansos, junto a Excepciones.</p></div>
-      <div className="rest-link-announcement-actions">
-        {(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable)
-          ? <form action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer" onSubmit={() => afterNativeSubmit(acknowledgeAnnouncement)}><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="calendario-base" /><button type="submit" className="primary">Abrir calendario <ExternalLink size={16} aria-hidden="true" /></button></form>
-          : <button type="button" className="primary" onClick={() => { acknowledgeAnnouncement(); navigate('descansos'); }}>Ver Descansos</button>}
-        <button type="button" onClick={acknowledgeAnnouncement}>Entendido</button>
-      </div>
-    </aside>}
     {false && portalLinkStatus?.portalPasswordIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>Contraseña del portal incorrecta.</strong> Revisa los datos en «Vincular portal» e introduce la contraseña de acceso al portal de SEVASA</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', '1'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Vincular portal</button></div>}
     {false && portalLinkStatus?.premiumKeyIncorrect && <div className="portal-password-warning portal-password-global-notice" role="alert"><p><strong>La clave de primas guardada ya no funciona.</strong> Introduce tu clave actual en «Vincular portal» para volver a cargar las primas automáticamente.</p><button type="button" className="primary" onClick={() => { sessionStorage.setItem('app-cpe-open-portal-link', 'premium'); navigate('perfil'); window.dispatchEvent(new Event('app-cpe-open-portal-link')); }}>Actualizar clave de primas</button></div>}
     {tab === 'perfil' ? <ProfileSettings session={session} onSession={onSession} />
@@ -943,7 +930,6 @@ function Salary({ session, onSession }) {
       : tab === 'conversaciones' ? <SectionPage eyebrow="ENTRE COMPAÑEROS" title="Chats"><div className="exchange-area"><ExchangeConversations session={session} /></div></SectionPage>
       : tab === 'novedades' ? <SectionPage eyebrow="ACTIVIDAD" title="Novedades"><ExchangeNotifications rows={notifications} onOpen={openNotification} pushState={pushState} pushError={pushError} onEnablePush={enablePush} onDisablePush={() => optOutPushNotifications(session.token).then(() => { setPushState('idle'); setPushError(''); }).catch((error) => setPushError(error?.message || 'No se pudieron desactivar.'))} onMarkAll={() => { setNotifications((rows) => rows.map((row) => ({ ...row, readAt: row.readAt || new Date().toISOString() }))); markUserNotificationsRead({ token: session.token, all: true }).catch(() => {}); }} /></SectionPage>
       : <>
-    <div className="salary-link-notice" role="note"><strong>Ahora los jornales y las primas se añaden manualmente.</strong></div>
     {error && !showForm && !showPaidForm && <div className="banner error" role="alert">{error}</div>}{notice && <div className="banner success" role="status">{notice}</div>}
     {showImport && <ManualEditorDialog label="Importar jornales" wide onClose={() => setShowImport(false)} busy={busy}><PortalJornalesImport existingItems={months.flatMap((entry) => entry.items)} manualRows={manualRows} busy={busy} onImport={importPastedJornales} onClose={() => setShowImport(false)} /></ManualEditorDialog>}
     {showForm && <ManualEditorDialog label={form.id ? 'Editar jornal' : 'Añadir jornal'} onClose={() => setShowForm(false)} busy={busy}>{jornalEditor}</ManualEditorDialog>}
