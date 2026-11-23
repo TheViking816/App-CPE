@@ -8,7 +8,7 @@ import VacationExchangePanel from './VacationExchangePanel.jsx';
 import ExchangeConversations, { conversationHash, directConversationHash } from './ExchangeConversations.jsx';
 import { hashForExchangeOffer } from './navigation.js';
 import { buildManualSalaryMonths, companyImage, salaryPeriod, sharedPremiumRequest } from './manualSalary.js';
-import { MONITOR_DAY_RATE, UNION_LEAVE_DAY_RATE, PAID_LEAVE_DAY_RATE, TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, formatEuro, reconcileContinuousDoubleMeals } from './payroll.js';
+import { MONITOR_DAY_RATE, UNION_LEAVE_DAY_RATE, PAID_LEAVE_DAY_RATE, TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, getSpecialtyKey, formatEuro, reconcileContinuousDoubleMeals } from './payroll.js';
 import { optionsForGroup } from './manualSpecialties.js';
 import { specialties as censoSpecialties } from './censo.js';
 import { PROFESSIONAL_GROUPS, professionalGroupCode } from './professionalGroups.js';
@@ -373,20 +373,21 @@ function JornalCard({ item, onOpen }) {
       <div className="portal-jornal-heading"><strong>{paidDay ? (item.isVacation ? 'Vacaciones' : item.isTraining ? 'Formación' : item.isPaidLeave ? 'Permiso retribuido' : item.isUnionLeave ? 'Representación sindical' : 'Monitor') : item.especialidad || 'Jornal'}</strong><strong className="portal-jornal-total">{formatEuro(item.payroll.total)}</strong></div>
       {paidDay ? <em>{item.operacion}{item.isPaidLeave ? '' : ' retribuido'}</em> : <><em className="portal-jornal-destination">{destination}</em>{item.operacion && <em>{item.operacion}</em>}</>}
       {!paidDay && item.companyNeedsSaving && <span className="manual-jornal-company-warning">{item.empresa ? 'Empresa tomada del parte. Guárdala al editar el jornal.' : 'Indica la empresa al editar el jornal para mostrar su logo.'}</span>}
+      {item.payroll.receptionPending && <span className="manual-jornal-company-warning">Importe provisional · indica si hay recepción y entrega</span>}
       <div className="portal-jornal-breakdown">
         <span>{paidDay ? 'Importe' : 'Base'} <b>{formatEuro(item.payroll.base)}</b></span>
         {!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}
         {!paidDay && item.payroll.continuousDoubleMeal > 0 && <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>}
         {!paidDay && item.payroll.relayHour > 0 && <span>Hora de relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}
         {!paidDay && item.payroll.remate > 0 && <span>Remate · {item.payroll.remateHours} {item.payroll.remateHours === 1 ? 'hora' : 'horas'} <b>{formatEuro(item.payroll.remate)}</b></span>}
-        {!paidDay && item.payroll.operationType !== 'RECEPCION_ENTREGA' && <span className={item.payroll.primaPending ? 'is-pending' : 'is-prima'}>Prima <b>{item.payroll.primaPending ? 'Pendiente' : formatEuro(item.payroll.prima || 0)}</b></span>}
+        {!paidDay && item.payroll.primaEligible && <span className={item.payroll.primaPending ? 'is-pending' : 'is-prima'}>{item.payroll.singleOperation ? 'Prima manual' : 'Prima'} <b>{item.payroll.primaPending ? 'Pendiente' : formatEuro(item.payroll.prima || 0)}</b></span>}
       </div>
     </div>
     <ChevronRight className="portal-jornal-chevron" size={19} />
   </article>;
 }
 
-function JornalDetail({ item, busy, relayBusy, relayError, onRelayChange, onClose, onEdit, onRemove, onPremium, onEditPaid, onRemovePaid }) {
+function JornalDetail({ item, receptionBusy, receptionError, onReceptionChange, busy, relayBusy, relayError, onRelayChange, onClose, onEdit, onRemove, onPremium, onEditPaid, onRemovePaid }) {
   useEffect(() => {
     const onKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKeyDown);
@@ -397,11 +398,17 @@ function JornalDetail({ item, busy, relayBusy, relayError, onRelayChange, onClos
   return <div className="manual-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="manual-detail-modal" role="dialog" aria-modal="true" aria-label={`Detalle del ${paidDay ? 'día' : 'jornal'} ${item.payroll.date}`}>
     <header><div><small>{new Date(`${item.payroll.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })} · {item.payroll.shift}</small><h2>{paidDay ? (item.isVacation ? 'Vacaciones' : item.isTraining ? 'Formación' : item.isPaidLeave ? 'Permiso retribuido' : item.isUnionLeave ? 'Representación sindical' : 'Monitor') : item.especialidad || 'Jornal'}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar"><X size={21} /></button></header>
     {!paidDay && <p>{[item.buque, item.empresa, item.operacion].filter(Boolean).join(' · ')}</p>}
-    <div className="manual-detail-values"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}{!paidDay && <span>Prima <b>{item.payroll.primaPending ? 'Pendiente' : formatEuro(item.payroll.prima || 0)}</b></span>}{!paidDay && item.payroll.continuousDoubleMeal > 0 && <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>}{!paidDay && item.payroll.relayHour > 0 && <span>Hora de relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}{!paidDay && item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}<span>Total <b>{formatEuro(item.payroll.total)}</b></span></div>
+    <div className="manual-detail-values"><span>Base <b>{formatEuro(item.payroll.base)}</b></span>{!paidDay && item.payroll.complement > 0 && <span>Complemento <b>{formatEuro(item.payroll.complement)}</b></span>}{!paidDay && <span>{item.payroll.singleOperation ? 'Prima manual' : 'Prima'} <b>{item.payroll.primaPending ? 'Pendiente' : formatEuro(item.payroll.prima || 0)}</b></span>}{!paidDay && item.payroll.continuousDoubleMeal > 0 && <span>Manutención doble · {item.payroll.continuousDoubleMealHours} <b>{formatEuro(item.payroll.continuousDoubleMeal)}</b></span>}{!paidDay && item.payroll.relayHour > 0 && <span>Hora de relevo <b>{formatEuro(item.payroll.relayHour)}</b></span>}{!paidDay && item.payroll.remate > 0 && <span>Remate <b>{formatEuro(item.payroll.remate)}</b></span>}<span>Total <b>{formatEuro(item.payroll.total)}</b></span></div>
+    {item.payroll.receptionEligible && <fieldset className="manual-reception-choice"><legend>¿Hay recepción y entrega?</legend>
+      <p>{item.payroll.receptionPending ? 'Importe provisional con la base sin R/E hasta que respondas.' : 'La elección está guardada para este jornal.'}</p>
+      <div>{[true, false].map((value) => <button key={String(value)} type="button" aria-pressed={item.payroll.receptionChoice === value} disabled={busy || receptionBusy} onClick={() => onReceptionChange(item, value)}>{value ? 'Sí, con R/E' : 'No, sin R/E'} · {formatEuro(value ? item.payroll.receptionWithBase : item.payroll.receptionWithoutBase)}</button>)}</div>
+      <small>Base + 56,96 € de complemento + prima.</small>
+      {receptionBusy && <p role="status">Guardando…</p>}{receptionError && <p className="form-error" role="alert">{receptionError}</p>}
+    </fieldset>}
     {!paidDay && item.payroll.relayHourEligible && <label className={`manual-relay-hour${item.payroll.relayHourEnabled ? ' is-enabled' : ''}`}><input type="checkbox" checked={item.payroll.relayHourEnabled} disabled={busy || relayBusy} onChange={(event) => onRelayChange(item, event.target.checked)} /><span>Hora de relevo<small>{item.payroll.relayHourRateKey === 'FESTIVO' ? 'Festiva' : 'Laborable'} · +{formatEuro(item.payroll.relayHourRate)}</small></span></label>}
     {relayError && <p className="manual-relay-error" role="alert">{relayError}</p>}
     {!paidDay && (item.source === 'manual' ? item.manualPart : item.parte) && <p>Parte {item.source === 'manual' ? item.manualPart : item.parte}</p>}{item.notes && <p>{item.notes}</p>}
-    <div className="manual-detail-actions">{item.source === 'manual' && <><button type="button" disabled={busy} onClick={() => action(onEdit)}>Editar jornal</button><button type="button" disabled={busy} onClick={() => action(onPremium)}>Editar prima</button><button type="button" className="is-danger" disabled={busy} onClick={() => action(() => onRemove(item.id))}>Eliminar jornal</button></>}{item.source === 'historico' && <button type="button" disabled={busy} onClick={() => action(onPremium)}>Editar prima</button>}{item.source === 'manual_paid_day' && <><button type="button" disabled={busy} onClick={() => action(onEditPaid)}>Editar día</button><button type="button" disabled={busy} onClick={() => action(() => onRemovePaid(item.id))}>Eliminar día</button></>}</div>
+    <div className="manual-detail-actions">{item.source === 'manual' && <><button type="button" disabled={busy} onClick={() => action(onEdit)}>Editar jornal</button><button type="button" disabled={busy} onClick={() => action(onPremium)}>{item.payroll.primaPending ? 'Introducir prima' : 'Editar prima'}</button><button type="button" className="is-danger" disabled={busy} onClick={() => action(() => onRemove(item.id))}>Eliminar jornal</button></>}{item.source === 'historico' && <button type="button" disabled={busy} onClick={() => action(onPremium)}>{item.payroll.primaPending ? 'Introducir prima' : 'Editar prima'}</button>}{item.source === 'manual_paid_day' && <><button type="button" disabled={busy} onClick={() => action(onEditPaid)}>Editar día</button><button type="button" disabled={busy} onClick={() => action(() => onRemovePaid(item.id))}>Eliminar día</button></>}</div>
   </section></div>;
 }
 
@@ -499,6 +506,9 @@ function Salary({ session, onSession }) {
   const [savingRelayHourKey, setSavingRelayHourKey] = useState('');
   const [relayHourError, setRelayHourError] = useState('');
   const [remateHours, setRemateHours] = useState({});
+  const [receptionChoices, setReceptionChoices] = useState({});
+  const [receptionBusy, setReceptionBusy] = useState(false);
+  const [receptionError, setReceptionError] = useState('');
   const [config, setConfig] = useState(null);
   const [month, setMonth] = useState('');
   const [period, setPeriod] = useState(() => new Date().getDate() <= 15 ? 'first' : 'second');
@@ -540,7 +550,7 @@ function Salary({ session, onSession }) {
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const [oldData, newRows, paidDays, premiumData, rateData, relayData, remateData, pilot, pilotPremiums, upcomingPreview] = await Promise.all([
+      const [oldData, newRows, paidDays, premiumData, rateData, relayData, remateData, pilot, pilotPremiums, upcomingPreview, savedReceptionChoices] = await Promise.all([
         rpc('app_cpe_get_saved_salary_history', { p_token: session.token }),
         rpc('app_cpe_list_manual_jornales', { p_token: session.token }),
         rpc('app_cpe_list_manual_paid_days', { p_token: session.token }),
@@ -548,8 +558,10 @@ function Salary({ session, onSession }) {
         getUserRelayHours({ token: session.token }), getUserRemateHours({ token: session.token }),
         loadNorayPilotSnapshot(session.chapa, session.token).catch(() => null),
         loadNorayPilotPremiums(session.chapa, session.token).catch(() => null),
-        rpc('app_cpe_get_portal_preview_snapshot', { p_token: session.token, p_channel: 'upcoming-contracts-72683' }).catch(() => null)
+        rpc('app_cpe_get_portal_preview_snapshot', { p_token: session.token, p_channel: 'upcoming-contracts-72683' }).catch(() => null),
+        rpc('app_cpe_get_reception_choices', { p_token: session.token })
       ]);
+      setReceptionChoices(savedReceptionChoices || {});
       const mergedSalary = mergeNorayPilotSalary(oldData, newRows || [], pilot, pilotPremiums);
       const upcomingReading = upcomingPreview?.payload?.upcomingAssignments;
       const upcomingRows = String(upcomingPreview?.chapa) === String(session.chapa)
@@ -726,7 +738,7 @@ function Salary({ session, onSession }) {
     openNotification(item, window.location.hash.endsWith('?source=push') ? 'push' : 'app');
   }, [notifications, tab, notificationRoute]);
 
-  const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums]);
+  const months = useMemo(() => buildManualSalaryMonths(snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums, receptionChoices), [snapshot, manualRows, config, premiums, relayHours, remateHours, paidRows, sharedPremiums, receptionChoices]);
   const currentMonthKey = today().slice(0, 7);
   const selectedMonthKey = month || currentMonthKey;
   const chosen = months.find((item) => item.key === selectedMonthKey) || {
@@ -743,14 +755,24 @@ function Salary({ session, onSession }) {
     const [, monthNumber, day] = form.work_date.split('-');
     const raw = { dia: Number(day), jornada: form.shift, especialidad: form.specialty, payrollGroup: form.worker_group,
       operacion: form.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA', parte: 'MANUAL-PREVIA' };
-    const calculated = enrichJornales([raw], [], `${monthNumber}/${form.work_date.slice(0, 4)}`, config)[0]?.payroll;
+    const calculated = enrichJornales([raw], [], `${monthNumber}/${form.work_date.slice(0, 4)}`, config, {}, {}, {}, { ...receptionChoices, ...(typeof form.receptionChoice === 'boolean' ? { [[form.work_date, form.shift, getSpecialtyKey(form.specialty)].join('|')]: form.receptionChoice } : {}) })[0]?.payroll;
     if (!calculated) return null;
     const premium = euroInput(form.premium);
     const preview = { ...raw, payroll: { ...calculated, total: Number((calculated.total + (Number.isFinite(premium) ? premium : 0)).toFixed(2)) } };
     const companions = months.find((entry) => entry.key === form.work_date.slice(0, 7))?.items
       .filter((item) => !(form.id != null && item.source === 'manual' && item.id === form.id)) || [];
     return reconcileContinuousDoubleMeals([...companions, preview]).at(-1).payroll;
-  }, [form, config, months]);
+  }, [form, config, months, receptionChoices]);
+
+  async function updateReception(item, value) {
+    if (receptionBusy || !item.payroll.receptionEligible) return;
+    setReceptionBusy(true); setReceptionError('');
+    try {
+      await rpc('app_cpe_set_reception_choice', { p_token: session.token, p_jornal_key: item.payroll.receptionKey, p_has_reception: value });
+      setReceptionChoices((current) => ({ ...current, [item.payroll.receptionKey]: value }));
+    } catch (reason) { setReceptionError(reason.message || 'No se pudo guardar la respuesta.'); }
+    finally { setReceptionBusy(false); }
+  }
 
   async function save(event) {
     event.preventDefault(); setError(''); setNotice(''); setBusy(true);
@@ -758,10 +780,16 @@ function Salary({ session, onSession }) {
       const premium = euroInput(form.premium);
       if (!Number.isFinite(premium) || premium < 0) throw new Error('Introduce una prima válida.');
       if (!String(form.company || '').trim()) throw new Error('Selecciona la empresa o terminal.');
+      if (formEstimate?.receptionPending) throw new Error('Indica si hay recepción y entrega.');
       const saved = await rpc('app_cpe_save_manual_jornal', { p_token: session.token, p_id: form.id,
         p_work_date: form.work_date, p_shift: form.shift, p_specialty: form.specialty.trim(),
         p_worker_group: form.worker_group, p_operation_type: form.operation_type, p_premium: premium,
         p_notes: packManualNotes({ ...form, premiumKnown: form.premium !== '' }) });
+      // Retain the saved ID if saving the R/E answer fails, so retry cannot duplicate the jornal.
+      setForm((current) => ({ ...current, id: saved.id }));
+      if (formEstimate?.receptionEligible) {
+        await rpc('app_cpe_set_reception_choice', { p_token: session.token, p_jornal_key: formEstimate.receptionKey, p_has_reception: formEstimate.receptionChoice });
+      }
       setManualRows((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
       setMonth(saved.work_date.slice(0, 7)); setShowForm(false); setForm(blank()); setNotice('Jornal guardado.');
       await load();
@@ -897,7 +925,7 @@ function Salary({ session, onSession }) {
     try { const result = await updateUserIrpf({ token: session.token, irpfRate: irpf }); const next = { ...session, ...result, irpfRate: irpf }; localStorage.setItem(SESSION_KEY, JSON.stringify(next)); onSession(next); setNotice('IRPF guardado.'); }
     catch (reason) { setError(reason.message); } finally { setBusy(false); }
   }
-  const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setError(''); setForm({ ...row, ...unpackManualNotes(row.notes), premium: String(row.premium) }); setShowForm(true); };
+  const edit = (item) => { const row = manualRows.find((entry) => entry.id === item.id); if (!row) return; setError(''); setForm({ ...row, ...unpackManualNotes(row.notes), premium: item.payroll.primaPending ? '' : String(item.payroll.prima ?? row.premium) }); setShowForm(true); };
   const editPaidDay = (item) => { setError(''); setPaidForm({ id: item.id, work_date: item.payroll.date, concept_type: item.tipo }); setShowPaidForm(true); setShowForm(false); };
   const unreadCount = notifications.filter((row) => !row.readAt).length;
   const selectedCompany = companySelectValue(form.company);
@@ -908,11 +936,12 @@ function Salary({ session, onSession }) {
       <label>Grupo<select value={form.worker_group} onChange={(event) => { const worker_group = event.target.value; setForm({ ...form, worker_group, specialty: optionsForGroup(worker_group)[0] }); }}>{['I','II','III','IV'].map((value) => <option key={value} value={value}>Grupo {value}</option>)}</select></label>
       <label>Puesto / especialidad<select value={form.specialty} onChange={(event) => setForm({ ...form, specialty: event.target.value })} required>{optionsForGroup(form.worker_group, form.specialty).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
       <label>Tipo de operación<select value={form.operation_type} onChange={(event) => setForm({ ...form, operation_type: event.target.value })}><option value="ESTIBA">Servicio público (SP)</option><option value="RECEPCION_ENTREGA">Operaciones complementarias (OC)</option></select></label>
+      {formEstimate?.receptionEligible && <label>¿Hay recepción y entrega?<select value={formEstimate.receptionChoice == null ? '' : String(formEstimate.receptionChoice)} onChange={(event) => setForm({ ...form, receptionChoice: event.target.value === '' ? null : event.target.value === 'true' })} required><option value="">Selecciona una opción</option><option value="true">Sí, con R/E · {formatEuro(formEstimate.receptionWithBase)}</option><option value="false">No, sin R/E · {formatEuro(formEstimate.receptionWithoutBase)}</option></select></label>}
       <label>Empresa o terminal<select value={selectedCompany} onChange={(event) => setForm({ ...form, company: event.target.value })} required><option value="">Selecciona una empresa</option>{form.company && selectedCompany === form.company && !['CSP','APM','MSC','VTEU','ERH','BALEARIA','TRASMED','CPE'].includes(form.company) && <option value={form.company}>{form.company}</option>}<option value="CSP">CSP</option><option value="APM">APM</option><option value="MSC">MSC</option><option value="VTEU">VTEU</option><option value="ERH">ERH</option><option value="BALEARIA">Baleària</option><option value="TRASMED">Trasmed</option><option value="CPE">CPE</option></select></label>
       <label>Buque (opcional)<input value={form.vessel} onChange={(event) => setForm({ ...form, vessel: event.target.value })} maxLength="100" /></label>
-      <label>Prima (€)<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} placeholder="Pendiente" /></label>
+      <label>{formEstimate?.singleOperation ? 'Prima manual (€)' : 'Prima (€)'}<input inputMode="decimal" value={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.value })} placeholder="Pendiente" /></label>
       <label className="wide">N.º de parte (opcional)<input value={form.part} onChange={(event) => setForm({ ...form, part: event.target.value })} inputMode="numeric" pattern="[0-9]*" maxLength="12" placeholder="Número de parte" /></label>
-      {formEstimate && <div className="form-estimate"><span>Tarifa del grupo {form.worker_group}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
+      {formEstimate && <div className="form-estimate"><span>{formEstimate.singleOperation ? 'Base de operación única' : `Tarifa del grupo ${form.worker_group}`}</span><strong>{formatEuro(formEstimate.base)}</strong><span>Complemento del puesto</span><strong>{formatEuro(formEstimate.complement)}</strong><span>Prima introducida</span><strong>{formatEuro(euroInput(form.premium))}</strong><span>Total del jornal</span><strong>{formatEuro(formEstimate.total)}</strong></div>}
       <div className="form-actions"><button type="button" disabled={busy} onClick={() => setShowForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar jornal'}</button></div>
     </form></section>;
 
@@ -940,8 +969,9 @@ function Salary({ session, onSession }) {
       <div className="form-actions"><button type="button" disabled={busy} onClick={() => setShowPaidForm(false)}>Cancelar</button><button className="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar día'}</button></div>
     </form></section></ManualEditorDialog>}
     {loading ? <section className="manual-panel"><p>Cargando tu historial…</p></section> : <ManualSalaryDashboard months={months} monthChoices={monthChoices} chosen={chosen} period={period} onPeriodChange={setPeriod} onMonthChange={setMonth} onRefresh={load} irpf={irpf} onIrpfChange={setIrpf} onIrpfSave={() => saveIrpf({ preventDefault() {} })} busy={busy} onImport={() => { setShowImport(true); setShowForm(false); setShowPaidForm(false); setError(''); setNotice(''); }} onAdd={() => { setForm(blank()); setShowForm(true); setShowImport(false); setShowPaidForm(false); setError(''); setNotice(''); }} onAddPaidDay={() => { setPaidForm({ id: null, work_date: today(), concept_type: 'VA' }); setShowPaidForm(true); setShowImport(false); setShowForm(false); setError(''); setNotice(''); }} portalAction={(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <div className="personal-portal-actions">{personalLinkAvailable && !contractingEnabled && <form className="personal-portal-link" action="/api/donde-voy" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><button type="submit">Mi contratación <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="jornales" /><button type="submit">Jornales y primas <ExternalLink size={15} aria-hidden="true" /></button></form>}{(personalLinkAvailable || doblesLinkAvailable || vacationLinkAvailable) && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="situacion-trabajador" /><button type="submit">Jornada flexible <ExternalLink size={15} aria-hidden="true" /></button></form>}{doblesLinkAvailable && <form className="personal-portal-link" action="/api/noray-section" method="post" target="_blank" rel="noopener noreferrer"><input type="hidden" name="token" value={session.token} /><input type="hidden" name="section" value="dobles" /><button type="submit">Solicitar dobles y HS <ExternalLink size={15} aria-hidden="true" /></button></form>}</div>}>
+      {selected.items.some((item) => item.payroll.receptionPending) && <p className="manual-reception-notice" role="status">Total provisional: abre los jornales señalados e indica si hay recepción y entrega.</p>}
       {!selected.items.length ? <div className="empty"><strong>No hay jornales en este periodo.</strong><p>Elige otra quincena o un mes del historial.</p></div> : <div className="portal-jornales-list">{selected.items.map((item, index) => <JornalCard key={`${item.source}-${item.id || item.payroll.manualPremiumKey || item.payroll.date}-${index}`} item={item} onOpen={setSelectedDetail} />)}</div>}
-    </ManualSalaryDashboard>}{selectedDetailItem && <JornalDetail item={selectedDetailItem} busy={busy} relayBusy={Boolean(savingRelayHourKey)} relayError={relayHourError} onRelayChange={toggleRelayHour} onClose={() => { setSelectedDetail(null); setRelayHourError(''); }} onEdit={edit} onRemove={remove} onPremium={editPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}{premiumEditor && <QuickPremiumModal value={premiumEditor.value} onChange={(value) => setPremiumEditor((current) => ({ ...current, value }))} onClose={() => setPremiumEditor(null)} onSave={savePremium} busy={busy} error={premiumError} />}</>}</div>
+    </ManualSalaryDashboard>}{selectedDetailItem && <JornalDetail item={selectedDetailItem} receptionBusy={receptionBusy} receptionError={receptionError} onReceptionChange={updateReception} busy={busy} relayBusy={Boolean(savingRelayHourKey)} relayError={relayHourError} onRelayChange={toggleRelayHour} onClose={() => { setSelectedDetail(null); setRelayHourError(''); setReceptionError(''); }} onEdit={edit} onRemove={remove} onPremium={editPremium} onEditPaid={editPaidDay} onRemovePaid={removePaidDay} />}{premiumEditor && <QuickPremiumModal value={premiumEditor.value} onChange={(value) => setPremiumEditor((current) => ({ ...current, value }))} onClose={() => setPremiumEditor(null)} onSave={savePremium} busy={busy} error={premiumError} />}</>}</div>
     <nav className="visual-bottom-nav" aria-label="Secciones de la app">
       {[
         ...(contractingEnabled ? [['contratacion', 'Inicio', House]] : []),

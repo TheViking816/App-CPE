@@ -157,7 +157,7 @@ test("no suma dos veces una prima presente en jornales y primas", () => {
   assert.equal(payroll.total, 530.69);
 });
 
-test("trastainer suma jornal, complemento de servicio publico y prima", () => {
+test("trastainer usa base de operacion unica, complemento fijo y prima manual pendiente", () => {
   const payroll = enrichJornales([{
     dia: "13",
     parte: "30001",
@@ -167,13 +167,14 @@ test("trastainer suma jornal, complemento de servicio publico y prima", () => {
     produccion: "120,50 EUR"
   }], [], "Agosto de 2026")[0].payroll;
 
-  assert.equal(payroll.base, 105.53);
-  assert.equal(payroll.complement, 60.57);
-  assert.equal(payroll.prima, 120.50);
-  assert.equal(payroll.total, 286.60);
+  assert.equal(payroll.base, 151.92);
+  assert.equal(payroll.complement, 56.96);
+  assert.equal(payroll.prima, null);
+  assert.equal(payroll.primaPending, true);
+  assert.equal(payroll.total, 208.88);
 });
 
-test("containera suma complemento y prima tambien en recepcion y entrega", () => {
+test("containera usa complemento fijo y espera una prima manual tambien en OC", () => {
   const payroll = enrichJornales([{
     dia: "13",
     parte: "30002",
@@ -184,10 +185,10 @@ test("containera suma complemento y prima tambien en recepcion y entrega", () =>
   }], [], "Agosto de 2026")[0].payroll;
 
   assert.equal(payroll.base, 227.93);
-  assert.equal(payroll.complement, 16.90);
-  assert.equal(payroll.prima, 90);
-  assert.equal(payroll.total, 334.83);
-  assert.equal(payroll.primaPending, false);
+  assert.equal(payroll.complement, 56.96);
+  assert.equal(payroll.prima, null);
+  assert.equal(payroll.total, 284.89);
+  assert.equal(payroll.primaPending, true);
 });
 
 test("gruas usa el complemento festivo y suma la prima del portal", () => {
@@ -206,7 +207,7 @@ test("gruas usa el complemento festivo y suma la prima del portal", () => {
   assert.equal(payroll.total, 414.56);
 });
 
-test("los complementos de manipuladores se pueden modificar desde la tabla de especialidades", () => {
+test("el complemento fijo de RTT prevalece sobre configuraciones antiguas", () => {
   const payroll = enrichJornales([{
     dia: "13",
     parte: "30004",
@@ -222,8 +223,8 @@ test("los complementos de manipuladores se pueden modificar desde la tabla de es
     }]
   })[0].payroll;
 
-  assert.equal(payroll.complement, 65);
-  assert.equal(payroll.total, 270.53);
+  assert.equal(payroll.complement, 56.96);
+  assert.equal(payroll.total, 208.88);
 });
 
 test("mantiene editables los complementos simples existentes en Supabase", () => {

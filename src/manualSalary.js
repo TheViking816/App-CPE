@@ -1,4 +1,4 @@
-import { MONITOR_DAY_RATE, PAID_LEAVE_DAY_RATE, UNION_LEAVE_DAY_RATE, TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, reconcileContinuousDoubleMeals, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
+import { MONITOR_DAY_RATE, PAID_LEAVE_DAY_RATE, UNION_LEAVE_DAY_RATE, TRAINING_DAY_RATE, VACATION_DAY_RATE, enrichJornales, getSpecialtyKey, reconcileContinuousDoubleMeals, selectPortalJornales, selectPortalJornalesHistory } from './payroll.js';
 import { unpackManualNotes } from './manualMetadata.js';
 import { assignmentDateKey, assignmentShift } from './upcomingAssignments.js';
 
@@ -58,6 +58,7 @@ export function manualPaidDayEntry(row) {
 }
 
 export function sharedPremiumRequest(item) {
+  if (item?.payroll?.singleOperation) return null;
   if (!item?.payroll?.date || !item?.payroll?.shift || item.isVacation || item.isTraining || item.isPaidLeave || item.isUnionLeave || item.isMonitorDay) return null;
   const key = item.source === 'manual' ? `manual:${item.id}` : item.payroll.manualPremiumKey;
   if (!key) return null;
@@ -78,7 +79,7 @@ function applySharedPremium(item, sharedPremiums) {
     primaSource: 'shared', total: money(item.payroll.total - previous + shared) } };
 }
 
-export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}, manualPaidDays = [], sharedPremiums = {}) {
+export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig = null, manualPremiums = {}, relayHours = {}, remateHours = {}, manualPaidDays = [], sharedPremiums = {}, receptionChoices = {}) {
   const payload = snapshot?.payload || {};
   const upcomingRows = Array.isArray(payload.upcomingAssignments) ? payload.upcomingAssignments : [];
   const norayPremiumsBySlot = payload.norayPremiumsBySlot || {};
@@ -144,10 +145,24 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
   return [...months.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([key, period]) => {
     const savedPremiumRows = (payload.primas?.history || []).find((item) => Number(item.year) === period.year && Number(item.month) === period.month)?.rows
       || (String(payload.primas?.monthLabel || '').toLowerCase() === String(period.monthLabel).toLowerCase() ? payload.primas?.rows || [] : []);
-    const historicItems = enrichJornales(period.rows, savedPremiumRows, period.monthLabel, payrollConfig, relayHours, remateHours, manualPremiums)
+    const historicItems = enrichJornales(period.rows, savedPremiumRows, period.monthLabel, payrollConfig, relayHours, remateHours, manualPremiums, receptionChoices)
       .map((item) => {
+        // A later Noray import can replace the manual row for the same slot.
+        // Preserve the user's typed RTT/containera premium through that replacement.
+        if (item.payroll.singleOperation && item.payroll.manualPrima == null
+          && norayJournalSlots.has(`${item.payroll.date}|${item.payroll.shift}`)) {
+          const manual = manualRows.find((row) => row.work_date === item.payroll.date
+            && row.shift === item.payroll.shift && getSpecialtyKey(row.specialty) === getSpecialtyKey(item.especialidad));
+          const known = manual && unpackManualNotes(manual.notes).premiumKnown;
+          if (manual && (known === true || (known == null && Number(manual.premium) > 0))) {
+            const premium = money(manual.premium);
+            return { ...item, source: 'historico', payroll: { ...item.payroll, prima: premium,
+              manualPrima: premium, primaSource: 'manual', primaPending: false,
+              total: money(item.payroll.total + premium) } };
+          }
+        }
         const synced = norayPremiumsBySlot[`${item.payroll.date}|${item.payroll.shift}`];
-        if (synced && Number(synced.amount) > 0) {
+        if (!item.payroll.singleOperation && synced && Number(synced.amount) > 0) {
           const premium = money(Number(synced.amount));
           return { ...item, source: 'historico', payroll: { ...item.payroll, prima: premium,
             manualPrima: null, primaSource: 'portal', primaPending: false,
@@ -172,13 +187,13 @@ export function buildManualSalaryMonths(snapshot, manualRows = [], payrollConfig
       const raw = { dia: Number(row.work_date.slice(-2)), jornada: row.shift, tipo: details.portalType || 'MAN', especialidad: row.specialty,
         payrollGroup: row.worker_group, operacion: row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION Y ENTREGA' : 'ESTIBA',
         parte: details.part || `MANUAL-${row.id}`, empresa: savedCompany || matchingPart?.empresa || '', buque: row.vessel || details.vessel, produccion: '' };
-      const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig, relayHours, remateHours)[0];
+      const calculated = enrichJornales([raw], [], period.monthLabel, payrollConfig, relayHours, remateHours, {}, receptionChoices)[0];
       const premiumKnown = details.premiumKnown === true
         || (details.premiumKnown == null && Number(row.premium) > 0)
-        || row.operation_type === 'RECEPCION_ENTREGA';
+        || (row.operation_type === 'RECEPCION_ENTREGA' && !calculated.payroll.singleOperation);
       const importedPremium = norayPremiumsBySlot[`${row.work_date}|${String(row.shift).replace(/(\d{2})(\d{2})$/, '$1-$2')}`];
       const importedAmount = Number(importedPremium?.amount);
-      const hasImportedPremium = importedPremium && Number.isFinite(importedAmount) && importedAmount > 0;
+      const hasImportedPremium = !calculated.payroll.singleOperation && importedPremium && Number.isFinite(importedAmount) && importedAmount > 0;
       const premium = hasImportedPremium ? money(importedAmount) : premiumKnown ? money(row.premium) : null;
       const operationLabel = details.operation || (row.operation_type === 'RECEPCION_ENTREGA' ? 'RECEPCION / ENTREGA'
         : /^CONDUCTOR\s+2(?:a|ª)$/i.test(String(row.specialty || '').trim()) ? 'RO-RO (Vehículos)' : 'CONT. C/SPREADER AUT');

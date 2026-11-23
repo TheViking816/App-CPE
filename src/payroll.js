@@ -101,6 +101,17 @@ const MANIPULATOR_SPECIALTIES = new Set([
   "ELEVADORAS"
 ]);
 
+const SINGLE_OPERATION_SPECIALTIES = new Set(["TRASTAINERS_RTT", "CONTAINER"]);
+// Base amounts from the RTT/containera single-operation salary table.
+export const SINGLE_OPERATION_RATES = {
+  LABORABLE: { "02-08": [297.97], "06-12": [215.28], "08-14": [151.92], "14-20": [151.92], "20-02": [227.93] },
+  SABADO: { "02-08": [297.97], "08-14": [168.39], "14-20": [273.51, 231.75], "20-02": [402.20, 340.81] },
+  FESTIVO: { "02-08": [536.26, 469.13], "08-14": [273.51, 231.75], "14-20": [387.29, 328.17], "20-02": [521.37, 441.77] },
+  FESTIVO_TO_LABORABLE: { "02-08": [348.54], "20-02": [461.81, 391.29] },
+  FESTIVO_TO_FESTIVO: { "02-08": [584.93, 511.60], "20-02": [521.37, 441.77] },
+  LABORABLE_TO_FESTIVO: { "20-02": [288.69] }
+};
+
 const MANIPULATOR_COMPLEMENTS = {
   ESTIBA: {
     "02-08": 84.29,
@@ -336,7 +347,7 @@ export function getRemateGroup(specialty = "") {
   return "II";
 }
 
-function getSpecialtyKey(specialty = "") {
+export function getSpecialtyKey(specialty = "") {
   const normalized = normalizeSpecialty(specialty);
   if (/CONDUCTOR(?:\s+DE)?\s*1\s*A\b/.test(normalized)) return "CONDUCTOR_1A";
   if (/CONDUCTOR(?:\s+DE)?\s*2\s*A\b/.test(normalized)) return "CONDUCTOR_2A";
@@ -349,7 +360,7 @@ function getSpecialtyKey(specialty = "") {
   if (/APOYO\s+OPERACION/.test(normalized)) return "APOYO_OPERACION";
   if (/GARAJISTA(?:\s+RO\s*RO)?/.test(normalized)) return "GARAJISTA_RO_RO";
   if (/FURGONETERO(?:\s+RO\s*RO)?/.test(normalized)) return "FURGONETERO_RO_RO";
-  if (/TRASTAINER/.test(normalized) || /\bRTT\b/.test(normalized)) return "TRASTAINERS_RTT";
+  if (/TRAN?STAINER/.test(normalized) || /\bRTT\b/.test(normalized)) return "TRASTAINERS_RTT";
   if (/CONTAINERA?S?|CONTAINERS?/.test(normalized)) return "CONTAINER";
   if (/\bGRUAS?\b|GRUISTA/.test(normalized)) return "GRUAS";
   if (/ELEVADORAS?/.test(normalized)) return "ELEVADORAS";
@@ -504,6 +515,7 @@ function getComplement(
   complementLookup = new Map()
 ) {
   const specialtyKey = getSpecialtyKey(specialty);
+  if (SINGLE_OPERATION_SPECIALTIES.has(specialtyKey)) return 56.96;
   if (MANIPULATOR_SPECIALTIES.has(specialtyKey)) {
     const configuredRow = complementLookup.get(specialtyKey);
     const shiftSuffix = shift.replace("-", "_");
@@ -609,7 +621,7 @@ function findMatchingPrima(jornal, primas = []) {
   };
 }
 
-export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null, relayHours = {}, remateHours = {}, manualPremiums = {}) {
+export function enrichJornales(jornales = [], primas = [], monthLabel = "", payrollConfig = null, relayHours = {}, remateHours = {}, manualPremiums = {}, receptionChoices = {}) {
   const { month, year } = parseMonthLabel(monthLabel);
   const configuredHolidays = payrollConfig?.holidays
     ?.filter((item) => item.enabled !== false)
@@ -638,8 +650,16 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     const table = operationTable[group] || operationTable.II;
     const configuredRate = rateLookup.get([operationType, group, rateKey, shift].join("|"));
     const fallbackRate = table[rateKey]?.[shift] ?? table[getDayType(date, holidaySet)]?.[shift] ?? 0;
-    const base = Number((Number.isFinite(configuredRate) ? configuredRate : fallbackRate).toFixed(2));
     const specialtyKey = getSpecialtyKey(jornal.especialidad);
+    const singleOperation = SINGLE_OPERATION_SPECIALTIES.has(specialtyKey);
+    const singleRates = singleOperation ? SINGLE_OPERATION_RATES[rateKey]?.[shift] : null;
+    const receptionKey = [date, shift, specialtyKey].join("|");
+    const receptionEligible = singleRates?.length === 2;
+    const receptionChoice = typeof receptionChoices[receptionKey] === "boolean" ? receptionChoices[receptionKey] : null;
+    // Until answered, show the lower base explicitly as a provisional estimate.
+    const selectedBase = singleRates ? singleRates[receptionEligible && receptionChoice !== true ? 1 : 0]
+      : Number.isFinite(configuredRate) ? configuredRate : fallbackRate;
+    const base = Number(selectedBase.toFixed(2));
     const isManipulator = MANIPULATOR_SPECIALTIES.has(specialtyKey);
     const complement = Number(getComplement(
       jornal.especialidad,
@@ -648,10 +668,10 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
     ).toFixed(2));
     const allowsPrima = operationType !== "RECEPCION_ENTREGA" || isManipulator;
     const manualPremiumEligible = allowsPrima && Boolean(String(jornal.parte || jornal.jornal || "").trim());
-    const embeddedPrima = !allowsPrima
+    const embeddedPrima = !allowsPrima || singleOperation
       ? null
       : parseAmount(jornal.produccion) || null;
-    const matchedPrima = !allowsPrima
+    const matchedPrima = !allowsPrima || singleOperation
       ? null
       : findMatchingPrima(jornal, primas);
     const officialPrimaAmount = matchedPrima?.amount ?? embeddedPrima;
@@ -694,6 +714,13 @@ export function enrichJornales(jornales = [], primas = [], monthLabel = "", payr
         operationType,
         rateKey,
         base,
+        singleOperation,
+        receptionKey,
+        receptionEligible,
+        receptionChoice,
+        receptionPending: receptionEligible && receptionChoice == null,
+        receptionWithBase: receptionEligible ? singleRates[0] : null,
+        receptionWithoutBase: receptionEligible ? singleRates[1] : null,
         complement,
         production: 0,
         prima,
@@ -907,7 +934,8 @@ export function summarizeAnnualPayroll(
   premiumHistory = [],
   remateHours = {},
   manualPremiums = {},
-  trainingEntries = []
+  trainingEntries = [],
+  receptionChoices = {}
 ) {
   const historyKeys = new Set(history.map((month) => `${month.year}-${pad(month.month)}`));
   const supplementaryOnlyMonths = [...vacationEntries, ...trainingEntries].reduce((months, item) => {
@@ -935,7 +963,7 @@ export function summarizeAnnualPayroll(
     const trainingRows = trainingEntries.filter((item) => String(item?.payroll?.date || "").startsWith(`${monthKey}-`));
     const premiumRows = premiumRowsForMonth(premiumHistory, month);
     const enriched = [
-      ...enrichJornales(month.rows || [], premiumRows, month.monthLabel || "", payrollConfig, relayHours, remateHours, manualPremiums),
+      ...enrichJornales(month.rows || [], premiumRows, month.monthLabel || "", payrollConfig, relayHours, remateHours, manualPremiums, receptionChoices),
       ...vacationRows,
       ...trainingRows
     ];
