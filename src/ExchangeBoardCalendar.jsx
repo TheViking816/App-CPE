@@ -6,6 +6,7 @@ import { calendarDayMarks } from "./personalRestCalendar.js";
 
 const LABELS = { swap: "Intercambio", give: "Cesión", want: "Busco descanso" };
 const dayKey = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+const shortMonth = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const monthName = (year, month) => new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
 
 export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", onSelectDate, vacation = false, restGroup = "", overrides = [], paidDays = [], holidays = [], jornales = {}, officialDays = {}, restHeader = null, onEditDate }) {
@@ -61,7 +62,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
       <span><strong>FS:</strong> {restHeader.fsMonth?.used}/{restHeader.fsMonth?.max} mes | {restHeader.fsYear?.used}/{restHeader.fsYear?.max} año</span>
       <span><strong>{restHeader.month?.name}:</strong> min {restHeader.month?.min} / max {restHeader.month?.max} ({restHeader.month?.current})</span>
     </div>}
-    <header><div><small>{vacation ? "Tablón de ofertas" : group ? `Descansos del grupo ${group.label} · Ofertas` : "Descansos y ofertas"}</small>
+    <header className={vacation ? undefined : "exchange-rest-calendar-header"}><div><small>{vacation ? "Tablón de ofertas" : group ? `Descansos del grupo ${group.label} · Ofertas` : "Descansos y ofertas"}</small>
       <h3>{monthName(selectedYear, selectedMonth)}</h3></div>
       {vacation ? (
         <div><button type="button" aria-label="Mes anterior" onClick={() => changeMonth(-1)}>‹</button><button type="button" aria-label="Mes siguiente" onClick={() => changeMonth(1)}>›</button></div>
@@ -70,7 +71,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
           {restYears.map((year) => (
             <optgroup key={year} label={String(year)}>
               {(availableRestMonths(year).length ? availableRestMonths(year) : [selectedMonth]).map((month) => (
-                <option key={month} value={dayKey(year, month, 1).slice(0, 7)}>{monthName(year, month)}</option>
+                <option key={month} value={dayKey(year, month, 1).slice(0, 7)}>{shortMonth[month - 1]} {year}</option>
               ))}
             </optgroup>
           ))}

@@ -987,8 +987,40 @@ function Salary({ session, onSession }) {
         <span>{label}</span>
       </button>)}
     </nav>
+    <RestCalendarNotice key={session.chapa} chapa={session.chapa} onOpenCalendar={() => navigate('descansos')} />
     {deleteAccountOpen && <DeleteAccountDialog session={session} onClose={() => setDeleteAccountOpen(false)} onDeleted={() => { localStorage.removeItem(SESSION_KEY); onSession(null); }} />}
   </main>;
+}
+
+function RestCalendarNotice({ chapa, onOpenCalendar }) {
+  const dialog = useRef(null);
+  const storageKey = `app-cpe:calendar-2027-seen:${chapa}`;
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(storageKey)) return;
+    } catch {
+      // The notice can still be shown if storage is unavailable.
+    }
+    if (!dialog.current.open) dialog.current.showModal();
+  }, [storageKey]);
+
+  function rememberNotice() {
+    try {
+      localStorage.setItem(storageKey, '1');
+    } catch {
+      // The browser can still close the notice.
+    }
+  }
+
+  return <dialog ref={dialog} className="rest-calendar-notice" aria-labelledby="rest-calendar-notice-title" aria-describedby="rest-calendar-notice-copy" onClose={rememberNotice}>
+    <h2 id="rest-calendar-notice-title">Ya está disponible el calendario 2027</h2>
+    <p id="rest-calendar-notice-copy">En Descansos puedes elegir cualquier mes de 2027 y consultar los días de descanso de tu grupo.</p>
+    <form method="dialog">
+      <button type="submit">Entendido</button>
+      <button type="submit" className="primary" onClick={onOpenCalendar}>Ver mis descansos</button>
+    </form>
+  </dialog>;
 }
 
 export function ManualApp() {
