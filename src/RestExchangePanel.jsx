@@ -14,7 +14,7 @@ import ExchangeBoardCalendar from "./ExchangeBoardCalendar.jsx";
 import PersonalNoraySectionLink from "./PersonalNoraySectionLink.jsx";
 import { loadNorayPilotSnapshot, norayPilotCalendar } from './norayPilot.js';
 import { deleteManualPaidDay, getPersonalRestCalendar, saveManualPaidDay, saveRestDayOverride } from "./personalRestCalendarClient.js";
-import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
+import annualRestCalendarUrl from "../assets/calendario-laboral-2027.pdf?url";
 import {
   cancelRestExchange,
   decideRestExchange,
@@ -318,7 +318,7 @@ export default function RestExchangePanel({ session, onPaidDaysChange }) {
   }
 
   return <section className="rest-exchange-panel exchange-redesign" ref={panelRef}>
-    <div className="rest-portal-links"><a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2026 <ExternalLink size={15} aria-hidden="true" /></a></div>
+    <div className="rest-portal-links"><a className="rest-calendar-annual-link" href={annualRestCalendarUrl} target="_blank" rel="noopener noreferrer">Calendario Anual 2027 <ExternalLink size={15} aria-hidden="true" /></a></div>
     {calendarStatus === "ready" ? <ExchangeBoardCalendar offers={board} restGroup={session?.restGroup} overrides={calendarData.overrides} paidDays={calendarData.paidDays} holidays={calendarData.holidays} jornales={calendarData.jornales} officialDays={calendarData.officialDays} restHeader={calendarData.header}
       selectedDate={filters.date} onSelectDate={selectCalendarOffer} onEditDate={openCalendarEditor} />
       : <section className="exchange-board-calendar rest-calendar-placeholder" role="status" aria-live="polite">

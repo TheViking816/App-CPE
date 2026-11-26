@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { madridTodayKey } from "./exchangeDeadline.js";
 import { dateRangeKeys } from "./vacationExchange.js";
-import { availableRestMonths, parseRestGroup } from "./companyRestCalendar.js";
+import { availableRestMonths, companyRestYears, parseRestGroup } from "./companyRestCalendar.js";
 import { calendarDayMarks } from "./personalRestCalendar.js";
 
 const LABELS = { swap: "Intercambio", give: "Cesión", want: "Busco descanso" };
@@ -15,7 +15,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
   const group = parseRestGroup(restGroup);
   const [selectedYear, selectedMonth] = visibleMonth.split("-").map(Number);
   const months = [[selectedYear, selectedMonth]];
-  const restMonths = availableRestMonths(selectedYear);
+  const restYears = companyRestYears.includes(selectedYear) ? companyRestYears : [...companyRestYears, selectedYear];
   const holidayDates = useMemo(() => new Set(holidays), [holidays]);
   const entries = useMemo(() => {
     const byDay = new Map();
@@ -34,7 +34,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
   }, [offers, vacation]);
   const changeMonth = (offset) => {
     const date = new Date(selectedYear, selectedMonth - 1 + offset, 1);
-    if (!vacation && todayKey.startsWith("2026-") && date.getFullYear() !== 2026) return;
+    if (!vacation && date.getFullYear() !== selectedYear && !availableRestMonths(date.getFullYear()).length) return;
     setVisibleMonth(dayKey(date.getFullYear(), date.getMonth() + 1, 1).slice(0, 7));
   };
   const onTouchStart = (event) => {
@@ -54,7 +54,7 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
       changeMonth(dx < 0 ? 1 : -1);
     }
   };
-  const restCalendarAvailable = !vacation && restMonths.includes(selectedMonth);
+  const restCalendarAvailable = !vacation && availableRestMonths(selectedYear).includes(selectedMonth);
   return <section className="exchange-board-calendar" aria-label={`Calendario de ofertas de ${vacation ? "vacaciones" : "descansos"}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { swipeStart.current = null; }}>
     {!vacation && restHeader?.year === selectedYear && restHeader?.monthNumber === selectedMonth && <div className="noray-pilot-rest-header">
       <span><strong>Grupos descanso:</strong> {restHeader.groupVacation} / {restHeader.groupWeekly}</span>
@@ -63,7 +63,19 @@ export default function ExchangeBoardCalendar({ offers = [], selectedDate = "", 
     </div>}
     <header><div><small>{vacation ? "Tablón de ofertas" : group ? `Descansos del grupo ${group.label} · Ofertas` : "Descansos y ofertas"}</small>
       <h3>{monthName(selectedYear, selectedMonth)}</h3></div>
-      <div><button type="button" aria-label="Mes anterior" disabled={!vacation && todayKey.startsWith("2026-") && selectedYear === 2026 && selectedMonth === 1} onClick={() => changeMonth(-1)}>‹</button><button type="button" aria-label="Mes siguiente" disabled={!vacation && todayKey.startsWith("2026-") && selectedYear === 2026 && selectedMonth === 12} onClick={() => changeMonth(1)}>›</button></div>
+      {vacation ? (
+        <div><button type="button" aria-label="Mes anterior" onClick={() => changeMonth(-1)}>‹</button><button type="button" aria-label="Mes siguiente" onClick={() => changeMonth(1)}>›</button></div>
+      ) : (
+        <select className="exchange-rest-month-select" aria-label="Mes del calendario de descansos" value={visibleMonth} onChange={(event) => setVisibleMonth(event.target.value)}>
+          {restYears.map((year) => (
+            <optgroup key={year} label={String(year)}>
+              {(availableRestMonths(year).length ? availableRestMonths(year) : [selectedMonth]).map((month) => (
+                <option key={month} value={dayKey(year, month, 1).slice(0, 7)}>{monthName(year, month)}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      )}
     </header>
     {!vacation && !group && <p className="exchange-rest-group-notice">Elige tu grupo de descansos en <a href="#/perfil">Mis datos</a> para ver tus descansos de todo el año.</p>}
     {!vacation && group && !restCalendarAvailable && <p className="exchange-rest-group-notice">El calendario laboral de este año aún no está disponible. Consulta tus descansos en el portal oficial.</p>}

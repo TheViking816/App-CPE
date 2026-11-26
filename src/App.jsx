@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMonthlyPayrollPdfModule } from "./loadMonthlyPayrollPdf.js";
 import { doorDistanceLabel } from './doorDistanceLabel.js';
-import annualRestCalendarUrl from "../assets/descansos-Bef4loCk.jpg";
+import annualRestCalendarUrl from "../assets/calendario-laboral-2027.pdf?url";
 import {
   BriefcaseBusiness,
   BarChart3,
@@ -2564,7 +2564,7 @@ function PortalCalendarPreview({ descansos, slRows = [] }) {
         })}
       </div>
       <a className="portal-official-action" href={annualRestCalendarUrl} target="_blank" rel="noreferrer">
-        Abrir Calendario Anual <ExternalLink size={15} />
+        Abrir Calendario Anual 2027 <ExternalLink size={15} />
       </a>
       <a className="portal-official-action" href="https://portal.cpevalencia.com/#User,ViewNoray,18" target="_blank" rel="noreferrer">
         Gestionar descansos en el Portal <ExternalLink size={15} />
