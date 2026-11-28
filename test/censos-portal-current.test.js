@@ -4,18 +4,18 @@ import capture from '../src/censosPortalWorkersCurrent.js';
 import { findByChapa, getDoorState, getSpecialty, specialties, validateSpecialtyCenso } from '../src/censo.js';
 
 const totals = {
-  'conductor-1a': 610, 'conductor-2a': 534, clasificador: 203,
+  'conductor-1a': 609, 'conductor-2a': 533, clasificador: 203,
   'trastainers-rtt': 668, 'pol-conductor-1a': 457, 'pol-conductor-2a': 489,
-  'pol-especialista': 1338, 'pol-trincador': 600, 'pol-trinca-coches': 154,
+  'pol-especialista': 1340, 'pol-trincador': 599, 'pol-trinca-coches': 154,
   mafis: 84, 'apoyo-operacion': 333, container: 412,
   'pol-capataz': 44, 'pol-sobordista': 48, 'pol-elevadoras': 129
 };
 
 test('las capturas actuales contienen los quince censos completos sin credenciales', () => {
   assert.deepEqual(new Set(capture.sourceUsers), new Set(['72683', '71206', '72509', '63178', '72710']));
-  assert.match(capture.capturedAt, /^2026-11-21T/);
+  assert.match(capture.capturedAt, /^2026-11-28T/);
   for (const card of capture.cards) {
-    assert.match(card.capturedAt, /^conductor-/.test(card.id) || ['pol-trincador','pol-trinca-coches','pol-especialista'].includes(card.id) ? /^2026-11-21T/ : /^2026-10-22T/);
+    assert.match(card.capturedAt, /^conductor-/.test(card.id) || ['pol-trincador','pol-trinca-coches','pol-especialista'].includes(card.id) ? /^2026-11-28T/ : /^2026-10-22T/);
     if (/^conductor-/.test(card.id)) assert.equal(card.sourceUser, '72683');
     if (['pol-trincador','pol-trinca-coches','pol-especialista'].includes(card.id)) assert.equal(card.sourceUser, '72710');
     assert.ok(capture.sourceUsers.includes(card.sourceUser));
@@ -49,9 +49,9 @@ for (const [id, count] of Object.entries(totals)) {
 
 test('las nuevas altas tienen las especialidades y posiciones exactas del portal', () => {
   for (const [id, chapa, position] of [
-    ['conductor-1a', '72745', 47], ['conductor-2a', '72745', 45],
-    ['pol-trincador', '72758', 13], ['pol-trincador', '72710', 76], ['pol-trinca-coches', '72749', 16],
-    ['pol-especialista', '72788', 415]
+    ['conductor-1a', '72745', 45], ['conductor-2a', '72745', 44],
+    ['pol-trincador', '72758', 13], ['pol-trincador', '72710', 76], ['pol-trinca-coches', '72749', 15],
+    ['pol-especialista', '72788', 413]
   ]) assert.equal(findByChapa(chapa, id)?.position, position);
   assert.equal(findByChapa('72745', 'pol-trincador'), null);
   assert.equal(findByChapa('72748', 'pol-trincador'), null);
@@ -61,9 +61,9 @@ test('las nuevas altas tienen las especialidades y posiciones exactas del portal
 test('segunda calcula la puerta exacta y deja sin estimar una chapa sin referencia suficiente', () => {
   const doors = getDoorState('72683', [{ key: 'NOC', raw: 71658 }, { key: 'LAB', raw: 71773 }], 'conductor-2a');
   assert.deepEqual(doors.map(door => [door.doorChapa, door.doorPosition, door.distance, door.estimated]),
-    [['71658', 136, 467, false], ['71773', null, null, false]]);
+    [['71658', 134, 466, false], ['71773', null, null, false]]);
   assert.equal(doors[1].referenceChapa, null);
-  assert.equal(doors[0].userPosition, 69);
+  assert.equal(doors[0].userPosition, 67);
 });
 
 test('solo Lab cuenta no contratados delante; Noc y festivas conservan la distancia total', () => {
@@ -80,7 +80,7 @@ test('solo Lab cuenta no contratados delante; Noc y festivas conservan la distan
   ];
   const result = getDoorState('72683', doors, 'conductor-1a', workers);
   assert.equal(result.find((door) => door.key === 'LAB').distance, 2);
-  assert.equal(result.find((door) => door.key === 'LAB').totalDistance, 575);
+  assert.equal(result.find((door) => door.key === 'LAB').totalDistance, 574);
   assert.equal(result.find((door) => door.key === 'NOC').distance, result.find((door) => door.key === 'NOC').totalDistance);
   assert.equal(result.find((door) => door.key === 'FES').distance, result.find((door) => door.key === 'FES').totalDistance);
   assert.equal(getDoorState('72683', doors, 'conductor-1a', null).find((door) => door.key === 'LAB').distance, null);

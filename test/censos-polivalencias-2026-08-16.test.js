@@ -4,7 +4,7 @@ import test from "node:test";
 import { specialties } from "../src/censo.js";
 
 const expected = {
-  "pol-trincador": { count: 600, first: "72663", last: "24077" },
+  "pol-trincador": { count: 599, first: "72663", last: "24077" },
   "pol-trinca-coches": { count: 154, first: "72663", last: "24053" }
 };
 

@@ -22,10 +22,10 @@ test('una puerta ausente conserva distancia estimada, cuenta al siguiente y no i
   const specialty = getSpecialty('conductor-2a');
   const original = specialty.censo;
   try {
-    specialty.censo = rows(...original.map(row => row.chapa).filter(chapa => chapa !== '72749'));
+    specialty.censo = rows('72722', '72755', '72683');
     const doors = [{ key: 'NOC', raw: 72749 }, { key: 'LAB', raw: 72749 }];
-    const result = getDoorState('72683', doors, specialty.id, [{ chapa: '72751', status: 'nocontratado' }]);
-    assert.ok(result.every(door => door.estimated && door.referenceChapa === '72751' && Number.isInteger(door.distance)));
+    const result = getDoorState('72683', doors, specialty.id, [{ chapa: '72755', status: 'nocontratado' }]);
+    assert.ok(result.every(door => door.estimated && door.referenceChapa === '72755' && Number.isInteger(door.distance)));
     assert.equal(result.find(door => door.key === 'LAB').distance, 1);
     assert.equal(getDoorState('72683', doors, specialty.id, null).find(door => door.key === 'LAB').distance, null);
     assert.equal(getDoorState('72683', [{ key: 'NOC', raw: 79999 }], specialty.id)[0].distance, null);
